@@ -918,6 +918,7 @@ CI runs without production secrets.
 - No deployment of any kind.
 - Local validation: workflow YAML parsed and structurally checked (symfony/yaml from vendor: step shape, SHA pins, step-id references, no secrets). The CI steps were replayed on a clean copy of the tracked files (no vendor, node_modules, .env, build, generated helpers): `composer install`, `npm ci`, `.env` + key, `composer quality` PASS, `npm run test:e2e` with `E2E_REUSE_BUILD=1` PASS (23 passed, build reused). In the workspace: `composer quality` PASS, `npm run test:e2e` PASS (23 passed).
 - GitHub verification: commit `fe864ee`, run [36577884025](https://github.com/mddevops/landauto/actions/runs/36577884025) — success on the first real run, Ubuntu 24.04 (`ubuntu-latest`), job 1m29s. Log confirmed: PHP 8.3.35 with `pdo_sqlite`/`sqlite3`, 139 Composer packages, `npm ci` (291 packages), PHPUnit 47 passed, Larastan `[OK] No errors`, Pint PASS (61 files), Wayfinder generated on the clean checkout, `vp check` (format, lint, TypeScript) PASS, one production build, Chromium (Chrome for Testing 153 + headless shell) installed with system dependencies, E2E 23 passed (1 setup, 14 desktop, 4 tablet, 4 mobile) against `php artisan serve` + `database/e2e.sqlite`, reusing the build. Failure-artifact upload step correctly skipped.
+- Hardening: runner pinned from `ubuntu-latest` to `ubuntu-24.04` (commit `e6dc967`, run [36579169216](https://github.com/mddevops/landauto/actions/runs/36579169216) PASS) ahead of the announced `ubuntu-latest` → Ubuntu 26 migration.
 
 ---
 

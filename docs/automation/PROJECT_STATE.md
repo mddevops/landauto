@@ -965,7 +965,8 @@ CI (P0-025):
 ```text
 CI pipeline:                    CONFIGURED (.github/workflows/ci.yml, «Landflow CI»)
 CI GitHub verification:         PASS (run 36577884025, commit fe864ee)
-GitHub Actions platform:        Ubuntu (ubuntu-latest = ubuntu-24.04 at verification time)
+GitHub Actions platform:        Ubuntu
+CI runner:                      ubuntu-24.04 (pinned; verified in run 36579169216, commit e6dc967)
 Canonical quality gate:         composer quality
 Browser E2E gate:               npm run test:e2e
 Chromium CI:                    VERIFIED (npx playwright install --with-deps chromium)
@@ -1049,8 +1050,8 @@ Known gaps:
 
 - RESOLVED (2026-09-29) — Local development database: the developer `.env` now points to the working MySQL database `landauto` (previously a non-existent `autoland`). See "Actual local development environment" above.
 - RESOLVED (P0-025) — starter-kit workflow replaced by `.github/workflows/ci.yml` (canonical commands, single build, E2E included, `ci:check` removed); `.github/dependabot.yml` kept for weekly action updates. Original note: Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`. After P0-022 `composer ci:check` is a deprecated alias of `composer quality`, so the workflow still resolves; it now also runs Larastan, Pint and a second production build (`composer setup` already builds). P0-025 should call canonical commands directly (`composer quality`), drop the `ci:check` alias and the duplicate build, and add `npm run test:e2e` (CI must install Chromium via `npx playwright install --with-deps chromium`; it does not depend on a developer server).
-- Commits: baseline `fdcf597`, P0-021C `a96f6ee`, `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) and `fe864ee` (P0-025 CI) are pushed to `origin/main`, followed by the P0-025 documentation commit. Commits/pushes require explicit authorization.
-- `ubuntu-latest` will move to Ubuntu 26 from 2026-10-19 (GitHub annotation on the CI run). The workflow is not pinned to `ubuntu-24.04`; if the migration breaks Playwright system dependencies, pin the runner or upgrade Playwright in a separate task.
+- Commits: baseline `fdcf597`, P0-021C `a96f6ee`, `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) `fe864ee` (P0-025 CI), `7d12cfd` (P0-025 docs) and `e6dc967` (runner pinned to Ubuntu 24.04) are pushed to `origin/main`, followed by the runner-pin documentation commit. Commits/pushes require explicit authorization.
+- RESOLVED (e6dc967) — `ubuntu-latest` migration risk: GitHub announced the move of `ubuntu-latest` to Ubuntu 26 from 2026-10-19. The CI runner is now pinned to `ubuntu-24.04`, the environment CI was verified on (run [36579169216](https://github.com/mddevops/landauto/actions/runs/36579169216) PASS). Moving to a newer runner is a deliberate future change, not an automatic one.
 
 Resolved:
 

@@ -816,7 +816,7 @@ npm run test:e2e
 
 with any necessary environment setup around them.
 
-Actual implementation (P0-025) — `.github/workflows/ci.yml` («Landflow CI»), one job on `ubuntu-latest`:
+Actual implementation (P0-025) — `.github/workflows/ci.yml` («Landflow CI»), one job on `ubuntu-24.04` (pinned, not `ubuntu-latest`, so the verified environment does not change implicitly):
 
 ```text
 checkout → PHP 8.3 + Composer v2 → Node 22 (npm cache) → Composer cache
