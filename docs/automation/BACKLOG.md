@@ -64,7 +64,7 @@ Current phase:
 
 Current next task:
 
-`P0-022 — Standardize Quality Commands`
+`P0-025 — Create CI Pipeline`
 
 Phase 1 implementation must not start before required Phase 0 tasks are complete.
 
@@ -764,7 +764,7 @@ Translate the existing starter-kit user-facing UI to Russian so the application 
 
 ## P0-022 — Standardize Quality Commands
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-011, P0-021C
 
 ### Objective
@@ -787,11 +787,20 @@ Commands execute non-interactively.
 
 Run every standardized command.
 
+### Result
+
+- Composer: `test` (PHPUnit only), `analyse` (Larastan), `format` (Pint), `format:check` (Pint `--test`), `quality` (sequential: test → analyse → format:check → `npm run check` → `npm run build`, stops on first failure).
+- Removed duplicates: Composer `lint`, `lint:check`, `types:check`; npm `types:check`. `ci:check` kept only as a deprecated alias of `quality` for the existing workflow until P0-025.
+- `npm run check` now includes TypeScript type checking (vite-plus `lint.options.typeCheck: true`).
+- PHPUnit no longer depends on `public/build`: `tests/TestCase.php` uses Laravel's `withoutVite()`. Verified with `public/build` absent → `composer test` PASS.
+- Composer package renamed to `mddevops/landauto`; `laravel/chisel` moved to `require-dev` (installer scaffolding tool, unused at runtime).
+- Checks: `composer test` PASS, `composer analyse` PASS, `composer format:check` PASS, `npm run check` PASS, `npm run build` PASS, `composer quality` PASS; negative exit-code probes verified. Playwright NOT_AVAILABLE_YET.
+
 ---
 
 ## P0-023 — Install and Configure Playwright
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-013, P0-022
 
 ### Objective
@@ -820,11 +829,22 @@ Add Playwright browser QA.
 - build;
 - Playwright.
 
+### Result
+
+- `@playwright/test` 1.63.0 added as npm devDependency; only Chromium (headless shell) installed — no Firefox/WebKit, Dusk, Cypress or Selenium.
+- `playwright.config.ts`: `tests/browser/` (separate from PHPUnit), one project `chromium-desktop` at 1440×1000, headless, `baseURL` `http://127.0.0.1:8200`, `workers: 1`, `retries: 0`, test timeout 30 s / expect 5 s, trace `retain-on-failure`, screenshot `only-on-failure`, video off, locale `ru-RU`, timezone `Europe/Moscow`, reduced motion.
+- Isolated E2E environment: `APP_ENV=e2e` passed to the web server; `tests/browser/support/prepare-e2e.mjs` regenerates git-ignored `.env.e2e` from committed `.env.e2e.example` (test-only values, fresh random `APP_KEY` per run) and recreates git-ignored file SQLite `database/e2e.sqlite`. The script fails if configuration is cached or `public/hot` exists (Vite dev server).
+- `webServer`: prepare → `npm run build` → `php artisan migrate --force` → dedicated `php artisan serve` on 127.0.0.1:8200, readiness via `/up`; `reuseExistingServer: false` (a running server cannot be proven to be the E2E environment). No Docker, no developer `.env`/database.
+- `tests/browser/support/fixtures.ts`: every test fails on browser console errors, uncaught page errors and 4xx/5xx responses (no global filtering). `tests/browser/support/viewports.ts`: desktop 1440×1000, tablet 1024×1366, mobile 390×844 (tablet/mobile projects are P0-024 scope).
+- `tests/browser/smoke.spec.ts`: `/` and `/login` render Russian UI (`lang="ru"`, headings, labels, buttons).
+- `npm run test:e2e` = `playwright test`; Playwright stays a separate gate outside `composer quality`. `.gitignore`: `/test-results`, `/playwright-report`, `/blob-report`, `/playwright/.cache`, `.env.e2e`.
+- Checks: `composer quality` PASS, `npm run test:e2e` PASS (2 tests). Negative probe (temporary spec with `console.error` and a 404 page) failed as expected, with failure screenshot and trace; probe removed.
+
 ---
 
 ## P0-024 — Create Browser QA Baseline
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-023
 
 ### Objective
@@ -843,6 +863,22 @@ Create initial tests for current application.
 - Desktop baseline verified.
 - Tablet/mobile smoke checks where relevant.
 - Screenshots produced intentionally.
+
+### Result
+
+- Playwright projects: `setup` (logs in once via the real login form, saves storage state to git-ignored `playwright/.auth/member.json`), `desktop` 1440×1000 (full suite), `tablet` 1024×1366 and `mobile` 390×844 (tests tagged `@responsive`; touch + mobile viewport emulation, device scale factor 1). All Chromium, light color scheme.
+- Deterministic test data: `database/seeders/E2eSeeder.php` (runs only in `APP_ENV=e2e`, throws elsewhere; covered by `tests/Feature/E2eSeederTest.php`) creates two verified test-only users: `member@landflow.test` (long Russian name for layout QA, used by the storage state) and `login@landflow.test` (login/logout flows, separate login rate-limit key). Seeded by the web server command after migrations.
+- Flows (`tests/browser/*.spec.ts`, 22 tests + 1 setup):
+  - landing: Russian content for guests `@responsive`, link to login;
+  - auth: login page `@responsive`, guest redirect from `/dashboard`, wrong password → Russian error, keyboard login → dashboard, logout from user menu;
+  - dashboard: app shell `@responsive` (desktop/tablet sidebar; mobile sheet opens from header, closes with Escape), user menu → settings, collapsed sidebar persists after reload;
+  - settings: profile `@responsive` (Russian labels, current account data), settings navigation → appearance, security requires password confirmation, profile validation error in Russian and unchanged data after reload.
+- Every test fails on console errors, page errors and 4xx/5xx responses; `@responsive` tests also assert no document-level horizontal overflow.
+- Screenshots: `test-results/screenshots/<area>/<name>--<project>.png` (15 per run; `test-results/` is cleared per run, so no stale evidence; attached to the HTML report; not pixel baselines). Reviewed: landing, login, invalid login, dashboard, mobile sidebar, profile, security at the relevant viewports — layouts stack/wrap as intended, long Russian name truncates in the sidebar, no overflow.
+- Replaced the P0-023 `smoke.spec.ts` (its assertions moved into `landing.spec.ts` / `auth.spec.ts`).
+- Final fix: the Laravel logo mark (login/register/auth layouts, sidebar, header, mobile navigation, favicons) replaced by the owner-provided Landflow logo (vector trace of the supplied image; favicons rasterized from it). No user-facing Laravel branding remains.
+- Cleanup: removed the non-functional starter-kit search button from the app header (search is not implemented at this phase).
+- Checks: `composer quality` PASS, `npm run test:e2e` PASS (23 passed) — re-run after the final fix.
 
 ---
 
@@ -2523,9 +2559,9 @@ The remaining required sequence is:
 P0-021A Bootstrap Landflow Application                           DONE
 P0-021B Repository Initialization & Project State Reconciliation DONE
 P0-021C Russian Foundation UI                                    DONE
-P0-022  Quality Commands
-P0-023  Playwright
-P0-024  Browser QA Baseline
+P0-022  Quality Commands                                         DONE
+P0-023  Playwright                                               DONE
+P0-024  Browser QA Baseline                                      DONE
 P0-025  CI
 P0-026  Autonomous Workflow
 P0-027  Phase 0 Validation

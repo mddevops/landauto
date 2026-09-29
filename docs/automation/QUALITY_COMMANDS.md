@@ -297,13 +297,17 @@ Expected underlying tool:
 
 **Playwright**
 
-Before P0-023 is implemented, status is:
+Current status (P0-023):
 
 ```text
-NOT_AVAILABLE_YET
+AVAILABLE
 ```
 
-Do not report `PASS` for this command until Playwright is actually installed and configured.
+`npm run test:e2e` = `playwright test` (config: `playwright.config.ts`, tests: `tests/browser/`).
+
+It is a separate gate: it is not part of `composer quality` and must run after it, never concurrently (its web server runs its own `npm run build`).
+
+Report `PASS` only when the command actually ran and exited with code 0.
 
 ---
 
@@ -423,19 +427,30 @@ Do not create many overlapping quality aliases.
 
 # 19. Canonical Command Table
 
-| Gate | Canonical command | Current target status |
+| Gate | Canonical command | Current status (P0-024) |
 |---|---|---|
-| Backend tests | `composer test` | AVAILABLE/VERIFY |
-| Static analysis | `composer analyse` | AVAILABLE/VERIFY |
-| PHP formatting check | `composer format:check` | AVAILABLE/VERIFY |
-| PHP auto-format | `composer format` | AVAILABLE/VERIFY |
-| Frontend check | `npm run check` | AVAILABLE/VERIFY |
-| Production build | `npm run build` | AVAILABLE/VERIFY |
-| Browser E2E | `npm run test:e2e` | NOT_AVAILABLE_YET |
-| Core aggregate | `composer quality` | TO_CONFIGURE |
+| Backend tests | `composer test` | AVAILABLE |
+| Static analysis | `composer analyse` | AVAILABLE |
+| PHP formatting check | `composer format:check` | AVAILABLE |
+| PHP auto-format | `composer format` | AVAILABLE |
+| Frontend check | `npm run check` | AVAILABLE |
+| Production build | `npm run build` | AVAILABLE |
+| Browser E2E | `npm run test:e2e` | AVAILABLE |
+| Core aggregate | `composer quality` | AVAILABLE |
 | Full aggregate incl. browser | optional later | DEFERRED |
 
-`AVAILABLE/VERIFY` means the underlying tooling exists according to the repository audit, but the canonical alias must be confirmed or added before claiming it works.
+Implementation notes (verified in P0-022):
+
+- `composer test` runs only PHPUnit and does not require `public/build`: `tests/TestCase.php` calls Laravel's `withoutVite()`.
+- `npm run check` (`vp check`) covers formatting, type-aware lint and TypeScript type checking (`lint.options.typeCheck: true` in `vite.config.ts`); there is no separate `tsc` gate.
+- `composer ci:check` is a deprecated alias of `composer quality`, kept only for the starter-kit workflow until P0-025.
+
+Implementation notes (verified in P0-023):
+
+- `npm run test:e2e` runs Playwright with Chromium only, headless, one worker, no retries.
+- The Playwright `webServer` prepares an isolated environment on every run: `.env.e2e` regenerated from `.env.e2e.example` (`APP_ENV=e2e`, fresh `APP_KEY`), file SQLite `database/e2e.sqlite` recreated and migrated, production build, dedicated `php artisan serve` on `http://127.0.0.1:8200`. It never reuses a running server and never touches the developer `.env` or database.
+- Prerequisites: Chromium installed (`npx playwright install chromium`), port 8200 free, no cached config, no running Vite dev server (`public/hot`).
+- Artifacts (`test-results/`, `playwright-report/`) are git-ignored; failure screenshots and traces are kept there.
 
 ---
 
@@ -761,24 +776,26 @@ For UI tasks, browser QA must still verify:
 
 # 37. Current Playwright Status
 
-Until P0-023:
-
-```text
-Playwright: NOT_AVAILABLE_YET
-```
-
-After P0-023, update:
-
-`docs/automation/PROJECT_STATE.md`
-
-with:
+Current status (after P0-024, verified by a successful `npm run test:e2e` run):
 
 ```text
 Playwright: AVAILABLE
+Browser installed: Chromium
+Canonical E2E command: npm run test:e2e
+Browser QA baseline: DONE (P0-024)
 Browser automated QA: CONFIGURED
 ```
 
-only after the canonical command actually runs successfully.
+Browser QA conventions (P0-024):
+
+- Projects: `desktop` runs the full suite; `tablet` and `mobile` run only tests tagged `@responsive` (`test('…', { tag: '@responsive' }, …)`). Tag a test when its screen must behave intentionally on narrow viewports.
+- Authentication: most tests start from the `member` storage state created by the `setup` project (real login form). Guest tests use `test.use({ storageState: guestStorageState })`. Tests that log in via the UI use the `login` user (login rate limit is 5/min per email + IP).
+- Test data comes only from `database/seeders/E2eSeeder.php` (e2e environment only); credentials live in `tests/browser/support/users.ts`.
+- Import `test`/`expect` from `tests/browser/support/fixtures.ts` so console errors, page errors and 4xx/5xx responses fail the test.
+- Review screenshots: `captureScreenshot()` → `test-results/screenshots/<area>/<name>--<project>.png` (cleared every run, attached to the HTML report). Use `{ fullPage: false }` for open overlays. They are review evidence, not pixel baselines.
+- Responsive tests assert `expectNoHorizontalOverflow(page)`.
+
+Focused run examples: `npx playwright test tests/browser/settings.spec.ts`, `npx playwright test --project=mobile`.
 
 ---
 
@@ -1002,7 +1019,7 @@ P0-022 is fully `DONE` in the repository only when:
 10. outputs are recorded honestly;
 11. `PROJECT_STATE.md` is updated.
 
-Playwright remains `NOT_AVAILABLE_YET` until P0-023.
+Playwright became `AVAILABLE` in P0-023 (`npm run test:e2e`).
 
 ---
 

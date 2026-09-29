@@ -1,4 +1,9 @@
 /.phpunit.cache
+/blob-report
+/playwright-report
+/playwright/.auth
+/playwright/.cache
+/test-results
 /bootstrap/ssr
 /node_modules
 /public/build
@@ -13,6 +18,7 @@
 /vendor
 .DS_Store
 .env
+.env.e2e
 .env.backup
 .env.production
 .phpactor.json

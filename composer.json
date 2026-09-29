@@ -1,8 +1,8 @@
 {
     "$schema": "https://getcomposer.org/schema.json",
-    "name": "laravel/react-starter-kit",
+    "name": "mddevops/landauto",
     "type": "project",
-    "description": "The skeleton application for the Laravel framework.",
+    "description": "Landflow — SaaS website builder for automotive websites.",
     "keywords": [
         "laravel",
         "framework"
@@ -11,7 +11,6 @@
     "require": {
         "php": "^8.3",
         "inertiajs/inertia-laravel": "^3.0",
-        "laravel/chisel": "^0.1.0",
         "laravel/fortify": "^1.37.2",
         "laravel/framework": "^13.17",
         "laravel/tinker": "^3.0",
@@ -20,6 +19,7 @@
     "require-dev": {
         "fakerphp/faker": "^1.24",
         "larastan/larastan": "^3.9",
+        "laravel/chisel": "^0.1.0",
         "laravel/pail": "^1.2.5",
         "laravel/pao": "^1.0.6",
         "laravel/pint": "^1.27",
@@ -53,26 +53,30 @@
             "Composer\\Config::disableProcessTimeout",
             "npx concurrently -c \"#93c5fd,#c4b5fd,#fdba74\" \"php artisan serve\" \"php artisan queue:listen --tries=1\" \"npm run dev\" --names='server,queue,vite'"
         ],
-        "lint": [
+        "test": [
+            "Composer\\Config::disableProcessTimeout",
+            "@php artisan config:clear --ansi",
+            "@php artisan test"
+        ],
+        "analyse": [
+            "phpstan analyse --memory-limit=1G"
+        ],
+        "format": [
             "pint --parallel"
         ],
-        "lint:check": [
+        "format:check": [
             "pint --parallel --test"
         ],
-        "ci:check": [
+        "quality": [
             "Composer\\Config::disableProcessTimeout",
+            "@test",
+            "@analyse",
+            "@format:check",
             "npm run check",
-            "npm run types:check",
-            "@test"
+            "npm run build"
         ],
-        "types:check": [
-            "phpstan analyse"
-        ],
-        "test": [
-            "@php artisan config:clear --ansi",
-            "@lint:check",
-            "@types:check",
-            "@php artisan test"
+        "ci:check": [
+            "@quality"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
@@ -92,6 +96,14 @@
         "pre-package-uninstall": [
             "Illuminate\\Foundation\\ComposerScripts::prePackageUninstall"
         ]
+    },
+    "scripts-descriptions": {
+        "test": "Run the PHPUnit backend test suite only.",
+        "analyse": "Run Larastan/PHPStan static analysis only.",
+        "format": "Format PHP code with Pint (modifies files).",
+        "format:check": "Check PHP formatting with Pint without modifying files.",
+        "quality": "Run all core quality gates sequentially: test, analyse, format:check, npm run check, npm run build.",
+        "ci:check": "Deprecated alias of quality, kept for .github/workflows/tests.yml until P0-025."
     },
     "extra": {
         "laravel": {

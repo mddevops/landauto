@@ -126,7 +126,29 @@ Frontend:
 - Tailwind CSS 4.3.3
 - Vite 8.3.1 through vite-plus 0.3.0
 
-Local environment defaults (`.env`): SQLite database, database session/cache/queue (consistent with D-015).
+Repository environment template (`.env.example`): SQLite database, database session/cache/queue (consistent with D-015). Safe placeholder values only.
+
+Actual local development environment (verified 2026-09-29 with `php artisan db:show` / `migrate:status`):
+
+```text
+Development database:   MySQL 8.2.0 (OSPanel), connection mysql
+Host / port:            MySQL-8.2 / 3306
+Database:               landauto (all current migrations ran)
+Configured in:          developer .env only (git-ignored); credentials are not stored in the repository
+```
+
+- The development MySQL server also hosts unrelated databases of the developer; `landauto` is the only Landflow database.
+- This is the developer's local environment, not a production database-engine decision (still open; see `.cursor/rules/50-database.mdc` §85).
+
+Automated test databases (unchanged, independent of the development database):
+
+```text
+PHPUnit:          SQLite :memory: (phpunit.xml)
+Playwright E2E:   file SQLite database/e2e.sqlite, recreated and migrated before every run (.env.e2e, APP_ENV=e2e)
+```
+
+- Automated tests must never use the development MySQL database `landauto`. Guards: `tests/TestCase.php` refuses to boot unless the default connection is SQLite `:memory:` (e.g. cached config or shell `DB_*` variables), and `tests/browser/support/prepare-e2e.mjs` asks Laravel which connection the e2e environment resolves and stops unless it is `database/e2e.sqlite`. Both guards verified with a probe database path.
+- Switching PHPUnit or E2E to MySQL requires a separate task/decision.
 
 Aliases:
 
@@ -868,12 +890,12 @@ Completed:
 - Application foundation (P0-021A).
 - Git repository initialization (P0-021B).
 - Russian foundation UI (P0-021C).
+- Canonical quality commands (P0-022).
+- Playwright E2E framework (P0-023).
+- Browser QA baseline (P0-024).
 
 Still needed:
 
-- standardized quality commands (P0-022)
-- Playwright (P0-023)
-- browser QA baseline (P0-024)
 - CI (P0-025)
 - autonomous workflow (P0-026)
 
@@ -887,17 +909,73 @@ Verified after P0-021A (tools installed and executed successfully on the starter
 - Laravel Pint 1.32.1: AVAILABLE — `pint --test` PASS
 - Larastan 3.12.2 / PHPStan 2.2.16 (level 7): AVAILABLE — `phpstan analyse` PASS (0 errors)
 - vite-plus check: AVAILABLE — `npm run check` PASS (format + type-aware lint)
-- TypeScript: AVAILABLE — `npm run types:check` (`tsc --noEmit`) PASS
+- TypeScript: AVAILABLE — `npm run types:check` (`tsc --noEmit`) PASS (script removed in P0-022; type checking now runs inside `npm run check`)
 - Vite production build: AVAILABLE — `npm run build` PASS
 
 Re-verified after P0-021C: PHPUnit PASS (45 tests, incl. `LocalizationTest`), Pint PASS, Larastan PASS, `npm run check` PASS, `npm run build` PASS.
 
-Canonical quality command aliases are NOT yet standardized; this is `P0-022`.
-The starter-kit scripts currently overlap (e.g. `composer test` also runs Pint and PHPStan; `lint`, `lint:check`, `types:check`, `ci:check`).
+Canonical quality commands (P0-022) — contract: `docs/automation/QUALITY_COMMANDS.md`:
+
+```text
+Canonical quality commands:  CONFIGURED
+
+composer test          AVAILABLE  PHPUnit only (config:clear + php artisan test)
+composer analyse       AVAILABLE  Larastan/PHPStan only (phpstan analyse --memory-limit=1G)
+composer format        AVAILABLE  Pint, modifies files (pint --parallel)
+composer format:check  AVAILABLE  Pint --test, no file changes
+npm run check          AVAILABLE  vite-plus: format + type-aware lint + TypeScript type check
+npm run build          AVAILABLE  production Vite build (vp build)
+composer quality       AVAILABLE  sequential: test → analyse → format:check → npm run check → npm run build; stops on first failure
+npm run test:e2e       AVAILABLE  Playwright browser E2E (separate gate, not part of composer quality)
+```
+
+Browser E2E (P0-023):
+
+```text
+Playwright:                 AVAILABLE (@playwright/test 1.63.0)
+Browser E2E framework:      Playwright
+Browser installed:          Chromium (headless shell only; no Firefox/WebKit)
+Canonical E2E command:      npm run test:e2e
+Test directory:             tests/browser/ (separate from PHPUnit tests/)
+E2E environment:            APP_ENV=e2e, .env.e2e generated per run from .env.e2e.example (git-ignored, fresh APP_KEY)
+E2E database:               file SQLite database/e2e.sqlite, recreated + migrated per run (git-ignored)
+E2E server:                 dedicated php artisan serve on http://127.0.0.1:8200 (readiness /up), production build
+E2E test data:              database/seeders/E2eSeeder.php (e2e environment only): member@landflow.test, login@landflow.test
+Browser QA baseline:        DONE (P0-024)
+Browser automated QA:       CONFIGURED
+```
+
+Browser QA baseline (P0-024):
+
+```text
+Projects:        setup (UI login → playwright/.auth/member.json, git-ignored)
+                 desktop 1440×1000 — full suite
+                 tablet 1024×1366, mobile 390×844 — tests tagged @responsive
+Flows:           landing, auth (login page, guest redirect, wrong password, keyboard login, logout),
+                 dashboard (app shell, mobile sidebar sheet, user menu, collapsed sidebar persistence),
+                 settings (profile, navigation, security password confirmation, Russian validation)
+Checks per test: console errors, page errors, 4xx/5xx responses; @responsive → no horizontal overflow
+Screenshots:     test-results/screenshots/<area>/<name>--<project>.png (cleared per run, attached to HTML report)
+Visual baselines: none (screenshots are review evidence, not pixel baselines)
+```
+
+Notes:
+
+- All gates verified after P0-022: each command PASS with exit code 0; negative probes confirmed non-zero exit for `composer test`, `composer format:check` and `composer quality` (the aggregate stops at the first failing gate).
+- TypeScript type checking is part of `npm run check` via vite-plus `lint.options.typeCheck: true` (verified: a deliberate TS2322 error fails `npm run check`). The separate npm `types:check` (`tsc --noEmit`) script was removed as a duplicate.
+- Removed duplicate Composer scripts: `lint`, `lint:check`, `types:check`. `ci:check` is kept only as a deprecated alias of `composer quality` so the existing starter-kit workflow keeps working until P0-025.
+- Developer helpers that are not gates: `npm run check:fix` (vite-plus auto-fix), `composer format`.
+- Gates must run sequentially, never in parallel (`composer quality` enforces this).
+- `npm run test:e2e` runs after `composer quality`, never concurrently: its web server runs its own `npm run build` into `public/build`.
+- E2E verified after P0-023: `composer quality` PASS, then `npm run test:e2e` PASS (2 smoke tests: `/`, `/login`). A temporary negative probe (`console.error` + 404 page) failed as expected with failure screenshot and trace, then was removed.
+- Every browser test fails on console errors, uncaught page errors and 4xx/5xx responses (`tests/browser/support/fixtures.ts`); no global filtering.
+- `reuseExistingServer` is disabled: a running server cannot be proven to be the E2E environment. Port 8200 must be free. `prepare-e2e.mjs` refuses to run when configuration is cached (`bootstrap/cache/config.php`) or `public/hot` exists (Vite dev server running).
+- Verified after P0-024: `composer quality` PASS (47 PHPUnit tests), then `npm run test:e2e` PASS (23 passed: 1 setup, 14 desktop, 4 tablet, 4 mobile). The development MySQL database `landauto` was unchanged by both runs (table count, row counts and table creation times compared before/after).
+- Screenshots reviewed after P0-024: landing, login, invalid login, dashboard (desktop/tablet/mobile, mobile sidebar sheet), profile (desktop/tablet/mobile), security. No overflow; layouts stack on mobile as intended; the long Russian user name truncates with an ellipsis in the sidebar.
+- Login rate limit (5/min per email + IP) is why login flows use their own test user; new tests that log in via the UI should not reuse `member`.
 
 Not yet confirmed/installed as project quality gate:
 
-- Playwright: NOT_AVAILABLE_YET
 - browser screenshot regression automation: NOT_AVAILABLE_YET
 - full CI pipeline: NOT_AVAILABLE_YET
 
@@ -922,9 +1000,9 @@ Recommended next order:
 
 # 42. Current Next Approved Task
 
-Last completed task: `P0-021C — Russian Foundation UI` (DONE).
+Last completed task: `P0-024 — Create Browser QA Baseline` (DONE).
 
-**Next task: `P0-022 — Standardize Quality Commands`.**
+**Next task: `P0-025 — Create CI Pipeline`.**
 
 No implementation task should be inferred from this alone.
 
@@ -935,18 +1013,28 @@ Product UI language:       Russian
 Foundation UI localized:   YES
 APP_LOCALE:                ru (fallback_locale: en)
 Translations:              lang/ru/*.php + lang/ru.json (standard Laravel localization, no i18n package)
-Playwright:                NOT_AVAILABLE_YET
+Playwright:                AVAILABLE (P0-023)
 ```
+
+Foundation cleanup (before P0-023):
+
+- Removed starter-kit external links from the UI: sidebar footer and header "Репозиторий" (`github.com/laravel/react-starter-kit`) and "Документация" (Laravel docs), the unused `nav-footer.tsx` component, and the Laravel/Laracasts promo content of the welcome page. No replacement links were added.
+- The welcome page is now a minimal neutral placeholder: app name (Landflow), one-line Russian description, «Войти» / «Регистрация» (or «Панель управления» for signed-in users). A real Landflow landing belongs to a future product task.
+- Fallback app name in `resources/js/app.tsx` and `resources/views/app.blade.php` changed from `Laravel` to `Landflow`.
+- Laravel logo replaced by the owner-provided Landflow logo (P0-024 final fix): `resources/js/components/app-logo-icon.tsx` (auth layouts, sidebar, header, mobile navigation) and `public/favicon.svg` use a vector trace of the supplied logo image (black isometric parallelograms forming an «L»; the file was supplied as PNG 194×150, the trace matches it on 99.5% of pixels, differences are edge anti-aliasing only). `public/favicon.ico` (16/32 px) and `public/apple-touch-icon.png` (180 px) are rasterized from the same vector. No user-facing Laravel branding remains; «Laravel» appears only in technical code (package imports, generated action paths, `public/index.php`).
+- Removed the non-functional starter-kit search button (and its unused `Search` icon import) from `resources/js/components/app-header.tsx` (header-style app layout). Search is not a Landflow feature at this phase; no replacement was added.
 
 Known gaps:
 
-- The welcome page is still the starter-kit Laravel placeholder (translated to Russian, Laravel/Laracasts links kept); a real Landflow landing belongs to a future product task.
-- Local environment note: the developer `.env` points to MySQL database `autoland`, which does not exist locally; HTTP smoke/browser review for P0-021C used a shell-level SQLite override. `.env` was not modified. Automated tests use in-memory SQLite and are unaffected.
-- Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`; CI is formally `P0-025` and must switch to canonical commands after `P0-022`.
-- `composer.json` package name is still `laravel/react-starter-kit`.
-- `laravel/chisel` is a production `require` of the starter kit; keep/remove needs an explicit decision.
-- Baseline commit `fdcf597` (`chore: bootstrap Landflow foundation`) is pushed to `origin/main`. P0-021C changes are not committed yet; commits/pushes still require explicit authorization.
-- PHPUnit Feature tests that render Inertia pages depend on built Vite assets (`public/build/manifest.json`, fonts CSS). Running `npm run build` concurrently with PHPUnit causes a false 500 (`ViteException: Unable to locate font CSS file`); a clean checkout without a build would fail the same way. `P0-022` must account for this when ordering `composer quality` / CI (build before tests, or make tests independent of built assets), and gates must not run build and tests in parallel.
+- RESOLVED (2026-09-29) — Local development database: the developer `.env` now points to the working MySQL database `landauto` (previously a non-existent `autoland`). See "Actual local development environment" above.
+- Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`. After P0-022 `composer ci:check` is a deprecated alias of `composer quality`, so the workflow still resolves; it now also runs Larastan, Pint and a second production build (`composer setup` already builds). P0-025 should call canonical commands directly (`composer quality`), drop the `ci:check` alias and the duplicate build, and add `npm run test:e2e` (CI must install Chromium via `npx playwright install --with-deps chromium`; it does not depend on a developer server).
+- Commits: baseline `fdcf597` and P0-021C `a96f6ee` are pushed to `origin/main`. P0-022, foundation cleanup, P0-023, the development-environment record and P0-024 changes are not committed yet; commits/pushes require explicit authorization.
+
+Resolved:
+
+- RESOLVED (P0-022) — PHPUnit dependency on `public/build`: `tests/TestCase.php` calls Laravel's built-in `$this->withoutVite()` in `setUp()`, so `@vite` renders nothing in tests and no Vite manifest is needed; `@fonts` renders nothing when no build exists. Verified: `public/build` absent → `composer test` PASS (45 tests); then `npm run build` PASS separately. Tests that need real Vite output can opt in with `$this->withVite()`. Residual: `withoutVite()` does not stub `@fonts`, so running `npm run build` concurrently with PHPUnit (half-written `public/build`) is still unsupported — gates run sequentially.
+- RESOLVED (P0-022) — Composer package name changed from `laravel/react-starter-kit` to `mddevops/landauto` (description: Landflow). Product name remains Landflow.
+- RESOLVED (P0-022) — `laravel/chisel` moved from `require` to `require-dev`: it is the Laravel installer's scaffolding toolkit (removes unwanted starter-kit code at project creation), has no service provider and no references in application code. Version unchanged (v0.1.1); lock diff limited to its section move and `content-hash` (which was already stale from the installer).
 
 ---
 
@@ -1508,12 +1596,13 @@ Cursor agents:                PRESENT
 Application foundation:       INSTALLED (P0-021A)
 Git repository:               INITIALIZED (P0-021B, mddevops/landauto, main)
 Russian foundation UI:        DONE (P0-021C, APP_LOCALE=ru)
-Quality command aliases:      NOT_STARTED (P0-022)
-Playwright/browser QA:        NOT_AVAILABLE_YET
+Quality command aliases:      CONFIGURED (P0-022, composer quality)
+Playwright:                   AVAILABLE (P0-023, Chromium, npm run test:e2e)
+Browser QA baseline:          DONE (P0-024, desktop + tablet/mobile smoke)
 CI:                           NOT_STARTED (starter-kit workflow present, not standardized)
 
 Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 0 — IN_PROGRESS.  
-Next approved task: P0-022 — Standardize Quality Commands.**
+Next approved task: P0-025 — Create CI Pipeline.**
