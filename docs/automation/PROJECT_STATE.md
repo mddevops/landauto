@@ -60,13 +60,14 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 0 — Foundation / Automation** (status: §54)
+**Phase 1 — Core Platform** (status: §54)
+
+Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Validation` DONE (phase report in BACKLOG P0-027 `### Result`).
 
 Current focus:
 
-- documentation, rules, agents, application foundation, quality commands, Playwright, browser QA baseline, CI and the autonomous workflow are in place (P0-001 … P0-026, see BACKLOG);
-- remaining: `P0-027 — Phase 0 Validation`, the Phase 0 gate;
-- Phase 1 begins only after P0-027 is DONE.
+- next ready task: `P1-001 — Audit Authentication Baseline` (§42);
+- Phase 1 stops at `X-007` (before P1-003) until the owner accepts the primary identifier ADR (D-085, §46).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -91,7 +92,7 @@ Cursor agents:              PRESENT
 
 The application foundation was created by `P0-021A — Bootstrap Landflow Application` (status: DONE).
 
-Verified actual state after P0-021A:
+Verified actual state after P0-021A (historical snapshot; Playwright was added later by P0-023):
 
 ```text
 Laravel application:        INSTALLED (official laravel/react-starter-kit)
@@ -99,8 +100,10 @@ React/Inertia application:  INSTALLED
 composer.json:              PRESENT
 package.json:               PRESENT
 Git repository (.git):      INITIALIZED (P0-021B, branch main, origin mddevops/landauto)
-Playwright:                 NOT_AVAILABLE_YET
+Playwright:                 NOT_AVAILABLE_YET (at that time)
 ```
+
+Current tooling state (Playwright, quality commands, CI): §40 and §70.
 
 Installed stack (verified from `composer show` / `npm ls`):
 
@@ -180,7 +183,7 @@ Approved direction:
 
 `User` should implement `MustVerifyEmail` because email verification feature is enabled.
 
-This is an approved future implementation decision, not yet a statement that implementation has been completed.
+Current state (verified in P0-027): `App\Models\User` already implements `MustVerifyEmail` (starter-kit baseline) and the dashboard route uses the `verified` middleware. P1-002 covers consistent enforcement across protected pages and regression tests.
 
 ---
 
@@ -240,12 +243,13 @@ Current testing stack:
 - PHPUnit 12.5.36
 - SQLite in-memory tests
 - Mockery available
+- Playwright 1.63.0 (Chromium), `npm run test:e2e`, separate SQLite database `database/e2e.sqlite` (P0-023/P0-024)
 
 Approved decisions:
 
 - PHPUnit remains the main PHP testing framework.
 - Do not introduce Pest merely for preference.
-- Browser automation should later use Playwright.
+- Browser automation uses Playwright.
 - Laravel Dusk is not currently planned.
 
 ---
@@ -895,6 +899,22 @@ Completed:
 
 - CI pipeline (P0-025): configured and verified on GitHub Actions.
 - Autonomous task workflow (P0-026): `docs/automation/AUTONOMOUS_WORKFLOW.md` + `.cursor/agents/orchestrator.md`.
+- Phase 0 validation (P0-027): Phase 0 gate passed.
+
+Phase 0 validation (P0-027):
+
+```text
+Phase 0:                          COMPLETED
+Foundation:                       VALIDATED
+Architecture validation:          PASS
+Security validation:              PASS
+QA validation:                    PASS
+Autonomous workflow validation:   PASS (scenarios A–E; first real run of the protocol)
+Canonical quality:                PASS (composer quality)
+Browser QA:                       PASS (npm run test:e2e)
+GitHub CI:                        PASS (run 36583494996, commit 0b69c6d)
+CI runner:                        ubuntu-24.04
+```
 
 Autonomous workflow (P0-026):
 
@@ -913,11 +933,11 @@ Custom Cursor commands/workflows: not used (owner starts the workflow with the p
 ```
 
 - Dry run on the actual repository state (independent read-only subagent): current phase Phase 0; next ready task after P0-026 is `P0-027 — Phase 0 Validation` (primary qa; reviews architect, security, qa, final reviewer, plus ui-reviewer because Phase 0 changed user-visible UI in P0-021C/P0-024; gates `composer quality` → `npm run test:e2e` + repository/documentation consistency check); Phase 1 task selected: NO.
-- Look-ahead recorded by the dry run: D-085 "Primary Identifier Strategy" (`ADR_REQUIRED`, no resolving BACKLOG task yet) will be flagged as a potential blocker for `P1-003 — Create Workspace Schema`.
+- Look-ahead recorded by the dry run: D-085 "Primary Identifier Strategy" (`ADR_REQUIRED`) will be flagged as a potential blocker for `P1-003 — Create Workspace Schema`. P0-027 added the resolving task `X-007` (trigger before P1-003); see §46.
 
 Still needed:
 
-- Phase 0 validation (P0-027)
+- none for Phase 0; follow-ups `X-011` (before P1-006) and `X-012` (before P1-014) are tracked in BACKLOG.
 
 ---
 
@@ -996,6 +1016,8 @@ CI failure artifacts:           test-results/, playwright-report/, storage/logs/
 Production deployment:          NOT_CONFIGURED
 ```
 
+- Latest verified run before the Phase 0 gate: [36583494996](https://github.com/mddevops/landauto/actions/runs/36583494996) on `0b69c6d` (P0-026) — success on `ubuntu-24.04`: `composer quality` then `npm run test:e2e` (47 PHPUnit tests, 23 E2E tests); confirmed from the run log in P0-027.
+- External build dependency: `vite.config.ts` loads the Instrument Sans font through `laravel-vite-plugin` `bunny(...)`, which downloads it from `https://fonts.bunny.net` at build time (cached locally in `node_modules/.cache/laravel-vite-plugin/fonts`). CI starts with an empty cache, so `npm run build` / `composer quality` in CI needs that CDN reachable. At runtime the fonts are served from `public/build`.
 - GitHub verification (P0-025): first real run [36577884025](https://github.com/mddevops/landauto/actions/runs/36577884025) succeeded — PHPUnit 47 passed, Larastan no errors, Pint PASS, Wayfinder generated on the clean checkout, `vp check` (incl. TypeScript) PASS, one production build, Chromium installed with system dependencies, E2E 23 passed on `php artisan serve` + `database/e2e.sqlite`.
 
 Notes:
@@ -1032,9 +1054,9 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P0-026 — Create Autonomous Task Runner Workflow` (DONE).
+Last completed task: `P0-027 — Phase 0 Validation` (DONE; Phase 0 gate).
 
-**Next task: `P0-027 — Phase 0 Validation`** (Phase 0 gate; run in SINGLE TASK MODE per `AUTONOMOUS_WORKFLOW.md` §18).
+**Next ready task: `P1-001 — Audit Authentication Baseline`** (Phase 1; determined by P0-027, not started).
 
 No implementation task should be inferred from this alone.
 
@@ -1157,7 +1179,15 @@ Not chosen.
 
 Not chosen.
 
-These are not blockers for current documentation/automation work.
+## Primary identifier strategy (D-085)
+
+`ADR_REQUIRED`. Resolved through `X-007` (trigger `before P1-003`). The repository has only framework-default keys, so no project standard exists yet. First affected task: `P1-003 — Create Workspace Schema`; through it every later Phase 1 schema task. P1-001 and P1-002 create no domain tables and are not affected.
+
+## Money storage (D-084), characteristic values (D-086), media ownership / asset versioning (D-087, D-075)
+
+`ADR_REQUIRED` / `OPEN`. Resolved through `X-008` (before P3-009), `X-009` (before P3-001), `X-010` (before P2-013). Not affecting Phase 1 as long as P1-009 stores no money columns.
+
+These decisions do not block Phase 0 or the start of Phase 1; D-085 stops Phase 1 at P1-003 until its ADR is accepted by the owner. Full register: `DECISIONS.md` (audit in P0-027 `### Result`).
 
 ---
 
@@ -1310,8 +1340,8 @@ Do not use ambiguous status such as:
 Current:
 
 ```text
-Phase 0 — Foundation / Architecture / Automation: IN_PROGRESS
-Phase 1 — Core Platform: NOT_STARTED
+Phase 0 — Foundation / Architecture / Automation: COMPLETED
+Phase 1 — Core Platform: IN_PROGRESS
 Phase 2 — Designer Foundation: NOT_STARTED
 Phase 3 — Automotive Foundation: NOT_STARTED
 Phase 4 — Forms & Interactive Components: NOT_STARTED
@@ -1582,7 +1612,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P0-027 — Phase 0 Validation`** (see §42). The Master Plan, Backlog, decision log, rules, agents, testing/browser QA, CI and autonomous workflow exist. Phase 1 implementation begins only after P0-027 is DONE.
+**`P1-001 — Audit Authentication Baseline`** (see §42). Phase 0 is COMPLETED (P0-027 DONE). Phase 1 runs through the autonomous workflow; it stops at `X-007` before P1-003 for owner acceptance of the identifier ADR.
 
 ---
 
@@ -1631,11 +1661,12 @@ Quality command aliases:      CONFIGURED (P0-022, composer quality)
 Playwright:                   AVAILABLE (P0-023, Chromium, npm run test:e2e)
 Browser QA baseline:          DONE (P0-024, desktop + tablet/mobile smoke)
 CI:                           CONFIGURED, GitHub verification PASS (P0-025, Landflow CI, Ubuntu)
-Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orchestrator agent)
+Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orchestrator agent), validated (P0-027)
+Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
 Core Landflow implementation: NOT_STARTED
 ```
 
-**Current phase: Phase 0 — IN_PROGRESS (not complete; gate P0-027).  
-Next approved task: P0-027 — Phase 0 Validation.**
+**Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
+Next ready task: P1-001 — Audit Authentication Baseline (not started).**

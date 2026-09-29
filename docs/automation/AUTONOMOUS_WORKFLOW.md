@@ -42,7 +42,7 @@ Custom Cursor commands/workflow files (`.cursor/commands/`, `.cursor/workflows/`
 The Orchestrator does not implement Laravel, React, QA or security work itself in place of the specialists. Its own edits are limited to coordination content:
 
 - task status and `### Result` in BACKLOG;
-- new BACKLOG tasks required by the protocol (a missing ADR task, a follow-up discovered during work), following BACKLOG §4 (cross-cutting ADR tasks use the existing `X-` convention of the "Cross-Cutting Backlog Tasks" section) — always created as `NOT_STARTED`, then executed through the normal cycle;
+- new BACKLOG tasks required by the protocol (a missing ADR task, a follow-up discovered during work), following BACKLOG §4 (cross-cutting tasks — ADR tasks, and follow-ups that must precede a specific task — use the existing `X-` convention of the "Cross-Cutting Backlog Tasks" section with a `before <ID>` trigger instead of a phase ID and dependencies) — always created as `NOT_STARTED`, then executed through the normal cycle;
 - facts in PROJECT_STATE;
 - DECISIONS entries in the cases of §17;
 - automation/process documentation (`docs/automation/*` workflow content) when that is the task itself (§10);
@@ -61,6 +61,7 @@ The Orchestrator does not implement Laravel, React, QA or security work itself i
 | [QUALITY_COMMANDS.md](QUALITY_COMMANDS.md) | Canonical check commands. |
 | [MASTER_PLAN.md](MASTER_PLAN.md) | Phase order and phase gates. |
 | `docs/product/*`, `docs/architecture/*` | Product and architecture invariants. |
+| `docs/architecture/decisions/ADR-NNN-*.md` | Architecture Decision Records; only `Status: Accepted` ADRs are binding (§14 "ADR tasks"). |
 | `.cursor/rules/*.mdc` | Operating rules (always applied). |
 | Repository | What actually exists in code, tests, config and Git. |
 
@@ -109,7 +110,8 @@ The Orchestrator changes only the status of the task it is executing. It never c
 - **Cross-cutting tasks** (`X-001` ...) sit outside the phase sections and have a `**Trigger:**` instead of dependencies:
   - `before <task ID>` or a bare task ID (`P7-008`) makes the X-task an implicit dependency of that task: the target task is not ready until the X-task is `DONE`;
   - when the target task would otherwise be the next selection, the X-task is selected instead and is treated as a task of the current phase (§7);
-  - a non-ID trigger (a measured need, "before production-scale media deployment") is checked whenever a candidate task would act on that condition; if it applies, the X-task is selected first.
+  - a non-ID trigger (a measured need, "before production-scale media deployment") is checked whenever a candidate task would act on that condition; if it applies, the X-task is selected first;
+  - `**Resolves:** D-xxx[, D-yyy]` names the decisions an ADR X-task resolves (§7, §14 "ADR tasks").
 
 ---
 
@@ -143,7 +145,7 @@ A task is **ready** when all hold:
 - an `ADR_REQUIRED` entry, or an `OPEN` entry with a "Blocking" section, whose text plausibly covers the task blocks it;
 - an entry without a "Blocking" section (or marked "Not Blocking") does not block, unless doing the task would implicitly make that decision;
 - when unsure, ask the Architect for an ownership/decision assessment before starting;
-- the selected task then becomes `BLOCKED_DECISION` with the §14 record; if no BACKLOG task resolves the decision, first add one (cross-cutting `X-` ADR task, `NOT_STARTED`, trigger `before <task ID>`) and reference it in the record. Then stop. The Architect may draft the ADR; accepting it is an owner decision.
+- the selected task then becomes `BLOCKED_DECISION` with the §14 record; if no BACKLOG task resolves the decision, first add one (cross-cutting `X-` ADR task, `NOT_STARTED`, trigger `before <task ID>`) and reference it in the record. Then stop. The ADR task then follows the lifecycle in §14 "ADR tasks": the Architect drafts, the owner accepts.
 
 Selection order:
 
@@ -224,13 +226,14 @@ If any step fails (dependency not `DONE`, blocking decision, divergence), do not
 | Full-stack | backend, then frontend (sequential) | per triggers |
 | Architecture/product documentation, Cursor rules | architect | reviewer |
 | Automation/process documentation (`docs/automation/*` workflow content, agent prompts) | orchestrator (coordination content, §2) | reviewer; architect if architecture or decisions are touched |
-| Phase Review | qa (validation executor) | architect, security, reviewer; ui-reviewer if any task of the phase changed user-visible UI |
+| Phase Review | qa (validation executor) | architect, security, reviewer; ui-reviewer if any task of the phase changed user-visible UI. The qa validation report is the QA review; independence comes from architect, security, ui-reviewer and the final Reviewer. |
 | Final acceptance of every task | — | reviewer |
 
 Rules:
 
 - One primary owner per task. For full-stack work the backend delivers first, then an explicit handoff (the backend handoff report from `backend.md`) goes to the frontend.
-- Two agents never edit the same high-conflict files concurrently: `routes/*`, `bootstrap/app.php`, `composer.json`/`composer.lock`, `package.json`/`package-lock.json`, `config/*`, shared layouts and `resources/js/types`, migration ordering, `BACKLOG.md`, `PROJECT_STATE.md`, `DECISIONS.md`. Implementation is sequential. Only read-only reviews may run in parallel.
+- Two agents never edit the same high-conflict files concurrently: `routes/*`, `bootstrap/app.php`, `composer.json`/`composer.lock`, `package.json`/`package-lock.json`, `config/*`, shared layouts and `resources/js/types`, migration ordering, `BACKLOG.md`, `PROJECT_STATE.md`, `DECISIONS.md`. Implementation is sequential.
+- Reviews that only inspect files (documents, source, screenshots already captured) may run in parallel with each other. Reviews that execute commands — qa or ui-reviewer running Playwright or a real browser, any reviewer re-running a gate, `php artisan serve`, builds, migrations — run one at a time and never alongside a gate or another command-running review: E2E uses a fixed port, recreates its SQLite database and rebuilds assets. When delegating a file-inspection review, give the reviewer the gate results and screenshot paths and tell it not to run commands.
 - Architect review is required when a task adds a domain boundary, changes ownership or table scope, introduces infrastructure, needs an ADR, or changes the publishing runtime or Marketplace execution model (rule `90-agent-workflow.mdc` §28).
 
 ## Delegation mechanics
@@ -264,6 +267,8 @@ The triggers above are the minimum that can never be skipped. On top of them, th
 - architecture-sensitive task: architect → specialist → security/qa → reviewer.
 
 The Orchestrator may omit a default (non-trigger) QA or UI review only when the change has no behavior or visible UI impact (for example tooling or documentation), and must state the reason in the task report.
+
+When §10 requires the architect **before** implementation (new ownership, schema, domain boundary), that pre-implementation `architect.md` §70 output counts as the architect review. A second architect review after the gates is required only if the implementation departs from it (different ownership, tables, relationships or boundaries than assessed).
 
 Order:
 
@@ -376,6 +381,18 @@ Safe work completed:
 
 Never pick an irreversible option on the owner's behalf. The Architect may draft an ADR with options; accepting it is an owner decision. After the decision is resolved, the task is resumed (§7).
 
+## ADR tasks
+
+A cross-cutting `X-` ADR task resolves one or more `ADR_REQUIRED` / `OPEN` decisions. Lifecycle:
+
+1. **Ready.** The X-task is ready when its trigger is reached (§5): its target task would be the next selection, or its target task — or any task — is `BLOCKED_DECISION` on a decision listed in the X-task's `**Resolves:**` line. It is then current-phase work, selected before the blocked task.
+2. **Draft.** Primary: architect. The Architect writes `docs/architecture/decisions/ADR-NNN-<slug>.md` (sequential number, `architect.md` §73 format) with `Status: Proposed`, the options, tradeoffs and an optional recommendation, and adds an ADR reference to the DECISIONS entry without changing its status. The final Reviewer checks the draft (completeness, options, consistency with architecture docs). Gates: docs-only (§12).
+3. **Await the owner.** After Reviewer `PASS` the X-task becomes `BLOCKED_DECISION` with `Decision required: owner acceptance of ADR-NNN` and the Orchestrator stops. The target task stays not ready.
+4. **Owner acceptance** is an explicit owner message naming the ADR and the chosen option, for example «Принимаю ADR-001, вариант B». Only then does the Orchestrator record, in one step: ADR `Status: Accepted` with the date and chosen option; the DECISIONS entry → `APPROVED` with a one-line decision summary and the ADR link; the X-task → `DONE` with a `### Result`. The target task becomes ready again (a `BLOCKED_DECISION` target is resumed per §7). An acceptance message alone ends the run after recording; if the same message also contains an owner command (§21), continue per that command.
+5. If the owner rejects the ADR or asks for changes, the X-task goes back to the Architect (step 2); it stays `BLOCKED_DECISION` until then.
+
+The Orchestrator never accepts an ADR, never marks a decision `APPROVED` from a draft, and never infers acceptance from silence or from a commit authorization.
+
 ## BLOCKED_EXTERNAL
 
 Use for real DNS, production secrets, provider accounts, external approvals, manual external configuration. Complete all safe local work first (mocked tests, local implementation), then block with the exact external action needed.
@@ -402,6 +419,7 @@ The Orchestrator stops and asks the owner before:
 - irreversible production migrations;
 - deleting production or customer data;
 - a major architecture decision without an ADR;
+- accepting an ADR or marking a decision `APPROVED` (only on an explicit owner message, §14 "ADR tasks");
 - an unresolved product decision;
 - external actions with real accounts.
 
@@ -451,7 +469,11 @@ For `PARTIAL` / `BLOCKED_*`, record the reason and the remaining work in the tas
 - A phase ends only through its Phase Review task. Phase 0 ends only through `P0-027 — Phase 0 Validation`.
 - No Phase 1 task may start until `P0-027` is `DONE` with a `PASS` review. The same holds for every later phase and its Phase Review task.
 - The Phase Review task is executed only in SINGLE TASK MODE on an explicit owner request. CONTINUOUS MODE stops before it.
-- After a Phase Review task is `DONE`, the Orchestrator performs the phase transition of §6 (finished phase `COMPLETED`, next phase `IN_PROGRESS` in PROJECT_STATE §54, gate result recorded) and stops. It does not start the next phase's first task in the same run.
+- After a Phase Review task is `DONE`, the Orchestrator performs the phase transition of §6 and stops. It does not start the next phase's first task in the same run. The transition records:
+  - the MASTER_PLAN §139 phase report (implemented capabilities, tests, remaining known limitations, ADRs, metrics if available, next phase readiness) in the Phase Review task's `### Result`;
+  - PROJECT_STATE §54: finished phase `COMPLETED`, next phase `IN_PROGRESS`;
+  - PROJECT_STATE §3 (current phase), §39 (implemented / still needed), §42 (last completed / next approved task), §68 (next step), §70 (final state summary);
+  - BACKLOG §3 "Current Backlog Position" and §12 "Current Immediate Sequence": the new phase and its first ready task (determined per §7, not started).
 - A phase is marked `COMPLETED` only when the conditions of MASTER_PLAN §3 hold and the Phase Review reviews passed. If the Phase Review ends `PARTIAL` or `BLOCKED_*`, the phase stays `IN_PROGRESS`.
 
 ---

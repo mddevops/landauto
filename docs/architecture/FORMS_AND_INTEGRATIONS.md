@@ -427,6 +427,8 @@ Landflow should provide a constrained safe configuration rather than an unrestri
 
 The public visitor must never choose the destination URL.
 
+All outbound HTTP to customer-configured destinations, including `Проверить подключение`, must follow the mandatory SSRF policy in `SECURITY.md` §16.
+
 ---
 
 ## 21. CRM Adapter

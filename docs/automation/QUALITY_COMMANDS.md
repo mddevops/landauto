@@ -283,6 +283,8 @@ Expected behavior:
 
 Development server success does not replace production build.
 
+Known external build dependency: the Instrument Sans font is loaded through `laravel-vite-plugin` `bunny(...)` (`vite.config.ts`) and downloaded from `https://fonts.bunny.net` at build time, then cached in `node_modules/.cache/laravel-vite-plugin/fonts`. A build with an empty cache (fresh clone, CI) needs that CDN to be reachable; if it is not, `npm run build` fails. The built site serves the fonts from `public/build` without runtime CDN requests.
+
 ---
 
 # 13. Browser / E2E Tests

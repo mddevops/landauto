@@ -125,7 +125,7 @@ Workspace additionally owns reusable business resources:
 - logos;
 - banners;
 - dealership media;
-- reusable forms;
+- potentially reusable forms later (open decision D-082; current architecture: Forms are Site-owned, see `FORMS_AND_INTEGRATIONS.md` §3);
 - potentially reusable pricing defaults later.
 
 ## Priority

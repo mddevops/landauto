@@ -367,7 +367,7 @@ Initial known approved decisions include:
 
 - npm only;
 - PHPUnit;
-- Playwright later;
+- Playwright (established in P0-023);
 - no Pest;
 - no Dusk;
 - Workspace is tenant;

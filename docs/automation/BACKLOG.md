@@ -58,15 +58,17 @@ Use `DEFINITION_OF_DONE.md`.
 
 # 3. Current Backlog Position
 
+Phase 0 — Foundation / Automation: COMPLETED (gate `P0-027` DONE).
+
 Current phase:
 
-`P0 — Foundation / Automation`
+`P1 — Core Platform`
 
 Current next task:
 
-`P0-027 — Phase 0 Validation` (Phase 0 gate; run in SINGLE TASK MODE per `AUTONOMOUS_WORKFLOW.md` §18)
+`P1-001 — Audit Authentication Baseline`
 
-Phase 1 implementation must not start before required Phase 0 tasks are complete.
+Upcoming stops in Phase 1: `X-007` (before P1-003) requires owner acceptance of the identifier ADR (D-085); `X-011` fires before P1-006, `X-012` before P1-014.
 
 ---
 
@@ -959,7 +961,7 @@ Workflow can:
 
 ## P0-027 — Phase 0 Validation
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-004 through P0-026
 
 ### Objective
@@ -980,6 +982,37 @@ Verify Foundation is ready for product implementation.
 ### Required Checks
 
 All Phase 0 quality commands.
+
+### Result
+
+Run through `AUTONOMOUS_WORKFLOW.md` in SINGLE TASK MODE (first real run of the protocol). Validation only: no feature code, no migrations, no package changes; documentation consistency fixes only.
+
+Phase 0 report (MASTER_PLAN §139):
+
+- Implemented capabilities: product / architecture / automation documentation; Cursor rules 00–90 and 8 agent files; Landflow application on Laravel 13 + Fortify (2FA, passkeys) + Inertia 3 + React 19 + TypeScript strict + Tailwind 4 + shadcn; Russian foundation UI (`lang="ru"`, Russian validation); canonical quality commands (`composer quality`); Playwright E2E with isolated SQLite and viewports desktop 1440×1000 / tablet 1024×1366 / mobile 390×844; GitHub Actions CI on ubuntu-24.04; autonomous workflow protocol and Orchestrator.
+- Tests / metrics (final state of this run, not requirements): PHPUnit 47 tests / 152 assertions; PHPStan level 7 0 errors; Pint pass; vite-plus format 82 files and check 76 files (lint + TypeScript) clean; production build OK; `npm run test:e2e` 23 passed (setup, 14 desktop, 4 tablet, 4 mobile). CI run 36583494996 (commit 0b69c6d) PASS on ubuntu-24.04.
+- Known limitations: foundation hygiene follow-ups `X-011` (shared Inertia User allowlist, `.gitignore` `.env.*`, seeder environment guard, Playwright `requestfailed` collector, SSR leftovers, Pest allow-plugin) and UI follow-ups `X-012` (dashboard starter placeholders, login tab order, password toggle keyboard access, minor a11y/copy); production build downloads fonts from fonts.bunny.net (`QUALITY_COMMANDS.md` §12).
+- ADRs: none accepted yet. Pending ADR tasks: `X-007` (D-085 identifiers, before P1-003), `X-008` (D-084 money, before P3-009), `X-009` (D-086 characteristics, before P3-001), `X-010` (D-087 / D-075 media, before P2-013). ADR location `docs/architecture/decisions/` (ARCHITECTURE.md §96); lifecycle `AUTONOMOUS_WORKFLOW.md` §14 "ADR tasks".
+- Next phase readiness: Phase 1 may start with P1-001. Deterministic order: P1-001 → P1-002 → X-007 (stops for owner acceptance of the identifier ADR) → P1-003 → P1-004 → P1-005 → X-011 → P1-006 … P1-013 → X-012 → P1-014 → P1-015 → P1-016 → P1-017.
+
+Decisions audit (DECISIONS.md):
+
+- Resolved / approved or provisional-in-force: D-001–D-014, D-017–D-068, D-070, D-092; provisional D-015, D-016, D-069, D-071.
+- Open, not blocking Phase 1: D-072–D-084 (D-084 only while P1-009 adds no money columns), D-086–D-091 (D-088 only while P1-008 stays with Workspace system roles), new D-093 (Developer Profile ownership, blocks P9-001), new D-094 (personal data retention, ADR_REQUIRED, blocks production launch and Submission export).
+- Potentially blocking Phase 1: only D-085 (ADR_REQUIRED), first affected task P1-003; not decided in this task; resolved through `X-007`.
+
+Documentation fixes: stale MustVerifyEmail / Playwright / "future automation" statements (PROJECT_STATE §4, §5, §8; DoD §93–§94; MASTER_PLAN; ARCHITECTURE.md §3, §93; rule 60); PERMISSIONS.md Russian error examples; WEBFLOW_TO_LANDFLOW reusable forms → D-082; SECURITY.md §16 mandatory SSRF policy and §12 Fortify QR SVG safe source; FORMS_AND_INTEGRATIONS SSRF reference; DECISIONS filing (D-015/D-016 provisional, D-070 approved, D-072 open), "Resolved By" lines, stale §10 sequence; QUALITY_COMMANDS §12 font CDN note. Workflow protocol: ADR task lifecycle, `**Resolves:**` field, X- follow-up convention, sequential command-running reviews, Phase Review QA independence, phase transition records, owner-only ADR acceptance. Backlog: P1-003 decision gate and notes; P1-008 / P1-009 / P1-010 / P1-012 notes; X-007–X-012.
+
+Reviews (each by a separate subagent after reading its role file):
+
+- Architect: PASS (ADR required for Phase 0: NO).
+- Security: PASS (non-blocking findings → X-011, D-094, SECURITY.md fixes).
+- QA (primary validation report): PASS (non-blocking findings → X-011, doc fixes).
+- UI reviewer: PASS_WITH_MINOR_NOTES (15 baseline screenshots; notes → X-012).
+- Orchestrator workflow validation: REJECTED → REJECTED → PASS (scenarios A–E; X-009 deadlock fixed).
+- Final Reviewer: PASS.
+
+Checks on the final state (sequential): `composer quality` PASS; `npm run test:e2e` PASS; link/reference check PASS (remaining unresolved paths are intentionally absent or historical); git safety PASS (only tracked docs / rules / agents modified; `.env`, `.env.e2e`, `database/e2e.sqlite`, build and report artifacts, Wayfinder output ignored and untracked; no secrets in diff). Commit/push: not performed (requires owner authorization).
 
 ---
 
@@ -1045,6 +1078,15 @@ Implement `MustVerifyEmail` behavior consistently.
 - migration clean;
 - relationships defined;
 - indexes/constraints correct.
+
+### Decision gate
+
+Requires D-085 (primary identifier strategy) through `X-007` (trigger `before P1-003`). Not ready until X-007 is `DONE` (ADR accepted by the owner).
+
+### Notes from P0-027 validation
+
+- Owner source of truth: DATABASE.md has `owner_user_id` next to membership roles, PERMISSIONS.md allows "at least one Owner". Define the single authoritative source and the consistency rule.
+- Account deletion: `Settings/ProfileController::destroy` calls `$user->delete()`. Define how User deletion affects Workspaces/memberships (TENANCY.md §41 "User Account Deletion"), guard the sole-Owner case, test it (here or in P1-005).
 
 ### References
 
@@ -1125,6 +1167,11 @@ Implement initial system roles/permission catalog.
 - Designer
 - Content Editor
 
+### Notes from P0-027 validation
+
+- Permission key names conflict across docs (`edit_integrations` vs `manage_integrations`, `delete_sites` vs `delete_site`): record the canonical names in DECISIONS and align the docs as an acceptance criterion.
+- Workspace system roles only; Site-specific overrides wait for D-088.
+
 ---
 
 ## P1-009 — Entitlement Foundation
@@ -1139,7 +1186,7 @@ Implement initial system roles/permission catalog.
 - `max_sites`;
 - future feature keys.
 
-No real billing provider.
+No real billing provider. No plan price or other money columns (D-084 / X-008 unresolved).
 
 ---
 
@@ -1154,6 +1201,11 @@ No real billing provider.
 - Site folders if included now;
 - status;
 - Workspace ownership.
+
+### Notes from P0-027 validation
+
+- No publication pointer columns (`current_draft_version_id`, `current_published_version_id`) before the snapshot ADR (X-002).
+- A Site folder must belong to the same Workspace as the Site (TENANCY.md).
 
 ---
 
@@ -1180,6 +1232,10 @@ No real billing provider.
 - Template version baseline;
 - Blank Template;
 - one starter Template if practical.
+
+### Note from P0-027 validation
+
+Pages and Block Instances arrive in P2-001 (Phase 2). Before implementation, the Architect defines what a Template instantiates in Phase 1 (P1-012/P1-013 "Site-owned initial structure") so that P1-013 does not create Page/Block schema ahead of P2-001.
 
 ---
 
@@ -2477,6 +2533,109 @@ Decision must cover:
 
 ---
 
+## X-007 — ADR: Primary Identifier Strategy
+
+**Status:** NOT_STARTED  
+**Trigger:** before P1-003  
+**Resolves:** D-085
+
+The repository has only framework-default keys (`id()` on users, passkeys, jobs); no project identifier standard exists (DATABASE.md "to be finalized"). P1-003 is the first core domain migration.
+
+Decision must cover:
+
+- primary key type for domain tables (bigint / UUID / ULID / mixed internal + public IDs);
+- whether framework tables (users, sessions, passkeys, jobs) keep their keys, and the `users.id` foreign-key convention;
+- public identifiers: which entities need one (Site, Form, Site Vehicle / Offer references, Publication) and their format;
+- route-binding keys for the authenticated app vs public runtime;
+- SQLite test and production engine compatibility;
+- Laravel conventions to use (`foreignId` / `foreignUlid`, `HasUuids` / `HasUlids`).
+
+Lifecycle: `AUTONOMOUS_WORKFLOW.md` §14 "ADR tasks" (Architect drafts, owner accepts).
+
+---
+
+## X-008 — ADR: Money Storage Representation
+
+**Status:** NOT_STARTED  
+**Trigger:** before P3-009  
+**Resolves:** D-084
+
+Decision must cover: integer minor units vs fixed decimal, currency representation, rounding, Block price field presentation. Until accepted, no money columns anywhere (including P1-009 Plans).
+
+---
+
+## X-009 — ADR: Characteristic Value Schema
+
+**Status:** NOT_STARTED  
+**Trigger:** before P3-001  
+**Resolves:** D-086
+
+Decision must cover: storage of characteristic values across Generation / Modification / Trim and override/inheritance resolution.
+
+---
+
+## X-010 — ADR: Media Ownership and Asset Versioning
+
+**Status:** NOT_STARTED  
+**Trigger:** before P2-013  
+**Resolves:** D-087, D-075
+
+Decision must cover: Site asset vs Workspace asset ownership/reference model, immutable/versioned public asset strategy compatible with Published Version stability.
+
+---
+
+## X-011 — Foundation Hygiene Follow-ups (from P0-027)
+
+**Status:** NOT_STARTED  
+**Trigger:** before P1-006
+
+Non-blocking findings of the Phase 0 validation reviews. P1-006 is the first task that adds Workspace context to shared Inertia props, so the shared-props allowlist must exist before it. Primary: backend (frontend for the Playwright fixture item); reviews: security, qa, reviewer.
+
+Scope:
+
+- `HandleInertiaRequests` shares the full `User` model: replace with an explicit safe field allowlist matching `resources/js/types/auth.ts`; Feature test that password / 2FA / remember-token columns never appear in shared props (security review);
+- `.gitignore`: ignore `.env` and `.env.*` with exceptions `!.env.example`, `!.env.e2e.example` (`.env.local`, `.env.testing`, `.env.staging` are currently not ignored) (security review);
+- `DatabaseSeeder` creates `test@example.com` / `password` without an environment guard: refuse outside `local`/`testing`, with a test (security review);
+- Playwright fixtures detect 4xx/5xx responses but not network-level failures: add a `requestfailed` collector with a narrow documented exception for aborted superseded navigations (rule `80-browser-qa.mdc` §21) (QA review);
+- starter-kit SSR leftovers: `build:ssr` script without `resources/js/ssr.tsx`, `config/inertia.php` SSR `enabled => true` — remove / disable per D-069 (QA review);
+- `composer.json` `allow-plugins` still lists `pestphp/pest-plugin` although Pest is forbidden (D-011) — remove (QA review).
+
+Acceptance Criteria:
+
+- each item fixed or explicitly re-classified with reason;
+- tests added where listed;
+- `composer quality` and `npm run test:e2e` PASS;
+- security review (shared props, seeder, gitignore).
+
+---
+
+## X-012 — Foundation UI Follow-ups (from P0-027)
+
+**Status:** NOT_STARTED  
+**Trigger:** before P1-014
+
+Non-blocking findings of the Phase 0 UI review (screenshots of the P0-024 baseline). P1-014 is the first task that reworks the Dashboard, so the starter scaffolding and the foundation accessibility gaps are fixed before it. Primary: frontend; reviews: ui-reviewer, qa (keyboard / tab order), reviewer.
+
+Scope:
+
+- `resources/js/pages/dashboard.tsx` still renders starter `PlaceholderPattern` boxes without a heading: replace with a `Heading` `Панель управления` and one short neutral Russian empty-state line (no feature promises);
+- `resources/js/pages/auth/login.tsx` positive `tabIndex` values (1–5, duplicate 5) break tab order (passkey button first on screen, last in tab order): remove them (rule `80-browser-qa.mdc` §51);
+- `resources/js/components/password-input.tsx` show/hide button has `tabIndex={-1}`: make it keyboard reachable;
+- `resources/js/layouts/auth/auth-simple-layout.tsx` home logo link announces `Вход в аккаунт`: give it an accurate accessible name;
+- login status message renders below the form with hardcoded `text-green-600`: move above the form, use theme token / `Alert`;
+- `resources/js/pages/settings/profile.tsx` breadcrumb `Настройки профиля` is inconsistent with sibling settings pages: use `Профиль`;
+- divider spacing in `resources/js/components/passkey-verify.tsx` (`my-6` stacked on layout gap): normalize;
+- `resources/js/layouts/settings/layout.tsx` active settings link indicated by color only: add `aria-current="page"`.
+
+Acceptance Criteria:
+
+- each item fixed or explicitly re-classified with reason;
+- all UI remains Russian;
+- `composer quality` and `npm run test:e2e` PASS (update baseline selectors/screenshots if affected);
+- ui-reviewer review of updated screenshots.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---
@@ -2490,6 +2649,8 @@ New task must:
 - avoid overlapping another task;
 - reference architecture;
 - have acceptance criteria.
+
+Exception: cross-cutting tasks (ADR tasks and follow-ups that must precede a specific task) use the `X-` prefix and a `**Trigger:** before <ID>` line instead of a phase ID and dependencies; ADR tasks also name the decisions they resolve in `**Resolves:**` (`AUTONOMOUS_WORKFLOW.md` §5, §14).
 
 Do not add vague tasks like:
 
@@ -2590,13 +2751,13 @@ P0-023  Playwright                                               DONE
 P0-024  Browser QA Baseline                                      DONE
 P0-025  CI                                                       DONE
 P0-026  Autonomous Workflow                                      DONE
-P0-027  Phase 0 Validation
+P0-027  Phase 0 Validation                                       DONE
 ```
 
-Only after `P0-027 = DONE`:
+Phase 0 is COMPLETED. Phase 1 — Core Platform begins with:
 
 ```text
-P1-001 — Core Platform implementation begins.
+P1-001 — Audit Authentication Baseline
 ```
 
 ---

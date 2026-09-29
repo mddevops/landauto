@@ -76,7 +76,7 @@ Frontend:
 Testing:
 
 - PHPUnit
-- browser/E2E testing will be added later with Playwright
+- Playwright browser/E2E testing (established in P0-023/P0-024, `npm run test:e2e`)
 
 Important:
 
@@ -1816,7 +1816,7 @@ Register
 → Preview
 → Publish
 
-Browser testing will be introduced later with Playwright.
+Browser testing uses Playwright (established in P0-023/P0-024, `npm run test:e2e`); these critical flows are added as the features exist.
 
 ---
 

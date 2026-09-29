@@ -219,6 +219,12 @@ Security requirements:
 - restrict executable script injection;
 - avoid rendering raw untrusted HTML.
 
+Every raw HTML render path (e.g. React `dangerouslySetInnerHTML`) requires a documented safe source (`.cursor/rules/70-security.mdc` §19–20).
+
+Current documented safe sources:
+
+- `resources/js/components/two-factor-setup-modal.tsx` — the two-factor QR-code SVG. It is generated server-side by Fortify from the signed-in user's own two-factor secret and returned by the Fortify QR-code endpoint; it contains no customer-entered content.
+
 ---
 
 # 13. RichText Sanitization
@@ -284,15 +290,20 @@ Do not allow arbitrary unrestricted server requests to:
 - private internal networks;
 - control-plane services.
 
-Implementation should validate/limit destination URLs.
+Implementation must validate/limit destination URLs.
 
-Potential protections:
+Mandatory protections (`.cursor/rules/70-security.mdc` §23–28, D-062):
 
-- block private IP ranges;
-- DNS resolution validation;
-- protocol allowlist;
-- outbound request policy;
-- provider allowlist for known adapters.
+- one centralized outbound HTTP policy for all customer-configured destinations; adapters must not implement their own URL checks;
+- protocol allowlist (`https`, `http` only where product permits);
+- block loopback, private (RFC 1918 and IPv6 unique-local), link-local and cloud metadata addresses, for both IPv4 and IPv6;
+- validate the resolved IP addresses, not only the hostname string;
+- follow redirects only deliberately, with a small redirect limit, and revalidate every redirect hop against the same policy;
+- connect and read timeouts on every request;
+- `Проверить подключение` (Test Connection) uses the same or a stricter policy than actual Delivery;
+- TLS certificate verification stays enabled.
+
+Provider allowlists for known adapters may add further restrictions.
 
 ---
 

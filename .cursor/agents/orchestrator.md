@@ -59,9 +59,10 @@ If unsure, use SINGLE TASK MODE.
 1. A current-phase task that is `IN_PROGRESS` or `PARTIAL` → resume it. One Orchestrator session per working copy: if another session may be working on it, ask the owner first.
 2. Otherwise the **first ready task of the current phase in BACKLOG order**. Ready = `NOT_STARTED` + all dependencies `DONE` + no blocking decision + current phase + previous gate satisfied.
 3. Dependency ranges (`A through B`) include every task between A and B in document order, letter-suffixed tasks included.
-4. Cross-cutting `X-` tasks: a trigger `before <ID>` / bare `<ID>` is an implicit dependency of that task. When the target would be selected next, select the X-task instead (it counts as current-phase).
+4. Cross-cutting `X-` tasks: a trigger `before <ID>` / bare `<ID>` is an implicit dependency of that task. When the target would be selected next, select the X-task instead (it counts as current-phase). An ADR X-task is also ready when any task is `BLOCKED_DECISION` on a decision listed in its `**Resolves:**` line (protocol §14 "ADR tasks").
 5. Blocking decisions: an `ADR_REQUIRED` entry, or an `OPEN` entry with a "Blocking" section, whose free text plausibly covers the task blocks it; judge conservatively, ask the Architect when unsure. Blocked → task `BLOCKED_DECISION` with the protocol §14 record; if no BACKLOG task resolves the decision, first add an `X-` ADR task (`NOT_STARTED`, trigger `before <ID>`) and reference it. Stop.
 6. Already-blocked tasks: report them. Blocker resolved (ADR accepted, external action done) → resume the task as `IN_PROGRESS`. Otherwise pick a later ready task only if it does not depend on the blocked one.
+   ADR tasks (protocol §14 "ADR tasks"): the Architect drafts `docs/architecture/decisions/ADR-NNN-<slug>.md` (`Status: Proposed`), the Reviewer checks it, then the X-task becomes `BLOCKED_DECISION` awaiting owner acceptance and you stop. Only an explicit owner message accepting the ADR lets you set the ADR `Accepted`, the decision `APPROVED` and the X-task `DONE`.
 7. Owner-named task: run it only if it is ready; naming may override BACKLOG order inside the current phase, never dependencies, blockers, the phase boundary or the gate.
 8. Never select a later-phase task. Never skip ahead to an easier task. Never select or set `DEFERRED`.
 
@@ -99,7 +100,7 @@ Constraints: Russian-only UI, no new packages, no commit/push, no gates in paral
 Expected output: the handoff/verdict format from the role file
 ```
 
-One primary implementer at a time. Full-stack: backend first, explicit handoff to frontend. No two agents edit the same high-conflict files concurrently (routes, bootstrap, composer/npm manifests and lockfiles, config, shared layouts/types, migrations, BACKLOG, PROJECT_STATE, DECISIONS). Read-only reviews may run in parallel.
+One primary implementer at a time. Full-stack: backend first, explicit handoff to frontend. No two agents edit the same high-conflict files concurrently (routes, bootstrap, composer/npm manifests and lockfiles, config, shared layouts/types, migrations, BACKLOG, PROJECT_STATE, DECISIONS). Reviews that only inspect files may run in parallel; reviews that execute commands (Playwright, a real browser, gates, builds, `php artisan serve`) run one at a time and never alongside a gate (protocol §10).
 
 ### 5. Verify
 
@@ -139,11 +140,11 @@ Report with the task report format (protocol §19), ending with `Next ready task
 - A phase ends only through its Phase Review task (`P0-027 — Phase 0 Validation` for Phase 0).
 - No Phase 1 task before `P0-027` is `DONE` with a `PASS` review; the same for every later phase.
 - Phase Review tasks run only in SINGLE TASK MODE on explicit owner request (an owner SINGLE TASK command counts when the Phase Review is the next ready task). CONTINUOUS MODE stops before them and after any phase gate.
-- After a Phase Review is `DONE` with a final Reviewer `PASS`: in PROJECT_STATE §54 set the finished phase `COMPLETED` and the next phase `IN_PROGRESS` (status only), record the gate result, then stop. Do not start any task of the next phase in the same run. A `PARTIAL`/`BLOCKED_*` Phase Review leaves the phase `IN_PROGRESS`.
+- After a Phase Review is `DONE` with a final Reviewer `PASS`: in PROJECT_STATE §54 set the finished phase `COMPLETED` and the next phase `IN_PROGRESS` (status only), record the MASTER_PLAN §139 phase report in the task's `### Result`, update the fields listed in protocol §18 (PROJECT_STATE §3/§39/§42/§68/§70, BACKLOG §3/§12), then stop. Do not start any task of the next phase in the same run. A `PARTIAL`/`BLOCKED_*` Phase Review leaves the phase `IN_PROGRESS`.
 
 ## Stop and ask the owner before
 
-Force push (forbidden always), production deployment, production DNS, production credentials, live billing/payment configuration, irreversible production migrations, deleting production/customer data, a major architecture decision without ADR, an unresolved product decision, external actions with real accounts, and any commit/push not explicitly authorized for the current task.
+Force push (forbidden always), production deployment, production DNS, production credentials, live billing/payment configuration, irreversible production migrations, deleting production/customer data, a major architecture decision without ADR, accepting an ADR or marking a decision `APPROVED`, an unresolved product decision, external actions with real accounts, and any commit/push not explicitly authorized for the current task.
 
 ## You must never
 

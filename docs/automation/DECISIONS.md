@@ -333,50 +333,6 @@ Current authenticated app works naturally through Inertia.
 
 ---
 
-## D-015 — Database Session / Cache / Queue Initially
-
-**Status:** PROVISIONAL
-
-### Decision
-
-Initial infrastructure may use database-backed:
-
-- session;
-- cache;
-- queue.
-
-### Rationale
-
-Keeps early infrastructure simple.
-
-### Impact
-
-Redis is not required at project start.
-
----
-
-## D-016 — Redis Only When Justified
-
-**Status:** PROVISIONAL
-
-### Decision
-
-Introduce Redis when real requirements justify it.
-
-Potential triggers:
-
-- queue throughput;
-- rate-limit counters;
-- cache pressure;
-- pub/sub;
-- realtime features.
-
-### Impact
-
-Do not install Redis into Landflow merely because it is common.
-
----
-
 ## D-017 — Global Automotive Catalog Is Platform-Owned
 
 **Status:** APPROVED
@@ -1151,6 +1107,24 @@ Lead capture and external CRM integration remain in scope.
 
 ---
 
+## D-070 — Relational Database Is Primary Source of Truth
+
+**Status:** APPROVED
+
+### Decision
+
+Use relational tables for stable domain entities.
+
+Use JSON selectively for:
+
+- Block Schema;
+- Block state;
+- integration mappings;
+- dynamic settings;
+- publication snapshots/manifests.
+
+---
+
 ## D-092 — Product UI Language: Russian Only
 
 **Status:** APPROVED
@@ -1193,6 +1167,50 @@ Landflow targets the Russian-speaking automotive market; mixed-language UI is a 
 
 ---
 
+## D-015 — Database Session / Cache / Queue Initially
+
+**Status:** PROVISIONAL
+
+### Decision
+
+Initial infrastructure may use database-backed:
+
+- session;
+- cache;
+- queue.
+
+### Rationale
+
+Keeps early infrastructure simple.
+
+### Impact
+
+Redis is not required at project start.
+
+---
+
+## D-016 — Redis Only When Justified
+
+**Status:** PROVISIONAL
+
+### Decision
+
+Introduce Redis when real requirements justify it.
+
+Potential triggers:
+
+- queue throughput;
+- rate-limit counters;
+- cache pressure;
+- pub/sub;
+- realtime features.
+
+### Impact
+
+Do not install Redis into Landflow merely because it is common.
+
+---
+
 ## D-069 — Inertia SSR Not Required Initially
 
 **Status:** PROVISIONAL
@@ -1207,24 +1225,6 @@ Public Site rendering architecture remains a separate open decision.
 
 ---
 
-## D-070 — Relational Database Is Primary Source of Truth
-
-**Status:** APPROVED
-
-### Decision
-
-Use relational tables for stable domain entities.
-
-Use JSON selectively for:
-
-- Block Schema;
-- Block state;
-- integration mappings;
-- dynamic settings;
-- publication snapshots/manifests.
-
----
-
 ## D-071 — No Dedicated Search Engine Initially
 
 **Status:** PROVISIONAL
@@ -1232,6 +1232,10 @@ Use JSON selectively for:
 ### Decision
 
 Use primary relational database search/filtering until scale proves the need for dedicated search infrastructure.
+
+---
+
+# ADR-REQUIRED OPEN DECISIONS
 
 ---
 
@@ -1243,9 +1247,9 @@ Use primary relational database search/filtering until scale proves the need for
 
 Storage abstraction should remain provider-neutral until production infrastructure is selected.
 
----
+### Tracked By
 
-# ADR-REQUIRED OPEN DECISIONS
+Provider selection is tracked by D-076 (ADR_REQUIRED), resolved by BACKLOG `X-003 — ADR: Object Storage Provider`.
 
 ---
 
@@ -1314,6 +1318,10 @@ immutable objects/versioned references.
 ### Blocking
 
 Production-grade publishing/media stability.
+
+### Resolved By
+
+BACKLOG `X-010 — ADR: Media Ownership and Asset Versioning` (together with D-087; trigger: before P2-013).
 
 ---
 
@@ -1486,6 +1494,10 @@ Never use floating point.
 
 Final Site Offer implementation.
 
+### Resolved By
+
+BACKLOG `X-008 — ADR: Money Storage Representation` (trigger: before P3-009).
+
 ---
 
 ## D-085 — Primary Identifier Strategy
@@ -1512,6 +1524,10 @@ Choose:
 
 Core domain migration implementation if not already standardized by project.
 
+### Resolved By
+
+BACKLOG `X-007 — ADR: Primary Identifier Strategy` (trigger: before P1-003).
+
 ---
 
 ## D-086 — Characteristic Value Schema Strategy
@@ -1534,6 +1550,10 @@ More specific canonical value may override inherited value.
 
 Automotive schema implementation.
 
+### Resolved By
+
+BACKLOG `X-009 — ADR: Characteristic Value Schema` (trigger: before P3-001).
+
 ---
 
 ## D-087 — Site Asset / Workspace Asset Relationship
@@ -1553,6 +1573,10 @@ Whether Site assets use:
 - tenant isolation;
 - reusable Workspace assets;
 - Published version stability.
+
+### Resolved By
+
+BACKLOG `X-010 — ADR: Media Ownership and Asset Versioning` (together with D-075; trigger: before P2-013).
 
 ---
 
@@ -1616,6 +1640,55 @@ No external provider is selected as core source yet.
 ### Rule
 
 Internal Landflow schema stays provider-neutral.
+
+---
+
+## D-093 — Developer Profile Ownership
+
+**Status:** OPEN
+
+### Question
+
+Whether a Developer Profile is:
+
+- owned by a User;
+- owned by a Workspace;
+- another explicit creator-ownership model.
+
+`DATABASE.md` §69 currently leaves `developer_profiles` as "user_id or workspace relation".
+
+### Must Preserve
+
+- `TENANCY.md` §59: a Developer profile is not automatically a customer Workspace; creator ownership must not be confused with customer tenancy;
+- Workspace-private Blocks remain Workspace-owned;
+- Marketplace license scope (D-079) stays consistent with the chosen owner.
+
+### Blocking
+
+`P9-001 — Developer Profile`.
+
+---
+
+## D-094 — Personal Data Retention and Deletion Policy
+
+**Status:** ADR_REQUIRED
+
+### Decision Needed
+
+Define for personal data (Submissions, contact fields, IP addresses, delivery payloads):
+
+- retention periods;
+- deletion and anonymization rules and triggers;
+- applicable Russian personal-data requirements.
+
+### Current Constraint
+
+`SECURITY.md` §21: retention policy must be defined before production launch. Schema must not make deletion/anonymization impossible (`.cursor/rules/50-database.mdc` §99, `.cursor/rules/70-security.mdc` §99).
+
+### Blocking
+
+- production launch;
+- Submission export (no BACKLOG task exists yet; the task must reference D-094 when created).
 
 ---
 
@@ -1720,17 +1793,7 @@ Phase 5 cannot implement public publishing engine before D-073/D-074 are resolve
 
 Task order is defined by `docs/automation/BACKLOG.md`.
 
-Remaining Phase 0 sequence:
-
-```text
-P0-021C Russian Foundation UI
-P0-022  Quality Commands
-P0-023  Playwright
-P0-024  Browser QA Baseline
-P0-025  CI
-P0-026  Autonomous Workflow
-P0-027  Phase 0 Validation
-```
+Current position and the immediate sequence live in `BACKLOG.md` §3 (Current Backlog Position) and §12 (Current Immediate Sequence); they are not duplicated here.
 
 ---
 

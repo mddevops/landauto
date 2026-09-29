@@ -1332,7 +1332,7 @@ Production build
 Playwright where environment permits
 ```
 
-Exact canonical commands will be defined in P0-022.
+Canonical commands are defined in `docs/automation/QUALITY_COMMANDS.md`; CI is configured in `.github/workflows/ci.yml`.
 
 ---
 
@@ -1434,7 +1434,7 @@ Larastan: PASS
 Pint: PASS
 TypeScript: NOT_APPLICABLE
 Build: NOT_APPLICABLE
-Playwright: NOT_AVAILABLE_YET
+Playwright: NOT_APPLICABLE
 Security review: PASS
 ```
 

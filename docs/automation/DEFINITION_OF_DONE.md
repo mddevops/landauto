@@ -1272,7 +1272,7 @@ Before a tool is introduced, mark it:
 
 Never mark it PASS.
 
-Phase 0 will establish the required automation.
+Phase 0 established the required automation: PHPUnit, Larastan, Pint, vite-plus check (lint + TypeScript), production build, Playwright and CI (`QUALITY_COMMANDS.md`).
 
 ---
 
@@ -1282,10 +1282,10 @@ This document works together with:
 
 - Product docs;
 - Architecture docs;
-- future `MASTER_PLAN.md`;
-- future `BACKLOG.md`;
-- future Cursor rules;
-- future CI configuration.
+- `MASTER_PLAN.md`;
+- `BACKLOG.md`;
+- Cursor rules (`.cursor/rules/*.mdc`);
+- `QUALITY_COMMANDS.md` (canonical commands) and CI configuration (`.github/workflows/ci.yml`).
 
 If a task conflicts with architecture, the conflict must be resolved before DONE.
 

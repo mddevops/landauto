@@ -1479,8 +1479,10 @@ Prefer clear but safe messages.
 
 Examples:
 
-- "You don't have permission to publish this Site."
-- "Your current plan does not include custom domains."
+- «У вас нет прав на публикацию этого сайта.»
+- «Ваш тариф не включает подключение собственных доменов.»
+
+User-facing messages are Russian only (D-092).
 
 Distinguish permission failure from entitlement failure where helpful.
 

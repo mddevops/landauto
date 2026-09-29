@@ -1328,6 +1328,8 @@ Do not pretend there is no path forward.
 
 ## 73. ADR Structure
 
+Location: `docs/architecture/decisions/ADR-NNN-<slug>.md` (sequential number). A new ADR starts as `Status: Proposed`; only the owner accepts it (`docs/automation/AUTONOMOUS_WORKFLOW.md` §14 "ADR tasks").
+
 Recommended ADR format:
 
 ```text
