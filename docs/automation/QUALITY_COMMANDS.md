@@ -305,7 +305,7 @@ AVAILABLE
 
 `npm run test:e2e` = `playwright test` (config: `playwright.config.ts`, tests: `tests/browser/`).
 
-It is a separate gate: it is not part of `composer quality` and must run after it, never concurrently (its web server runs its own `npm run build`).
+It is a separate gate: it is not part of `composer quality` and must run after it, never concurrently (its web server runs its own `npm run build`, unless `E2E_REUSE_BUILD=1` — see section 38).
 
 Report `PASS` only when the command actually ran and exited with code 0.
 
@@ -397,6 +397,8 @@ If one command fails:
 
 Exact implementation may use Composer script chaining.
 
+Actual implementation (P0-025): `composer test` → `composer analyse` → `composer format:check` → `php artisan wayfinder:generate --with-form` → `npm run check` → `npm run build`. The Wayfinder step generates the git-ignored TypeScript route helpers (`resources/js/actions`, `resources/js/routes`, `resources/js/wayfinder`) with the same options as the Vite build, so `npm run check` type-checks correctly on a clean checkout (without it, a fresh clone fails with TS2307 `Cannot find module '@/routes'`).
+
 ---
 
 # 18. Browser Quality Gate
@@ -427,7 +429,7 @@ Do not create many overlapping quality aliases.
 
 # 19. Canonical Command Table
 
-| Gate | Canonical command | Current status (P0-024) |
+| Gate | Canonical command | Current status (P0-025) |
 |---|---|---|
 | Backend tests | `composer test` | AVAILABLE |
 | Static analysis | `composer analyse` | AVAILABLE |
@@ -443,7 +445,7 @@ Implementation notes (verified in P0-022):
 
 - `composer test` runs only PHPUnit and does not require `public/build`: `tests/TestCase.php` calls Laravel's `withoutVite()`.
 - `npm run check` (`vp check`) covers formatting, type-aware lint and TypeScript type checking (`lint.options.typeCheck: true` in `vite.config.ts`); there is no separate `tsc` gate.
-- `composer ci:check` is a deprecated alias of `composer quality`, kept only for the starter-kit workflow until P0-025.
+- `composer ci:check` (deprecated alias of `composer quality`) was removed in P0-025; CI calls `composer quality` directly.
 
 Implementation notes (verified in P0-023):
 
@@ -813,6 +815,23 @@ npm run test:e2e
 ```
 
 with any necessary environment setup around them.
+
+Actual implementation (P0-025) — `.github/workflows/ci.yml` («Landflow CI»), one job on `ubuntu-latest`:
+
+```text
+checkout → PHP 8.3 + Composer v2 → Node 22 (npm cache) → Composer cache
+→ composer install → npm ci
+→ cp .env.example .env + php artisan key:generate   (placeholder values, throwaway key)
+→ composer quality
+→ npx playwright install --with-deps chromium
+→ npm run test:e2e   (E2E_REUSE_BUILD=1)
+→ on E2E failure only: upload test-results/, playwright-report/, storage/logs/ (7 days)
+```
+
+- Triggers: push to `main`, pull requests into `main`. Concurrency: one run per workflow + ref, newer runs cancel older ones. Timeout: 20 minutes. Permissions: `contents: read`. Actions pinned to commit SHAs (Dependabot updates them weekly).
+- No database service: PHPUnit uses in-memory SQLite, E2E uses `database/e2e.sqlite`. No GitHub Secrets are required.
+- `E2E_REUSE_BUILD=1` (CI only) makes the Playwright web server skip its own `npm run build` and reuse the production build `composer quality` just produced from the same checkout (Vite reads `.env` in both cases, so the output is identical). `prepare-e2e.mjs` fails if the flag is set but `public/build/manifest.json` is missing. Locally leave it unset: the E2E server then always rebuilds, so a stale build is never tested.
+- `composer setup` (local project bootstrap: install, `.env`, key, migrate, build) is not used by CI.
 
 ---
 

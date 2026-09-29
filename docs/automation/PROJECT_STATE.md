@@ -894,9 +894,11 @@ Completed:
 - Playwright E2E framework (P0-023).
 - Browser QA baseline (P0-024).
 
+- CI pipeline (P0-025): configured and locally validated; real GitHub Actions run pending push.
+
 Still needed:
 
-- CI (P0-025)
+- CI verification on GitHub (P0-025)
 - autonomous workflow (P0-026)
 
 ---
@@ -925,7 +927,7 @@ composer format        AVAILABLE  Pint, modifies files (pint --parallel)
 composer format:check  AVAILABLE  Pint --test, no file changes
 npm run check          AVAILABLE  vite-plus: format + type-aware lint + TypeScript type check
 npm run build          AVAILABLE  production Vite build (vp build)
-composer quality       AVAILABLE  sequential: test → analyse → format:check → npm run check → npm run build; stops on first failure
+composer quality       AVAILABLE  sequential: test → analyse → format:check → wayfinder:generate → npm run check → npm run build; stops on first failure
 npm run test:e2e       AVAILABLE  Playwright browser E2E (separate gate, not part of composer quality)
 ```
 
@@ -959,11 +961,27 @@ Screenshots:     test-results/screenshots/<area>/<name>--<project>.png (cleared 
 Visual baselines: none (screenshots are review evidence, not pixel baselines)
 ```
 
+CI (P0-025):
+
+```text
+CI pipeline:                    CONFIGURED (.github/workflows/ci.yml, «Landflow CI»)
+Canonical CI quality command:   composer quality
+Browser CI command:             npm run test:e2e (Chromium via npx playwright install --with-deps chromium)
+CI database:                    SQLite test environments (PHPUnit :memory:, E2E database/e2e.sqlite); no DB service
+CI secrets:                     none required
+CI triggers:                    push to main, pull_request into main
+CI failure artifacts:           test-results/, playwright-report/, storage/logs/ — only on E2E failure, 7 days
+CI GitHub verification:         PENDING_PUSH
+Production deployment:          NOT_CONFIGURED
+```
+
 Notes:
 
 - All gates verified after P0-022: each command PASS with exit code 0; negative probes confirmed non-zero exit for `composer test`, `composer format:check` and `composer quality` (the aggregate stops at the first failing gate).
 - TypeScript type checking is part of `npm run check` via vite-plus `lint.options.typeCheck: true` (verified: a deliberate TS2322 error fails `npm run check`). The separate npm `types:check` (`tsc --noEmit`) script was removed as a duplicate.
-- Removed duplicate Composer scripts: `lint`, `lint:check`, `types:check`. `ci:check` is kept only as a deprecated alias of `composer quality` so the existing starter-kit workflow keeps working until P0-025.
+- Removed duplicate Composer scripts: `lint`, `lint:check`, `types:check`. `ci:check` was kept as a deprecated alias of `composer quality` for the starter-kit workflow and removed in P0-025.
+- P0-025: `composer quality` generates the git-ignored Wayfinder route helpers (`php artisan wayfinder:generate --with-form`) before `npm run check`, so it passes on a clean checkout (before, only a previous build created them and a fresh clone failed with TS2307). `E2E_REUSE_BUILD=1` (set only in CI) makes the E2E web server reuse the build `composer quality` just made; locally it always rebuilds.
+- Verified after P0-025: CI steps replayed on a clean copy of the tracked files — `composer install`, `npm ci`, `.env` + key, `composer quality` PASS, `npm run test:e2e` (`E2E_REUSE_BUILD=1`) PASS, 23 passed, build reused. Workspace: `composer quality` PASS, `npm run test:e2e` PASS (23 passed).
 - Developer helpers that are not gates: `npm run check:fix` (vite-plus auto-fix), `composer format`.
 - Gates must run sequentially, never in parallel (`composer quality` enforces this).
 - `npm run test:e2e` runs after `composer quality`, never concurrently: its web server runs its own `npm run build` into `public/build`.
@@ -977,7 +995,7 @@ Notes:
 Not yet confirmed/installed as project quality gate:
 
 - browser screenshot regression automation: NOT_AVAILABLE_YET
-- full CI pipeline: NOT_AVAILABLE_YET
+- full CI pipeline: CONFIGURED (P0-025), verification on GitHub: PENDING_PUSH — do not report CI as PASS until a real GitHub Actions run succeeds
 
 Agents must not claim unavailable checks as PASS.
 
@@ -1002,7 +1020,9 @@ Recommended next order:
 
 Last completed task: `P0-024 — Create Browser QA Baseline` (DONE).
 
-**Next task: `P0-025 — Create CI Pipeline`.**
+Current task: `P0-025 — Create CI Pipeline` — PARTIAL (CI configured and locally validated; commit/push and a real GitHub Actions run are pending owner authorization).
+
+**Next task after P0-025 is verified on GitHub: `P0-026 — Autonomous Task Workflow`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1027,8 +1047,8 @@ Foundation cleanup (before P0-023):
 Known gaps:
 
 - RESOLVED (2026-09-29) — Local development database: the developer `.env` now points to the working MySQL database `landauto` (previously a non-existent `autoland`). See "Actual local development environment" above.
-- Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`. After P0-022 `composer ci:check` is a deprecated alias of `composer quality`, so the workflow still resolves; it now also runs Larastan, Pint and a second production build (`composer setup` already builds). P0-025 should call canonical commands directly (`composer quality`), drop the `ci:check` alias and the duplicate build, and add `npm run test:e2e` (CI must install Chromium via `npx playwright install --with-deps chromium`; it does not depend on a developer server).
-- Commits: baseline `fdcf597` and P0-021C `a96f6ee` are pushed to `origin/main`. P0-022, foundation cleanup, P0-023, the development-environment record and P0-024 changes are not committed yet; commits/pushes require explicit authorization.
+- RESOLVED (P0-025) — starter-kit workflow replaced by `.github/workflows/ci.yml` (canonical commands, single build, E2E included, `ci:check` removed); `.github/dependabot.yml` kept for weekly action updates. Original note: Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`. After P0-022 `composer ci:check` is a deprecated alias of `composer quality`, so the workflow still resolves; it now also runs Larastan, Pint and a second production build (`composer setup` already builds). P0-025 should call canonical commands directly (`composer quality`), drop the `ci:check` alias and the duplicate build, and add `npm run test:e2e` (CI must install Chromium via `npx playwright install --with-deps chromium`; it does not depend on a developer server).
+- Commits: baseline `fdcf597`, P0-021C `a96f6ee` and `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) are pushed to `origin/main`. P0-025 changes are not committed yet; commits/pushes require explicit authorization.
 
 Resolved:
 
@@ -1599,10 +1619,12 @@ Russian foundation UI:        DONE (P0-021C, APP_LOCALE=ru)
 Quality command aliases:      CONFIGURED (P0-022, composer quality)
 Playwright:                   AVAILABLE (P0-023, Chromium, npm run test:e2e)
 Browser QA baseline:          DONE (P0-024, desktop + tablet/mobile smoke)
-CI:                           NOT_STARTED (starter-kit workflow present, not standardized)
+CI:                           CONFIGURED (P0-025, Landflow CI; GitHub verification PENDING_PUSH)
+Production deployment:        NOT_CONFIGURED
 
 Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 0 — IN_PROGRESS.  
-Next approved task: P0-025 — Create CI Pipeline.**
+Current task: P0-025 — Create CI Pipeline (PARTIAL, pending push + GitHub run).  
+Next approved task: P0-026 — Autonomous Task Workflow.**

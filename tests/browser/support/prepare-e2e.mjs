@@ -27,6 +27,15 @@ if (existsSync(fromRoot('public/hot'))) {
     );
 }
 
+if (
+    process.env.E2E_REUSE_BUILD === '1' &&
+    !existsSync(fromRoot('public/build/manifest.json'))
+) {
+    fail(
+        'E2E_REUSE_BUILD=1 but there is no production build (public/build/manifest.json). Run "composer quality" or "npm run build" first.',
+    );
+}
+
 const database = fromRoot('database/e2e.sqlite');
 
 rmSync(database, { force: true });

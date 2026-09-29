@@ -72,11 +72,9 @@
             "@test",
             "@analyse",
             "@format:check",
+            "@php artisan wayfinder:generate --with-form --ansi",
             "npm run check",
             "npm run build"
-        ],
-        "ci:check": [
-            "@quality"
         ],
         "post-autoload-dump": [
             "Illuminate\\Foundation\\ComposerScripts::postAutoloadDump",
@@ -102,8 +100,7 @@
         "analyse": "Run Larastan/PHPStan static analysis only.",
         "format": "Format PHP code with Pint (modifies files).",
         "format:check": "Check PHP formatting with Pint without modifying files.",
-        "quality": "Run all core quality gates sequentially: test, analyse, format:check, npm run check, npm run build.",
-        "ci:check": "Deprecated alias of quality, kept for .github/workflows/tests.yml until P0-025."
+        "quality": "Run all core quality gates sequentially: test, analyse, format:check, npm run check, npm run build (generates Wayfinder route helpers first, so it works on a clean checkout)."
     },
     "extra": {
         "laravel": {

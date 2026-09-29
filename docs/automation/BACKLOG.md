@@ -64,7 +64,7 @@ Current phase:
 
 Current next task:
 
-`P0-025 — Create CI Pipeline`
+`P0-025 — Create CI Pipeline` — PARTIAL: configured and validated locally; the real GitHub Actions run is pending push authorization. After it passes on GitHub: `P0-026 — Create Autonomous Task Runner Workflow`.
 
 Phase 1 implementation must not start before required Phase 0 tasks are complete.
 
@@ -790,7 +790,7 @@ Run every standardized command.
 ### Result
 
 - Composer: `test` (PHPUnit only), `analyse` (Larastan), `format` (Pint), `format:check` (Pint `--test`), `quality` (sequential: test → analyse → format:check → `npm run check` → `npm run build`, stops on first failure).
-- Removed duplicates: Composer `lint`, `lint:check`, `types:check`; npm `types:check`. `ci:check` kept only as a deprecated alias of `quality` for the existing workflow until P0-025.
+- Removed duplicates: Composer `lint`, `lint:check`, `types:check`; npm `types:check`. `ci:check` kept only as a deprecated alias of `quality` for the existing workflow until P0-025 (removed in P0-025).
 - `npm run check` now includes TypeScript type checking (vite-plus `lint.options.typeCheck: true`).
 - PHPUnit no longer depends on `public/build`: `tests/TestCase.php` uses Laravel's `withoutVite()`. Verified with `public/build` absent → `composer test` PASS.
 - Composer package renamed to `mddevops/landauto`; `laravel/chisel` moved to `require-dev` (installer scaffolding tool, unused at runtime).
@@ -884,7 +884,7 @@ Create initial tests for current application.
 
 ## P0-025 — Create CI Pipeline
 
-**Status:** NOT_STARTED  
+**Status:** PARTIAL (CI CONFIGURED, locally validated; CI VERIFIED ON GITHUB pending push authorization)  
 **Dependencies:** P0-022, P0-023
 
 ### Objective
@@ -905,6 +905,19 @@ Create CI for required quality gates.
 ### Acceptance Criteria
 
 CI runs without production secrets.
+
+### Result
+
+- One workflow: the starter-kit `.github/workflows/tests.yml` («tests», `composer setup` + `composer ci:check`) was replaced in place by `.github/workflows/ci.yml` («Landflow CI»). No second workflow.
+- Steps: PHP 8.3 (`composer.json` `^8.3`) + Composer v2 with Composer cache → Node 22 (as in the starter workflow and local tooling; no `.nvmrc`/`engines`) with npm cache → `composer install` → `npm ci` → `.env` from `.env.example` + `php artisan key:generate` → `composer quality` → `npx playwright install --with-deps chromium` → `npm run test:e2e`. Triggers: push to `main`, pull requests into `main`; concurrency cancels outdated runs; 20-minute timeout; `contents: read`; actions pinned to commit SHAs.
+- No database service; PHPUnit in-memory SQLite, E2E `database/e2e.sqlite`; the development MySQL database is not reachable from CI. No GitHub Secrets, no production credentials.
+- Playwright failure artifacts (traces, failure screenshots, review screenshots, HTML report, Laravel log) are uploaded only when the E2E step fails, retained 7 days.
+- Duplicate build removed: the old workflow built in `composer setup` and again in `ci:check`. Now `composer quality` builds once and the E2E server reuses that build in CI (`E2E_REUSE_BUILD=1`; locally it still rebuilds).
+- Clean-checkout fix: `composer quality` now runs `php artisan wayfinder:generate --with-form` before `npm run check`. The generated route helpers are git-ignored and only the build created them, so on a fresh clone `npm run check` failed (TS2307). Previously hidden because `composer setup` built first.
+- `composer ci:check` removed (no remaining references). `composer setup` kept: it is the local bootstrap script, not a CI step.
+- No deployment of any kind.
+- Local validation: workflow YAML parsed and structurally checked (symfony/yaml from vendor: step shape, SHA pins, step-id references, no secrets). The CI steps were replayed on a clean copy of the tracked files (no vendor, node_modules, .env, build, generated helpers): `composer install`, `npm ci`, `.env` + key, `composer quality` PASS, `npm run test:e2e` with `E2E_REUSE_BUILD=1` PASS (23 passed, build reused). In the workspace: `composer quality` PASS, `npm run test:e2e` PASS (23 passed).
+- Remaining for DONE: commit + push (requires owner authorization) and a successful real GitHub Actions run.
 
 ---
 
@@ -2562,7 +2575,7 @@ P0-021C Russian Foundation UI                                    DONE
 P0-022  Quality Commands                                         DONE
 P0-023  Playwright                                               DONE
 P0-024  Browser QA Baseline                                      DONE
-P0-025  CI
+P0-025  CI                                                       PARTIAL (configured; GitHub run pending push)
 P0-026  Autonomous Workflow
 P0-027  Phase 0 Validation
 ```
