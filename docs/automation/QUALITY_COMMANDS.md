@@ -873,6 +873,8 @@ full-stack:
 
 Task metadata/agent judgment may narrow focused tests, but final DoD controls completion.
 
+Implemented (P0-026): the canonical task-type → gate mapping used by the Orchestrator is `docs/automation/AUTONOMOUS_WORKFLOW.md` §12 "Quality Routing". It refines the example above: a frontend change with no browser-facing effect runs `npm run check` + `npm run build`; a user-facing UI change also runs `npm run test:e2e`.
+
 ---
 
 # 41. Check Result Vocabulary

@@ -60,16 +60,13 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 0 — Foundation / Architecture / Automation Design**
+**Phase 0 — Foundation / Automation** (status: §54)
 
 Current focus:
 
-- finalize product architecture;
-- finalize engineering rules;
-- build Cursor operating system;
-- establish Master Plan and Backlog;
-- create Cursor rules/agents;
-- only then begin implementation.
+- documentation, rules, agents, application foundation, quality commands, Playwright, browser QA baseline, CI and the autonomous workflow are in place (P0-001 … P0-026, see BACKLOG);
+- remaining: `P0-027 — Phase 0 Validation`, the Phase 0 gate;
+- Phase 1 begins only after P0-027 is DONE.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -402,6 +399,8 @@ This defines:
 - mandatory quality gates
 - No Fake Success
 - test/review expectations
+
+Also present: `MASTER_PLAN.md`, `BACKLOG.md`, `DECISIONS.md`, `PROJECT_STATE.md`, `QUALITY_COMMANDS.md` (P0-022) and `AUTONOMOUS_WORKFLOW.md` (P0-026, the Orchestrator protocol).
 
 ---
 
@@ -895,10 +894,30 @@ Completed:
 - Browser QA baseline (P0-024).
 
 - CI pipeline (P0-025): configured and verified on GitHub Actions.
+- Autonomous task workflow (P0-026): `docs/automation/AUTONOMOUS_WORKFLOW.md` + `.cursor/agents/orchestrator.md`.
+
+Autonomous workflow (P0-026):
+
+```text
+Autonomous workflow:              CONFIGURED (docs/automation/AUTONOMOUS_WORKFLOW.md, normative protocol)
+Orchestrator agent:               AVAILABLE (.cursor/agents/orchestrator.md, coordinator only)
+Single-task mode:                 AVAILABLE (default)
+Continuous mode:                  AVAILABLE (explicit owner request; stops before Phase Review tasks)
+Specialist routing:               CONFIGURED (architect, backend, frontend, ui-reviewer, qa, security, reviewer)
+Review routing:                   CONFIGURED (security / UI / QA triggers, final Reviewer for every task)
+Quality routing:                  CONFIGURED (canonical commands per task type, gates sequential)
+Human approval boundaries:        DOCUMENTED (commit/push only with explicit per-task authorization; force push forbidden)
+Phase boundary enforcement:       CONFIGURED (phase ends only through its Phase Review task)
+Workflow engine/packages:         none (repository-driven protocol, no parser/daemon/queue/database)
+Custom Cursor commands/workflows: not used (owner starts the workflow with the plain-text commands in AUTONOMOUS_WORKFLOW.md §21)
+```
+
+- Dry run on the actual repository state (independent read-only subagent): current phase Phase 0; next ready task after P0-026 is `P0-027 — Phase 0 Validation` (primary qa; reviews architect, security, qa, final reviewer, plus ui-reviewer because Phase 0 changed user-visible UI in P0-021C/P0-024; gates `composer quality` → `npm run test:e2e` + repository/documentation consistency check); Phase 1 task selected: NO.
+- Look-ahead recorded by the dry run: D-085 "Primary Identifier Strategy" (`ADR_REQUIRED`, no resolving BACKLOG task yet) will be flagged as a potential blocker for `P1-003 — Create Workspace Schema`.
 
 Still needed:
 
-- autonomous workflow (P0-026)
+- Phase 0 validation (P0-027)
 
 ---
 
@@ -1007,24 +1026,15 @@ Agents must not claim unavailable checks as PASS.
 
 # 41. Next Planned Automation Documents
 
-Recommended next order:
-
-1. `MASTER_PLAN.md`
-2. `BACKLOG.md`
-3. `DECISIONS.md`
-4. Cursor rules
-5. Cursor agents
-6. testing/browser QA setup
-7. CI
-8. autonomous orchestrator workflow
+All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, `DECISIONS.md`, Cursor rules, Cursor agents, testing/browser QA setup (`QUALITY_COMMANDS.md`, Playwright), CI and the autonomous orchestrator workflow (`AUTONOMOUS_WORKFLOW.md`). Their completeness is verified by `P0-027 — Phase 0 Validation`.
 
 ---
 
 # 42. Current Next Approved Task
 
-Last completed task: `P0-025 — Create CI Pipeline` (DONE, verified on GitHub Actions).
+Last completed task: `P0-026 — Create Autonomous Task Runner Workflow` (DONE).
 
-**Next task: `P0-026 — Autonomous Task Workflow`.**
+**Next task: `P0-027 — Phase 0 Validation`** (Phase 0 gate; run in SINGLE TASK MODE per `AUTONOMOUS_WORKFLOW.md` §18).
 
 No implementation task should be inferred from this alone.
 
@@ -1050,7 +1060,7 @@ Known gaps:
 
 - RESOLVED (2026-09-29) — Local development database: the developer `.env` now points to the working MySQL database `landauto` (previously a non-existent `autoland`). See "Actual local development environment" above.
 - RESOLVED (P0-025) — starter-kit workflow replaced by `.github/workflows/ci.yml` (canonical commands, single build, E2E included, `ci:check` removed); `.github/dependabot.yml` kept for weekly action updates. Original note: Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`. After P0-022 `composer ci:check` is a deprecated alias of `composer quality`, so the workflow still resolves; it now also runs Larastan, Pint and a second production build (`composer setup` already builds). P0-025 should call canonical commands directly (`composer quality`), drop the `ci:check` alias and the duplicate build, and add `npm run test:e2e` (CI must install Chromium via `npx playwright install --with-deps chromium`; it does not depend on a developer server).
-- Commits: baseline `fdcf597`, P0-021C `a96f6ee`, `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) `fe864ee` (P0-025 CI), `7d12cfd` (P0-025 docs) and `e6dc967` (runner pinned to Ubuntu 24.04) are pushed to `origin/main`, followed by the runner-pin documentation commit. Commits/pushes require explicit authorization.
+- Commits: baseline `fdcf597`, P0-021C `a96f6ee`, `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) `fe864ee` (P0-025 CI), `7d12cfd` (P0-025 docs) and `e6dc967` (runner pinned to Ubuntu 24.04) are pushed to `origin/main`, followed by the runner-pin documentation commit `412e85c` and the P0-026 commit `chore: establish Landflow autonomous workflow`. Commits/pushes require explicit authorization.
 - RESOLVED (e6dc967) — `ubuntu-latest` migration risk: GitHub announced the move of `ubuntu-latest` to Ubuntu 26 from 2026-10-19. The CI runner is now pinned to `ubuntu-24.04`, the environment CI was verified on (run [36579169216](https://github.com/mddevops/landauto/actions/runs/36579169216) PASS). Moving to a newer runner is a deliberate future change, not an automatic one.
 
 Resolved:
@@ -1276,6 +1286,8 @@ It should remain concise enough for an agent to understand project state quickly
 
 # 53. Status Vocabulary
 
+This vocabulary describes capabilities and facts in this file. Backlog task statuses are defined in `BACKLOG.md` §1 and `AUTONOMOUS_WORKFLOW.md` §4; phase statuses in §54 also use `COMPLETED` (MASTER_PLAN §3).
+
 Use:
 
 - NOT_STARTED
@@ -1392,15 +1404,20 @@ docs/
 │   ├── PUBLISHING.md
 │   └── SECURITY.md
 └── automation/
+    ├── AUTONOMOUS_WORKFLOW.md
+    ├── BACKLOG.md
+    ├── DECISIONS.md
     ├── DEFINITION_OF_DONE.md
-    └── PROJECT_STATE.md
+    ├── MASTER_PLAN.md
+    ├── PROJECT_STATE.md
+    └── QUALITY_COMMANDS.md
 ```
 
 ---
 
-# 59. Future Cursor Structure
+# 59. Cursor Structure
 
-Planned:
+Present:
 
 ```text
 .cursor/
@@ -1422,16 +1439,17 @@ Planned:
     ├── ui-reviewer.md
     ├── qa.md
     ├── security.md
-    └── reviewer.md
+    ├── reviewer.md
+    └── orchestrator.md   (P0-026, coordinator)
 ```
 
-Do not create all of these until Master Plan/Backlog ordering is finalized.
+No `.cursor/commands/` or `.cursor/workflows/`: the workflow is started with the owner commands in `AUTONOMOUS_WORKFLOW.md` §21.
 
 ---
 
 # 60. Autonomous Workflow Goal
 
-Target workflow:
+Workflow (implemented by P0-026, protocol `AUTONOMOUS_WORKFLOW.md`):
 
 ```text
 Product Docs
@@ -1441,13 +1459,13 @@ Product Docs
 → Specialist Agent
 → Tests/Checks
 → Fix Loop
-→ Reviewer
-→ Commit
-→ PROJECT_STATE update
-→ Next Task
+→ Reviews + final Reviewer
+→ BACKLOG / PROJECT_STATE update
+→ Commit (only with explicit owner authorization for the task)
+→ Next Task (SINGLE TASK MODE stops here)
 ```
 
-Task status is determined by quality gates, not agent confidence.
+Task status is determined by quality gates and independent reviews, not agent confidence.
 
 ---
 
@@ -1564,17 +1582,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**Create `docs/automation/MASTER_PLAN.md`.**
-
-After Master Plan:
-
-1. BACKLOG
-2. DECISIONS
-3. Cursor rules
-4. agents
-5. automation/testing infrastructure
-6. CI
-7. begin Phase 1 implementation
+**`P0-027 — Phase 0 Validation`** (see §42). The Master Plan, Backlog, decision log, rules, agents, testing/browser QA, CI and autonomous workflow exist. Phase 1 implementation begins only after P0-027 is DONE.
 
 ---
 
@@ -1623,10 +1631,11 @@ Quality command aliases:      CONFIGURED (P0-022, composer quality)
 Playwright:                   AVAILABLE (P0-023, Chromium, npm run test:e2e)
 Browser QA baseline:          DONE (P0-024, desktop + tablet/mobile smoke)
 CI:                           CONFIGURED, GitHub verification PASS (P0-025, Landflow CI, Ubuntu)
+Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orchestrator agent)
 Production deployment:        NOT_CONFIGURED
 
 Core Landflow implementation: NOT_STARTED
 ```
 
-**Current phase: Phase 0 — IN_PROGRESS.  
-Next approved task: P0-026 — Autonomous Task Workflow.**
+**Current phase: Phase 0 — IN_PROGRESS (not complete; gate P0-027).  
+Next approved task: P0-027 — Phase 0 Validation.**

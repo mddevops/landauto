@@ -64,7 +64,7 @@ Current phase:
 
 Current next task:
 
-`P0-026 — Create Autonomous Task Runner Workflow`
+`P0-027 — Phase 0 Validation` (Phase 0 gate; run in SINGLE TASK MODE per `AUTONOMOUS_WORKFLOW.md` §18)
 
 Phase 1 implementation must not start before required Phase 0 tasks are complete.
 
@@ -924,7 +924,7 @@ CI runs without production secrets.
 
 ## P0-026 — Create Autonomous Task Runner Workflow
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-014 through P0-025
 
 ### Objective
@@ -942,6 +942,18 @@ Workflow can:
 - request Reviewer;
 - update task status;
 - update PROJECT_STATE.
+
+### Result
+
+- `docs/automation/AUTONOMOUS_WORKFLOW.md` — normative protocol: Orchestrator role, source of truth and divergence handling, task statuses (`DEFERRED` owner-only, `STALLED` runtime-only), BACKLOG reading rules (dependency ranges incl. letter-suffixed tasks, Phase Review tasks, cross-cutting `X-` triggers), current-phase determination and phase transition, ready-task selection (resume first, first ready task in BACKLOG order, blocking-decision check, owner-named task), SINGLE TASK / CONTINUOUS / read-only / review-only modes, task start sequence, specialist routing and delegation mechanics, review routing with per-role verdict mapping, quality routing, fix loop and STALLED, BLOCKED_DECISION / BLOCKED_EXTERNAL records, human approval boundaries, Git safety, state updates, phase boundary, report formats, Orchestrator self-limits, four owner commands.
+- `.cursor/agents/orchestrator.md` — Orchestrator role prompt (official Cursor subagent frontmatter `name`/`description`): coordinator only; routes to architect, backend, frontend, ui-reviewer, qa, security, reviewer; never implements specialist work, never writes a reviewer's verdict.
+- No `.cursor/commands/` or `.cursor/workflows/`: `.cursor/agents/*.md` subagents are verified in the official Cursor documentation; commands are supported but not needed, workflows are not documented. No workflow engine, database, daemon, queue or package.
+- `QUALITY_COMMANDS.md` §40 points to the protocol's quality routing. PROJECT_STATE updated: autonomous workflow fields (§39), next task P0-027 (§42, §68, §70), automation documents (§16), status-vocabulary scope (§53), and stale §3/§41/§58/§59/§60 statements corrected.
+- Dry run (independent read-only subagent, actual repository state): actual state → resume P0-026 (`IN_PROGRESS`); with P0-026 `DONE` → current phase Phase 0, next ready task P0-027 (primary qa; architect, security, qa, final reviewer, ui-reviewer because Phase 0 changed user-visible UI; `composer quality` → `npm run test:e2e` + repository/documentation consistency check); Phase 1 selected: NO. Its protocol findings (X-tasks unselectable, missing ADR tasks, docs owner, MASTER_PLAN §131 review defaults, session concurrency, subagent nesting, explicit Phase Review request) were fixed.
+- Final Reviewer (independent subagent, `reviewer.md`): first REJECTED with 3 findings (security triggers narrower than rule 90 §25 / rule 70 §127, inaccurate verdict vocabulary, undefined phase transition) → fixed (per-role verdict table, trigger union, phase transition: finished phase `COMPLETED` + next phase `IN_PROGRESS` in PROJECT_STATE §54, then stop) → second review PASS.
+- Checks: link/reference check PASS (all relative links and file references resolve, all 8 agent files exist); `composer quality` PASS and `npm run test:e2e` PASS (23 passed) — run before the review fixes and re-run on the final state. No contradiction with `90-agent-workflow.mdc` found by the dry run or the Reviewer.
+- Follow-up for P0-027: re-exercise the protocol end to end on the final text (phase transition, verdict table, owner-named task were added after the dry run).
+- Committed and pushed to `origin/main` with owner authorization (`chore: establish Landflow autonomous workflow`).
 
 ---
 
@@ -2577,7 +2589,7 @@ P0-022  Quality Commands                                         DONE
 P0-023  Playwright                                               DONE
 P0-024  Browser QA Baseline                                      DONE
 P0-025  CI                                                       DONE
-P0-026  Autonomous Workflow
+P0-026  Autonomous Workflow                                      DONE
 P0-027  Phase 0 Validation
 ```
 
