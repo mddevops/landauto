@@ -64,7 +64,7 @@ Current phase:
 
 Current next task:
 
-`P0-025 — Create CI Pipeline` — PARTIAL: configured and validated locally; the real GitHub Actions run is pending push authorization. After it passes on GitHub: `P0-026 — Create Autonomous Task Runner Workflow`.
+`P0-026 — Create Autonomous Task Runner Workflow`
 
 Phase 1 implementation must not start before required Phase 0 tasks are complete.
 
@@ -884,7 +884,7 @@ Create initial tests for current application.
 
 ## P0-025 — Create CI Pipeline
 
-**Status:** PARTIAL (CI CONFIGURED, locally validated; CI VERIFIED ON GITHUB pending push authorization)  
+**Status:** DONE (CI configured and verified on GitHub Actions)  
 **Dependencies:** P0-022, P0-023
 
 ### Objective
@@ -917,7 +917,7 @@ CI runs without production secrets.
 - `composer ci:check` removed (no remaining references). `composer setup` kept: it is the local bootstrap script, not a CI step.
 - No deployment of any kind.
 - Local validation: workflow YAML parsed and structurally checked (symfony/yaml from vendor: step shape, SHA pins, step-id references, no secrets). The CI steps were replayed on a clean copy of the tracked files (no vendor, node_modules, .env, build, generated helpers): `composer install`, `npm ci`, `.env` + key, `composer quality` PASS, `npm run test:e2e` with `E2E_REUSE_BUILD=1` PASS (23 passed, build reused). In the workspace: `composer quality` PASS, `npm run test:e2e` PASS (23 passed).
-- Remaining for DONE: commit + push (requires owner authorization) and a successful real GitHub Actions run.
+- GitHub verification: commit `fe864ee`, run [36577884025](https://github.com/mddevops/landauto/actions/runs/36577884025) — success on the first real run, Ubuntu 24.04 (`ubuntu-latest`), job 1m29s. Log confirmed: PHP 8.3.35 with `pdo_sqlite`/`sqlite3`, 139 Composer packages, `npm ci` (291 packages), PHPUnit 47 passed, Larastan `[OK] No errors`, Pint PASS (61 files), Wayfinder generated on the clean checkout, `vp check` (format, lint, TypeScript) PASS, one production build, Chromium (Chrome for Testing 153 + headless shell) installed with system dependencies, E2E 23 passed (1 setup, 14 desktop, 4 tablet, 4 mobile) against `php artisan serve` + `database/e2e.sqlite`, reusing the build. Failure-artifact upload step correctly skipped.
 
 ---
 
@@ -2575,7 +2575,7 @@ P0-021C Russian Foundation UI                                    DONE
 P0-022  Quality Commands                                         DONE
 P0-023  Playwright                                               DONE
 P0-024  Browser QA Baseline                                      DONE
-P0-025  CI                                                       PARTIAL (configured; GitHub run pending push)
+P0-025  CI                                                       DONE
 P0-026  Autonomous Workflow
 P0-027  Phase 0 Validation
 ```

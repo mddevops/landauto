@@ -894,11 +894,10 @@ Completed:
 - Playwright E2E framework (P0-023).
 - Browser QA baseline (P0-024).
 
-- CI pipeline (P0-025): configured and locally validated; real GitHub Actions run pending push.
+- CI pipeline (P0-025): configured and verified on GitHub Actions.
 
 Still needed:
 
-- CI verification on GitHub (P0-025)
 - autonomous workflow (P0-026)
 
 ---
@@ -965,15 +964,19 @@ CI (P0-025):
 
 ```text
 CI pipeline:                    CONFIGURED (.github/workflows/ci.yml, «Landflow CI»)
-Canonical CI quality command:   composer quality
-Browser CI command:             npm run test:e2e (Chromium via npx playwright install --with-deps chromium)
+CI GitHub verification:         PASS (run 36577884025, commit fe864ee)
+GitHub Actions platform:        Ubuntu (ubuntu-latest = ubuntu-24.04 at verification time)
+Canonical quality gate:         composer quality
+Browser E2E gate:               npm run test:e2e
+Chromium CI:                    VERIFIED (npx playwright install --with-deps chromium)
 CI database:                    SQLite test environments (PHPUnit :memory:, E2E database/e2e.sqlite); no DB service
 CI secrets:                     none required
 CI triggers:                    push to main, pull_request into main
 CI failure artifacts:           test-results/, playwright-report/, storage/logs/ — only on E2E failure, 7 days
-CI GitHub verification:         PENDING_PUSH
 Production deployment:          NOT_CONFIGURED
 ```
+
+- GitHub verification (P0-025): first real run [36577884025](https://github.com/mddevops/landauto/actions/runs/36577884025) succeeded — PHPUnit 47 passed, Larastan no errors, Pint PASS, Wayfinder generated on the clean checkout, `vp check` (incl. TypeScript) PASS, one production build, Chromium installed with system dependencies, E2E 23 passed on `php artisan serve` + `database/e2e.sqlite`.
 
 Notes:
 
@@ -995,7 +998,7 @@ Notes:
 Not yet confirmed/installed as project quality gate:
 
 - browser screenshot regression automation: NOT_AVAILABLE_YET
-- full CI pipeline: CONFIGURED (P0-025), verification on GitHub: PENDING_PUSH — do not report CI as PASS until a real GitHub Actions run succeeds
+- full CI pipeline: AVAILABLE (P0-025, verified on GitHub Actions). Report CI results only from real runs.
 
 Agents must not claim unavailable checks as PASS.
 
@@ -1018,11 +1021,9 @@ Recommended next order:
 
 # 42. Current Next Approved Task
 
-Last completed task: `P0-024 — Create Browser QA Baseline` (DONE).
+Last completed task: `P0-025 — Create CI Pipeline` (DONE, verified on GitHub Actions).
 
-Current task: `P0-025 — Create CI Pipeline` — PARTIAL (CI configured and locally validated; commit/push and a real GitHub Actions run are pending owner authorization).
-
-**Next task after P0-025 is verified on GitHub: `P0-026 — Autonomous Task Workflow`.**
+**Next task: `P0-026 — Autonomous Task Workflow`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1048,7 +1049,8 @@ Known gaps:
 
 - RESOLVED (2026-09-29) — Local development database: the developer `.env` now points to the working MySQL database `landauto` (previously a non-existent `autoland`). See "Actual local development environment" above.
 - RESOLVED (P0-025) — starter-kit workflow replaced by `.github/workflows/ci.yml` (canonical commands, single build, E2E included, `ci:check` removed); `.github/dependabot.yml` kept for weekly action updates. Original note: Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`. After P0-022 `composer ci:check` is a deprecated alias of `composer quality`, so the workflow still resolves; it now also runs Larastan, Pint and a second production build (`composer setup` already builds). P0-025 should call canonical commands directly (`composer quality`), drop the `ci:check` alias and the duplicate build, and add `npm run test:e2e` (CI must install Chromium via `npx playwright install --with-deps chromium`; it does not depend on a developer server).
-- Commits: baseline `fdcf597`, P0-021C `a96f6ee` and `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) are pushed to `origin/main`. P0-025 changes are not committed yet; commits/pushes require explicit authorization.
+- Commits: baseline `fdcf597`, P0-021C `a96f6ee`, `3070ef7` (P0-022, foundation cleanup, P0-023, development-environment record, P0-024) and `fe864ee` (P0-025 CI) are pushed to `origin/main`, followed by the P0-025 documentation commit. Commits/pushes require explicit authorization.
+- `ubuntu-latest` will move to Ubuntu 26 from 2026-10-19 (GitHub annotation on the CI run). The workflow is not pinned to `ubuntu-24.04`; if the migration breaks Playwright system dependencies, pin the runner or upgrade Playwright in a separate task.
 
 Resolved:
 
@@ -1619,12 +1621,11 @@ Russian foundation UI:        DONE (P0-021C, APP_LOCALE=ru)
 Quality command aliases:      CONFIGURED (P0-022, composer quality)
 Playwright:                   AVAILABLE (P0-023, Chromium, npm run test:e2e)
 Browser QA baseline:          DONE (P0-024, desktop + tablet/mobile smoke)
-CI:                           CONFIGURED (P0-025, Landflow CI; GitHub verification PENDING_PUSH)
+CI:                           CONFIGURED, GitHub verification PASS (P0-025, Landflow CI, Ubuntu)
 Production deployment:        NOT_CONFIGURED
 
 Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 0 — IN_PROGRESS.  
-Current task: P0-025 — Create CI Pipeline (PARTIAL, pending push + GitHub run).  
 Next approved task: P0-026 — Autonomous Task Workflow.**
