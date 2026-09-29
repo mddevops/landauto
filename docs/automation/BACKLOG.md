@@ -64,7 +64,7 @@ Current phase:
 
 Current next task:
 
-`P0-021C — Russian Foundation UI`
+`P0-022 — Standardize Quality Commands`
 
 Phase 1 implementation must not start before required Phase 0 tasks are complete.
 
@@ -706,7 +706,7 @@ Make the current `landauto` working copy the single versioned source of the proj
 
 ## P0-021C — Russian Foundation UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-021B
 
 ### Objective
@@ -742,6 +742,17 @@ Translate the existing starter-kit user-facing UI to Russian so the application 
 - frontend check;
 - production build;
 - manual browser review of changed surfaces (Playwright: NOT_AVAILABLE_YET).
+
+### Result
+
+- All starter-kit surfaces translated to Russian: welcome, auth (login, registration, password reset, email verification, password confirmation, 2FA challenge, passkeys), dashboard, settings (profile, security, appearance, account deletion), app shell (sidebar, header, user menu, mobile sheet), shadcn primitives' screen-reader/aria texts.
+- Passkey client errors mapped to Russian messages (`resources/js/lib/passkey-errors.ts`); raw English library messages are not shown.
+- `APP_LOCALE=ru` (`config/app.php` default `ru`, `.env.example`); fallback locale `en`.
+- Standard Laravel localization, no translation package / React i18n library: `lang/ru/{auth,passwords,pagination,validation}.php`, `lang/ru.json` (flash toasts, Fortify, passkeys, validation summary, notifications/mail, error pages).
+- `tests/Feature/LocalizationTest.php` added (locale, `<html lang="ru">`, Russian auth/validation/flash messages); no existing tests weakened or removed.
+- Layout: long Russian strings reviewed at 1440×1000 and 390×844 (manual headless Chrome review; no overflow, no console errors, no failed requests); no layout fixes required beyond shorter appearance labels.
+- Checks: PHPUnit PASS (45 tests), Pint PASS, Larastan PASS, `npm run check` PASS, `npm run build` PASS, Playwright NOT_AVAILABLE_YET.
+- Allowed Latin text: proper nouns (Landflow, Laravel, Laracasts on placeholder landing), technical abbreviations (QR, TOTP), user data.
 
 ### References
 
@@ -2511,7 +2522,7 @@ The remaining required sequence is:
 ```text
 P0-021A Bootstrap Landflow Application                           DONE
 P0-021B Repository Initialization & Project State Reconciliation DONE
-P0-021C Russian Foundation UI
+P0-021C Russian Foundation UI                                    DONE
 P0-022  Quality Commands
 P0-023  Playwright
 P0-024  Browser QA Baseline

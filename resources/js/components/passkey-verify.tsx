@@ -6,6 +6,7 @@ import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Separator } from '@/components/ui/separator';
 import { Spinner } from '@/components/ui/spinner';
+import { passkeyErrorMessage } from '@/lib/passkey-errors';
 
 type Props = {
     routes?: {
@@ -23,7 +24,7 @@ export default function PasskeyVerify({
     loadingLabel,
     separator,
 }: Props = {}) {
-    const { verify, isLoading, error, isSupported } = usePasskeyVerify({
+    const { verify, isLoading, errorInstance, isSupported } = usePasskeyVerify({
         ...(routes && {
             routes: {
                 options: routes.options.url,
@@ -39,6 +40,8 @@ export default function PasskeyVerify({
         return null;
     }
 
+    const error = passkeyErrorMessage(errorInstance);
+
     return (
         <>
             <div className="grid gap-2">
@@ -51,8 +54,8 @@ export default function PasskeyVerify({
                 >
                     {isLoading ? <Spinner /> : <KeyRound className="h-4 w-4" />}
                     {isLoading
-                        ? (loadingLabel ?? 'Authenticating...')
-                        : (label ?? 'Sign in with a passkey')}
+                        ? (loadingLabel ?? 'Выполняем вход…')
+                        : (label ?? 'Войти с помощью ключа доступа')}
                 </Button>
                 {error && (
                     <InputError message={error} className="text-center" />
@@ -65,7 +68,7 @@ export default function PasskeyVerify({
                 </div>
                 <div className="relative flex justify-center text-xs uppercase">
                     <span className="bg-background px-2 text-muted-foreground">
-                        {separator ?? 'Or continue with email'}
+                        {separator ?? 'Или войдите по электронной почте'}
                     </span>
                 </div>
             </div>

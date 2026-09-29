@@ -867,10 +867,10 @@ Completed:
 - Cursor Agents (P0-015…P0-021) present.
 - Application foundation (P0-021A).
 - Git repository initialization (P0-021B).
+- Russian foundation UI (P0-021C).
 
 Still needed:
 
-- Russian foundation UI (P0-021C)
 - standardized quality commands (P0-022)
 - Playwright (P0-023)
 - browser QA baseline (P0-024)
@@ -889,6 +889,8 @@ Verified after P0-021A (tools installed and executed successfully on the starter
 - vite-plus check: AVAILABLE — `npm run check` PASS (format + type-aware lint)
 - TypeScript: AVAILABLE — `npm run types:check` (`tsc --noEmit`) PASS
 - Vite production build: AVAILABLE — `npm run build` PASS
+
+Re-verified after P0-021C: PHPUnit PASS (45 tests, incl. `LocalizationTest`), Pint PASS, Larastan PASS, `npm run check` PASS, `npm run build` PASS.
 
 Canonical quality command aliases are NOT yet standardized; this is `P0-022`.
 The starter-kit scripts currently overlap (e.g. `composer test` also runs Pint and PHPStan; `lint`, `lint:check`, `types:check`, `ci:check`).
@@ -920,19 +922,30 @@ Recommended next order:
 
 # 42. Current Next Approved Task
 
-Last completed task: `P0-021B — Repository Initialization & Project State Reconciliation` (DONE).
+Last completed task: `P0-021C — Russian Foundation UI` (DONE).
 
-**Next task: `P0-021C — Russian Foundation UI`.**
+**Next task: `P0-022 — Standardize Quality Commands`.**
 
 No implementation task should be inferred from this alone.
 
+UI language state (P0-021C):
+
+```text
+Product UI language:       Russian
+Foundation UI localized:   YES
+APP_LOCALE:                ru (fallback_locale: en)
+Translations:              lang/ru/*.php + lang/ru.json (standard Laravel localization, no i18n package)
+Playwright:                NOT_AVAILABLE_YET
+```
+
 Known gaps:
 
-- Starter-kit UI (welcome, auth, dashboard, settings) is English; `APP_LOCALE=en`. Violates D-092 → tracked as `P0-021C`.
+- The welcome page is still the starter-kit Laravel placeholder (translated to Russian, Laravel/Laracasts links kept); a real Landflow landing belongs to a future product task.
+- Local environment note: the developer `.env` points to MySQL database `autoland`, which does not exist locally; HTTP smoke/browser review for P0-021C used a shell-level SQLite override. `.env` was not modified. Automated tests use in-memory SQLite and are unaffected.
 - Starter kit ships `.github/workflows/tests.yml` (`composer setup` + `composer ci:check`) and `.github/dependabot.yml`; CI is formally `P0-025` and must switch to canonical commands after `P0-022`.
 - `composer.json` package name is still `laravel/react-starter-kit`.
 - `laravel/chisel` is a production `require` of the starter kit; keep/remove needs an explicit decision.
-- No initial commit exists yet; `origin` (`mddevops/landauto`) is empty. First commit/push requires explicit authorization.
+- Baseline commit `fdcf597` (`chore: bootstrap Landflow foundation`) is pushed to `origin/main`. P0-021C changes are not committed yet; commits/pushes still require explicit authorization.
 - PHPUnit Feature tests that render Inertia pages depend on built Vite assets (`public/build/manifest.json`, fonts CSS). Running `npm run build` concurrently with PHPUnit causes a false 500 (`ViteException: Unable to locate font CSS file`); a clean checkout without a build would fail the same way. `P0-022` must account for this when ordering `composer quality` / CI (build before tests, or make tests independent of built assets), and gates must not run build and tests in parallel.
 
 ---
@@ -1494,7 +1507,7 @@ Cursor rules:                 PRESENT
 Cursor agents:                PRESENT
 Application foundation:       INSTALLED (P0-021A)
 Git repository:               INITIALIZED (P0-021B, mddevops/landauto, main)
-Russian foundation UI:        NOT_STARTED (P0-021C)
+Russian foundation UI:        DONE (P0-021C, APP_LOCALE=ru)
 Quality command aliases:      NOT_STARTED (P0-022)
 Playwright/browser QA:        NOT_AVAILABLE_YET
 CI:                           NOT_STARTED (starter-kit workflow present, not standardized)
@@ -1503,4 +1516,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 0 — IN_PROGRESS.  
-Next approved task: P0-021C — Russian Foundation UI.**
+Next approved task: P0-022 — Standardize Quality Commands.**
