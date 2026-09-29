@@ -1,0 +1,1380 @@
+---
+description: Laravel backend implementation rules for Landflow.
+alwaysApply: true
+---
+
+# Landflow — Laravel Backend Rule
+
+This rule defines how Cursor agents should implement backend code in Landflow.
+
+Primary references:
+
+- `docs/architecture/ARCHITECTURE.md`
+- `docs/architecture/DATABASE.md`
+- `docs/architecture/TENANCY.md`
+- `docs/architecture/PERMISSIONS.md`
+- `docs/architecture/SECURITY.md`
+- `docs/automation/DEFINITION_OF_DONE.md`
+- `docs/automation/DECISIONS.md`
+
+Use existing Laravel conventions before inventing new abstractions.
+
+---
+
+## 1. Backend Role
+
+Laravel is the authoritative application backend.
+
+Backend owns:
+
+- authentication;
+- authorization;
+- tenancy;
+- persistence;
+- domain invariants;
+- validation;
+- queueing;
+- integration delivery;
+- publishing state;
+- security-sensitive decisions.
+
+React/Inertia is not the source of truth for business authorization.
+
+---
+
+## 2. Follow Existing Laravel Version
+
+Use the Laravel version already installed in the repository.
+
+Do not write code from assumptions based on older framework conventions when current framework behavior differs.
+
+Before implementation:
+
+- inspect current bootstrap/config structure;
+- inspect middleware registration;
+- inspect routing conventions;
+- inspect existing auth/Fortify setup;
+- inspect existing test setup.
+
+---
+
+## 3. Controllers Should Stay Thin
+
+Controllers should coordinate request flow.
+
+Good responsibilities:
+
+- receive validated request;
+- resolve authorized resource;
+- call domain Action/Service when behavior is non-trivial;
+- return Inertia/redirect/response.
+
+Avoid giant controllers containing:
+
+- complex business logic;
+- cross-domain orchestration;
+- integration delivery logic;
+- long transaction blocks;
+- permission logic duplicated manually everywhere.
+
+---
+
+## 4. Use Form Requests for Non-Trivial Validation
+
+Prefer dedicated Form Request classes when validation is meaningful or reusable.
+
+Use them for:
+
+- create/update Workspace resources;
+- Site configuration;
+- automotive imports;
+- Form definitions;
+- Integration configuration;
+- domains;
+- publishing commands.
+
+Small one-line validation may remain inline if it is genuinely trivial.
+
+---
+
+## 5. Validation Is Server-Side
+
+All user input must be validated in Laravel.
+
+Do not trust:
+
+- TypeScript types;
+- frontend required fields;
+- select options;
+- hidden inputs;
+- route parameters without ownership checks;
+- client-calculated prices;
+- client-supplied `workspace_id`.
+
+Frontend validation is UX only.
+
+---
+
+## 6. Derive Ownership Server-Side
+
+Do not mass-assign authoritative ownership fields from request payload.
+
+Examples:
+
+Wrong:
+
+```php
+Site::create($request->validated());
+```
+
+when validated data contains arbitrary `workspace_id`.
+
+Preferred:
+
+```php
+$workspace->sites()->create($validatedDataWithoutOwnershipFields);
+```
+
+or an explicit Action that derives ownership from authorized context.
+
+---
+
+## 7. Policies Are the Default Authorization Boundary
+
+Use Laravel Policies for resource-level authorization.
+
+Examples:
+
+- Workspace;
+- Site;
+- Form;
+- Submission;
+- IntegrationProfile;
+- SiteVehicle;
+- Domain;
+- Publication.
+
+Do not duplicate the same access rule in many controllers.
+
+---
+
+## 8. Authorization Order
+
+Conceptually:
+
+```text
+Authenticated User
+→ Workspace membership
+→ Site/resource ownership
+→ permission
+→ entitlement
+→ business invariant
+```
+
+A Policy/authorization layer should reflect this order where practical.
+
+---
+
+## 9. Do Not Trust Route Model Binding Alone
+
+Route model binding resolves a model.
+
+It does not prove the User may access it.
+
+Always authorize.
+
+Nested routes must verify parent-child relationships.
+
+Example:
+
+```text
+/workspaces/{workspace}/sites/{site}
+```
+
+must verify that `site.workspace_id == workspace.id`.
+
+---
+
+## 10. Workspace Context
+
+Do not rely on a global mutable Workspace context for domain correctness where explicit resource ownership is available.
+
+Active Workspace is useful for UX/navigation.
+
+Authorization must still verify the actual resource belongs to that Workspace/User context.
+
+---
+
+## 11. Global Scopes
+
+Use global scopes carefully.
+
+Do not hide tenant isolation entirely inside opaque global scopes if that makes:
+
+- Super Admin behavior unsafe;
+- queue jobs ambiguous;
+- tests hard to reason about;
+- cross-Workspace operations dangerous.
+
+Explicit scoping is preferred for critical ownership logic.
+
+If a global scope is used, document escape behavior clearly.
+
+---
+
+## 12. Models Should Represent Domain Relationships
+
+Eloquent models should define clear relationships.
+
+Examples:
+
+- Workspace hasMany Sites;
+- Workspace hasMany IntegrationProfiles;
+- Site hasMany Pages;
+- Site hasMany SiteVehicles;
+- Form hasMany Submissions.
+
+Avoid turning models into giant service containers.
+
+---
+
+## 13. Model Methods vs Services
+
+Use model methods for simple behavior closely tied to model state.
+
+Use Actions/Services for:
+
+- multi-model transactions;
+- cross-domain orchestration;
+- external side effects;
+- publishing;
+- imports;
+- delivery pipeline;
+- complex copy workflows.
+
+Do not create a Service class for every trivial CRUD operation.
+
+---
+
+## 14. Action Classes for Use Cases
+
+For meaningful commands, prefer single-purpose Actions.
+
+Examples:
+
+```text
+CreateWorkspace
+CreateSite
+ImportCatalogVehicleToSite
+CopySiteVehicle
+PublishSite
+SubmitForm
+RetryDelivery
+```
+
+Action names should describe business intent.
+
+---
+
+## 15. Service Classes for Reusable Domain Capabilities
+
+Use Service classes when a capability has several operations.
+
+Examples:
+
+```text
+EntitlementService
+AutomotiveBindingResolver
+PublishedSiteResolver
+IntegrationDeliveryService
+```
+
+Do not create vague services such as:
+
+```text
+SiteService
+HelperService
+CommonService
+```
+
+unless scope is genuinely cohesive.
+
+---
+
+## 16. Transactions
+
+Use database transactions for operations that must succeed atomically.
+
+Examples:
+
+- create Workspace + owner membership;
+- create Site + initial Page/Template state;
+- import Site Vehicle + Site Offer;
+- persist Submission + Delivery records;
+- publish version metadata and activation where architecture requires.
+
+Do not wrap external HTTP calls inside long database transactions.
+
+---
+
+## 17. External Calls Outside Long Transactions
+
+Preferred pattern:
+
+1. persist required state;
+2. commit transaction;
+3. dispatch queue/external work.
+
+Do not hold database locks while waiting on:
+
+- CRM;
+- webhook;
+- email provider;
+- DNS;
+- third-party API.
+
+---
+
+## 18. Queue Jobs
+
+Use Jobs for asynchronous work such as:
+
+- Form delivery;
+- image processing;
+- publication build if expensive;
+- external imports;
+- notifications.
+
+Jobs must carry explicit IDs/context.
+
+Do not depend on session active Workspace.
+
+---
+
+## 19. Queue Job Re-Resolution
+
+A Job should re-load authoritative state before acting.
+
+Check:
+
+- record still exists;
+- status still allows execution;
+- tenant relationship still valid;
+- operation has not already completed.
+
+This supports retries and idempotency.
+
+---
+
+## 20. Idempotent Jobs
+
+Jobs that may retry must be safe against duplicate execution.
+
+Especially:
+
+- CRM lead creation;
+- webhook delivery;
+- publication activation;
+- import processing.
+
+Use state guards/idempotency keys where appropriate.
+
+---
+
+## 21. Events
+
+Use Events when decoupling is meaningful.
+
+Good examples:
+
+- SitePublished;
+- SubmissionReceived;
+- DeliveryFailed;
+- WorkspaceMemberInvited.
+
+Do not turn simple synchronous behavior into event spaghetti.
+
+---
+
+## 22. Listeners
+
+Listeners should perform one clear responsibility.
+
+Heavy/external listeners should normally be queued.
+
+Do not hide critical transactional invariants in asynchronous listeners.
+
+---
+
+## 23. Domain Invariants Must Be Explicit
+
+Examples:
+
+- Site belongs to one Workspace;
+- Site Integration Profile must belong to same Workspace;
+- customer cannot mutate Global Catalog;
+- Site Offer owns price;
+- Block Instance references pinned Block Version;
+- Published Version must not expose Draft.
+
+Enforce invariants in backend code and tests.
+
+---
+
+## 24. Enums
+
+Use backed enums for stable state/status values where appropriate.
+
+Examples:
+
+- SiteStatus;
+- PublicationStatus;
+- DeliveryStatus;
+- WorkspaceRole;
+- AvailabilityStatus.
+
+Do not use magic strings throughout the codebase.
+
+---
+
+## 25. Value Objects
+
+Use Value Objects when they clarify important domain concepts.
+
+Potential examples:
+
+- Money;
+- normalized phone;
+- public hostname;
+- semantic version.
+
+Do not create Value Objects for every primitive automatically.
+
+---
+
+## 26. Money
+
+Never use floating-point arithmetic for money.
+
+Exact storage strategy is still an ADR-required decision.
+
+Until resolved:
+
+- do not implement irreversible money schema assumptions;
+- use `BLOCKED_DECISION` if a task requires final Money storage.
+
+---
+
+## 27. IDs
+
+Primary identifier strategy is not yet finalized globally.
+
+Do not introduce a new arbitrary UUID/ULID strategy in one domain if repository/database strategy is unresolved.
+
+Use the approved project strategy once decided.
+
+---
+
+## 28. Migrations
+
+Migrations must be:
+
+- deterministic;
+- reviewable;
+- safe for existing data;
+- explicit about foreign keys;
+- explicit about indexes;
+- explicit about nullable/default behavior.
+
+Do not create schema solely from guessed future needs.
+
+---
+
+## 29. Migration Ownership
+
+Every table must be classified:
+
+- Global;
+- Workspace;
+- Site.
+
+Before creating a migration, inspect `DATABASE.md`.
+
+---
+
+## 30. Foreign Keys
+
+Use foreign keys where they improve integrity and fit the domain.
+
+Be deliberate about:
+
+- cascade;
+- restrict;
+- set null.
+
+Do not use cascade delete if it could erase valuable customer/history data unexpectedly.
+
+---
+
+## 31. Delete vs Archive
+
+Prefer archive/status/deprecation for referenced durable entities.
+
+Examples:
+
+- Global Catalog records;
+- Block Versions;
+- Forms with historical Submissions;
+- Integration Profiles with Delivery history.
+
+Hard deletion is appropriate only when domain semantics support it.
+
+---
+
+## 32. Indexes
+
+Add indexes based on real query/constraint needs.
+
+Common candidates:
+
+- workspace_id;
+- site_id;
+- status;
+- unique slugs;
+- domain hostname;
+- foreign-key combinations;
+- lookup keys.
+
+Do not index every column blindly.
+
+---
+
+## 33. Unique Constraints
+
+Use database uniqueness where correctness depends on it.
+
+Examples:
+
+- Workspace membership user/workspace pair;
+- Site hostname/subdomain where globally unique;
+- public identifiers;
+- version number per parent where required.
+
+Application checks alone are not enough for race-safe uniqueness.
+
+---
+
+## 34. JSON Usage
+
+JSON is appropriate for:
+
+- Block Schema;
+- Block state;
+- integration mapping;
+- dynamic settings;
+- snapshots/manifests.
+
+Do not put core ownership relationships only into JSON.
+
+Do not use JSON as a substitute for proper relational modeling.
+
+---
+
+## 35. Casts
+
+Use explicit Eloquent casts for:
+
+- enums;
+- booleans;
+- arrays/JSON;
+- dates;
+- encrypted values if appropriate and supported.
+
+Do not rely on implicit PHP coercion for important business state.
+
+---
+
+## 36. Encrypted Attributes
+
+Sensitive stored credentials should use secure server-side encryption.
+
+Examples:
+
+- API token;
+- client secret;
+- SMTP password;
+- CAPTCHA secret.
+
+Do not expose encrypted ciphertext directly to UI as if it were masked secret state.
+
+---
+
+## 37. Secrets in Responses
+
+Never serialize secrets through:
+
+- Inertia props;
+- JSON API responses;
+- logs;
+- resource arrays;
+- debug dumps.
+
+Create dedicated safe DTO/resource representations.
+
+---
+
+## 38. API Resources / DTOs
+
+Use explicit response structures for sensitive or public data.
+
+Avoid passing full Eloquent models blindly to frontend when they contain:
+
+- hidden/private fields;
+- internal IDs not needed;
+- secrets;
+- unrelated relationships.
+
+---
+
+## 39. Inertia Props
+
+Inertia props should be intentional.
+
+Send only data needed by the page.
+
+Do not dump entire Workspace/Site graphs.
+
+This matters for:
+
+- security;
+- performance;
+- frontend clarity.
+
+---
+
+## 40. Query Efficiency
+
+List endpoints should consider:
+
+- eager loading;
+- pagination;
+- filters;
+- indexes.
+
+Avoid N+1 queries.
+
+Do not load the entire Global Automotive Catalog for one selector if cascading/filtering is appropriate.
+
+---
+
+## 41. Query Builder
+
+Use Eloquent/query builder with bound parameters.
+
+Raw SQL should be rare and justified.
+
+Never concatenate untrusted values into raw SQL.
+
+---
+
+## 42. Commands and Schedulers
+
+Artisan commands/scheduled tasks must:
+
+- be idempotent where possible;
+- operate with explicit scope;
+- log safe summaries;
+- avoid secrets;
+- handle partial failure.
+
+Do not rely on current authenticated User context.
+
+---
+
+## 43. Notifications
+
+Use Laravel Notifications when appropriate.
+
+Do not couple core domain state to a specific delivery channel unnecessarily.
+
+If Telegram/email/etc. is introduced later, keep domain event separate from provider detail where useful.
+
+---
+
+## 44. Exceptions
+
+Use domain-specific exceptions for meaningful exceptional conditions.
+
+Examples:
+
+- EntitlementExceeded;
+- InvalidSiteVehicleCopy;
+- PublicationValidationFailed.
+
+Do not use exceptions for normal branching when a result object/state is clearer.
+
+---
+
+## 45. Error Responses
+
+Production responses must not expose:
+
+- stack traces;
+- SQL;
+- filesystem paths;
+- secret values.
+
+Use meaningful Russian user-facing errors.
+
+Internal logs may retain safe diagnostic context.
+
+---
+
+## 46. Logging
+
+Log structured context where useful.
+
+Examples:
+
+```text
+workspace_id
+site_id
+submission_id
+delivery_id
+publication_id
+```
+
+Never log:
+
+- passwords;
+- raw tokens;
+- Authorization headers;
+- full sensitive Submission payload by default.
+
+---
+
+## 47. Public Forms
+
+Public Form submission must go through the central Form domain.
+
+Do not create custom controller logic per Block.
+
+Required flow:
+
+```text
+validate
+→ anti-spam
+→ trusted context resolution
+→ persist Submission
+→ create Delivery records
+→ queue
+```
+
+---
+
+## 48. Integration Delivery
+
+CRM/API/Webhook delivery belongs in backend Jobs/Adapters.
+
+Do not expose Integration secrets to browser.
+
+Do not perform direct browser-to-CRM requests.
+
+---
+
+## 49. HTTP Client
+
+Use Laravel HTTP client / approved backend client abstraction.
+
+All external requests require:
+
+- timeout;
+- safe error handling;
+- secret redaction;
+- SSRF policy for custom endpoints;
+- retry classification.
+
+---
+
+## 50. Provider Adapters
+
+Provider-specific integrations should be isolated behind adapters.
+
+Examples:
+
+```text
+EmailDeliveryAdapter
+WebhookDeliveryAdapter
+DealerCrmAdapter
+```
+
+Do not scatter provider-specific payload rules throughout controllers/forms.
+
+---
+
+## 51. File Uploads
+
+Use Laravel storage abstraction.
+
+Validate:
+
+- MIME;
+- size;
+- extension/content;
+- image decode;
+- dimensions where relevant.
+
+Do not trust original filename as storage path.
+
+---
+
+## 52. Public vs Private Storage
+
+Decide media visibility explicitly.
+
+Published assets may be public/CDN-backed.
+
+Workspace-private assets may require protected access.
+
+Do not make every upload public by default.
+
+---
+
+## 53. Image Processing
+
+Image processing should be server/worker controlled.
+
+Do not allow user-supplied shell command arguments.
+
+Preserve transparency where required by automotive assets.
+
+---
+
+## 54. Cache
+
+Cache is an optimization, not source of truth.
+
+Cache keys must include relevant tenant/site/version dimensions.
+
+Do not share private cache entries between Workspaces.
+
+---
+
+## 55. Cache Invalidation
+
+Invalidate narrowly.
+
+Example after Site Publish:
+
+- Site published manifest;
+- affected Page cache;
+- sitemap;
+- domain resolution if needed.
+
+Do not globally clear every tenant cache.
+
+---
+
+## 56. Fortify/Auth
+
+Keep existing Fortify-based authentication unless a task explicitly requires a change.
+
+Do not rebuild authentication from scratch.
+
+Preserve:
+
+- registration;
+- login;
+- password reset;
+- verification;
+- 2FA/passkeys where currently configured.
+
+---
+
+## 57. Email Verification
+
+Approved direction:
+
+User should implement `MustVerifyEmail` because verification is enabled.
+
+When implemented, add tests for verification/protected flow.
+
+---
+
+## 58. Super Admin
+
+Do not identify Super Admin by:
+
+- hardcoded user ID;
+- email;
+- environment-only bypass.
+
+Use explicit platform roles/permissions.
+
+---
+
+## 59. Impersonation
+
+If implemented later, use a dedicated controlled flow.
+
+Requirements include:
+
+- explicit permission;
+- audit;
+- visible state;
+- safe exit.
+
+Do not simulate impersonation by overwriting session User IDs manually.
+
+---
+
+## 60. Factories
+
+Use model factories for tests.
+
+Factories should create valid minimal domain state.
+
+Avoid factories that silently create huge unrelated graphs.
+
+Use states for roles/statuses where helpful.
+
+---
+
+## 61. Seeders
+
+Seeders may provide:
+
+- local development users;
+- Plans;
+- official Templates;
+- official Blocks;
+- sample catalog data.
+
+Do not seed production secrets.
+
+Make production-sensitive seed behavior explicit.
+
+---
+
+## 62. PHPUnit
+
+Use PHPUnit for backend tests.
+
+Prefer:
+
+- Feature tests for HTTP/auth/tenancy;
+- Unit tests for isolated domain rules.
+
+Do not introduce Pest.
+
+---
+
+## 63. Database Test Isolation
+
+Tests must not depend on existing local data.
+
+Use test database mechanisms already established in repository.
+
+Current baseline uses SQLite in-memory tests unless implementation requirements force an approved change.
+
+---
+
+## 64. Tenancy Tests
+
+Every new Workspace/Site-scoped domain should include negative tests.
+
+Example:
+
+```text
+User A / Workspace A
+cannot read/update/delete
+Workspace B resource.
+```
+
+Positive tests alone are insufficient.
+
+---
+
+## 65. Permission Tests
+
+Test:
+
+- allowed role;
+- denied role;
+- direct request denial even if UI hides action.
+
+Do not test only frontend visibility.
+
+---
+
+## 66. Entitlement Tests
+
+Test entitlement limits separately from permissions.
+
+Example:
+
+Owner may create Site,
+but `max_sites` entitlement may still deny creation.
+
+---
+
+## 67. Regression Tests
+
+Bug fixes should add regression tests when practical.
+
+Do not delete a failing test to make a bug "fixed".
+
+---
+
+## 68. Architecture-Sensitive Backend Work
+
+Before implementing any of these, read the corresponding architecture document fully enough to avoid semantic drift:
+
+### Workspace / Site
+- TENANCY
+- PERMISSIONS
+- DATABASE
+
+### Automotive
+- AUTOMOTIVE_DATA
+- DATABASE
+
+### Blocks
+- BLOCK_SYSTEM
+
+### Forms / Integrations
+- FORMS_AND_INTEGRATIONS
+- SECURITY
+
+### Publishing
+- PUBLISHING
+- SECURITY
+
+---
+
+## 69. Do Not Over-Abstract Repository Layer
+
+Do not create generic repository interfaces for every model by default.
+
+Eloquent is an accepted persistence abstraction.
+
+Introduce repositories only when they solve a concrete problem.
+
+---
+
+## 70. Do Not Create "Manager" Classes Without Clear Meaning
+
+Avoid names such as:
+
+- SiteManager;
+- DataManager;
+- CommonManager.
+
+Prefer business verbs/capabilities:
+
+- PublishSite;
+- ImportVehicle;
+- ResolveEntitlements;
+- DeliverSubmission.
+
+---
+
+## 71. No Service Locator Pattern
+
+Dependencies should be explicit through Laravel container injection where appropriate.
+
+Do not hide dependencies behind global helper/service-locator patterns.
+
+---
+
+## 72. Helpers
+
+Global helpers should be rare.
+
+Prefer:
+
+- Value Objects;
+- Services;
+- dedicated utility classes;
+- existing framework helpers.
+
+Do not create a large `helpers.php` dumping ground.
+
+---
+
+## 73. Config
+
+Stable environment/provider configuration belongs in config files/environment variables.
+
+Customer-specific configuration belongs in database/domain models.
+
+Do not put customer `site_id`/CRM mapping in `.env`.
+
+---
+
+## 74. Environment Variables
+
+New environment variables must be:
+
+- documented;
+- represented in `.env.example` if appropriate;
+- free of real secret values in repo.
+
+---
+
+## 75. Feature Flags
+
+Feature flags may gate experimental rollout.
+
+They do not replace:
+
+- permission;
+- entitlement;
+- tenant checks.
+
+---
+
+## 76. Soft Deletes
+
+Use soft deletes only when they match product semantics.
+
+Do not add `SoftDeletes` everywhere automatically.
+
+Some entities may prefer explicit `archived_at` / status.
+
+Choose deliberately.
+
+---
+
+## 77. Audit
+
+Sensitive actions should produce audit records where architecture requires it.
+
+Examples:
+
+- permission change;
+- publish;
+- price change;
+- domain change;
+- Integration secret replacement.
+
+Audit snapshots must redact secrets.
+
+---
+
+## 78. Public Identifiers
+
+Where public routes expose resources, consider public-safe identifiers.
+
+Do not assume internal sequential IDs must always be public.
+
+Exact identifier strategy remains an ADR-required decision.
+
+---
+
+## 79. Browser-Visible Errors
+
+User-facing backend validation/errors must be Russian because the Landflow UI language is Russian only.
+
+Technical/internal exception messages remain English where appropriate for engineering.
+
+Do not expose raw English framework errors to users.
+
+---
+
+## 80. Naming
+
+Code naming is English.
+
+Use domain names consistently:
+
+```text
+Workspace
+WorkspaceMember
+Site
+SiteOffer
+BlockDefinition
+BlockVersion
+PageBlock
+Form
+Submission
+IntegrationProfile
+Publication
+```
+
+Do not mix transliterated Russian names into code identifiers.
+
+---
+
+## 81. Route Naming
+
+Use consistent English internal route names.
+
+Example:
+
+```text
+sites.index
+sites.create
+sites.store
+designer.show
+```
+
+Browser-visible link text remains Russian.
+
+---
+
+## 82. Domain Logic Must Not Live in Blade/React
+
+Backend business invariants must not be enforced solely in frontend components or Blade templates.
+
+The UI may reflect state.
+
+Laravel enforces state.
+
+---
+
+## 83. No Hidden Side Effects in Accessors
+
+Avoid Eloquent accessors/mutators that perform database writes, network calls, or complex side effects.
+
+Keep model serialization predictable.
+
+---
+
+## 84. Observers
+
+Use model observers sparingly.
+
+Do not hide core business workflows in observers.
+
+Critical behavior should be explicit in Actions/Services.
+
+---
+
+## 85. Boot Methods
+
+Avoid stuffing major domain logic into model `booted()` callbacks.
+
+Implicit cascading side effects make autonomous maintenance harder.
+
+---
+
+## 86. Database Events vs Domain Events
+
+Do not confuse:
+
+- model lifecycle hooks;
+- domain events.
+
+Use explicit domain events for business-significant transitions when needed.
+
+---
+
+## 87. Publication
+
+Publishing backend must respect:
+
+- Draft/Published separation;
+- validation;
+- atomic activation;
+- version pinning;
+- failure safety.
+
+Do not build public rendering directly from mutable Draft tables unless the approved publishing ADR explicitly chooses such a strategy.
+
+---
+
+## 88. Automotive Import
+
+Importing Global Catalog vehicle into customer scope must never mutate the source catalog.
+
+Preserve source references.
+
+Customer overrides remain customer-owned.
+
+---
+
+## 89. Copy Operations
+
+Copy workflows should be explicit Actions.
+
+Examples:
+
+```text
+CopySiteVehicle
+DuplicatePage
+DuplicateBlockInstance
+```
+
+Define whether IDs/repeater item IDs/references are regenerated.
+
+Do not clone database rows blindly.
+
+---
+
+## 90. Submission History
+
+Historical Submission values must remain understandable even if current Form definition changes.
+
+Do not design historical display to depend only on current Form fields.
+
+---
+
+## 91. Integration History
+
+Historical Delivery records should survive Integration Profile changes/deactivation.
+
+Do not rewrite old Delivery results when credentials change.
+
+---
+
+## 92. Security Before Convenience
+
+Never:
+
+- disable CSRF globally;
+- bypass Policies;
+- expose secrets for easier frontend usage;
+- accept arbitrary internal URLs;
+- skip validation because TypeScript validates;
+- disable tenant scoping to simplify admin queries.
+
+---
+
+## 93. Definition of Done
+
+Before marking backend task DONE, run all applicable checks from:
+
+`docs/automation/DEFINITION_OF_DONE.md`
+
+At minimum, backend tasks commonly require:
+
+- PHPUnit;
+- Larastan;
+- Pint;
+- migration verification;
+- tenancy/permission tests where applicable.
+
+---
+
+## 94. Final Backend Checklist
+
+Before finishing a Laravel task, verify:
+
+```text
+Does the backend derive ownership?
+Is authorization explicit?
+Is validation server-side?
+Is the tenant boundary tested?
+Is the transaction boundary correct?
+Are external calls outside long transactions?
+Are queue jobs retry-safe?
+Are secrets protected?
+Are user-facing errors Russian?
+Are queries efficient?
+Are migrations safe?
+Did I avoid unnecessary abstractions?
+Did applicable tests actually run?
+```
+
+If any critical answer is unclear, do not mark the task DONE.

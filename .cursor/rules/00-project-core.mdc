@@ -1,0 +1,675 @@
+---
+description: Core project rules for Landflow. Always apply before any implementation task.
+alwaysApply: true
+---
+
+# Landflow — Core Project Rule
+
+This file contains the highest-level operational rules for Cursor agents working on Landflow.
+
+It is intentionally concise.
+
+Detailed product and architecture rules live in `/docs`.
+
+---
+
+## 1. Project Identity
+
+Project:
+
+**Landflow**
+
+Landflow is a SaaS website builder focused on automotive websites.
+
+Primary product flow:
+
+```text
+Workspace
+→ Create Site
+→ Choose Template
+→ Customize in Designer
+→ Configure Vehicles & Prices
+→ Configure Forms / Integrations
+→ Preview
+→ Publish
+```
+
+Landflow is a separate product from the automotive CRM project.
+
+Do not introduce CRM-specific functionality unless it is explicitly part of Landflow architecture.
+
+---
+
+## 2. Current Phase
+
+Current project phase:
+
+**Phase 0 — Foundation / Architecture / Automation**
+
+Core Landflow product implementation must not begin until Phase 0 is completed according to:
+
+- `docs/automation/MASTER_PLAN.md`
+- `docs/automation/BACKLOG.md`
+- `docs/automation/PROJECT_STATE.md`
+
+Always inspect the current backlog task before starting work.
+
+---
+
+## 3. Required Sources of Truth
+
+Before implementation, use the relevant documents as source of truth.
+
+Core documents:
+
+```text
+docs/product/PRODUCT.md
+docs/product/WEBFLOW_TO_LANDFLOW.md
+
+docs/architecture/ARCHITECTURE.md
+docs/architecture/DATABASE.md
+docs/architecture/TENANCY.md
+docs/architecture/PERMISSIONS.md
+docs/architecture/AUTOMOTIVE_DATA.md
+docs/architecture/BLOCK_SYSTEM.md
+docs/architecture/FORMS_AND_INTEGRATIONS.md
+docs/architecture/PUBLISHING.md
+docs/architecture/SECURITY.md
+
+docs/automation/DEFINITION_OF_DONE.md
+docs/automation/PROJECT_STATE.md
+docs/automation/MASTER_PLAN.md
+docs/automation/BACKLOG.md
+docs/automation/DECISIONS.md
+```
+
+Do not assume architecture from memory when a relevant source-of-truth document exists.
+
+---
+
+## 4. Repository State Must Be Inspected
+
+Architecture documents describe the target system.
+
+They do not prove that something is already implemented.
+
+Before modifying code:
+
+1. inspect the current repository;
+2. verify existing files, models, migrations, routes, tests, and packages;
+3. distinguish existing behavior from planned behavior;
+4. avoid duplicating already-existing functionality.
+
+Never claim something exists unless repository evidence confirms it.
+
+---
+
+## 5. Product UI Language — Russian Only
+
+**All user-facing Landflow interface text must be written in Russian.**
+
+This rule applies to every product surface:
+
+- authentication UI;
+- Workspace;
+- Dashboard;
+- Site management;
+- Site creation;
+- Designer;
+- Block Properties;
+- Automotive Catalog;
+- Site Vehicles;
+- Site Offers;
+- Forms;
+- Popups;
+- Integrations;
+- Submissions;
+- SEO;
+- Domains;
+- Publishing;
+- Team;
+- Super Admin;
+- Developer Platform;
+- Marketplace;
+- empty states;
+- validation messages;
+- success/error messages;
+- dialogs;
+- buttons;
+- menus;
+- tooltips;
+- notifications;
+- onboarding;
+- loading states;
+- browser-visible labels and headings.
+
+Examples:
+
+Use:
+
+- `Создать сайт`
+- `Настройки`
+- `Опубликовать`
+- `Сохранено`
+- `Автомобили`
+- `Рабочее пространство`
+
+Do not use:
+
+- `Create Site`
+- `Settings`
+- `Publish`
+- `Saved`
+- `Vehicles`
+- `Workspace`
+
+unless the text is an external product/service name or another intentionally untranslated proper noun.
+
+### Code Language
+
+Code and technical identifiers remain in English.
+
+Use English for:
+
+- class names;
+- methods;
+- variables;
+- database tables;
+- database columns;
+- enum values;
+- permission keys;
+- route names;
+- component names;
+- TypeScript interfaces/types;
+- API fields;
+- internal domain names.
+
+Examples:
+
+```text
+Workspace
+Site
+SiteOffer
+BlockDefinition
+FormSubmission
+publish_site
+edit_prices
+manage_integrations
+```
+
+User-facing Russian equivalents belong only in UI.
+
+### Mixed Language Is Not Allowed
+
+Do not ship mixed Russian/English interface such as:
+
+```text
+Создать Site
+Publish сайт
+Settings профиля
+Save changes
+```
+
+The current product has one active UI language:
+
+**Russian.**
+
+### Future Localization
+
+Architecture should avoid making future localization impossible.
+
+However:
+
+- do not build a full multilingual UI system now unless a task explicitly requires it;
+- do not delay current work for internationalization;
+- Russian remains the only active product UI language at this stage.
+
+---
+
+## 6. Core Technology Stack
+
+Use the existing application stack.
+
+Backend:
+
+- Laravel
+- PHP 8.3+
+
+Frontend:
+
+- React
+- Inertia
+- TypeScript strict
+- shadcn/ui
+- Tailwind CSS 4
+- Vite / vite-plus
+
+Do not introduce a competing frontend framework.
+
+---
+
+## 7. Package Manager
+
+Use:
+
+**npm only**
+
+Do not use:
+
+- yarn;
+- pnpm;
+- bun.
+
+Do not add another package manager lockfile.
+
+---
+
+## 8. Package Installation Policy
+
+Do not install a package simply because it makes an implementation easier.
+
+Before adding a dependency:
+
+1. confirm the current task actually needs it;
+2. check whether existing project capabilities already solve the problem;
+3. evaluate maintenance, security, license, and bundle/runtime impact;
+4. ensure architecture permits it.
+
+Major package/infrastructure choices may require a decision or ADR.
+
+If uncertain:
+
+`BLOCKED_DECISION`
+
+is preferable to silently changing architecture.
+
+---
+
+## 9. Current Testing Direction
+
+PHP:
+
+**PHPUnit**
+
+Do not introduce Pest.
+
+Browser/E2E:
+
+**Playwright**
+
+Do not introduce Laravel Dusk.
+
+Frontend type/check workflow should follow existing repository tooling.
+
+Do not add standalone ESLint merely by convention.
+
+---
+
+## 10. Definition of Done Is Mandatory
+
+Every task is governed by:
+
+`docs/automation/DEFINITION_OF_DONE.md`
+
+Writing code is not sufficient.
+
+Applicable checks may include:
+
+- PHPUnit;
+- Larastan;
+- Pint;
+- TypeScript/check;
+- production build;
+- Playwright;
+- browser console;
+- responsive/visual QA;
+- security/tenancy review.
+
+Never mark a task DONE while a required check is failing.
+
+---
+
+## 11. No Fake Success
+
+Never claim:
+
+- tests passed;
+- build passed;
+- browser was verified;
+- Playwright passed;
+- migration ran successfully;
+- integration was tested;
+
+unless that check actually ran.
+
+If a tool/check does not yet exist:
+
+```text
+NOT_AVAILABLE_YET
+```
+
+If it is genuinely irrelevant:
+
+```text
+NOT_APPLICABLE
+```
+
+Do not report assumptions as successful verification.
+
+---
+
+## 12. Task Status Vocabulary
+
+Use only:
+
+- `NOT_STARTED`
+- `IN_PROGRESS`
+- `DONE`
+- `PARTIAL`
+- `BLOCKED_DECISION`
+- `BLOCKED_EXTERNAL`
+- `DEFERRED`
+
+Do not use vague statuses such as:
+
+- mostly done;
+- probably working;
+- almost complete.
+
+---
+
+## 13. Backlog Discipline
+
+Work should follow:
+
+`docs/automation/BACKLOG.md`
+
+Before starting a task:
+
+1. identify task ID;
+2. verify dependencies are DONE;
+3. read relevant architecture;
+4. inspect repository;
+5. implement only the task scope.
+
+Do not skip ahead to unrelated future features.
+
+---
+
+## 14. Architecture Changes
+
+Do not silently redefine architecture inside implementation.
+
+If the requested implementation conflicts with approved architecture:
+
+1. identify the conflict;
+2. stop the conflicting part;
+3. return `BLOCKED_DECISION`;
+4. create/propose an ADR or update decision log where appropriate.
+
+Routine implementation decisions inside approved architecture are allowed.
+
+Major architectural changes are not.
+
+---
+
+## 15. Non-Negotiable Architecture Summary
+
+Always preserve these rules:
+
+1. Workspace is the tenant.
+2. User is identity, not the tenant.
+3. Site belongs to Workspace.
+4. Global Automotive Catalog is platform-owned.
+5. Customers cannot mutate Global Catalog.
+6. Site Offer owns Site-specific commercial prices.
+7. Templates do not own customer vehicles/prices.
+8. Site-to-Site transfer defaults to copy, not live sync.
+9. Block Schema is deterministic runtime truth.
+10. Developer Blocks do not query raw database tables.
+11. Form and Popup are separate entities.
+12. Valid Submission is persisted before external delivery.
+13. Workspace owns reusable Integration credentials.
+14. Site stores Site-specific integration overrides.
+15. Draft and Published state are separate.
+16. Autosave never publishes.
+17. Permission and entitlement are separate concepts.
+18. Backend authorization is mandatory.
+19. Secrets never belong in public frontend/published output.
+20. Product UI is Russian only.
+
+---
+
+## 16. Scope Exclusions
+
+Landflow is not currently a full automotive CRM.
+
+Do not add without explicit product decision:
+
+- telephony;
+- call center;
+- sales pipeline CRM;
+- employee task management;
+- internal team chat;
+- warehouse CRM.
+
+In scope:
+
+- website creation;
+- automotive content;
+- prices/offers;
+- lead capture;
+- Forms;
+- CRM/API integrations;
+- publishing;
+- analytics.
+
+---
+
+## 17. Backend Is Authoritative
+
+Never trust frontend state for:
+
+- Workspace ownership;
+- Site ownership;
+- permissions;
+- entitlement;
+- price;
+- Integration Profile;
+- destination URL;
+- publish permission;
+- Global Catalog mutation.
+
+Frontend controls UX.
+
+Backend controls authorization and business truth.
+
+---
+
+## 18. Security Baseline
+
+Always preserve:
+
+- tenant isolation;
+- server-side authorization;
+- CSRF protection where applicable;
+- input validation;
+- XSS protection;
+- RichText sanitization;
+- secret masking;
+- upload validation;
+- SSRF-aware outbound integrations;
+- safe public Form handling.
+
+Never weaken security just to make implementation easier.
+
+---
+
+## 19. UI Foundation
+
+Prefer existing shadcn/ui components and primitives.
+
+Use:
+
+`@/lib/utils`
+
+Do not create duplicate generic helpers if an established project helper already exists.
+
+Use product-specific components only where composition of shadcn primitives is insufficient.
+
+---
+
+## 20. UI Quality
+
+User-facing UI tasks are not complete until actual browser behavior is verified when tooling is available.
+
+Check:
+
+- layout;
+- spacing;
+- empty states;
+- loading states;
+- errors;
+- permissions;
+- long Russian text;
+- desktop;
+- tablet;
+- mobile where relevant;
+- browser console.
+
+Russian text is often longer than English.
+
+Design components so Russian labels do not break layout.
+
+---
+
+## 21. Database Ownership
+
+Before adding any table or persistent model, classify it as:
+
+- Global;
+- Workspace;
+- Site.
+
+Check:
+
+- foreign keys;
+- indexes;
+- deletion/archive behavior;
+- tenancy;
+- historical/version behavior.
+
+Refer to:
+
+`docs/architecture/DATABASE.md`
+
+---
+
+## 22. Do Not Over-Engineer
+
+Implement current task requirements using approved extension points.
+
+Do not build:
+
+- hypothetical microservices;
+- generic frameworks;
+- unused abstraction layers;
+- future Marketplace infrastructure during basic Site work.
+
+Prefer simple, explicit, testable code.
+
+---
+
+## 23. No Hidden Magic
+
+Important product behavior must be explicit.
+
+Examples:
+
+Good:
+
+```text
+Site Offer owns Site price.
+```
+
+Bad:
+
+```text
+Price is copied into several Blocks automatically.
+```
+
+Good:
+
+```text
+Copy Site Vehicle from Site A to Site B.
+```
+
+Bad:
+
+```text
+Sites silently synchronize forever.
+```
+
+---
+
+## 24. Documentation Updates
+
+When implementation changes real project state:
+
+update:
+
+`docs/automation/PROJECT_STATE.md`
+
+When an approved lightweight decision changes:
+
+update:
+
+`docs/automation/DECISIONS.md`
+
+When architecture changes:
+
+update the relevant architecture document and create an ADR if required.
+
+Do not leave source-of-truth documents knowingly stale.
+
+---
+
+## 25. Stop Conditions
+
+Use `BLOCKED_DECISION` when:
+
+- architecture documents materially conflict;
+- task requires an unresolved major architecture choice;
+- ownership cannot be safely inferred;
+- a major package/infrastructure choice is required;
+- public rendering architecture is needed but not yet approved;
+- security implications cannot be safely resolved from existing docs.
+
+Use `BLOCKED_EXTERNAL` for:
+
+- production credentials;
+- DNS;
+- third-party approval;
+- provider account;
+- production-only infrastructure access.
+
+Complete all non-blocked work first.
+
+---
+
+## 26. Final Rule
+
+Before changing Landflow code, always ask internally:
+
+```text
+What backlog task am I implementing?
+What already exists in the repository?
+Which architecture documents govern it?
+What tenant owns this data?
+What permission is required?
+Is this UI fully Russian?
+What tests prove it works?
+What could this break?
+```
+
+Then implement only within the approved task and architecture boundaries.

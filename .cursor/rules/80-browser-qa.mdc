@@ -1,0 +1,1474 @@
+---
+description: Browser QA and Playwright verification rules for Landflow.
+alwaysApply: true
+---
+
+# Landflow — Browser QA Rule
+
+This rule defines browser-level verification standards for Landflow.
+
+Primary references:
+
+- `docs/automation/DEFINITION_OF_DONE.md`
+- `docs/automation/BACKLOG.md`
+- `docs/automation/PROJECT_STATE.md`
+- `.cursor/rules/30-react-inertia.mdc`
+- `.cursor/rules/40-ui-shadcn.mdc`
+- `.cursor/rules/60-testing.mdc`
+- `.cursor/rules/70-security.mdc`
+
+UI work is not complete only because JSX/TSX compiles.
+
+Where browser tooling is available, actual browser behavior must be verified.
+
+---
+
+## 1. Approved Browser Tool
+
+Use:
+
+**Playwright**
+
+Do not introduce Laravel Dusk.
+
+Do not introduce a second browser automation framework without explicit approval.
+
+---
+
+## 2. Browser QA Purpose
+
+Browser QA verifies:
+
+- real navigation;
+- interaction;
+- responsive layout;
+- visual hierarchy;
+- loading/empty/error states;
+- console errors;
+- failed network requests;
+- accessibility basics;
+- Russian UI;
+- end-to-end product flows.
+
+Backend authorization still requires backend tests.
+
+---
+
+## 3. No Fake Browser Verification
+
+Never claim:
+
+- browser checked;
+- responsive verified;
+- console clean;
+- screenshots reviewed;
+- Playwright passed;
+
+unless those checks actually ran.
+
+If Playwright is not configured yet, report:
+
+`NOT_AVAILABLE_YET`
+
+Do not substitute code inspection for browser verification.
+
+---
+
+## 4. Browser QA Is Part of Definition of Done
+
+Relevant UI tasks should not be marked DONE until applicable browser checks pass.
+
+This applies especially to:
+
+- Dashboard;
+- Site creation;
+- Designer;
+- automotive management;
+- Forms;
+- Popups;
+- Integrations;
+- Publish;
+- Domains;
+- Team;
+- Developer Platform;
+- Marketplace;
+- public Site runtime.
+
+---
+
+## 5. Critical Viewports
+
+Use a standard viewport baseline.
+
+Recommended baseline:
+
+### Desktop
+
+```text
+1440 × 1000
+```
+
+### Tablet
+
+```text
+1024 × 1366
+```
+
+### Mobile
+
+```text
+390 × 844
+```
+
+Exact values may be centralized in Playwright config.
+
+Do not invent different viewports per test without reason.
+
+---
+
+## 6. Designer Viewport
+
+Landflow Designer is desktop-first.
+
+Primary Designer QA should use desktop.
+
+Still verify smaller widths do not fail accidentally.
+
+If product intentionally limits Designer on small screens, verify the intended Russian warning/limited state.
+
+---
+
+## 7. Public Site Viewports
+
+Published customer Sites require meaningful QA on:
+
+- desktop;
+- tablet;
+- mobile.
+
+Public Sites are customer-facing and responsive quality is critical.
+
+---
+
+## 8. Initial Phase 0 Browser Baseline
+
+Before feature work, establish smoke coverage for existing application surfaces:
+
+- `/`
+- login
+- dashboard
+- settings
+
+Purpose:
+
+- prove Playwright environment works;
+- catch browser console errors;
+- establish auth/test data approach;
+- establish screenshot conventions.
+
+---
+
+## 9. Critical Flow Philosophy
+
+Prefer a small set of high-value browser flows over hundreds of fragile click tests.
+
+Examples later:
+
+```text
+Login
+→ Dashboard
+→ Create Site
+→ choose Template
+→ Site appears
+```
+
+```text
+Open Designer
+→ add Hero
+→ edit title
+→ autosave
+→ reload
+→ change remains
+```
+
+```text
+Vehicle Card
+→ open Popup
+→ submit Form
+→ success
+```
+
+```text
+Edit Draft
+→ Preview
+→ Publish
+→ public Site updates
+```
+
+---
+
+## 10. Browser Tests Do Not Replace Feature Tests
+
+Playwright proves the user-facing workflow.
+
+Laravel/PHPUnit proves:
+
+- authorization;
+- tenant isolation;
+- persistence;
+- validation;
+- business invariants.
+
+Use both where appropriate.
+
+---
+
+## 11. Test Data
+
+Browser tests must use deterministic test data.
+
+Do not depend on:
+
+- developer's personal Workspace;
+- manual database records;
+- production account;
+- arbitrary seed state.
+
+Use explicit setup/factories/seed commands approved for test environment.
+
+---
+
+## 12. Authentication Setup
+
+Use a reliable test authentication flow.
+
+Options may include:
+
+- actual login flow for auth-specific tests;
+- authenticated storage state/test helper for unrelated tests.
+
+Do not bypass authentication in a way that invalidates the behavior being tested.
+
+Do not store real credentials in repo.
+
+---
+
+## 13. Stable Test User
+
+If a dedicated test user is used:
+
+- create it deterministically in test setup;
+- use test-only credentials;
+- do not depend on a developer account;
+- do not use production email/password.
+
+---
+
+## 14. Workspace Isolation in Browser
+
+Browser E2E may include critical tenancy smoke flows.
+
+Example:
+
+User with Workspace A attempts to open a known Workspace B URL.
+
+Expected:
+
+- denied;
+- safe error/not-found;
+- no private data rendered.
+
+Backend Feature tests remain the primary exhaustive tenancy coverage.
+
+---
+
+## 15. Stable Selectors
+
+Prefer:
+
+1. role + accessible name;
+2. label;
+3. visible stable text;
+4. deliberate `data-testid` where necessary.
+
+Avoid selectors based on:
+
+- Tailwind class names;
+- DOM child indexes;
+- generated IDs;
+- fragile nested CSS selectors.
+
+---
+
+## 16. Russian Text as Selector
+
+Important stable Russian UI text may be used in tests.
+
+Examples:
+
+- `Создать сайт`
+- `Опубликовать`
+- `Настройки`
+- `Добавить автомобиль`
+
+This also helps detect accidental English UI regressions.
+
+Do not over-couple tests to long marketing copy.
+
+---
+
+## 17. Test IDs
+
+Use `data-testid` only when semantic selectors are insufficient.
+
+Good uses:
+
+- canvas frame;
+- sortable Block item;
+- complex draggable handle;
+- non-text visual state.
+
+Do not add test IDs to every DOM node.
+
+---
+
+## 18. Page Objects
+
+Use Page Objects only where repeated complex interactions justify them.
+
+Do not hide every assertion behind a giant abstraction layer.
+
+Tests should remain readable.
+
+---
+
+## 19. Console Errors
+
+Unexpected browser console errors must fail relevant QA.
+
+Watch for:
+
+- JavaScript errors;
+- React errors;
+- hydration errors;
+- uncaught promises.
+
+Do not globally ignore all console output.
+
+---
+
+## 20. Known Console Noise
+
+If unavoidable third-party noise exists:
+
+- document exact pattern;
+- filter narrowly;
+- retain all other failures.
+
+Do not use blanket ignore.
+
+---
+
+## 21. Network Failures
+
+Critical unexpected failed requests should be detected.
+
+Pay attention to:
+
+- 500;
+- 419/CSRF;
+- 403 unexpected;
+- 404 missing assets;
+- failed save requests;
+- failed public endpoints.
+
+Not every 4xx is a bug if the test intentionally verifies denial.
+
+---
+
+## 22. Browser Request Assertions
+
+Use network assertions when they improve confidence.
+
+Examples:
+
+- autosave request succeeds;
+- publish request succeeds;
+- no direct request from browser to CRM;
+- expected asset loads.
+
+Do not duplicate all backend API tests in Playwright.
+
+---
+
+## 23. Page Load Completion
+
+Do not rely on arbitrary fixed sleep.
+
+Wait for meaningful state:
+
+- visible heading;
+- response;
+- form completion;
+- saved indicator;
+- dialog;
+- route change.
+
+---
+
+## 24. No Arbitrary `waitForTimeout`
+
+Do not use `waitForTimeout()` to make tests pass unless simulating time itself is the explicit test.
+
+Prefer Playwright's auto-wait and assertions.
+
+---
+
+## 25. Save State Verification
+
+For autosave flows, do not only assert:
+
+`Сохранено`
+
+Also reload/navigate when valuable and verify persisted state remains.
+
+This proves actual persistence rather than UI-only status.
+
+---
+
+## 26. Navigation Tests
+
+Verify primary navigation:
+
+- expected route;
+- correct active state;
+- no full-page failure;
+- permissions respected.
+
+Do not test every static nav link in every spec.
+
+---
+
+## 27. Dialog QA
+
+For Dialog/AlertDialog test:
+
+- opens;
+- correct Russian title;
+- keyboard/focus behavior where critical;
+- cancel;
+- confirm;
+- closes;
+- resulting state.
+
+---
+
+## 28. Destructive Dialog QA
+
+Verify destructive actions do not execute on open.
+
+Expected:
+
+1. open confirmation;
+2. user confirms;
+3. operation executes.
+
+Cancel must leave state unchanged.
+
+---
+
+## 29. Form QA
+
+For product forms verify:
+
+- labels;
+- input behavior;
+- processing state;
+- validation errors;
+- success;
+- duplicate submit prevention where applicable.
+
+Backend validation remains authoritative.
+
+---
+
+## 30. Validation Language
+
+Browser-visible validation errors must be Russian.
+
+A raw English Laravel/framework error is a UI defect.
+
+---
+
+## 31. Empty State QA
+
+For major collections, deliberately test empty state.
+
+Examples:
+
+- no Sites;
+- no vehicles;
+- no Forms;
+- no submissions.
+
+Verify:
+
+- Russian copy;
+- primary action where appropriate;
+- no broken blank layout.
+
+---
+
+## 32. Loading State QA
+
+Where async loading is meaningful, verify:
+
+- visible state;
+- controls not misleadingly active;
+- transition to loaded/error.
+
+Do not require artificial delays in production code only to make loading screenshotable.
+
+---
+
+## 33. Error State QA
+
+Simulate meaningful failures using mocks/test environment where practical.
+
+Examples:
+
+- integration test failure;
+- publish failure;
+- upload failure;
+- save failure.
+
+Verify user receives a safe Russian error.
+
+---
+
+## 34. Permission State QA
+
+Where UI differs by permission, test representative roles.
+
+Examples:
+
+Designer:
+
+- sees design controls;
+- does not see/enable price editing.
+
+Publisher:
+
+- can publish.
+
+User without submission access:
+
+- cannot open lead data.
+
+Backend denial still requires PHPUnit.
+
+---
+
+## 35. Entitlement State QA
+
+Test capability unavailable due to plan separately from permission denial.
+
+Example:
+
+Owner has domain permission,
+but Free plan lacks custom domain entitlement.
+
+UI should communicate correct reason.
+
+---
+
+## 36. Long Russian Text QA
+
+Use realistic long Russian strings in relevant UI tests.
+
+Check:
+
+- button wrapping;
+- tabs;
+- cards;
+- tables;
+- breadcrumbs;
+- dialog footer;
+- sidebars.
+
+Do not approve layout only with short labels.
+
+---
+
+## 37. Overflow Detection
+
+Where practical, inspect for horizontal overflow.
+
+Critical surfaces should not create unexpected document-wide horizontal scrolling.
+
+Allowed exceptions:
+
+- intended data table scroll;
+- Designer canvas behavior.
+
+---
+
+## 38. Responsive Layout QA
+
+For each significant screen decide expected narrow behavior:
+
+- stack;
+- wrap;
+- scroll;
+- Sheet;
+- hide secondary content;
+- unsupported/limited mode.
+
+Test intended behavior rather than merely taking screenshots.
+
+---
+
+## 39. Mobile Interaction
+
+On mobile-capable surfaces verify:
+
+- menus can open;
+- buttons are tappable;
+- dialogs fit;
+- form fields are usable;
+- sticky elements do not cover controls.
+
+---
+
+## 40. Tablet QA
+
+Tablet is not just a scaled desktop.
+
+Check:
+
+- sidebar;
+- two-column settings;
+- cards;
+- tables;
+- dialogs;
+- public Block layout.
+
+---
+
+## 41. Visual Review
+
+A screenshot is evidence, not automatic approval.
+
+Review actual:
+
+- hierarchy;
+- spacing;
+- alignment;
+- typography;
+- truncation;
+- density;
+- states.
+
+UI Reviewer should inspect the result.
+
+---
+
+## 42. Screenshot Locations
+
+Use a predictable screenshot structure.
+
+Suggested convention:
+
+```text
+tests/browser/screenshots/
+  dashboard/
+  sites/
+  designer/
+  automotive/
+  publishing/
+```
+
+Exact location may be centralized during P0-023/P0-024.
+
+Do not scatter random screenshots across repository.
+
+---
+
+## 43. Debug Screenshots
+
+Failure screenshots may be generated by Playwright output.
+
+Do not commit transient failure artifacts unless they are intentional references.
+
+---
+
+## 44. Reference Screenshots
+
+Reference screenshots are appropriate for stable/high-value surfaces.
+
+Potential candidates:
+
+- Dashboard;
+- Create Site;
+- Designer shell;
+- Properties Panel;
+- Vehicle Card;
+- Publish dialog.
+
+Do not create pixel baselines for every tooltip.
+
+---
+
+## 45. Visual Regression
+
+If visual regression is introduced:
+
+- use deliberate thresholds;
+- review diffs;
+- avoid blindly updating snapshots.
+
+A changed baseline is not automatically correct.
+
+---
+
+## 46. Screenshot Size
+
+Keep screenshot dimensions deterministic.
+
+Do not compare screenshots captured at arbitrary browser sizes.
+
+---
+
+## 47. Browser Zoom
+
+Use default zoom unless a specific accessibility test requires otherwise.
+
+Do not fix layout by assuming unusual browser zoom.
+
+---
+
+## 48. Accessibility Sanity
+
+Browser QA should check critical accessibility basics:
+
+- labels;
+- button semantics;
+- accessible names;
+- keyboard;
+- focus;
+- dialog trapping/return;
+- alt text where relevant.
+
+Dedicated automated accessibility tooling may be added later if approved.
+
+---
+
+## 49. Keyboard QA
+
+Test keyboard behavior for important components.
+
+Examples:
+
+- dialog close;
+- dropdown/menu navigation;
+- form submit;
+- Lightbox;
+- command/search palette later.
+
+---
+
+## 50. Focus Visibility
+
+Keyboard focus must remain visible.
+
+Do not approve UI that removed focus styles.
+
+---
+
+## 51. Tab Order
+
+Critical forms/dialogs should have logical tab order.
+
+Avoid unexpected focus into hidden/disabled content.
+
+---
+
+## 52. Modal Focus
+
+When Dialog opens:
+
+- focus enters modal appropriately.
+
+When closed:
+
+- focus returns to trigger where practical.
+
+Use Radix/shadcn behavior rather than overriding it casually.
+
+---
+
+## 53. Public Site Accessibility
+
+Published Site blocks should be tested for:
+
+- semantic headings;
+- links/buttons;
+- alt text;
+- form labels;
+- mobile keyboard behavior;
+- contrast sanity.
+
+---
+
+## 54. Designer Accessibility
+
+Designer is complex.
+
+Prioritize accessibility for:
+
+- panels;
+- buttons;
+- properties inputs;
+- dialogs;
+- navigation.
+
+Canvas drag-and-drop may require additional keyboard strategy later.
+
+Do not block MVP on hypothetical perfect accessibility, but do not knowingly degrade basic semantics.
+
+---
+
+## 55. Designer Browser QA
+
+Important Designer flow:
+
+```text
+Open Site
+→ Designer loads
+→ select Page
+→ add Block
+→ select Block
+→ edit property
+→ autosave
+→ reload
+→ persisted
+→ Preview
+```
+
+Later extend with:
+
+- reorder;
+- duplicate;
+- hide/show;
+- repeater;
+- responsive;
+- Actions.
+
+---
+
+## 56. Designer Console QA
+
+Designer should not generate repeated React warnings/errors during normal editing.
+
+Pay attention to:
+
+- key warnings;
+- uncontrolled/controlled input warnings;
+- stale async errors;
+- drag-and-drop warnings.
+
+---
+
+## 57. Designer Autosave QA
+
+Test rapid edits where practical.
+
+Verify:
+
+- newest value wins;
+- no stale overwrite;
+- visible save state;
+- reload persists latest value.
+
+---
+
+## 58. Designer Repeater QA
+
+Test:
+
+- add;
+- edit;
+- reorder;
+- duplicate;
+- delete;
+- reload.
+
+Stable item identity must be preserved.
+
+---
+
+## 59. Automotive Browser QA
+
+Core automotive flow later:
+
+```text
+Select Make
+→ Model
+→ Generation
+→ Modification
+→ Trim
+→ import
+→ set price
+→ choose color
+→ verify image
+```
+
+Do not assume cascading selectors work because individual endpoints do.
+
+---
+
+## 60. Automotive Color QA
+
+Include:
+
+- one-tone;
+- two-tone;
+- selected state;
+- long manufacturer color name.
+
+Verify swatches remain clear.
+
+---
+
+## 61. Vehicle Card QA
+
+Test:
+
+- image;
+- model;
+- trim;
+- price;
+- benefits;
+- CTA;
+- fallback state.
+
+Do not allow missing image/data to break card layout.
+
+---
+
+## 62. Popup QA
+
+Test:
+
+- CTA opens correct Popup;
+- overlay;
+- close button;
+- Escape where supported;
+- outside click according to settings;
+- mobile layout;
+- focus.
+
+---
+
+## 63. Form Context QA
+
+From multiple Vehicle Cards using same Popup/Form:
+
+1. click Vehicle A;
+2. verify Form context resolves A;
+3. close;
+4. click Vehicle B;
+5. verify context resolves B.
+
+This guards against stale context.
+
+---
+
+## 64. Public Form Success QA
+
+Test visitor flow:
+
+```text
+fill form
+→ submit
+→ processing
+→ success
+```
+
+Submission persistence itself should also be proven by backend test.
+
+---
+
+## 65. Public Form Abuse QA
+
+Browser tests may verify user-visible behavior for:
+
+- validation;
+- CAPTCHA;
+- rate-limit response.
+
+Security mechanics require backend tests.
+
+---
+
+## 66. Carousel QA
+
+Test:
+
+- arrows;
+- pagination if enabled;
+- touch/mobile behavior where practical;
+- correct visible item count by breakpoint;
+- no broken loop/autoplay state.
+
+Do not couple test to implementation library internals.
+
+---
+
+## 67. Lightbox QA
+
+Test:
+
+- open image;
+- next/previous;
+- close;
+- Escape;
+- focus;
+- mobile fit.
+
+---
+
+## 68. Publishing QA
+
+Critical flow:
+
+```text
+Published value = A
+→ edit Draft to B
+→ Preview = B
+→ public production = A
+→ Publish
+→ production = B
+```
+
+This is one of Landflow's highest-value E2E regressions.
+
+---
+
+## 69. Publish Failure QA
+
+Simulate a safe test failure if architecture supports it.
+
+Verify:
+
+- error shown in Russian;
+- previous production remains live;
+- Draft remains available.
+
+---
+
+## 70. Publish Permission QA
+
+User without `publish_site` must not be able to publish through UI.
+
+Backend denial is also tested separately.
+
+---
+
+## 71. Domain QA
+
+For custom domain UI later, test:
+
+- add;
+- validation;
+- status;
+- verification instruction;
+- primary selection;
+- remove.
+
+Real DNS may remain mocked/local in CI.
+
+---
+
+## 72. Integration Profile QA
+
+Test:
+
+- create/edit Profile;
+- secret displayed masked;
+- Test Connection;
+- safe failure;
+- Site binding.
+
+Never assert plaintext secret appears.
+
+---
+
+## 73. Delivery Status QA
+
+Test user-facing states:
+
+- pending;
+- delivered;
+- failed;
+- retrying.
+
+Use Russian labels.
+
+---
+
+## 74. Team QA
+
+Later critical flow:
+
+```text
+Owner invites Designer
+→ Designer opens allowed Site
+→ cannot edit price
+→ Pricing role can edit price
+→ Publisher can publish
+```
+
+Use separate backend permission tests too.
+
+---
+
+## 75. Super Admin QA
+
+Platform UI should verify normal customer User cannot navigate/use platform-only management.
+
+Do not rely on hidden sidebar only.
+
+---
+
+## 76. Developer Platform QA
+
+Later flow:
+
+```text
+Create Block
+→ define Schema
+→ Preview
+→ submit for review
+→ status changes
+```
+
+Ensure code/schema editing does not leak unsafe internal capabilities.
+
+---
+
+## 77. Marketplace QA
+
+Later flow:
+
+```text
+Browse
+→ open listing
+→ install/use allowed item
+```
+
+Paid/licensing flows only after corresponding architecture exists.
+
+---
+
+## 78. Public Host QA
+
+Published runtime should test known hostname routing.
+
+Cases:
+
+- valid Landflow subdomain;
+- unknown subdomain;
+- custom domain later;
+- unpublished Site.
+
+Do not let unknown Host expose another Site.
+
+---
+
+## 79. Draft Route QA
+
+Preview/Draft routes must not be publicly accessible without appropriate authorization/token.
+
+Browser test should verify anonymous denial where applicable.
+
+---
+
+## 80. Authentication Browser QA
+
+Maintain a small set of auth browser tests for:
+
+- login success;
+- bad credentials;
+- verified/unverified behavior where relevant;
+- logout.
+
+Do not duplicate every Fortify unit test in browser.
+
+---
+
+## 81. Browser Locale
+
+Current product UI language is Russian.
+
+Browser tests should not accidentally depend on system locale for application copy.
+
+Date/number formatting tests may need explicit locale/timezone setup.
+
+---
+
+## 82. Timezone Determinism
+
+For date/time UI assertions:
+
+- configure deterministic test timezone where possible;
+- assert stable formatted output;
+- avoid tests that change by machine timezone.
+
+---
+
+## 83. Animation
+
+Animations can make tests flaky.
+
+Prefer waiting for semantic final state.
+
+Use reduced motion in test environment if helpful and supported.
+
+Do not remove real product animation solely to satisfy tests.
+
+---
+
+## 84. File Upload QA
+
+For upload flows test:
+
+- accepted image;
+- preview;
+- invalid file;
+- failure state.
+
+Use small fixtures.
+
+Do not upload huge assets in normal E2E.
+
+---
+
+## 85. Download/Export QA
+
+For exports later verify:
+
+- correct permission;
+- file download occurs;
+- filename/content type safe;
+- another Workspace cannot export data.
+
+Detailed file-content validation may be backend-level.
+
+---
+
+## 86. Search QA
+
+Test meaningful search/filter flow.
+
+Example:
+
+```text
+enter query
+→ results update
+→ clear query
+→ all results return
+```
+
+If filters use URL state, verify reload preserves them where intended.
+
+---
+
+## 87. Pagination QA
+
+For large lists verify:
+
+- next/previous;
+- filters preserved;
+- no duplicate/missing obvious rows;
+- page state sensible.
+
+Do not create hundreds of browser tests for pagination edge cases better covered server-side.
+
+---
+
+## 88. Table QA
+
+Check:
+
+- header alignment;
+- long Russian values;
+- actions;
+- empty state;
+- responsive overflow;
+- no clipped critical content.
+
+---
+
+## 89. Toast QA
+
+Use toast assertions only when toast is part of user feedback contract.
+
+Do not make every E2E depend on ephemeral toast if persisted state is the real behavior.
+
+---
+
+## 90. Browser Test Isolation
+
+A test should not rely on another browser test creating data first.
+
+Use per-test setup or explicit suite-level fixtures with controlled lifecycle.
+
+---
+
+## 91. Parallel Execution
+
+Tests should be designed to support parallel execution where practical.
+
+Avoid collisions on:
+
+- same subdomain;
+- same email;
+- same Workspace name if unique;
+- shared mutable record.
+
+Generate deterministic unique test identifiers.
+
+---
+
+## 92. Cleanup
+
+Prefer database reset/test transaction strategy over fragile manual cleanup.
+
+Browser tests should leave test environment deterministic.
+
+---
+
+## 93. Flakiness
+
+Flaky Playwright test is a defect.
+
+Investigate:
+
+- race;
+- unstable selector;
+- shared state;
+- network dependency;
+- animation/timing;
+- data collision.
+
+Do not hide flakiness with large timeouts.
+
+---
+
+## 94. Timeouts
+
+Use reasonable default timeout.
+
+Increase locally only for operations known to take longer.
+
+Do not solve application hangs with huge global timeout.
+
+---
+
+## 95. Trace / Video
+
+Enable Playwright trace/video/screenshots on failure according to test config where useful.
+
+Use them for diagnosis.
+
+Do not commit large transient artifacts routinely.
+
+---
+
+## 96. Browser QA Report
+
+Task completion report should say what was actually checked.
+
+Example:
+
+```text
+Playwright: PASS
+Desktop 1440x1000: PASS
+Tablet 1024x1366: PASS
+Mobile 390x844: PASS
+Console errors: none
+Network errors: none unexpected
+Screenshots reviewed: dashboard, create-site
+```
+
+Only report checks that ran.
+
+---
+
+## 97. UI Reviewer Handoff
+
+For visually significant work, browser output should be suitable for UI Reviewer.
+
+Provide:
+
+- screenshots;
+- relevant route;
+- expected state;
+- known intentional differences.
+
+UI Reviewer should not need to infer whether a screenshot came from stale state.
+
+---
+
+## 98. Browser QA Stop Conditions
+
+Do not mark task DONE if:
+
+- primary action cannot be completed;
+- unexpected console error appears;
+- data does not persist;
+- Russian copy is broken/mixed;
+- critical layout overflows;
+- permission UI contradicts backend behavior;
+- mobile/public layout is unusable;
+- screenshot reveals obvious visual regression.
+
+---
+
+## 99. Playwright Availability
+
+Until P0-023 is completed:
+
+report browser automation as:
+
+`NOT_AVAILABLE_YET`
+
+Do not invent test output.
+
+After Playwright is installed, relevant browser checks become expected gates.
+
+---
+
+## 100. Final Browser QA Checklist
+
+Before finishing a user-facing task, ask:
+
+```text
+Did I open the actual page in a browser?
+Does the main flow work end to end?
+Is every user-facing string Russian?
+Does long Russian text fit?
+Are loading, empty, success and error states intentional?
+Are permissions/entitlements represented correctly?
+Are there unexpected console errors?
+Are there unexpected failed requests?
+Does desktop layout look correct?
+Does tablet/mobile behave intentionally where relevant?
+Can the main interaction be used by keyboard?
+Did I reload where persistence matters?
+Did I review screenshots where visual quality matters?
+Did Playwright actually run if required?
+```
+
+If a critical answer is no, the task is not DONE.

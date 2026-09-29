@@ -1,0 +1,1391 @@
+---
+description: Database modeling and migration rules for Landflow.
+alwaysApply: true
+---
+
+# Landflow — Database Rule
+
+This rule defines database modeling, migration, ownership, indexing, deletion, JSON, versioning, and data-safety standards for Landflow.
+
+Primary references:
+
+- `docs/architecture/DATABASE.md`
+- `docs/architecture/TENANCY.md`
+- `docs/architecture/AUTOMOTIVE_DATA.md`
+- `docs/architecture/BLOCK_SYSTEM.md`
+- `docs/architecture/FORMS_AND_INTEGRATIONS.md`
+- `docs/architecture/PUBLISHING.md`
+- `docs/architecture/SECURITY.md`
+- `docs/automation/DECISIONS.md`
+- `.cursor/rules/10-architecture.mdc`
+- `.cursor/rules/20-laravel.mdc`
+
+Before creating or changing a table, identify its ownership, lifecycle, and historical requirements.
+
+---
+
+## 1. Relational Database Is Primary
+
+Use relational tables for stable business entities and relationships.
+
+Examples:
+
+- users
+- workspaces
+- workspace_members
+- sites
+- pages
+- forms
+- submissions
+- integration_profiles
+- catalog makes/models/trims
+- site_vehicles
+- site_offers
+- publications
+
+Do not put core domain structure into giant JSON blobs.
+
+---
+
+## 2. JSON Is for Dynamic Schema-Driven State
+
+JSON is appropriate for structures such as:
+
+- Block Schema;
+- Block Instance state;
+- integration field mappings;
+- configurable settings;
+- capability metadata;
+- publication manifest/snapshot where approved;
+- dynamic provider configuration metadata.
+
+JSON must not become a replacement for:
+
+- ownership;
+- foreign keys;
+- tenant boundaries;
+- important searchable relationships;
+- canonical pricing.
+
+---
+
+## 3. Every Table Needs a Scope
+
+Before creating a model/table, classify it as:
+
+- Global
+- Workspace
+- Site
+
+If scope is unclear, stop and inspect architecture.
+
+### Global examples
+
+- automotive catalog;
+- official Block Definitions;
+- official Templates;
+- Plans;
+- Entitlement definitions.
+
+### Workspace examples
+
+- memberships;
+- Integration Profiles;
+- Workspace Vehicle Library;
+- Workspace Assets.
+
+### Site examples
+
+- Pages;
+- Block Instances;
+- Site Vehicles;
+- Site Offers;
+- Popups;
+- Forms;
+- SEO;
+- Domains;
+- Publications.
+
+---
+
+## 4. Workspace Is Tenant Boundary
+
+Workspace-scoped data must not leak across tenants.
+
+A Workspace-owned table should normally have a clear path to `workspace_id`.
+
+A Site-owned table may inherit tenant ownership through:
+
+```text
+child → site → workspace
+```
+
+Do not add ambiguous ownership chains.
+
+---
+
+## 5. Avoid Redundant Ownership Unless Justified
+
+Do not automatically add both:
+
+- `workspace_id`
+- `site_id`
+
+to every Site-owned child.
+
+If `site_id` already uniquely determines Workspace, duplicating `workspace_id` may create consistency risks.
+
+Add redundant tenant key only when there is a concrete reason such as:
+
+- frequent tenant-scoped query performance;
+- defense-in-depth;
+- partitioning/future infrastructure.
+
+If duplicated, enforce consistency.
+
+---
+
+## 6. Global Catalog Is Separate From Customer Data
+
+Never mix customer-owned commercial data into Global Automotive Catalog tables.
+
+Global Catalog may contain canonical data such as:
+
+- names;
+- hierarchy;
+- technical specifications;
+- equipment;
+- colors;
+- global images.
+
+Customer-owned values belong outside Global Catalog.
+
+---
+
+## 7. Site Offer Owns Commercial Price
+
+Customer commercial values belong to Site Offer or equivalent Site-owned commercial layer.
+
+Examples:
+
+- RRP;
+- current price;
+- discount;
+- credit benefit;
+- trade-in benefit;
+- availability;
+- badges.
+
+Do not add dealer-specific price columns to canonical Trim tables.
+
+---
+
+## 8. Workspace Vehicle Library Is Separate
+
+Workspace Vehicle Library is customer-owned reusable preparation data.
+
+Do not merge it into Global Catalog.
+
+It may reference Global entities but owns its customer-specific overrides/content.
+
+---
+
+## 9. Copy vs Reference Must Be Explicit
+
+For each relationship, decide whether it is:
+
+- reference;
+- copy;
+- inherited fallback;
+- snapshot.
+
+Examples:
+
+Template Version → Site:
+copy/instantiate.
+
+Global Trim → Site Vehicle:
+source reference + customer-owned Site record.
+
+Workspace Integration Profile → Site Binding:
+reference.
+
+Site A Vehicle → Site B:
+copy.
+
+Do not leave this behavior implicit in schema.
+
+---
+
+## 10. Foreign Keys
+
+Use foreign keys where they preserve domain integrity.
+
+Examples:
+
+- `sites.workspace_id`
+- `pages.site_id`
+- `site_offers.site_vehicle_id`
+- `submissions.form_id`
+
+Foreign-key behavior must be deliberate.
+
+---
+
+## 11. Cascade Delete Is Not the Default
+
+Do not use cascade deletes blindly.
+
+Ask:
+
+- Is the child purely disposable?
+- Does it contain historical/audit value?
+- Could deletion destroy customer data?
+- Is archive better?
+
+Examples that often require preservation:
+
+- Submissions;
+- Delivery Attempts;
+- Publications;
+- historical Block Versions;
+- catalog records referenced by customers.
+
+---
+
+## 12. Restrict / Archive for Durable References
+
+Use restrict/archive/deactivate for durable entities that may be referenced.
+
+Examples:
+
+- Block Version;
+- Template Version;
+- Global Trim;
+- Integration Profile;
+- Form with historical Submissions.
+
+Do not hard-delete history casually.
+
+---
+
+## 13. Soft Delete Is Not Automatic
+
+Do not add Laravel `SoftDeletes` to every model.
+
+Choose between:
+
+- hard delete;
+- soft delete;
+- archived_at;
+- status enum;
+- deprecated_at;
+
+based on product semantics.
+
+---
+
+## 14. Status Columns
+
+Use explicit status enums/columns when lifecycle matters.
+
+Examples:
+
+- active;
+- inactive;
+- archived;
+- deprecated;
+- draft;
+- published;
+- failed.
+
+Do not overload nullable timestamps for every lifecycle unless that is the deliberate model.
+
+---
+
+## 15. Primary ID Strategy Is Not Yet Globally Final
+
+Exact identifier strategy is ADR-required.
+
+Do not introduce an arbitrary UUID/ULID convention in one domain if the project has not finalized it.
+
+Follow existing repository standards until the decision is made.
+
+---
+
+## 16. Public Identifier Is Separate Concern
+
+Internal primary key and public-safe identifier need not be identical.
+
+Public resources may later use:
+
+- UUID;
+- ULID;
+- random token;
+- slug;
+- opaque public key.
+
+Do not expose internal sequential IDs automatically if they are unnecessary.
+
+---
+
+## 17. Money Must Never Use Float
+
+Never store or calculate money with floating-point types.
+
+Exact strategy is still ADR-required.
+
+Potential approaches:
+
+- integer minor units;
+- fixed decimal.
+
+Do not create irreversible money columns before the strategy is approved if the task depends on it.
+
+---
+
+## 18. Currency
+
+If Landflow initially uses RUB only, do not silently assume the database can never support another currency.
+
+At minimum, keep architecture capable of adding explicit currency later.
+
+Do not add complex FX infrastructure before product need exists.
+
+---
+
+## 19. Unique Constraints
+
+Database-level uniqueness should enforce race-sensitive invariants.
+
+Examples:
+
+- one membership per Workspace/User pair;
+- unique Site subdomain;
+- unique active hostname;
+- version number unique per parent;
+- stable public key.
+
+Do not rely only on `exists()` checks in application code.
+
+---
+
+## 20. Composite Unique Constraints
+
+Use composite uniqueness where domain identity is contextual.
+
+Examples:
+
+```text
+workspace_id + user_id
+site_id + slug
+block_definition_id + version
+site_id + version_number
+```
+
+Choose constraints according to domain semantics.
+
+---
+
+## 21. Index Foreign Keys
+
+Foreign keys used for joins/filtering should generally be indexed.
+
+Examples:
+
+- workspace_id;
+- site_id;
+- form_id;
+- submission_id;
+- block_version_id.
+
+Inspect database engine behavior rather than adding duplicate redundant indexes.
+
+---
+
+## 22. Index Query Paths
+
+Index based on real/common query paths.
+
+Examples:
+
+```text
+site_id + status
+workspace_id + status
+site_id + created_at
+form_id + created_at
+hostname
+public_key
+```
+
+Do not index every field blindly.
+
+---
+
+## 23. Search Fields
+
+For frequently searched text:
+
+- understand expected volume;
+- start with relational DB capabilities;
+- avoid introducing dedicated search engine prematurely.
+
+Dedicated search is currently provisional, not required.
+
+---
+
+## 24. Slugs
+
+Slugs should have explicit scope.
+
+Examples:
+
+Page slug may be unique within Site.
+
+Site subdomain is globally unique in Landflow hosting scope.
+
+Do not apply global uniqueness where only parent-scoped uniqueness is required.
+
+---
+
+## 25. Case Sensitivity
+
+For identifiers such as domains/slugs where case-insensitive uniqueness matters, normalize deliberately.
+
+Do not depend accidentally on database collation behavior.
+
+---
+
+## 26. Domains
+
+Domain hostname storage should be normalized.
+
+Consider:
+
+- lowercase;
+- no protocol;
+- no path;
+- trailing dot handling;
+- IDN/punycode strategy later.
+
+Do not store arbitrary URL strings as domain identity.
+
+---
+
+## 27. Time Fields
+
+Use consistent timestamps.
+
+Prefer standard Laravel timestamps for lifecycle events where appropriate.
+
+Use explicit timestamps for business transitions such as:
+
+- published_at;
+- delivered_at;
+- archived_at;
+- verified_at.
+
+---
+
+## 28. Time Zones
+
+Persist timestamps in a consistent server/database timezone strategy.
+
+Do not store formatted local display strings in database.
+
+Frontend handles display formatting.
+
+---
+
+## 29. Boolean Columns
+
+Use booleans for real binary state.
+
+Do not replace richer lifecycle with many overlapping boolean flags.
+
+Bad:
+
+```text
+is_active
+is_archived
+is_deleted
+is_disabled
+```
+
+when a single status enum better represents mutually exclusive state.
+
+---
+
+## 30. Enum Storage
+
+Use stable backed enum values.
+
+Prefer English internal values.
+
+Example:
+
+```text
+draft
+published
+failed
+archived
+```
+
+UI maps these to Russian labels.
+
+---
+
+## 31. Ordering
+
+Ordered collections should have explicit ordering column.
+
+Examples:
+
+- Page order;
+- Block order;
+- images;
+- Repeater items where persisted relationally;
+- Site Vehicles.
+
+Use a clear sortable numeric column.
+
+---
+
+## 32. Reordering
+
+Reordering should update explicit order values transactionally when needed.
+
+Do not infer durable order from creation time or primary key.
+
+---
+
+## 33. Versioned Entities
+
+Versioned reusable entities should separate identity from immutable version.
+
+Examples:
+
+```text
+block_definitions
+block_versions
+```
+
+```text
+templates
+template_versions
+```
+
+Do not overwrite a published version in place.
+
+---
+
+## 34. Block Version Stability
+
+Page Block Instance must reference exact Block Version.
+
+New Block version must create a new version row/state.
+
+Do not mutate a version already used by published Sites unless the architecture explicitly allows a safe metadata-only change.
+
+---
+
+## 35. Template Version Stability
+
+Template Version should be stable after use/publish.
+
+Creating a Site instantiates Site-owned state.
+
+Do not make Site runtime query a mutable live Template for core content.
+
+---
+
+## 36. Publication Version Stability
+
+Published Site Version must remain reproducible according to the approved snapshot architecture.
+
+Do not point Published runtime directly at arbitrary mutable Draft records without the publishing ADR approving that model.
+
+---
+
+## 37. Historical Records
+
+Historical records should keep enough context to remain understandable later.
+
+Examples:
+
+Submission should preserve submitted values even if Form fields change.
+
+Delivery Attempt should preserve result metadata even if Integration Profile changes.
+
+Publication should preserve version identity even if Draft changes.
+
+---
+
+## 38. Submission Storage
+
+Submission data may contain personal data.
+
+Store only what is required for product/integration/history.
+
+Do not copy unrelated User/Workspace data into Submission payload.
+
+---
+
+## 39. Form Field Snapshots
+
+Historical Submission should not rely only on current Form schema.
+
+Store sufficient field/value metadata to render old submissions.
+
+Do not delete historical values when Form field is removed.
+
+---
+
+## 40. Integration Delivery History
+
+Delivery records should reference:
+
+- Submission;
+- route/destination;
+- status;
+- attempts;
+- external record ID where available.
+
+Do not overwrite old result history after retries.
+
+---
+
+## 41. Secrets in Database
+
+Secrets may be stored encrypted.
+
+Examples:
+
+- API token;
+- client secret;
+- private key;
+- SMTP password;
+- CAPTCHA secret.
+
+Do not store plaintext unless a provider protocol leaves no alternative and architecture explicitly accepts the risk.
+
+---
+
+## 42. Secret Columns
+
+Secret columns should be clearly identifiable in code/schema.
+
+Do not name a secret ambiguously like:
+
+```text
+value
+data
+config
+```
+
+when explicit names improve security review.
+
+---
+
+## 43. JSON Secret Mixing
+
+Avoid placing secrets inside large generic JSON config blobs when separate encrypted attributes/tables provide clearer security.
+
+If JSON encryption is used, ensure masking and rotation are still manageable.
+
+---
+
+## 44. Block Schema JSON
+
+Block Schema JSON may define:
+
+- fields;
+- types;
+- groups;
+- repeaters;
+- conditions;
+- capabilities;
+- defaults.
+
+It must not contain executable backend code.
+
+---
+
+## 45. Block Instance JSON
+
+Block state may contain:
+
+- field values;
+- bindings;
+- visual settings;
+- Actions;
+- responsive values.
+
+It must not contain:
+
+- secrets;
+- Submission data;
+- copied full automotive tables;
+- arbitrary scripts/server code.
+
+---
+
+## 46. JSON Versioning
+
+Dynamic JSON structures should include or derive schema/version context.
+
+Do not assume a JSON shape will never evolve.
+
+Block state already has Block Version as its schema contract.
+
+Other dynamic payloads may require explicit version fields.
+
+---
+
+## 47. JSON Querying
+
+If a JSON field becomes frequently filtered/sorted/reported on, consider normalizing that data.
+
+Do not force high-value relational queries into opaque JSON because initial implementation was convenient.
+
+---
+
+## 48. Automotive Hierarchy
+
+Keep canonical automotive hierarchy normalized.
+
+Do not store repeated Make/Model/Generation names on every Trim as authoritative copies.
+
+Denormalized display caches may be introduced later only with a clear reason.
+
+---
+
+## 49. Series Is Optional
+
+Series is optional in canonical hierarchy.
+
+Do not make every Model require Series.
+
+Schema must allow:
+
+```text
+Model → Generation
+```
+
+when Series is absent.
+
+---
+
+## 50. Restyling / Facelift
+
+Do not hardcode assumptions that make restyling impossible later.
+
+Architecture should be able to represent lifecycle/variant distinction without rebuilding the whole catalog.
+
+Exact model can evolve.
+
+---
+
+## 51. Characteristics
+
+Characteristic values are structured data.
+
+Exact cross-level value strategy requires an ADR before final implementation.
+
+Do not reduce characteristics to a single unstructured text JSON blob if querying/filtering/inheritance is required.
+
+---
+
+## 52. Equipment / Options
+
+Equipment/options should use normalized dictionaries/categories where architecture specifies.
+
+Do not create one boolean database column per option.
+
+---
+
+## 53. Automotive Color Swatches
+
+Color may have multiple swatches.
+
+Use a relational child table or structured representation capable of ordered layers.
+
+Do not use one mandatory `hex_color` column as the full model.
+
+---
+
+## 54. Automotive Images
+
+Image metadata should support:
+
+- scope/entity relation;
+- color;
+- trim;
+- angle/view;
+- order;
+- transparency;
+- dimensions/status where useful.
+
+Media file metadata and automotive semantic relationship may be separate layers.
+
+---
+
+## 55. Media Records
+
+Prefer media record/reference rather than embedding URLs everywhere.
+
+Benefits:
+
+- storage provider independence;
+- metadata;
+- versioning;
+- reuse;
+- deletion checks.
+
+---
+
+## 56. Media Replacement
+
+Prefer immutable/versioned file objects over destructive replacement when Published Version stability matters.
+
+New file:
+→ new media reference/object.
+
+Old Published Version can retain old reference.
+
+---
+
+## 57. Workspace Assets
+
+Workspace Assets are private reusable customer resources.
+
+Do not allow cross-Workspace media references.
+
+---
+
+## 58. Site Assets
+
+Exact Site/Workspace media relationship is still an open decision.
+
+Do not create an irreversible asset ownership scheme without checking DECISIONS.md if the task depends on it.
+
+---
+
+## 59. Site Vehicle
+
+Site Vehicle is customer/Site-owned representation of an automotive item.
+
+It may keep source references to canonical catalog entities.
+
+Do not reuse Global Trim row itself as mutable Site Vehicle state.
+
+---
+
+## 60. Site Offer
+
+Site Offer is separate from canonical catalog.
+
+Price/benefits/availability must remain Site-scoped.
+
+Do not place commercial offer JSON directly on Global Trim.
+
+---
+
+## 61. Benefits
+
+Benefits should be extensible.
+
+Avoid fixed schema such as:
+
+```text
+tradein_discount
+credit_discount
+insurance_discount
+```
+
+if product architecture requires future custom benefit types.
+
+Use structured benefit definitions/relations.
+
+---
+
+## 62. Integration Profiles
+
+Integration Profile belongs to Workspace.
+
+Site Integration Binding belongs to Site.
+
+The binding may reference Profile and hold overrides.
+
+Do not copy encrypted token into every binding row.
+
+---
+
+## 63. Form Routing
+
+One Form may have several routes.
+
+Database should represent route/destination separately enough to track independent delivery status.
+
+Do not store one destination URL directly on Form as the only integration model.
+
+---
+
+## 64. Delivery Attempts
+
+Delivery retries should create or preserve attempt history.
+
+Do not overwrite the only error/status record on every retry.
+
+---
+
+## 65. Idempotency Keys
+
+Where external delivery requires idempotency, persist a stable key or operation identifier.
+
+Do not generate a different key on every retry if provider semantics require same-operation identity.
+
+---
+
+## 66. Blacklists
+
+Blacklist entries need scope:
+
+- Global;
+- Workspace;
+- Site.
+
+Store normalized comparison value.
+
+Phone blacklist should use normalized phone.
+
+IP model must be capable of IPv4 and IPv6.
+
+---
+
+## 67. Rate Limit Counters
+
+High-frequency rate-limit counters usually do not belong as permanent relational rows per request.
+
+Use cache/Redis when infrastructure supports it.
+
+Database can store durable blacklist/security events where needed.
+
+---
+
+## 68. Audit Log
+
+Audit records should capture sensitive business changes.
+
+Potential fields:
+
+- actor;
+- Workspace;
+- Site;
+- event;
+- subject;
+- safe before/after metadata;
+- timestamp.
+
+Redact secrets.
+
+---
+
+## 69. Audit Immutability
+
+Audit history should not be edited casually.
+
+Corrections should normally append new events rather than rewrite previous history.
+
+---
+
+## 70. Super Admin Data
+
+Platform roles/permissions should be explicit.
+
+Do not create special database behavior around one hardcoded User ID.
+
+---
+
+## 71. Entitlements
+
+Plan entitlement definitions and Workspace/subscription entitlement resolution should remain data-driven/configurable.
+
+Do not add a new boolean column to Workspace for every future paid feature unless there is a clear reason.
+
+---
+
+## 72. Feature Flags vs Entitlements
+
+Feature flags and entitlements are different.
+
+Do not store rollout flags as customer subscription capabilities or vice versa.
+
+---
+
+## 73. Migration Safety
+
+Before writing a migration:
+
+1. inspect current schema;
+2. determine current data implications;
+3. define defaults/nullability;
+4. define FK/delete behavior;
+5. define indexes;
+6. verify clean migration;
+7. consider production existing rows.
+
+---
+
+## 74. Additive Changes First
+
+For production-safe evolution, prefer additive changes before destructive changes.
+
+Example:
+
+1. add new column/table;
+2. backfill/migrate data;
+3. switch code;
+4. remove old field in later deployment.
+
+Do not drop critical columns in the same step without a safe rollout plan.
+
+---
+
+## 75. Renaming Columns
+
+Column renames may be risky for deployed code.
+
+Use staged rollout when needed.
+
+Do not assume app and migration are always deployed atomically across all workers.
+
+---
+
+## 76. Data Backfills
+
+Large data backfills should not necessarily run inside schema migration.
+
+For large production datasets, consider:
+
+- dedicated command;
+- queued batches;
+- resumable process.
+
+Do not make migration timeout because it rewrites millions of rows.
+
+---
+
+## 77. Migration Rollback
+
+Rollback should be safe where practical.
+
+Do not pretend destructive irreversible migration has a meaningful rollback if data cannot be restored.
+
+Document irreversible steps.
+
+---
+
+## 78. Default Values
+
+Choose defaults deliberately.
+
+Bad default can silently create invalid business state.
+
+Do not use:
+
+```text
+status = active
+```
+
+automatically if new record should require setup/review.
+
+---
+
+## 79. Nullability
+
+Nullable should represent meaningful absence.
+
+Do not make fields nullable simply to avoid migration effort.
+
+Conversely, do not require values before product workflow can legitimately supply them.
+
+---
+
+## 80. Check Constraints
+
+Use database check constraints when supported and valuable.
+
+Examples:
+
+- non-negative ordering;
+- valid numeric bounds.
+
+Do not duplicate complex business rules entirely as SQL checks if application/domain validation is more appropriate.
+
+---
+
+## 81. Database Transactions
+
+Multi-table invariants should be persisted transactionally.
+
+Examples:
+
+- Workspace + owner membership;
+- Site + initial Page;
+- Submission + Delivery rows;
+- Site Vehicle + Site Offer.
+
+---
+
+## 82. No External Calls Inside Migration
+
+Migrations must not call:
+
+- external APIs;
+- CRM;
+- DNS;
+- third-party catalog service.
+
+Database migration must be deterministic and local to deployment infrastructure.
+
+---
+
+## 83. No External Calls Inside Long Transaction
+
+Do not wait for HTTP providers while holding transaction locks.
+
+Persist/commit first, then queue external work.
+
+---
+
+## 84. Test Database Compatibility
+
+Current tests use SQLite in-memory.
+
+New migrations/query behavior should remain compatible where reasonable.
+
+If a production database feature cannot be represented in SQLite, document and test it appropriately rather than silently weakening production schema.
+
+---
+
+## 85. Production Database Engine Awareness
+
+Do not write SQL that accidentally depends on one engine unless production engine is known/approved.
+
+Use Laravel schema/query abstractions where practical.
+
+Raw engine-specific behavior requires justification.
+
+---
+
+## 86. Factories
+
+Factories must create valid scoped entities.
+
+Examples:
+
+A Site factory should not accidentally create a Site with no Workspace if schema requires ownership.
+
+Use reusable factory states for common scenarios.
+
+---
+
+## 87. Seeders
+
+Seeders may populate:
+
+- Plans;
+- official Blocks;
+- official Templates;
+- demo catalog data.
+
+Do not make production correctness depend on running a local-only demo seeder.
+
+---
+
+## 88. Local Demo Data
+
+Clearly separate demo/sample records from platform-required reference data.
+
+Do not accidentally deploy fake dealership/vehicle data as mandatory production content.
+
+---
+
+## 89. Query Scoping
+
+Queries for customer data must be scoped by authorized parent/resource.
+
+Avoid:
+
+```php
+Site::findOrFail($id)
+```
+
+followed by no ownership check.
+
+Prefer authorized relationship queries/policies.
+
+---
+
+## 90. N+1 Prevention
+
+Before completing list/query-heavy work, inspect:
+
+- relationships loaded;
+- pagination;
+- computed properties;
+- resource serialization.
+
+Do not create a query per row in large tables/cards.
+
+---
+
+## 91. Aggregate Counts
+
+Use efficient aggregate queries for counts.
+
+Do not load all child rows merely to count them.
+
+---
+
+## 92. Pagination
+
+Large collections should paginate.
+
+Examples:
+
+- catalog;
+- submissions;
+- Sites at scale;
+- Marketplace;
+- audit history.
+
+Avoid unbounded `get()` on potentially large customer/global data.
+
+---
+
+## 93. Cursor Pagination
+
+Cursor pagination may be useful for very large chronological streams later.
+
+Do not introduce it everywhere before need exists.
+
+---
+
+## 94. Database Naming
+
+Use consistent English snake_case names.
+
+Examples:
+
+```text
+workspace_members
+site_vehicles
+site_offers
+block_versions
+form_submissions
+integration_profiles
+```
+
+Do not use transliterated Russian names.
+
+---
+
+## 95. Boolean Naming
+
+Prefer clear boolean names:
+
+```text
+is_active
+is_primary
+is_transparent
+```
+
+when a real binary state exists.
+
+Do not create ambiguous:
+
+```text
+flag
+type_status
+enabled_value
+```
+
+---
+
+## 96. FK Column Naming
+
+Use standard Laravel naming:
+
+```text
+workspace_id
+site_id
+form_id
+submission_id
+```
+
+unless a domain-specific distinction requires another name.
+
+---
+
+## 97. Public Key Naming
+
+If a separate public identifier is introduced, name it explicitly.
+
+Examples:
+
+```text
+public_id
+public_key
+token
+slug
+```
+
+Do not overload `id` semantics invisibly.
+
+---
+
+## 98. Sensitive Personal Data
+
+Personal data storage should be intentional.
+
+Do not copy phone/email into multiple unrelated tables for convenience.
+
+Submission may own submitted contact details.
+
+CRM Delivery can reference Submission.
+
+---
+
+## 99. Data Retention
+
+Retention policy for personal data is not finalized.
+
+Schema should not make deletion/anonymization impossible.
+
+Avoid unnecessary denormalization of personal data.
+
+---
+
+## 100. Final Database Checklist
+
+Before completing a database task, verify:
+
+```text
+Is this table Global, Workspace, or Site scoped?
+Who owns each row?
+Are cross-tenant references impossible?
+Should this be relational or JSON?
+Are foreign keys correct?
+Are delete/archive rules safe?
+Are unique constraints race-safe?
+Are indexes based on real query paths?
+Did I keep customer prices outside Global Catalog?
+Did I preserve historical/version data?
+Are secrets isolated/encrypted?
+Is the migration safe for existing rows?
+Did clean migrations and relevant tests actually run?
+```
+
+If a critical answer is unclear, the task is not DONE.

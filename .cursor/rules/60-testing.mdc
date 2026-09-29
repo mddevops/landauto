@@ -1,0 +1,1478 @@
+---
+description: Testing and verification rules for Landflow.
+alwaysApply: true
+---
+
+# Landflow — Testing Rule
+
+This rule defines how Landflow must be tested and how Cursor agents prove that work is complete.
+
+Primary references:
+
+- `docs/automation/DEFINITION_OF_DONE.md`
+- `docs/automation/BACKLOG.md`
+- `docs/automation/PROJECT_STATE.md`
+- `docs/architecture/SECURITY.md`
+- `docs/architecture/TENANCY.md`
+- `docs/architecture/PERMISSIONS.md`
+- `.cursor/rules/00-project-core.mdc`
+- `.cursor/rules/20-laravel.mdc`
+- `.cursor/rules/30-react-inertia.mdc`
+
+Testing is part of implementation, not a later cleanup phase.
+
+---
+
+## 1. Approved Test Stack
+
+Backend:
+
+**PHPUnit**
+
+Browser/E2E:
+
+**Playwright**
+
+Do not introduce:
+
+- Pest;
+- Laravel Dusk;
+
+without an explicit approved decision.
+
+---
+
+## 2. No Fake Success
+
+Never claim a check passed unless it actually ran.
+
+Allowed reporting:
+
+- `PASS`
+- `FAIL`
+- `NOT_AVAILABLE_YET`
+- `NOT_APPLICABLE`
+- `BLOCKED_EXTERNAL`
+
+Do not report:
+
+- probably passes;
+- should work;
+- looks fine.
+
+---
+
+## 3. Definition of Done Governs Testing
+
+Every task is governed by:
+
+`docs/automation/DEFINITION_OF_DONE.md`
+
+A task is not DONE only because:
+
+- code compiles;
+- page renders once;
+- the happy path works manually.
+
+Use all applicable quality gates.
+
+---
+
+## 4. Test the Contract, Not the Implementation Detail
+
+Tests should verify business behavior.
+
+Prefer:
+
+```text
+User from Workspace A cannot update Site from Workspace B
+```
+
+over:
+
+```text
+method X called method Y exactly once
+```
+
+unless interaction itself is the behavior being tested.
+
+---
+
+## 5. Test Pyramid
+
+Use the cheapest useful test level.
+
+### Unit Tests
+
+Use for isolated logic such as:
+
+- value objects;
+- resolvers;
+- pure calculators;
+- normalization;
+- schema validators;
+- permission/entitlement helper logic.
+
+### Feature Tests
+
+Use for:
+
+- HTTP;
+- auth;
+- policies;
+- tenancy;
+- database persistence;
+- workflow behavior;
+- validation.
+
+### Browser/E2E Tests
+
+Use for critical user flows and real UI behavior.
+
+Do not test every trivial helper through Playwright.
+
+---
+
+## 6. Feature Tests Are Critical for SaaS Boundaries
+
+For tenant-aware resources, Feature tests are normally required.
+
+Examples:
+
+- Workspace;
+- Site;
+- Form;
+- Integration Profile;
+- Submission;
+- Site Vehicle;
+- Domain;
+- Publication.
+
+Positive-only tests are insufficient.
+
+---
+
+## 7. Tenancy Negative Tests
+
+Every new tenant-scoped domain must include negative tests.
+
+Pattern:
+
+```text
+User A belongs to Workspace A.
+Resource belongs to Workspace B.
+User A attempts read/update/delete/action.
+Request is denied.
+Resource remains unchanged.
+```
+
+Test IDOR-style access explicitly.
+
+---
+
+## 8. Nested Resource Tests
+
+For nested routes, test mismatched parents.
+
+Example:
+
+```text
+/workspaces/A/sites/B
+```
+
+where Site B belongs to Workspace B.
+
+Expected:
+
+- denied/not found according to chosen policy;
+- no data leak.
+
+Do not assume route nesting itself provides protection.
+
+---
+
+## 9. Permission Tests
+
+For protected operations test:
+
+- allowed role;
+- denied role;
+- direct HTTP denial;
+- resource unchanged on denial.
+
+Examples:
+
+- edit design;
+- edit prices;
+- manage integrations;
+- view submissions;
+- publish Site.
+
+---
+
+## 10. Entitlement Tests
+
+Permissions and entitlements are separate.
+
+Test both.
+
+Example:
+
+```text
+Owner has permission to create Site.
+Plan has max_sites = 1.
+Workspace already has 1 Site.
+Second creation is denied by entitlement.
+```
+
+Do not infer entitlement behavior from role tests.
+
+---
+
+## 11. Super Admin Tests
+
+Platform authorization must have tests.
+
+Verify:
+
+- authorized platform role can perform action;
+- normal Workspace Admin cannot;
+- hardcoded User ID is not required.
+
+---
+
+## 12. Authentication Tests
+
+Preserve existing authentication behavior.
+
+Test when changed:
+
+- registration;
+- login;
+- logout;
+- password reset;
+- email verification;
+- 2FA/passkeys where relevant.
+
+Do not retest the entire framework for unrelated tasks.
+
+---
+
+## 13. Email Verification
+
+When `MustVerifyEmail` is implemented, test:
+
+- verified User access;
+- unverified User restrictions;
+- verification completion;
+- existing auth flows remain intact.
+
+---
+
+## 14. Validation Tests
+
+Meaningful Form Requests should have validation coverage.
+
+Test:
+
+- required values;
+- invalid enums;
+- invalid ownership IDs;
+- invalid URL/domain;
+- invalid money input;
+- invalid uploads;
+- unexpected fields when security-sensitive.
+
+---
+
+## 15. Mass Assignment / Ownership Tests
+
+Where ownership fields are server-derived, test that client cannot override them.
+
+Example:
+
+User submits another `workspace_id`.
+
+Expected:
+
+resource still belongs to authorized Workspace or request is rejected.
+
+---
+
+## 16. Database Constraint Tests
+
+For important invariants, test database-backed uniqueness/integrity.
+
+Examples:
+
+- duplicate Workspace membership;
+- duplicate Site subdomain;
+- duplicate version number;
+- forbidden null where business requires value.
+
+Application validation alone is not the whole guarantee.
+
+---
+
+## 17. Migration Tests
+
+When schema changes are non-trivial, verify:
+
+- clean migration;
+- test suite on migrated schema;
+- rollback where meaningful;
+- defaults/nullability;
+- foreign keys/indexes.
+
+Do not mark migration task DONE without running migrations/tests.
+
+---
+
+## 18. Existing Data Safety
+
+If migration affects existing rows, test the transition.
+
+Examples:
+
+- add non-null field;
+- split table;
+- backfill relation;
+- rename state.
+
+For large production backfills, test command/process separately from migration.
+
+---
+
+## 19. Factories
+
+Tests should use factories.
+
+Factories must create valid minimal state.
+
+Avoid factory side effects that create huge unrelated object graphs.
+
+Use states such as:
+
+- owner;
+- admin;
+- designer;
+- published;
+- archived;
+- active.
+
+---
+
+## 20. Deterministic Test Data
+
+Tests must be deterministic.
+
+Avoid relying on:
+
+- current wall-clock date when not needed;
+- random external data;
+- network;
+- existing local DB records.
+
+Freeze time where business logic depends on time.
+
+---
+
+## 21. Unique Faker Data
+
+Use Faker carefully.
+
+Tests should not fail randomly because generated values collide with unique constraints.
+
+Use deterministic or guaranteed-unique values for critical unique fields.
+
+---
+
+## 22. No Shared Test State
+
+A test must not depend on another test running first.
+
+Each test should arrange its own required state.
+
+---
+
+## 23. Test Naming
+
+Test names should describe expected behavior.
+
+Good:
+
+```text
+test_user_cannot_update_site_from_another_workspace
+```
+
+Bad:
+
+```text
+test_site_4
+```
+
+Names should help reviewers understand coverage quickly.
+
+---
+
+## 24. Arrange / Act / Assert
+
+Prefer clear structure:
+
+```text
+Arrange
+Act
+Assert
+```
+
+Comments are optional if code is already obvious.
+
+Avoid long tests with several unrelated workflows.
+
+---
+
+## 25. One Behavior per Test
+
+A test may contain several assertions for one behavior.
+
+Do not make one test cover:
+
+- creation;
+- update;
+- delete;
+- permissions;
+- publishing;
+
+all at once.
+
+Split for clarity and failure diagnosis.
+
+---
+
+## 26. Regression Tests
+
+When fixing a bug, add a regression test when practical.
+
+Preferred sequence:
+
+1. reproduce failure;
+2. write failing test;
+3. fix;
+4. verify test passes.
+
+Do not delete a failing test simply to restore green CI.
+
+---
+
+## 27. Bug Reproduction
+
+Before changing code for a reported bug, reproduce it when feasible.
+
+Evidence may be:
+
+- failing PHPUnit test;
+- failing Playwright test;
+- deterministic local reproduction.
+
+Do not guess at the fix if behavior can be reproduced.
+
+---
+
+## 28. Security Regression Tests
+
+Security bugs require explicit regression coverage.
+
+Examples:
+
+- IDOR;
+- unauthorized price change;
+- secret exposure;
+- unsafe URL;
+- XSS;
+- upload bypass.
+
+Security regression tests should remain in suite permanently.
+
+---
+
+## 29. Automotive Catalog Tests
+
+For Global Catalog test:
+
+- hierarchy relations;
+- customer cannot mutate catalog;
+- optional Series;
+- color structure;
+- image relationships;
+- status/archive behavior.
+
+Do not test automotive catalog only through UI.
+
+---
+
+## 30. Site Vehicle Tests
+
+Test:
+
+- import does not mutate Global Catalog;
+- Site Vehicle belongs to correct Site;
+- source reference retained;
+- customer overrides remain Site-owned;
+- cross-tenant import/reference denied.
+
+---
+
+## 31. Site Offer Tests
+
+Test:
+
+- price belongs to Site Offer;
+- price differs between Sites;
+- benefits remain Site-specific;
+- no accidental Global Catalog update.
+
+Money tests must follow the approved Money ADR when created.
+
+---
+
+## 32. Site-to-Site Copy Tests
+
+Test default copy semantics.
+
+Example:
+
+```text
+Copy Site Vehicle A → Site B.
+Modify Site A price.
+Site B price remains unchanged.
+```
+
+Also test:
+
+- ownership;
+- conflict handling;
+- source/destination access.
+
+---
+
+## 33. Block Schema Tests
+
+Test Schema validation.
+
+Cover:
+
+- supported field types;
+- invalid type;
+- group;
+- repeater;
+- conditions where implemented;
+- defaults;
+- required fields.
+
+Do not allow invalid Block Schema into runtime.
+
+---
+
+## 34. Block Version Tests
+
+Test:
+
+- Block Instance pins version;
+- publishing new Block Version does not mutate existing Instance;
+- archived/deprecated version remains usable where architecture requires.
+
+---
+
+## 35. Block State Tests
+
+Test state against Schema.
+
+Cover:
+
+- valid state;
+- missing required;
+- wrong type;
+- repeater limits;
+- unsafe unsupported values.
+
+---
+
+## 36. Binding Tests
+
+Automotive/data bindings should be tested semantically.
+
+Examples:
+
+```text
+offer.price
+vehicle.model.name
+vehicle.primary_image
+```
+
+Test invalid/unapproved paths are rejected.
+
+Do not permit arbitrary model property access.
+
+---
+
+## 37. Action System Tests
+
+Test each Action type separately.
+
+Examples:
+
+- open URL validation;
+- Page reference;
+- Popup reference;
+- phone;
+- email.
+
+Arbitrary script execution must remain impossible.
+
+---
+
+## 38. Form Definition Tests
+
+Test:
+
+- Site ownership;
+- field validation;
+- stable mapping key;
+- historical compatibility where applicable.
+
+---
+
+## 39. Public Form Submission Tests
+
+Test full backend flow:
+
+```text
+valid request
+→ anti-spam
+→ Submission saved
+→ Delivery rows created
+→ jobs dispatched
+```
+
+External provider success is not required for Submission persistence.
+
+---
+
+## 40. Invalid Form Submission Tests
+
+Test:
+
+- invalid phone;
+- required field missing;
+- invalid Form;
+- inactive Site/Form where applicable;
+- invalid public key;
+- malformed context.
+
+Ensure invalid submissions do not create Deliveries.
+
+---
+
+## 41. Trusted Context Tests
+
+Client may send contextual identifiers.
+
+Backend must resolve trusted values.
+
+Test client cannot spoof:
+
+- current price;
+- Site identity;
+- Integration Profile;
+- Workspace;
+- privileged routing data.
+
+---
+
+## 42. Anti-Spam Tests
+
+Test implemented protections independently:
+
+- honeypot;
+- IP rate limit;
+- phone rate limit;
+- duplicate detection;
+- blacklist.
+
+Avoid one giant anti-spam test.
+
+---
+
+## 43. CAPTCHA Tests
+
+Provider verification should be mocked at unit/feature level.
+
+Test:
+
+- valid provider result;
+- invalid result;
+- timeout/error;
+- disabled/not-required state.
+
+Do not call real CAPTCHA service in normal CI.
+
+---
+
+## 44. Submission History Tests
+
+Edit Form after Submission exists.
+
+Historical Submission must remain readable.
+
+Do not let field deletion erase historical meaning.
+
+---
+
+## 45. Integration Profile Tests
+
+Test:
+
+- Workspace ownership;
+- same-Workspace Site Binding;
+- cross-Workspace binding denied;
+- masked secret response;
+- secret replacement.
+
+---
+
+## 46. Secret Exposure Tests
+
+Where practical, assert responses do not contain raw secret.
+
+Examples:
+
+- Inertia props;
+- JSON response;
+- logs if testable;
+- export.
+
+A configured secret should be represented safely.
+
+---
+
+## 47. Delivery Tests
+
+Test each Delivery independently.
+
+Cases:
+
+- success;
+- temporary failure;
+- permanent failure;
+- retry;
+- idempotency;
+- one route fails while another succeeds.
+
+---
+
+## 48. External HTTP Mocking
+
+Use Laravel HTTP fake/mock facilities for external services.
+
+Normal test suite must not depend on real:
+
+- CRM;
+- webhook receiver;
+- Yandex;
+- email provider;
+- DNS;
+- billing.
+
+---
+
+## 49. HTTP Adapter Contract Tests
+
+Provider adapters should have deterministic tests around:
+
+- payload;
+- headers excluding raw-secret assertions where unsafe;
+- timeout behavior;
+- response classification;
+- retries.
+
+---
+
+## 50. SSRF Tests
+
+Custom Webhook/API destinations require security tests.
+
+Reject or protect against:
+
+- localhost;
+- loopback;
+- private networks;
+- link-local;
+- cloud metadata targets;
+- unsafe redirects according to policy.
+
+---
+
+## 51. Publishing Tests
+
+Publishing must have dedicated tests for:
+
+- validation;
+- snapshot/version creation;
+- activation;
+- failure;
+- old production stability;
+- permission.
+
+---
+
+## 52. Draft vs Published Test
+
+Critical regression:
+
+```text
+Published Site has value A.
+Edit Draft to value B.
+Preview shows B.
+Production still shows A.
+Publish.
+Production shows B.
+```
+
+This behavior must remain protected by automated tests.
+
+---
+
+## 53. Failed Publish Test
+
+Simulate publication failure.
+
+Expected:
+
+- old Published Version remains active;
+- no broken production pointer;
+- failure state recorded safely.
+
+---
+
+## 54. Version Restore Tests
+
+When restore exists:
+
+```text
+historical version
+→ Draft restored
+→ production unchanged
+→ explicit Publish required
+```
+
+unless a future emergency rollback mode is intentionally tested separately.
+
+---
+
+## 55. Domain Tests
+
+Custom domain tests should cover:
+
+- ownership;
+- normalized hostname;
+- uniqueness;
+- verification states;
+- permission;
+- entitlement.
+
+Real DNS may be mocked in CI.
+
+---
+
+## 56. SEO Tests
+
+Test generated:
+
+- title;
+- meta;
+- canonical;
+- robots;
+- sitemap entries.
+
+Do not require browser snapshots for every SEO string.
+
+---
+
+## 57. Public Runtime Tests
+
+Published public pages should have HTTP-level tests for:
+
+- correct Site resolution;
+- unknown hostname;
+- unpublished Site;
+- published content;
+- no Draft leakage;
+- no secret/private data leakage.
+
+---
+
+## 58. Playwright Purpose
+
+Playwright proves real user flows.
+
+Use it for:
+
+- navigation;
+- dialogs;
+- forms;
+- Designer interactions;
+- publish flow;
+- responsive behavior;
+- console errors.
+
+Do not replace backend authorization tests with browser tests.
+
+---
+
+## 59. Initial Playwright Baseline
+
+Phase 0 should establish smoke tests for:
+
+- root/landing;
+- login;
+- dashboard;
+- settings.
+
+As features appear, add critical flows.
+
+---
+
+## 60. Browser Test Independence
+
+Playwright tests should prepare their own known data or use deterministic setup.
+
+Do not depend on a manually maintained local account/database state.
+
+---
+
+## 61. Browser Authentication
+
+Use a reliable test authentication/setup strategy.
+
+Do not hardcode production credentials.
+
+Do not commit real user passwords/tokens.
+
+---
+
+## 62. Stable Selectors
+
+Prefer selectors by:
+
+- role;
+- accessible name;
+- label;
+- text when stable.
+
+Use `data-testid` where necessary.
+
+Do not target:
+
+- generated class names;
+- fragile Tailwind chains;
+- arbitrary DOM position.
+
+---
+
+## 63. Russian UI in Playwright
+
+Browser tests should assert important Russian UI labels.
+
+Example:
+
+```text
+Создать сайт
+Опубликовать
+Настройки
+```
+
+This helps prevent accidental English UI regressions.
+
+---
+
+## 64. Console Errors
+
+Unexpected browser console errors should fail relevant E2E tests.
+
+Allow only documented known noise if unavoidable.
+
+Do not ignore all console errors globally.
+
+---
+
+## 65. Failed Network Requests
+
+Critical unexpected failed requests should be detected in browser QA when practical.
+
+Examples:
+
+- 500;
+- failed save;
+- missing assets;
+- broken API/public Form endpoint.
+
+---
+
+## 66. Responsive Browser Tests
+
+Important customer/public screens should be tested at:
+
+- desktop;
+- tablet;
+- mobile.
+
+Authenticated admin screens may use targeted responsive smoke coverage.
+
+Designer can be desktop-first but still needs intentional smaller-screen behavior.
+
+---
+
+## 67. Screenshot Testing
+
+Use screenshots for visual review where helpful.
+
+Screenshots are not a substitute for functional assertions.
+
+Good candidates:
+
+- Dashboard;
+- Site creation;
+- Designer;
+- vehicle card;
+- publish dialog.
+
+---
+
+## 68. Visual Regression Strategy
+
+Do not enable brittle pixel-perfect regression everywhere.
+
+Use visual baselines for high-value stable surfaces.
+
+Allow documented threshold/diff strategy when introduced.
+
+---
+
+## 69. UI State Tests
+
+Critical UIs should cover:
+
+- loading;
+- empty;
+- success;
+- validation error;
+- permission denied/unavailable;
+- entitlement limit.
+
+Do not test only populated happy-state screenshots.
+
+---
+
+## 70. Accessibility Smoke Tests
+
+For critical flows verify:
+
+- form labels;
+- button roles;
+- keyboard navigation;
+- Dialog focus;
+- accessible names.
+
+Automated accessibility tooling may be added later if approved.
+
+---
+
+## 71. Keyboard Tests
+
+Use Playwright keyboard interactions where the interaction is important.
+
+Examples:
+
+- dialog close;
+- dropdown navigation;
+- form submit;
+- Lightbox;
+- Designer shortcuts later.
+
+---
+
+## 72. Build Check
+
+Frontend task commonly requires production build.
+
+Development server success is not equivalent to production build success.
+
+---
+
+## 73. Type Check
+
+TypeScript/check must pass for applicable frontend tasks.
+
+Do not suppress errors to get a green build.
+
+---
+
+## 74. Pint
+
+Run Pint according to canonical project command.
+
+Formatting changes must not hide unrelated modifications.
+
+---
+
+## 75. Larastan
+
+Run Larastan for backend tasks when available/applicable.
+
+Do not blanket-ignore new static-analysis errors.
+
+Suppress only with a documented valid reason.
+
+---
+
+## 76. PHPUnit Scope
+
+During implementation:
+
+- run focused affected tests first for speed;
+- before completion, run broader required suite according to DoD.
+
+Do not claim full suite passed after only one test file.
+
+---
+
+## 77. Playwright Scope
+
+During UI iteration:
+
+- run focused spec;
+- before task DONE, run relevant critical suite.
+
+Phase/CI gates may require complete browser suite.
+
+---
+
+## 78. Test Runtime Discipline
+
+Keep tests reasonably fast.
+
+Avoid:
+
+- unnecessary sleep;
+- real network;
+- huge fixtures;
+- repeated expensive seed of entire catalog.
+
+Fast tests support autonomous fix loops.
+
+---
+
+## 79. Avoid `sleep`
+
+Do not use arbitrary sleep to fix asynchronous tests.
+
+Use:
+
+- explicit events;
+- polling assertions;
+- Playwright waiting semantics;
+- queue fake/assertions.
+
+---
+
+## 80. Queue Tests
+
+Use Laravel queue fake where testing dispatch behavior.
+
+Use synchronous/test execution for Job behavior when needed.
+
+Test separately:
+
+- Job dispatched;
+- Job performs correct work.
+
+---
+
+## 81. Event Tests
+
+Use event fake when verifying dispatch.
+
+Do not over-mock if the real event/listener integration behavior is what needs testing.
+
+---
+
+## 82. Notification Tests
+
+Use notification fake for delivery triggering.
+
+Do not send real email/SMS/Telegram during normal test suite.
+
+---
+
+## 83. Storage Tests
+
+Use fake storage for upload/media behavior when appropriate.
+
+Test:
+
+- path ownership;
+- validation;
+- deletion/archive semantics;
+- private/public behavior.
+
+Do not write test artifacts into production storage.
+
+---
+
+## 84. Image Processing Tests
+
+For image processing, use small deterministic fixtures.
+
+Test:
+
+- accepted image;
+- invalid file;
+- dimensions/metadata where relevant;
+- transparency preservation where required.
+
+Avoid large real automotive image collections in normal unit suite.
+
+---
+
+## 85. Time-Based Tests
+
+Freeze time for:
+
+- expiration;
+- rate limits;
+- version timestamps;
+- invitation expiry;
+- temporary blacklist;
+- scheduled publication if ever added.
+
+Do not rely on actual waiting.
+
+---
+
+## 86. Retry Tests
+
+For retry logic test:
+
+- attempt increment;
+- delay/classification where important;
+- permanent failure;
+- success after retry;
+- no duplicate successful external entity when idempotency applies.
+
+---
+
+## 87. Concurrency Tests
+
+For race-sensitive behavior add tests where practical.
+
+Examples:
+
+- unique Site subdomain;
+- duplicate membership;
+- publication activation;
+- duplicate Submission/idempotency.
+
+Database constraints remain important even when concurrency is difficult to simulate.
+
+---
+
+## 88. Test Secrets
+
+Use fake test secrets.
+
+Never put real:
+
+- API token;
+- SMTP credentials;
+- provider keys;
+- production domains;
+
+into tests or fixtures.
+
+---
+
+## 89. `.env.testing`
+
+Testing environment configuration should contain only test-safe values.
+
+Do not require a developer's personal `.env` secrets to run automated suite.
+
+---
+
+## 90. CI Reproducibility
+
+Tests must run in CI from a clean checkout.
+
+A test that passes only because of local files/manual services is not reliable.
+
+---
+
+## 91. CI Required Gates
+
+Target Phase 0 CI should run:
+
+```text
+Composer install
+npm install
+PHPUnit
+Larastan
+Pint check
+Frontend check
+Production build
+Playwright where environment permits
+```
+
+Exact canonical commands will be defined in P0-022.
+
+---
+
+## 92. CI Failure
+
+Do not merge/mark phase complete with a known required CI failure.
+
+If failure is external/infrastructure-specific, classify explicitly and document it.
+
+---
+
+## 93. Flaky Tests
+
+Flaky tests are defects.
+
+Do not solve flakiness by automatic retries alone.
+
+Find the root cause:
+
+- shared state;
+- timing;
+- nondeterministic data;
+- external dependency;
+- order dependency.
+
+---
+
+## 94. Disabled Tests
+
+Do not skip/disable a failing required test to make CI green.
+
+A temporarily skipped test needs:
+
+- reason;
+- owner/task;
+- explicit follow-up.
+
+---
+
+## 95. Test Coverage
+
+Do not optimize for raw coverage percentage.
+
+Prioritize coverage of:
+
+- business invariants;
+- tenant boundaries;
+- permissions;
+- money;
+- publishing;
+- lead persistence;
+- external delivery;
+- security.
+
+---
+
+## 96. Critical Regression Areas
+
+Maintain strong regression coverage around:
+
+1. Workspace isolation.
+2. Site ownership.
+3. Permissions.
+4. Entitlements.
+5. Global Catalog immutability.
+6. Site-specific prices.
+7. Block Schema/versioning.
+8. Submission persistence.
+9. Integration secret safety.
+10. Draft/Published isolation.
+
+---
+
+## 97. Task Test Plan
+
+Before implementing a non-trivial task, identify:
+
+```text
+What behavior must work?
+What must be denied?
+What can regress?
+Which layer is cheapest to prove it?
+What browser flow proves the UX?
+```
+
+Do not postpone all testing until the end.
+
+---
+
+## 98. Task Completion Report
+
+When reporting a completed task, include actual checks.
+
+Example:
+
+```text
+PHPUnit: PASS
+Larastan: PASS
+Pint: PASS
+TypeScript: NOT_APPLICABLE
+Build: NOT_APPLICABLE
+Playwright: NOT_AVAILABLE_YET
+Security review: PASS
+```
+
+Do not fabricate output.
+
+---
+
+## 99. Phase Validation
+
+At the end of each phase, run the phase-level validation task from BACKLOG.
+
+Phase validation should include:
+
+- broader automated suite;
+- browser critical path;
+- architecture review;
+- security review;
+- PROJECT_STATE update.
+
+---
+
+## 100. Final Testing Checklist
+
+Before marking any implementation task DONE, ask:
+
+```text
+Did I test the business behavior, not just implementation details?
+Did I include negative tenancy/permission cases?
+Did I add a regression test for a bug fix?
+Did migrations actually run?
+Did PHPUnit actually run?
+Did static analysis/format checks run when applicable?
+Did TypeScript/build run when applicable?
+Did Playwright/browser verification actually run when required?
+Did I check unexpected console errors?
+Did I avoid real external services in normal tests?
+Did I preserve secret safety?
+Did I report unavailable checks honestly?
+```
+
+If a required answer is no, the task is not DONE.

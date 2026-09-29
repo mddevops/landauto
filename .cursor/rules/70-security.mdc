@@ -1,0 +1,1726 @@
+---
+description: Security rules for Landflow across tenancy, auth, public endpoints, secrets, integrations, publishing and Marketplace.
+alwaysApply: true
+---
+
+# Landflow — Security Rule
+
+This rule defines mandatory security boundaries for Landflow.
+
+Primary references:
+
+- `docs/architecture/SECURITY.md`
+- `docs/architecture/TENANCY.md`
+- `docs/architecture/PERMISSIONS.md`
+- `docs/architecture/FORMS_AND_INTEGRATIONS.md`
+- `docs/architecture/PUBLISHING.md`
+- `docs/automation/DEFINITION_OF_DONE.md`
+- `docs/automation/DECISIONS.md`
+- `.cursor/rules/00-project-core.mdc`
+- `.cursor/rules/10-architecture.mdc`
+- `.cursor/rules/20-laravel.mdc`
+- `.cursor/rules/50-database.mdc`
+- `.cursor/rules/60-testing.mdc`
+
+Security is not optional cleanup.
+
+If implementation convenience conflicts with a documented security boundary, the security boundary wins unless an approved architecture decision changes it.
+
+---
+
+## 1. Core Security Principles
+
+Always preserve:
+
+1. Backend is authoritative.
+2. Workspace is the tenant boundary.
+3. Every protected resource is authorized server-side.
+4. Public input is untrusted.
+5. Secrets remain server-side.
+6. Published output contains only public-safe data.
+7. Developer extensions are constrained.
+8. External HTTP is SSRF-aware.
+9. Historical/audit data does not leak secrets.
+10. Security regressions require tests.
+
+---
+
+## 2. Authentication Is Not Authorization
+
+A logged-in User is not automatically allowed to access:
+
+- Workspace;
+- Site;
+- Form;
+- Submission;
+- Integration Profile;
+- Domain;
+- Site Vehicle;
+- Publication.
+
+Authentication proves identity.
+
+Authorization proves access to a specific action/resource.
+
+---
+
+## 3. Workspace Isolation Is Mandatory
+
+All Workspace/Site-scoped operations must prevent cross-tenant access.
+
+Test for:
+
+- read;
+- create under foreign parent;
+- update;
+- delete/archive;
+- copy/import;
+- publish;
+- integration binding;
+- media reference;
+- submission access.
+
+Do not rely only on hidden UI controls.
+
+---
+
+## 4. IDOR Prevention
+
+Any endpoint taking a resource identifier is a potential IDOR surface.
+
+Examples:
+
+```text
+/sites/{site}
+/forms/{form}
+/submissions/{submission}
+/integrations/{profile}
+/domains/{domain}
+```
+
+Backend must confirm authorized ownership.
+
+Never trust that an opaque/UUID ID alone is a security boundary.
+
+---
+
+## 5. Nested Resource Validation
+
+For nested routes, validate parent-child relationship.
+
+Example:
+
+```text
+/workspaces/{workspace}/sites/{site}
+```
+
+must verify Site belongs to that Workspace.
+
+Do not authorize each parameter independently and assume nesting is valid.
+
+---
+
+## 6. Active Workspace Is Not Enough
+
+Current/selected Workspace in session/UI is useful context.
+
+It does not replace resource authorization.
+
+A manipulated route/request must not access another Workspace merely because the frontend normally sends current Workspace.
+
+---
+
+## 7. Policies / Authorization
+
+Use explicit Laravel Policies/Gates/approved authorization services.
+
+Do not scatter ad-hoc authorization such as:
+
+```php
+if ($user->role === 'admin')
+```
+
+across controllers/components.
+
+Do not authorize only by role without checking resource ownership.
+
+---
+
+## 8. Permission and Entitlement
+
+Security-sensitive action may require both:
+
+- permission;
+- entitlement.
+
+Example:
+
+User may have `manage_domains`, while Workspace plan lacks `custom_domain`.
+
+Do not treat entitlement as authorization or permission as subscription capability.
+
+---
+
+## 9. Super Admin
+
+Super Admin must use explicit platform-level authorization.
+
+Never implement Super Admin as:
+
+- `user_id === 1`;
+- hardcoded email;
+- secret query parameter;
+- tenancy globally disabled;
+- environment-only bypass in normal app flow.
+
+---
+
+## 10. Platform Role Separation
+
+Customer Workspace Admin is not Platform Admin.
+
+Do not reuse customer role names to grant platform-wide powers.
+
+Platform scopes should be explicit.
+
+---
+
+## 11. Impersonation
+
+If impersonation is added later, it must require:
+
+- explicit platform permission;
+- visible active impersonation state;
+- audit record;
+- safe exit;
+- no secret exposure.
+
+Do not manually overwrite auth/session identity without an approved flow.
+
+---
+
+## 12. Session Security
+
+Use Laravel's session/auth security defaults.
+
+Do not weaken:
+
+- secure cookies in production;
+- HttpOnly;
+- SameSite behavior;
+- session regeneration after login;
+- CSRF protections.
+
+Do not store API/provider secrets in browser session storage.
+
+---
+
+## 13. CSRF
+
+Authenticated browser mutations must retain CSRF protection where applicable.
+
+Never disable CSRF globally to fix an integration issue.
+
+Public webhook/provider callbacks should use their own verification model rather than disabling security everywhere.
+
+---
+
+## 14. Mass Assignment
+
+Do not allow users to set protected ownership/security fields through mass assignment.
+
+Examples:
+
+- `workspace_id`;
+- `site_id` when derived;
+- role;
+- permission;
+- plan;
+- publication status;
+- Integration Profile owner;
+- system/global flags.
+
+Derive protected fields from authorized server context.
+
+---
+
+## 15. Input Validation
+
+Validate all untrusted input server-side.
+
+Validate:
+
+- types;
+- ranges;
+- enums;
+- length;
+- ownership;
+- URLs;
+- domains;
+- filenames/uploads;
+- schema JSON;
+- mapping fields;
+- public identifiers.
+
+TypeScript does not replace backend validation.
+
+---
+
+## 16. Unexpected Fields
+
+For sensitive configuration, avoid accepting arbitrary extra payload fields.
+
+Use explicit validated/DTO shape.
+
+This is especially important for:
+
+- permissions;
+- integrations;
+- Block Schema;
+- Actions;
+- domains;
+- publishing.
+
+---
+
+## 17. XSS
+
+Treat customer-entered content as untrusted.
+
+Never render arbitrary HTML without sanitization.
+
+Risk surfaces include:
+
+- RichText;
+- Block text;
+- custom descriptions;
+- Form labels;
+- automotive descriptions;
+- Developer Template metadata.
+
+---
+
+## 18. RichText Sanitization
+
+RichText must use an allowlist-based sanitation model.
+
+Do not permit arbitrary:
+
+- script;
+- iframe;
+- event attributes;
+- inline JavaScript;
+- dangerous URL protocols.
+
+Exact editor can change; sanitation boundary cannot.
+
+---
+
+## 19. React Escaping
+
+React text escaping is useful but not sufficient when using:
+
+- `dangerouslySetInnerHTML`;
+- RichText HTML;
+- SVG;
+- external embeds.
+
+Any raw HTML path requires explicit review.
+
+---
+
+## 20. `dangerouslySetInnerHTML`
+
+Do not use `dangerouslySetInnerHTML` casually.
+
+If necessary:
+
+1. sanitize before rendering;
+2. document the safe source;
+3. test XSS payloads;
+4. avoid mixing secrets/private metadata.
+
+---
+
+## 21. URL Validation
+
+Actions such as `open_url` must validate allowed URL schemes.
+
+Normally allow:
+
+- `https`;
+- `http` where product permits;
+- possibly `mailto`;
+- `tel` via dedicated Actions.
+
+Reject dangerous schemes such as:
+
+- `javascript:`;
+- `data:` unless a specific safe media context exists;
+- other executable/custom schemes.
+
+---
+
+## 22. Open Redirects
+
+Do not redirect to arbitrary user-supplied URLs without validation.
+
+For internal navigation, prefer known route/Page identifiers.
+
+For external URL actions, validate and present intentionally.
+
+---
+
+## 23. External HTTP Is Security-Sensitive
+
+Custom Webhook/API/CRM endpoints create SSRF risk.
+
+All server-side outbound HTTP to customer-configured URLs must use a centralized security policy.
+
+Do not let each adapter implement its own inconsistent URL validation.
+
+---
+
+## 24. SSRF Protection
+
+Custom destinations must protect against access to:
+
+- localhost;
+- loopback;
+- private RFC1918 networks;
+- link-local;
+- cloud metadata services;
+- internal service hostnames where applicable;
+- unsafe redirect chains.
+
+IPv4 and IPv6 must both be considered.
+
+---
+
+## 25. DNS Rebinding / Resolution
+
+For strong SSRF protection, validate resolved addresses appropriately.
+
+Do not only regex-check the hostname string.
+
+If request follows redirects, destination must remain within policy.
+
+---
+
+## 26. Test Connection Uses Same SSRF Policy
+
+`Проверить подключение` is not exempt.
+
+It must use the same or stricter outbound security policy as actual Delivery.
+
+Do not create a "test" endpoint that can scan internal infrastructure.
+
+---
+
+## 27. HTTP Timeouts
+
+Every external request requires sensible timeout.
+
+Do not allow customer-configured integrations to hang workers indefinitely.
+
+Separate connect/read timeout where useful.
+
+---
+
+## 28. Redirects
+
+External HTTP redirect following must be deliberate.
+
+Do not automatically follow unlimited redirects.
+
+Revalidate redirected destination against SSRF policy.
+
+---
+
+## 29. TLS Verification
+
+Do not disable TLS certificate verification in production to make an integration work.
+
+Provider-specific exceptions require explicit security decision.
+
+---
+
+## 30. Secrets
+
+Secrets include:
+
+- API tokens;
+- client secrets;
+- SMTP passwords;
+- CAPTCHA secrets;
+- private keys;
+- webhook signing secrets;
+- billing secrets.
+
+They remain server-side.
+
+---
+
+## 31. Secret Storage
+
+Store secrets encrypted at rest where supported.
+
+Do not store plaintext token in generic settings JSON by default.
+
+Do not commit secrets to repository.
+
+---
+
+## 32. Secret UI
+
+After save:
+
+- show configured state;
+- optionally safe masked suffix;
+- allow replacement.
+
+Do not return original plaintext secret to React.
+
+---
+
+## 33. Secret Logging
+
+Never log:
+
+- Authorization header;
+- Bearer token;
+- full API key;
+- password;
+- private key;
+- CAPTCHA secret.
+
+Redaction must apply to errors/retries/debug context.
+
+---
+
+## 34. Secret Export
+
+Do not include secrets in:
+
+- Site export;
+- Workspace export;
+- Published Version;
+- Template;
+- Block state;
+- support bundle;
+- audit before/after snapshots.
+
+---
+
+## 35. Secret Rotation
+
+Architecture should allow replacement/rotation without rewriting historical records.
+
+Historical Delivery should keep safe result metadata, not old plaintext credential.
+
+---
+
+## 36. Environment Secrets
+
+Production platform secrets belong in environment/secret management, not source code.
+
+`.env` stays untracked.
+
+`.env.example` contains placeholders only.
+
+---
+
+## 37. Public Forms Are Hostile Input Surfaces
+
+Public Form endpoints must assume:
+
+- bots;
+- spam;
+- malformed input;
+- replay;
+- automated enumeration;
+- fake context;
+- oversized payloads.
+
+Keep endpoint narrow and validated.
+
+---
+
+## 38. Form Submission Pipeline
+
+Security-sensitive order:
+
+```text
+Resolve safe public Form/Site
+→ request limits
+→ validation
+→ normalization
+→ anti-spam
+→ CAPTCHA where required
+→ trusted context resolution
+→ persist Submission
+→ create Delivery
+→ queue external work
+```
+
+Do not send directly to CRM from browser.
+
+---
+
+## 39. Hidden Fields Are Untrusted
+
+Hidden fields can be modified by the client.
+
+Never trust hidden values for:
+
+- price;
+- Workspace;
+- Integration Profile;
+- Site ownership;
+- privileged routing;
+- canonical vehicle fields.
+
+Resolve authoritative data server-side.
+
+---
+
+## 40. Automotive Context
+
+Form context may include public identifiers for selected:
+
+- Site Vehicle;
+- Trim;
+- Color;
+- Offer.
+
+Backend must verify those resources belong to the Site/Form context.
+
+---
+
+## 41. Price Integrity
+
+Client-supplied displayed price is not authoritative.
+
+On Submission, resolve current trusted Site Offer/publication price server-side where business needs it.
+
+Do not accept arbitrary hidden `price` as truth.
+
+---
+
+## 42. Phone Normalization
+
+Normalize phone before:
+
+- duplicate checks;
+- blacklist;
+- rate limits;
+- CRM mapping where appropriate.
+
+Do not compare multiple formatting variants as different people by accident.
+
+---
+
+## 43. Rate Limiting
+
+Apply rate limits to public abuse-sensitive endpoints.
+
+Possible dimensions:
+
+- IP;
+- Form;
+- phone;
+- Site.
+
+Do not use only one global limit that allows targeted abuse of one Site.
+
+---
+
+## 44. Rate Limit Responses
+
+Do not reveal sensitive anti-abuse internals.
+
+User-facing message can be generic Russian text such as:
+
+`Слишком много попыток. Попробуйте позже.`
+
+---
+
+## 45. Honeypot
+
+Honeypot is an additional signal, not the only anti-spam protection.
+
+Do not rely on it alone.
+
+---
+
+## 46. Duplicate Detection
+
+Duplicate prevention must be configurable/product-aware.
+
+Do not silently discard legitimate repeated lead attempts without trace if architecture expects Submission history.
+
+---
+
+## 47. Blacklists
+
+Blacklist scopes:
+
+- Global;
+- Workspace;
+- Site.
+
+Blacklist management must be authorized and auditable where appropriate.
+
+Customers must not edit Global blacklist unless platform role allows it.
+
+---
+
+## 48. IP Addresses
+
+Store/compare IPs in a representation that supports IPv4 and IPv6.
+
+Do not assume IPv4-only.
+
+---
+
+## 49. SmartCaptcha
+
+SmartCaptcha verification occurs server-side.
+
+Never expose CAPTCHA secret.
+
+Verify current official provider documentation during implementation.
+
+Treat provider failure according to explicit product policy.
+
+---
+
+## 50. Upload Security
+
+Uploads are untrusted.
+
+Validate:
+
+- size;
+- MIME;
+- actual content/decode;
+- dimensions where needed;
+- permitted file class;
+- file name/path.
+
+Do not trust file extension.
+
+---
+
+## 51. File Names
+
+Do not use original filename directly as filesystem path.
+
+Generate safe storage names.
+
+Store original display name separately if needed.
+
+---
+
+## 52. Path Traversal
+
+Never concatenate untrusted path segments into storage/filesystem paths.
+
+Reject:
+
+- `../`;
+- absolute paths;
+- encoded traversal forms.
+
+Use storage abstraction.
+
+---
+
+## 53. Image Bombs
+
+Image processing must protect against unreasonable:
+
+- dimensions;
+- decompression size;
+- memory use.
+
+Do not decode arbitrary gigantic files without limits.
+
+---
+
+## 54. SVG
+
+SVG can contain active content.
+
+Do not treat uploaded SVG as automatically safe.
+
+If SVG upload is allowed later:
+
+- sanitize;
+- restrict features;
+- serve safely;
+- test XSS.
+
+PNG/WebP/AVIF/raster formats are safer defaults for many customer image flows.
+
+---
+
+## 55. Public vs Private Media
+
+Media visibility must be explicit.
+
+Private Workspace assets must not become public merely because file exists in shared storage.
+
+Published assets require a deliberate public reference.
+
+---
+
+## 56. Media Authorization
+
+Private media download/preview routes must authorize Workspace/Site access.
+
+Do not rely on hard-to-guess URLs.
+
+---
+
+## 57. Published Media
+
+Published Site should reference only media intentionally included in the Published Version/public state.
+
+Do not expose all Workspace assets through public paths.
+
+---
+
+## 58. Malware / Non-Image Files
+
+Landflow's initial upload surfaces should accept only required file classes.
+
+Do not allow arbitrary executable/document upload without a product need and corresponding security controls.
+
+---
+
+## 59. Form Attachments
+
+If public Form attachments are introduced later, they require a separate threat model:
+
+- malware;
+- size;
+- MIME spoofing;
+- storage isolation;
+- retention;
+- CRM forwarding safety.
+
+Do not add them casually.
+
+---
+
+## 60. Block Schema Security
+
+Block Schema is data, not code.
+
+Reject unsupported:
+
+- executable expressions;
+- PHP;
+- JavaScript;
+- arbitrary SQL;
+- arbitrary backend class names.
+
+Conditional logic must use safe defined operators.
+
+---
+
+## 61. Block State Security
+
+Block state must be validated against Block Schema.
+
+Do not store arbitrary unexpected keys forever if schema forbids them.
+
+Do not deserialize arbitrary executable objects.
+
+---
+
+## 62. Actions Are Allowlists
+
+Action types are platform-defined.
+
+Do not allow:
+
+```text
+custom_js
+eval
+php_callback
+sql
+shell
+```
+
+as normal Block actions.
+
+---
+
+## 63. Data Bindings Are Allowlists
+
+Bindings must reference approved semantic paths.
+
+Do not evaluate arbitrary property/method expressions.
+
+Do not expose hidden model fields through generic reflection.
+
+---
+
+## 64. Developer Blocks
+
+Third-party Developer Blocks must not receive:
+
+- raw DB;
+- filesystem;
+- environment;
+- secrets;
+- unrestricted HTTP;
+- arbitrary Laravel container access.
+
+They consume approved safe contracts.
+
+---
+
+## 65. Marketplace Runtime
+
+Marketplace sandbox/execution model requires ADR before public third-party runtime.
+
+Do not ship unrestricted custom server-side code from Marketplace packages.
+
+---
+
+## 66. Third-Party JavaScript
+
+Unrestricted third-party JavaScript creates:
+
+- XSS;
+- credential theft;
+- form interception;
+- DOM/data exfiltration;
+- CSP problems.
+
+Do not permit it in public runtime without an approved sandbox/security architecture.
+
+---
+
+## 67. CSP
+
+Published runtime should be compatible with a strong Content Security Policy strategy.
+
+Avoid architecture that requires widespread:
+
+- `unsafe-eval`;
+- unrestricted inline scripts;
+- arbitrary third-party origins.
+
+Exact CSP can be implemented later.
+
+---
+
+## 68. Clickjacking
+
+Consider frame protection for authenticated Landflow app.
+
+Published Site embedding policy may differ and should be deliberate.
+
+Do not globally disable frame protections without product need.
+
+---
+
+## 69. Security Headers
+
+Production app/public runtime should support appropriate headers such as:
+
+- Content-Security-Policy;
+- X-Content-Type-Options;
+- Referrer-Policy;
+- frame policy;
+- HSTS where HTTPS/domain setup permits.
+
+Implementation should be centralized.
+
+---
+
+## 70. CORS
+
+Do not enable `*` CORS globally.
+
+Public APIs/endpoints should define explicit cross-origin requirements.
+
+Authenticated Inertia app normally does not need open CORS.
+
+---
+
+## 71. Public API
+
+No broad public API exists by default.
+
+If API is introduced later:
+
+- explicit auth model;
+- scopes/permissions;
+- rate limits;
+- versioning;
+- audit.
+
+Do not expose internal Inertia endpoints as accidental public API.
+
+---
+
+## 72. Webhooks Into Landflow
+
+Inbound provider webhooks require verification appropriate to provider:
+
+- signature;
+- secret;
+- timestamp/replay check;
+- idempotency.
+
+Do not trust source IP alone unless provider formally requires/supports that model.
+
+---
+
+## 73. Webhooks Out of Landflow
+
+Outbound webhook payload must not include unnecessary private data.
+
+Send only mapped/approved fields.
+
+Do not include entire Submission/model dump.
+
+---
+
+## 74. Queue Security
+
+Jobs should carry IDs/minimal context, not secrets or full private payloads if unnecessary.
+
+Do not serialize plaintext credentials into queue payload when they can be re-resolved securely.
+
+---
+
+## 75. Queue Retry Safety
+
+Retries must not:
+
+- duplicate external leads unexpectedly;
+- republish twice;
+- create duplicate billing records.
+
+Use idempotency/state guards.
+
+---
+
+## 76. Scheduled Jobs
+
+Scheduled jobs run without authenticated browser context.
+
+Every scheduled operation must re-resolve scope/authorization/system authority explicitly.
+
+---
+
+## 77. Publishing Security
+
+Publish is privileged.
+
+Requires:
+
+- authenticated User;
+- Site access;
+- `publish_site`;
+- entitlement if applicable;
+- valid Site state.
+
+Do not allow publish because User can edit content.
+
+---
+
+## 78. Draft Leakage
+
+Public runtime must never expose Draft unintentionally.
+
+Test:
+
+- unpublished Block changes;
+- unpublished price changes;
+- unpublished SEO;
+- unpublished Forms.
+
+Draft Preview route must be separately protected.
+
+---
+
+## 79. Preview Security
+
+Authenticated preview should require authorization.
+
+If shareable preview tokens are introduced:
+
+- high entropy;
+- scope to Site/version;
+- expiry/revocation strategy;
+- no privileged admin functionality.
+
+Do not use predictable preview URLs.
+
+---
+
+## 80. Published Snapshot Secrets
+
+Before publication, ensure snapshot/manifest excludes:
+
+- Integration tokens;
+- Submission data;
+- member info;
+- permissions;
+- private Workspace settings;
+- internal audit metadata.
+
+---
+
+## 81. Atomic Publish Security
+
+Publication activation must not partially expose a broken version.
+
+Build/validate first, then atomically switch current published reference.
+
+---
+
+## 82. Version Restore
+
+Restore must be authorized.
+
+Normal restore goes to Draft.
+
+Do not let any editor silently replace production with an old version.
+
+---
+
+## 83. Domains
+
+Custom domain changes are sensitive.
+
+Require:
+
+- Site ownership/access;
+- `manage_domains`;
+- entitlement;
+- verification.
+
+Do not let arbitrary Workspace member attach domain without permission.
+
+---
+
+## 84. Domain Verification
+
+Domain ownership verification must use a robust challenge mechanism.
+
+Do not accept a user assertion that they own a domain.
+
+Exact DNS/HTTP challenge model may be decided later.
+
+---
+
+## 85. Host Header
+
+Public Site resolution by hostname must handle untrusted Host input safely.
+
+Do not use Host directly for unsafe redirects, SQL, filesystem paths, or cache poisoning.
+
+Normalize and lookup against known domain records.
+
+---
+
+## 86. Reserved Subdomains
+
+Landflow-managed subdomain system should reserve platform-sensitive names.
+
+Examples conceptually:
+
+- www;
+- api;
+- admin;
+- app;
+- status;
+- support.
+
+Exact list can be product-defined.
+
+---
+
+## 87. DNS Rebinding in Custom Domains
+
+Domain verification alone does not automatically make arbitrary backend URL requests safe.
+
+Do not confuse custom domain ownership with SSRF trust.
+
+---
+
+## 88. SEO Input
+
+SEO fields are untrusted content.
+
+Escape/sanitize:
+
+- title;
+- meta description;
+- OG values;
+- structured data inputs.
+
+Do not permit raw script injection through SEO configuration.
+
+---
+
+## 89. JSON-LD
+
+If structured data is generated, serialize through safe JSON encoding.
+
+Do not concatenate unescaped customer strings into `<script type="application/ld+json">`.
+
+---
+
+## 90. Audit Logs
+
+Security-sensitive actions should be auditable.
+
+Examples:
+
+- role/permission changes;
+- secret replacement;
+- publish;
+- domain changes;
+- blacklist changes;
+- Super Admin actions;
+- impersonation.
+
+Do not log secrets in audit payload.
+
+---
+
+## 91. Audit Actor
+
+Audit record should distinguish:
+
+- human User;
+- platform/system;
+- queued process;
+
+where relevant.
+
+Do not fake a User actor for system jobs.
+
+---
+
+## 92. Price Changes
+
+Price edits are commercially sensitive.
+
+Use explicit permission.
+
+Audit significant price changes where architecture requires.
+
+Do not let Designer/content-only role modify price through crafted request.
+
+---
+
+## 93. Catalog Integrity
+
+Global Catalog modifications require platform permissions.
+
+Workspace users cannot modify canonical catalog by manipulating IDs/routes.
+
+Catalog import is a separate controlled operation.
+
+---
+
+## 94. Form Submission Access
+
+Submissions contain potentially sensitive personal data.
+
+Require explicit permission such as:
+
+- `view_submissions`;
+- `export_submissions`.
+
+Do not expose submissions to generic Site editors by default.
+
+---
+
+## 95. Export Security
+
+Exports must apply same scope/permission rules as UI.
+
+Do not create an export endpoint that skips tenant filters because it is "internal".
+
+Exports must not contain secrets.
+
+---
+
+## 96. Integration Permissions
+
+Managing Integration credentials is a sensitive permission.
+
+Do not assume Form editor can read/replace tokens.
+
+Frontend should receive masked state only.
+
+---
+
+## 97. Logs and Error Tracking
+
+If external error tracking is introduced later:
+
+- scrub secrets;
+- scrub auth headers;
+- evaluate personal data;
+- avoid full Form submissions by default.
+
+---
+
+## 98. Personal Data
+
+Store and expose personal data only as required.
+
+Potential personal data:
+
+- name;
+- phone;
+- email;
+- IP;
+- form content.
+
+Do not copy it across unrelated tables for convenience.
+
+---
+
+## 99. Retention / Deletion
+
+Exact privacy retention policy is not yet finalized.
+
+Architecture should permit:
+
+- deletion;
+- anonymization;
+- retention policies.
+
+Do not make personal data impossible to remove because it is duplicated everywhere.
+
+---
+
+## 100. Support Access
+
+Support/operations access to customer data should be explicit and auditable if introduced.
+
+Do not add hidden backdoors for support convenience.
+
+---
+
+## 101. Production Debugging
+
+Do not enable debug mode in production.
+
+Do not display:
+
+- stack traces;
+- SQL;
+- filesystem paths;
+- environment;
+- secrets.
+
+User-facing error should be safe and Russian.
+
+---
+
+## 102. `dd()` / Debug Artifacts
+
+Never commit:
+
+- `dd()`;
+- `dump()`;
+- test debug routes;
+- auth bypasses;
+- temporary secret printouts;
+- public phpinfo.
+
+Reviewer should check for these.
+
+---
+
+## 103. Dependency Security
+
+Before adding a package, consider:
+
+- maintenance;
+- known vulnerabilities;
+- license;
+- transitive dependency surface;
+- need.
+
+Do not add unmaintained packages for trivial convenience.
+
+---
+
+## 104. Composer / npm Audit
+
+Security/dependency audit may be part of CI/release process later.
+
+Do not automatically upgrade major versions during unrelated tasks solely to clear warnings without assessing compatibility.
+
+---
+
+## 105. Supply Chain
+
+Lockfiles belong in repository according to existing stack.
+
+Do not download executable scripts/packages from random sources during automated agent work.
+
+Use official package registries/providers.
+
+---
+
+## 106. Shell Commands
+
+Never build shell commands with untrusted user input.
+
+Prefer framework/library APIs.
+
+If shell execution is ever required for internal tooling, escape/allowlist arguments strictly.
+
+---
+
+## 107. Deserialization
+
+Do not unserialize untrusted PHP objects.
+
+Avoid insecure native object deserialization from client-controlled data.
+
+Use JSON with validated schema.
+
+---
+
+## 108. SQL Injection
+
+Use Eloquent/query builder parameterization.
+
+Never concatenate untrusted input into SQL fragments.
+
+Raw `orderBy`/column names must be allowlisted.
+
+---
+
+## 109. Dynamic Sorting
+
+For user-selected sort fields, map public sort key to approved DB column.
+
+Do not pass arbitrary query parameter directly as column/expression.
+
+---
+
+## 110. File System
+
+User input must not control arbitrary local paths.
+
+Use storage disk + generated keys.
+
+Never expose server paths to frontend/errors.
+
+---
+
+## 111. Denial of Service
+
+Protect expensive public operations.
+
+Examples:
+
+- huge Form payload;
+- giant image;
+- repeated publish trigger;
+- integration Test Connection spam;
+- expensive search/filter abuse.
+
+Use limits, queues, throttling and pagination.
+
+---
+
+## 112. Pagination
+
+Do not expose unbounded sensitive collections.
+
+Submissions/catalog/audit should paginate.
+
+This is security/performance hygiene.
+
+---
+
+## 113. Browser Storage
+
+Do not store:
+
+- tokens;
+- API secrets;
+- submission data;
+- privileged permissions snapshot longer than necessary
+
+in localStorage/sessionStorage.
+
+Use secure server/session model.
+
+---
+
+## 114. Frontend Source Is Public
+
+Assume all browser-delivered JS/config can be inspected.
+
+Never place secret/security assumptions in frontend code.
+
+Public IDs and feature flags are not secrets.
+
+---
+
+## 115. Environment Detection
+
+Do not use client-side environment checks as security controls.
+
+Example:
+
+```text
+if production hide button
+```
+
+is not authorization.
+
+Backend must enforce.
+
+---
+
+## 116. Error Messages
+
+User-facing error messages should be useful but not reveal internal security detail.
+
+Example:
+
+Use:
+
+`Не удалось выполнить действие.`
+
+instead of:
+
+`Workspace 18 policy denied because role matrix mismatch at ...`
+
+Internal logs can contain safe diagnostic IDs.
+
+---
+
+## 117. Account Enumeration
+
+Authentication/reset/invite flows should avoid unnecessary account enumeration.
+
+Follow Fortify/framework secure defaults unless product explicitly requires otherwise.
+
+---
+
+## 118. Passwords
+
+Never log/store plaintext passwords.
+
+Use framework password hashing.
+
+Do not create alternate password storage.
+
+---
+
+## 119. 2FA / Passkeys
+
+Preserve Fortify security model.
+
+Do not bypass 2FA/passkeys for custom dashboard routes.
+
+Sensitive account-security changes may require re-authentication according to framework/product behavior.
+
+---
+
+## 120. API Tokens
+
+If personal/API tokens are introduced later:
+
+- hash where possible;
+- scope permissions;
+- show plaintext only once when architecture allows;
+- revoke/rotate;
+- audit use where needed.
+
+Not required now.
+
+---
+
+## 121. Marketplace Moderation
+
+Developer content must not become public automatically without required review when Marketplace phase is active.
+
+Review should include:
+
+- schema;
+- dependencies;
+- data access;
+- network behavior;
+- rendering safety.
+
+---
+
+## 122. Marketplace Versioning
+
+Approved Marketplace Block/Template version should be immutable enough for review integrity.
+
+Developer editing draft must not silently alter already-approved/published version.
+
+---
+
+## 123. AI-Generated Schema
+
+If AI proposes Block Schema:
+
+- treat output as untrusted draft;
+- validate against safe Schema format;
+- developer confirms;
+- reviewer/security rules still apply.
+
+AI output is not executable authority.
+
+---
+
+## 124. AI / Prompt Data
+
+If future AI features send customer content to external providers, require explicit architecture/privacy decision.
+
+Do not silently send:
+
+- submissions;
+- secrets;
+- private Workspace data;
+- customer assets
+
+to third-party AI APIs.
+
+---
+
+## 125. Security Testing Requirements
+
+Applicable security tests include:
+
+- cross-tenant IDOR;
+- role denial;
+- entitlement denial;
+- secret not exposed;
+- SSRF;
+- XSS/RichText;
+- upload validation;
+- public Form abuse;
+- Draft leakage;
+- publish permission.
+
+---
+
+## 126. Security Regression
+
+Every fixed security bug should receive an automated regression test when practical.
+
+Do not rely only on manual note.
+
+---
+
+## 127. Threat Review Trigger
+
+Perform explicit security review when a task introduces:
+
+- new public endpoint;
+- file upload;
+- external HTTP;
+- secrets;
+- permission system;
+- publishing;
+- domain routing;
+- Marketplace code;
+- custom HTML/script;
+- export;
+- personal data flow.
+
+---
+
+## 128. Security Agent
+
+Security-sensitive tasks should be reviewed by the future Security Agent according to backlog workflow.
+
+The implementing agent should still follow this rule before review.
+
+Security is not outsourced only to the reviewer.
+
+---
+
+## 129. BLOCKED_DECISION
+
+Use `BLOCKED_DECISION` if task requires unresolved security architecture, such as:
+
+- arbitrary custom code runtime;
+- Marketplace sandbox;
+- safe embedded third-party scripts;
+- provider requiring insecure TLS behavior;
+- unclear data ownership;
+- irreversible secret/public exposure design.
+
+Do not invent a weak workaround.
+
+---
+
+## 130. BLOCKED_EXTERNAL
+
+Use `BLOCKED_EXTERNAL` for security-sensitive external dependencies such as:
+
+- production DNS ownership;
+- real provider secret;
+- billing account;
+- production certificate authority action.
+
+Complete local safe implementation/tests first.
+
+---
+
+## 131. Security Definition of Done
+
+Before marking a security-relevant task DONE, verify:
+
+```text
+Authorization is server-side.
+Tenant ownership is enforced.
+Negative access test exists.
+Input is validated.
+Secrets are not exposed.
+Logs are safe.
+Public endpoints are rate-limited where applicable.
+External URLs use SSRF protection where applicable.
+Uploads are validated where applicable.
+Draft/public boundary is preserved.
+Security tests actually ran.
+```
+
+---
+
+## 132. Final Security Checklist
+
+Before finishing any feature, ask:
+
+```text
+Can a User change the ID and reach another Workspace?
+Can the browser spoof ownership, price or permissions?
+Can this input cause XSS?
+Can this URL reach internal infrastructure?
+Can a secret reach React, logs or published output?
+Can an upload escape intended file type/path?
+Can a bot abuse this public endpoint cheaply?
+Can Draft data leak publicly?
+Can a normal Workspace Admin gain platform powers?
+Can a third-party Block access more than its approved contract?
+Did I test the denial path?
+```
+
+If a critical answer is uncertain, the task is not DONE.
