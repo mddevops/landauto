@@ -66,9 +66,9 @@ Current phase:
 
 Current next task:
 
-`P1-001 — Audit Authentication Baseline`
+`X-007 — ADR: Primary Identifier Strategy` (trigger `before P1-003`; P1-001 and P1-002 DONE). The ADR is drafted by agents; P1-003 stays blocked until the owner accepts D-085.
 
-Upcoming stops in Phase 1: `X-007` (before P1-003) requires owner acceptance of the identifier ADR (D-085); `X-011` fires before P1-006, `X-012` before P1-014.
+Upcoming stops in Phase 1: `X-007` (before P1-003) requires owner acceptance of the identifier ADR (D-085); `X-014` (before P1-005A, Yandex OAuth) requires owner acceptance of the account-linking / Yandex client ADR (D-096, D-097); `X-011` fires before P1-006, `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -748,7 +748,7 @@ Translate the existing starter-kit user-facing UI to Russian so the application 
 ### Result
 
 - All starter-kit surfaces translated to Russian: welcome, auth (login, registration, password reset, email verification, password confirmation, 2FA challenge, passkeys), dashboard, settings (profile, security, appearance, account deletion), app shell (sidebar, header, user menu, mobile sheet), shadcn primitives' screen-reader/aria texts.
-- Passkey client errors mapped to Russian messages (`resources/js/lib/passkey-errors.ts`); raw English library messages are not shown.
+- Passkey client errors mapped to Russian messages (`resources/js/lib/passkey-errors.ts`); raw English library messages are not shown. (Historical: passkeys and this file were removed in P1-002, D-095.)
 - `APP_LOCALE=ru` (`config/app.php` default `ru`, `.env.example`); fallback locale `en`.
 - Standard Laravel localization, no translation package / React i18n library: `lang/ru/{auth,passwords,pagination,validation}.php`, `lang/ru.json` (flash toasts, Fortify, passkeys, validation summary, notifications/mail, error pages).
 - `tests/Feature/LocalizationTest.php` added (locale, `<html lang="ru">`, Russian auth/validation/flash messages); no existing tests weakened or removed.
@@ -1022,7 +1022,7 @@ Checks on the final state (sequential): `composer quality` PASS; `npm run test:e
 
 ## P1-001 — Audit Authentication Baseline
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P0-027
 
 ### Objective
@@ -1042,22 +1042,115 @@ Verify current Fortify/auth implementation before changing it.
 
 Document current behavior and identify only required changes.
 
+### Result
+
+Audit only; no application code, config or tests changed. Current behavior is recorded in PROJECT_STATE §5.
+
+Classification of findings:
+
+- Required in P1-002 (section "Required changes from P1-001 audit"):
+  - explicit unverified-user route policy; account deletion UI vs `profile.destroy` consistency;
+  - 2FA / passkey enrollment requires `verified` (pre-account-takeover);
+  - password reset ends other sessions;
+  - email change requires re-authentication, sends a new verification notification, lowercases the email;
+  - regression tests for all of the above, `verification.send` throttling and Russian verification email.
+- Required in existing tasks:
+  - `X-011`: shared-props allowlist (keep `email_verified_at`); rate limits for `register.store`, `password.email`, `password.update`, `password.confirm.store`, `profile.destroy`; consider a per-IP login limit;
+  - `P1-003` / `P1-005`: sole-Owner guard on account deletion (TENANCY.md §41) and deletion of the user's `sessions` rows;
+  - D-094: retention policy for deleted-user personal data (e.g. password reset tokens keyed by email) stays open.
+- New follow-up: `X-013 — Production Security Hardening Baseline` (secure cookie / HTTPS / HSTS, security headers, password-change session policy, debug off, trusted proxies, Inertia DevTools / `APP_ENV`, `APP_URL`, `local` disk `serve`).
+- Not required (accepted baseline):
+  - reset-link "user not found" message: Fortify default, registration's unique check reveals existence anyway (SECURITY.md §26 "where practical", rule 70 §117);
+  - passkey login skips the TOTP challenge: a passkey with user verification is a strong factor;
+  - non-production password minimum 8: production policy is min 12 with complexity and uncompromised check;
+  - no app-level tests for vendor-tested flows (2FA management, challenge codes, passkeys, remember me, password-confirm POST): rule 60 §12 requires tests when these change;
+  - password confirmation window 3 hours; login limiter keyed by email + IP with no trusted proxies configured (not spoofable via `X-Forwarded-For`).
+- Checked and accepted by security review: CSRF (no exceptions), intended-URL redirect (same host), session fixation (regeneration on every login path), signed + throttled verification link, 2FA limiter per login id, passkey deletion ownership check.
+
+Reviews (separate subagents after reading their role files):
+
+- Primary: backend (audit with file:line evidence, `php artisan route:list --json`).
+- Security: REJECTED (pre-account-takeover via unverified 2FA / passkey enrollment and sessions surviving a password reset; unthrottled password-checking routes; email change without re-authentication; missing Result) → fixed in docs → PASS.
+- QA: omitted (default, non-trigger review): audit only, no behavior change; the existing suite was run as evidence.
+- Final Reviewer: PASS.
+
+Checks: `composer test` PASS (47 tests / 152 assertions, audit evidence); link/reference check PASS; diff secret scan clean; Larastan / Pint / TypeScript / build / Playwright NOT_APPLICABLE (no code, config or tooling change).
+
+Superseded by the Product Owner decision D-095 (2026-09-29, after this audit): Landflow does not support 2FA, TOTP, passkeys or WebAuthn. The 2FA / passkey facts above describe the starter-kit baseline as audited. The pre-account-takeover finding (unverified user enrolls a passkey / TOTP and keeps access after the victim recovers the account) was real for that baseline; its Landflow fix is removing 2FA and passkeys entirely in P1-002, not adding verification checks to enrollment. The "passkey login skips TOTP" note and the 2FA / passkey items in `X-011`, `X-012` and `X-013` are obsolete. Supported sign-in methods: verified email/password and Yandex OAuth with a required email (P1-005A).
+
 ---
 
-## P1-002 — Enforce Email Verification
+## P1-002 — Remove 2FA / Passkeys and Enforce Email Verification
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P1-001
 
 ### Objective
 
-Implement `MustVerifyEmail` behavior consistently.
+Align the starter authentication with D-095: remove 2FA / TOTP / passkeys / WebAuthn completely and make verified email/password the consistent email/password flow.
+
+### Scope
+
+1. Remove Two-Factor Authentication from the product: Fortify `Features::twoFactorAuthentication` disabled, `TwoFactorAuthenticatable` removed from `User`, 2FA challenge page, settings UI, hooks, requests, controller props, translations and tests that exist only for 2FA.
+2. Remove passkeys / WebAuthn: Fortify `Features::passkeys` disabled, passkey config and `PASSKEYS_USER_HANDLE_SECRET`, passkey login button, settings UI, components, helpers, `.well-known/passkey-endpoints` route, translations and tests that exist only for passkeys.
+3. Backend routes / features no longer registered; the settings security page keeps only what remains needed (password change) — or is merged, with a documented choice.
+4. Remove frontend components, imports and tests that exist only for these features; update Playwright baseline (security page, login page) accordingly.
+5. Dependencies: remove npm `@laravel/passkeys` and `input-otp` only after confirming no remaining references (npm uninstall, lockfile updated, diff reviewed). PHP packages `laravel/passkeys`, `pragmarx/google2fa`, `bacon/bacon-qr-code` are transitive dependencies of `laravel/fortify` and stay installed but unused.
+6. Schema: a new forward migration drops the `passkeys` table and the `two_factor_*` columns of `users` (with a `down()` that restores the schema); the original migrations are not deleted (architect assessment for D-095, rule `50-database.mdc` §73–§77). Verify no package auto-loads a migration that recreates `passkeys`. No dependency on D-085 (no new identifiers).
+7. Email/password registration: verification mandatory; an unverified user has only minimal access. Define and document the allowed unverified routes (at least: verification notice, verification link, resend, logout, profile edit/update needed to fix a mistyped email, account deletion decision — consider D-094). Resend verification works; all messages Russian.
+8. Password reset: after a successful reset, end the user's other active sessions (database session driver) if the Laravel architecture allows it safely; otherwise record the reason. Whether a password *change* logs out other sessions stays a decision in `X-013`.
+9. Email normalization: store emails trimmed and lowercased on every write path (registration, profile update; Fortify `lowercase_usernames` already covers login / reset lookup) (rule `50-database.mdc` §25).
+10. Email change must not allow account takeover: for a password account require the current password (or `password.confirm`) according to the chosen implementation; the new email resets `email_verified_at` and a new verification notification is sent. Notifying the old address: decide and record. Moving email change to a separate task is allowed only with an explicit reason and dependency.
+11. Remove the SECURITY.md §12 temporary 2FA QR-code "safe source" entry once the component is gone.
+
+Out of scope: Yandex OAuth (P1-005A); shared-props allowlist and auth rate limits (`X-011`).
 
 ### Acceptance Criteria
 
-- verification flow works;
-- protected pages behave correctly;
-- regression tests exist.
+- no 2FA / TOTP / passkey / WebAuthn route, feature, UI, component or direct npm dependency remains; schema dropped by a forward migration;
+- unverified users cannot enter the protected Landflow area; verified users can; allowed unverified routes are documented and tested;
+- resend verification works; verification completes the account;
+- password reset ends other sessions (or the limitation is recorded with reason);
+- emails are stored normalized; email change requires re-authentication and re-verification;
+- all auth / verification UI and messages are Russian;
+- existing login / registration / reset continue working;
+- regression tests (PHPUnit): unverified user denied protected area; verified user allowed; resend verification; verification completes account; passkey routes / UI unavailable; 2FA routes / UI unavailable; password reset invalidates other sessions; email normalization; email change re-auth + re-verification; Russian auth / verification UI; login / register still work;
+- Playwright baseline updated (login and security page no longer expect passkey / 2FA UI);
+- `composer quality` PASS and `npm run test:e2e` PASS.
+
+### Reviews
+
+Primary: backend, then frontend (full-stack, sequential). Required: security (authentication / access change), qa (auth flow and browser E2E), ui-reviewer (login and settings pages change), final reviewer. Architect pre-assessment for the schema removal is recorded under D-095 (no ADR).
+
+### Result
+
+Completed 2026-09-29 (uncommitted; commit not authorized).
+
+Removed (D-095):
+- Fortify `twoFactorAuthentication` and `passkeys` features, the `two-factor` / `passkeys` limiters, the 2FA challenge view, the `fortify.passkeys` config, the `.well-known/passkey-endpoints` route, `TwoFactorAuthenticatable` / `PasskeyAuthenticatable` / `PasskeyUser` on `User`, the 2FA factory state, `TwoFactorAuthenticationRequest`, 2FA / passkey props of `SecurityController`, 2FA / passkey lang strings. Route count 46 → 29; none match two-factor / passkey / webauthn.
+- Frontend: 11 files deleted (2FA / passkey components, hook, helper, challenge page, `ui/input-otp`); login, confirm-password and security pages cleaned; npm `@laravel/passkeys` (with `@simplewebauthn/browser`) and `input-otp` uninstalled (lockfile diff: deletions only). PHP packages `laravel/passkeys`, `pragmarx/google2fa`, `bacon/bacon-qr-code` stay as unused Fortify transitive dependencies (discovery exclusion → `X-011`).
+- Schema: forward migration `2026_09_29_000001_remove_two_factor_and_passkeys` drops `passkeys` and `users.two_factor_*`; `down()` restores the original definitions; original migrations kept. The packages only publish migrations (no auto-load). Migrate / rollback / migrate / reset verified on a throwaway SQLite file (not covered by PHPUnit; optional test → `X-011`).
+
+Decisions:
+- Settings security page keeps only the password change (still behind `RequirePassword`).
+- Unverified access allowlist (documented in SECURITY.md §3): verification notice, signed link, resend (`throttle:6,1`), logout, `settings` redirect, `profile.edit` / `profile.update`, Fortify `password.confirm` / `password.confirm.store` / `password.confirmation`. Everything else needs `verified`, including account deletion (D-094; the email-correction path stays open). The profile page shows a neutral explanation instead of the delete block for unverified users.
+- Password reset: `ResetUserPassword` deletes all of the user's `sessions` rows when the session driver is `database` (the default); Fortify rotates the remember token. Other drivers: policy in `X-013`.
+- Emails stored `lower(trim())` on registration and profile update; uniqueness checked on the normalized value; login / reset lookups covered by Fortify `lowercase_usernames` + `TrimStrings`. No backfill of existing rows (no production data); a legacy mixed-case email would count as changed on the first profile save.
+- Email change requires `current_password` (only when the normalized email differs), clears verification, sends `VerifyEmail` to the new address and `EmailChangedNotification` (Russian, informational, no link, no new address) to the old address. `profile.update` is `throttle:6,1` (security review B1).
+- Login page: positive `tabIndex` values removed; `Забыли пароль?` moved to the `Запомнить меня` row (row wraps on narrow screens).
+- Yandex OAuth not implemented (new schema; P1-005A after `X-007` / D-085 and `X-014` / D-096, D-097).
+
+Checks (orchestrator, final run after all fixes, sequential):
+- `composer quality`: PASS — PHPUnit 102/102 (347 assertions; baseline 47), Larastan 0 errors, Pint, Wayfinder, `npm run check`, build.
+- `npm run test:e2e`: PASS — 27/27 (setup 1, desktop 18, tablet 4, mobile 4); console / network collector active.
+
+Reviews:
+- ui-reviewer: PASS_WITH_MINOR_NOTES — unverified delete subtitle and login row wrap fixed; remaining notes → `X-012`.
+- security: REJECTED (B1 `profile.update` throttle, B2 SECURITY.md §12 stale entry) → fixed → PASS; non-blocking → `X-011`, `X-013`.
+- qa: PASS — findings 1–3 (weak login negative regex, verification recipient assertion, unverified email-change test) fixed; remaining non-blocking → `X-011`, `X-012`.
+- final reviewer: PASS.
+
+Recorded minor notes: `X-011` (passkeys package discovery, array email 500 in Fortify controllers, unverified-route inventory test, old-address notice for unverified old emails, E2E fixed-address fragility and resend check, optional rollback test); `X-012` (verify-email link to profile, redirecting nav for unverified users, input-error ARIA links, extra screenshots, support contact wording); `X-013` (session policy for password / email change and non-database drivers). A now-unused `PASSKEYS_USER_HANDLE_SECRET` may remain in local untracked `.env` files.
 
 ---
 
@@ -1086,7 +1179,7 @@ Requires D-085 (primary identifier strategy) through `X-007` (trigger `before P1
 ### Notes from P0-027 validation
 
 - Owner source of truth: DATABASE.md has `owner_user_id` next to membership roles, PERMISSIONS.md allows "at least one Owner". Define the single authoritative source and the consistency rule.
-- Account deletion: `Settings/ProfileController::destroy` calls `$user->delete()`. Define how User deletion affects Workspaces/memberships (TENANCY.md §41 "User Account Deletion"), guard the sole-Owner case, test it (here or in P1-005).
+- Account deletion: `Settings/ProfileController::destroy` calls `$user->delete()`. Define how User deletion affects Workspaces/memberships (TENANCY.md §41 "User Account Deletion"), guard the sole-Owner case, test it (here or in P1-005). Also delete the user's `sessions` rows on account deletion (they have no foreign key and otherwise persist until garbage collection) (P1-001 security review).
 
 ### References
 
@@ -1121,7 +1214,38 @@ New account receives valid initial Workspace according to product flow.
 ### Acceptance Criteria
 
 - no duplicate accidental Workspace;
-- owner membership created transactionally.
+- owner membership created transactionally;
+- applies to every User creation path through one shared "new account" path (Fortify email/password registration now; Yandex OAuth in P1-005A).
+
+---
+
+## P1-005A — Yandex OAuth Authentication
+
+**Status:** NOT_STARTED  
+**Dependencies:** P1-005
+
+### Objective
+
+Implement Yandex OAuth as the second supported sign-in method (D-095).
+
+### Scope
+
+- Separate external identity entity (`user_auth_identities`: `user_id`, `provider`, `provider_user_id`, `provider_email`, timestamps; unique `provider + provider_user_id` and `user_id + provider`), no `yandex_id` on `users` (DATABASE.md "External Auth Identities"); identifier strategy per the accepted D-085 ADR.
+- Redirect / callback with `state` check, server-side code exchange, client secret in server config (`config/services.php`, env; placeholders only in `.env.example`) (SECURITY.md §3).
+- Email required: if Yandex returns no email, create nothing, show a Russian explanation and offer email registration or re-authorization with the required access.
+- First sign-in creates the user with `email_verified_at` set server-side (no verification email) and the identity row in one transaction, through the shared new-account path of P1-005 (default Workspace).
+- Existing identity → sign in. Email already used by another account → handled only per the accepted D-096 policy; never linked by plain email match.
+- Rate limits for redirect / callback (SECURITY.md §24); Russian UI.
+
+### Decision gate
+
+Requires D-096 (account linking) and D-097 (client implementation / package) through `X-014`; D-085 through `X-007` (already required before P1-003). Confirm in the current official Yandex ID documentation that the returned email is a confirmed address.
+
+### Acceptance Criteria
+
+- mocked-provider Feature tests: new user, returning user, missing email, email collision per D-096, invalid `state`;
+- no secret in props, logs or repository;
+- security review PASS; a real Yandex sign-in smoke test is `BLOCKED_EXTERNAL` until the owner registers a Yandex OAuth application.
 
 ---
 
@@ -2539,12 +2663,12 @@ Decision must cover:
 **Trigger:** before P1-003  
 **Resolves:** D-085
 
-The repository has only framework-default keys (`id()` on users, passkeys, jobs); no project identifier standard exists (DATABASE.md "to be finalized"). P1-003 is the first core domain migration.
+The repository has only framework-default keys (`id()` on users, jobs; the starter `passkeys` table is removed in P1-002, D-095); no project identifier standard exists (DATABASE.md "to be finalized"). P1-003 is the first core domain migration.
 
 Decision must cover:
 
 - primary key type for domain tables (bigint / UUID / ULID / mixed internal + public IDs);
-- whether framework tables (users, sessions, passkeys, jobs) keep their keys, and the `users.id` foreign-key convention;
+- whether framework tables (users, sessions, jobs) keep their keys, and the `users.id` foreign-key convention (also used by the planned `user_auth_identities`, P1-005A);
 - public identifiers: which entities need one (Site, Form, Site Vehicle / Offer references, Publication) and their format;
 - route-binding keys for the authenticated app vs public runtime;
 - SQLite test and production engine compatibility;
@@ -2593,19 +2717,27 @@ Non-blocking findings of the Phase 0 validation reviews. P1-006 is the first tas
 
 Scope:
 
-- `HandleInertiaRequests` shares the full `User` model: replace with an explicit safe field allowlist matching `resources/js/types/auth.ts`; Feature test that password / 2FA / remember-token columns never appear in shared props (security review);
+- `HandleInertiaRequests` shares the full `User` model: replace with an explicit safe field allowlist matching `resources/js/types/auth.ts` (keep `email_verified_at` or an equivalent verification flag used by `settings/profile.tsx`); Feature test that password / remember-token columns never appear in shared props (2FA columns are removed in P1-002) (security review);
+- Fortify registers `register.store`, `password.email` and `password.update` (reset-password POST) without a route rate limit (only the per-email reset-token throttle exists); SECURITY.md §24 requires limits for registration and password reset. `password.confirm.store` and `profile.destroy` check the current password without any throttle (password guessing from a hijacked session). Add named limiters to all five routes with a Russian 429 message and tests; consider an additional per-IP login limit against password spraying (the `login` limiter is keyed by email + IP) (P1-001 audit and security review);
 - `.gitignore`: ignore `.env` and `.env.*` with exceptions `!.env.example`, `!.env.e2e.example` (`.env.local`, `.env.testing`, `.env.staging` are currently not ignored) (security review);
 - `DatabaseSeeder` creates `test@example.com` / `password` without an environment guard: refuse outside `local`/`testing`, with a test (security review);
 - Playwright fixtures detect 4xx/5xx responses but not network-level failures: add a `requestfailed` collector with a narrow documented exception for aborted superseded navigations (rule `80-browser-qa.mdc` §21) (QA review);
 - starter-kit SSR leftovers: `build:ssr` script without `resources/js/ssr.tsx`, `config/inertia.php` SSR `enabled => true` — remove / disable per D-069 (QA review);
 - `composer.json` `allow-plugins` still lists `pestphp/pest-plugin` although Pest is forbidden (D-011) — remove (QA review).
+- From P1-002 reviews:
+  - `laravel/passkeys` (transitive via Fortify) is still auto-discovered (global `passkey` route binding, merged config; no routes / migrations): exclude it from package discovery (`composer.json` `extra.laravel.dont-discover`) and confirm nothing breaks (security review);
+  - Fortify vendor controllers (register, login, reset link, reset POST) call `Str::lower()` on the raw email before validation, so an array `email` returns 500: handle safely (e.g. request middleware / validation before Fortify) with tests (security review);
+  - route inventory test: every `auth` route without `verified` must be in the SECURITY.md §3 unverified allowlist (incl. `password.confirmation`); add an unverified `password.confirm.store` submit test (QA / reviewer);
+  - `EmailChangedNotification` is also sent to an old address that was never verified (possibly a stranger's mistyped address): consider skipping it for unverified old addresses (reviewer);
+  - E2E unverified-user flow registers a fixed address and breaks on `--repeat-each` / command-line retries against the same server: seed an unverified user in `E2eSeeder` or derive a unique suffix; add an E2E check of the resend-verification success message (QA review);
+  - migration `2026_09_29_000001_remove_two_factor_and_passkeys` `down()` is verified only manually on a throwaway SQLite file: optionally add a rollback test (QA review).
 
 Acceptance Criteria:
 
 - each item fixed or explicitly re-classified with reason;
 - tests added where listed;
 - `composer quality` and `npm run test:e2e` PASS;
-- security review (shared props, seeder, gitignore).
+- security review (shared props, seeder, gitignore, auth rate limits).
 
 ---
 
@@ -2619,13 +2751,18 @@ Non-blocking findings of the Phase 0 UI review (screenshots of the P0-024 baseli
 Scope:
 
 - `resources/js/pages/dashboard.tsx` still renders starter `PlaceholderPattern` boxes without a heading: replace with a `Heading` `Панель управления` and one short neutral Russian empty-state line (no feature promises);
-- `resources/js/pages/auth/login.tsx` positive `tabIndex` values (1–5, duplicate 5) break tab order (passkey button first on screen, last in tab order): remove them (rule `80-browser-qa.mdc` §51);
+- ~~`resources/js/pages/auth/login.tsx` positive `tabIndex` values~~ — resolved in P1-002 (removed; `Забыли пароль?` moved to the `Запомнить меня` row); `register.tsx` still has positive `tabIndex` values in DOM order: remove for consistency;
 - `resources/js/components/password-input.tsx` show/hide button has `tabIndex={-1}`: make it keyboard reachable;
 - `resources/js/layouts/auth/auth-simple-layout.tsx` home logo link announces `Вход в аккаунт`: give it an accurate accessible name;
 - login status message renders below the form with hardcoded `text-green-600`: move above the form, use theme token / `Alert`;
 - `resources/js/pages/settings/profile.tsx` breadcrumb `Настройки профиля` is inconsistent with sibling settings pages: use `Профиль`;
-- divider spacing in `resources/js/components/passkey-verify.tsx` (`my-6` stacked on layout gap): normalize;
 - `resources/js/layouts/settings/layout.tsx` active settings link indicated by color only: add `aria-current="page"`.
+- From P1-002 reviews:
+  - verify-email page has no link to profile settings (the mistyped-email fix path is reachable only by URL): add a Russian link;
+  - unverified users see sidebar `Панель управления` and settings `Безопасность` / `Внешний вид` links that silently redirect to the verification notice: hide, disable or explain;
+  - validation errors are not linked to their inputs (`aria-describedby` / `aria-invalid`), app-wide;
+  - add screenshots of the confirm-password page and of the mobile email-change / unverified profile states; verify the login `Запомнить меня` row wrap at ~320 px;
+  - `EmailChangedNotification` says `обратитесь в службу поддержки` while no support contact is defined: revisit before launch together with `X-013`.
 
 Acceptance Criteria:
 
@@ -2633,6 +2770,45 @@ Acceptance Criteria:
 - all UI remains Russian;
 - `composer quality` and `npm run test:e2e` PASS (update baseline selectors/screenshots if affected);
 - ui-reviewer review of updated screenshots.
+
+---
+
+## X-013 — Production Security Hardening Baseline (from P1-001)
+
+**Status:** NOT_STARTED  
+**Trigger:** before the first production deployment
+
+No BACKLOG task covers production security configuration yet; P1-001 found items that are acceptable locally but must be settled before production. Primary: backend; reviews: security, reviewer; architect if infrastructure is introduced.
+
+Scope:
+
+- secure session cookie (`SESSION_SECURE_COOKIE`), HTTPS enforcement and HSTS where the domain setup permits (rule `70-security.mdc` §12, §69);
+- centralized security headers for the authenticated app (rule `70-security.mdc` §68–§69);
+- decide whether a password change or an email change logs out other sessions (SECURITY.md §4); P1-002 ends all database sessions on password reset only for the `database` session driver — decide the policy for other drivers (e.g. Laravel `auth.session` middleware) if the production driver changes;
+- support contact referenced by the email-changed notice (`X-012`);
+- confirm `APP_DEBUG=false` and safe error pages in production (rule `70-security.mdc` §101);
+- trusted proxies for the production load balancer (otherwise all users share one IP and per-IP rate limits break);
+- `APP_ENV=production` and `INERTIA_DEVTOOLS_ENABLED` unset on every internet-facing environment including staging (the Inertia DevTools routes `_inertia/devtools/entries*` are open without login when `APP_ENV=local`);
+- `APP_URL` is the HTTPS production origin;
+- production Yandex OAuth redirect URI and client secret configured server-side only (P1-005A);
+- the `local` disk has `serve => true` (`config/filesystems.php`), which registers `storage/{path}` and a signed upload route `PUT storage/{path}`: disable or confirm safe before production, and review in the first media/upload task;
+- reference D-094 (personal data retention) as the related launch blocker.
+
+Acceptance Criteria:
+
+- each item implemented or explicitly decided with reason;
+- tests where behavior changes;
+- security review PASS.
+
+---
+
+## X-014 — Decision: OAuth Account Linking and Yandex Client
+
+**Status:** NOT_STARTED  
+**Trigger:** before P1-005A  
+**Resolves:** D-096, D-097
+
+Yandex OAuth (D-095) must not link an external identity to an existing Landflow account by plain email match. Architect and Security draft `docs/architecture/decisions/ADR-NNN-<slug>.md` covering: the account-linking flow for an email collision (never auto-link / link after proving control of the existing account / link only from a signed-in session / other), OAuth-only users without a password (password reset, email change, account deletion), and the Yandex client implementation (Socialite + provider vs in-repo provider vs Laravel HTTP client; package evaluation per rule `00-project-core.mdc` §8). Lifecycle: `AUTONOMOUS_WORKFLOW.md` §14 "ADR tasks" (owner accepts). Does not block P1-002.
 
 ---
 
@@ -2754,10 +2930,12 @@ P0-026  Autonomous Workflow                                      DONE
 P0-027  Phase 0 Validation                                       DONE
 ```
 
-Phase 0 is COMPLETED. Phase 1 — Core Platform begins with:
+Phase 0 is COMPLETED. Phase 1 — Core Platform:
 
 ```text
-P1-001 — Audit Authentication Baseline
+P1-001  Audit Authentication Baseline                            DONE
+P1-002  Remove 2FA / Passkeys and Enforce Email Verification     DONE
+X-007   ADR: Primary Identifier Strategy (before P1-003)          next (owner acceptance of D-085 required)
 ```
 
 ---

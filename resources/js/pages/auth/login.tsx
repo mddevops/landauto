@@ -10,7 +10,6 @@ import { Spinner } from '@/components/ui/spinner';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
-import PasskeyVerify from '@/components/passkey-verify';
 
 type Props = {
     status?: string;
@@ -21,8 +20,6 @@ export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
             <Head title="Вход" />
-
-            <PasskeyVerify />
 
             <Form
                 {...store.form()}
@@ -40,7 +37,6 @@ export default function Login({ status, canResetPassword }: Props) {
                                     name="email"
                                     required
                                     autoFocus
-                                    tabIndex={1}
                                     autoComplete="email"
                                     placeholder="email@example.com"
                                 />
@@ -48,42 +44,38 @@ export default function Login({ status, canResetPassword }: Props) {
                             </div>
 
                             <div className="grid gap-2">
-                                <div className="flex items-center">
-                                    <Label htmlFor="password">Пароль</Label>
-                                    {canResetPassword && (
-                                        <TextLink
-                                            href={request()}
-                                            className="ml-auto text-sm"
-                                            tabIndex={5}
-                                        >
-                                            Забыли пароль?
-                                        </TextLink>
-                                    )}
-                                </div>
+                                <Label htmlFor="password">Пароль</Label>
                                 <PasswordInput
                                     id="password"
                                     name="password"
                                     required
-                                    tabIndex={2}
                                     autoComplete="current-password"
                                     placeholder="Пароль"
                                 />
                                 <InputError message={errors.password} />
                             </div>
 
-                            <div className="flex items-center space-x-3">
-                                <Checkbox
-                                    id="remember"
-                                    name="remember"
-                                    tabIndex={3}
-                                />
-                                <Label htmlFor="remember">Запомнить меня</Label>
+                            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                                <div className="flex items-center space-x-3">
+                                    <Checkbox id="remember" name="remember" />
+                                    <Label htmlFor="remember">
+                                        Запомнить меня
+                                    </Label>
+                                </div>
+
+                                {canResetPassword && (
+                                    <TextLink
+                                        href={request()}
+                                        className="text-sm"
+                                    >
+                                        Забыли пароль?
+                                    </TextLink>
+                                )}
                             </div>
 
                             <Button
                                 type="submit"
                                 className="mt-4 w-full"
-                                tabIndex={4}
                                 disabled={processing}
                                 data-test="login-button"
                             >
@@ -94,7 +86,7 @@ export default function Login({ status, canResetPassword }: Props) {
 
                         <div className="text-center text-sm text-muted-foreground">
                             Нет аккаунта?{' '}
-                            <TextLink href={register()} tabIndex={5}>
+                            <TextLink href={register()}>
                                 Зарегистрироваться
                             </TextLink>
                         </div>

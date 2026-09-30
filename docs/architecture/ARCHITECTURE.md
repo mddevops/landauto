@@ -179,6 +179,10 @@ Examples:
 - authentication state;
 - security preferences.
 
+Supported sign-in methods: email + password with mandatory email verification, and Yandex OAuth with a required email (D-095). Two-factor authentication, TOTP, passkeys and WebAuthn are not supported. Every User has an email.
+
+External sign-in identities (Yandex) belong to the User in a separate user-level entity, not in provider-specific columns on `users` (`DATABASE.md` §4). Account linking follows D-096.
+
 User must not directly represent:
 
 - a dealership;

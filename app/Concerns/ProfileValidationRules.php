@@ -4,10 +4,19 @@ namespace App\Concerns;
 
 use App\Models\User;
 use Illuminate\Contracts\Validation\ValidationRule;
+use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
 
 trait ProfileValidationRules
 {
+    /**
+     * Normalize an email address before validation and storage (trimmed, lowercased).
+     */
+    protected function normalizeEmail(string $email): string
+    {
+        return Str::lower(trim($email));
+    }
+
     /**
      * Get the validation rules used to validate user profiles.
      *

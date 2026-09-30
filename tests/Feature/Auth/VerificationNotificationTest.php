@@ -6,6 +6,7 @@ use App\Models\User;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
+use Illuminate\Support\Facades\Route;
 use Laravel\Fortify\Features;
 use Tests\TestCase;
 
@@ -31,6 +32,14 @@ class VerificationNotificationTest extends TestCase
             ->assertRedirect(route('home'));
 
         Notification::assertSentTo($user, VerifyEmail::class);
+    }
+
+    public function test_resend_verification_route_stays_rate_limited(): void
+    {
+        $route = Route::getRoutes()->getByName('verification.send');
+
+        $this->assertNotNull($route);
+        $this->assertContains('throttle:6,1', $route->gatherMiddleware());
     }
 
     public function test_does_not_send_verification_notification_if_email_is_verified(): void

@@ -115,9 +115,36 @@ Suggested fields:
 - remember_token
 - timestamps
 
-Authentication-specific fields may be added by Laravel/Fortify.
+Only email/password authentication fields used by Fortify belong here. No two-factor columns (D-095; the starter-kit `two_factor_*` columns and `passkeys` table are removed in P1-002). No provider-specific columns such as `yandex_id`.
+
+`email` is required for every User, including Users created through Yandex OAuth.
 
 Do not store Workspace role directly here.
+
+## External Auth Identities (planned)
+
+Scope: platform user-level (Global identity data, not Workspace or Site).
+
+Suggested table: `user_auth_identities` (final name set by the Yandex OAuth task).
+
+Suggested fields:
+
+- id
+- user_id
+- provider (backed enum, e.g. `yandex`)
+- provider_user_id
+- provider_email
+- timestamps
+
+Constraints:
+
+- unique `provider + provider_user_id`;
+- unique `user_id + provider` (one identity per provider per User);
+- FK `user_id` → `users`, cascade on User deletion (the identity is a disposable sign-in link, not history).
+
+No OAuth access/refresh tokens are stored unless a later feature requires them (then encrypted).
+
+Not created before D-085 (identifier strategy) is accepted; linking to existing Users follows D-096.
 
 ---
 

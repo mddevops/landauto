@@ -252,7 +252,7 @@ Test when changed:
 - logout;
 - password reset;
 - email verification;
-- 2FA/passkeys where relevant.
+- Yandex OAuth sign-in with a mocked provider (never the real Yandex service in normal tests).
 
 Do not retest the entire framework for unrelated tasks.
 

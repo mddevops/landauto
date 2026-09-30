@@ -66,7 +66,8 @@ Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Valid
 
 Current focus:
 
-- next ready task: `P1-001 — Audit Authentication Baseline` (§42);
+- last completed: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verification` (auth baseline in §5);
+- next ready task: `X-007 — ADR: Primary Identifier Strategy` (§42);
 - Phase 1 stops at `X-007` (before P1-003) until the owner accepts the primary identifier ADR (D-085, §46).
 
 No product feature implementation should begin merely because architecture documents now exist.
@@ -112,7 +113,7 @@ Backend:
 - Laravel 13.33.0
 - PHP requirement ^8.3 (local runtime 8.3.6)
 - Inertia backend (`inertiajs/inertia-laravel`) 3.4.0
-- Laravel Fortify 1.40.0 (login, registration, password reset, email verification, 2FA, passkeys)
+- Laravel Fortify 1.40.0 (login, registration, password reset, email verification; 2FA / passkeys disabled and removed in P1-002, D-095)
 - Laravel Wayfinder 0.1.21
 - `laravel/chisel` 0.1.1 (starter-kit scaffolding tool, shipped by the official kit; not used by app code)
 
@@ -169,21 +170,19 @@ Current frontend structure includes:
 
 Existing authentication uses Laravel Fortify.
 
-Known capabilities/configuration include:
+Supported Landflow sign-in methods (D-095, Product Owner, 2026-09-29): email + password with mandatory email verification (implemented), and Yandex OAuth with a required email that is treated as verified (not implemented; P1-005A after D-085 via `X-007` and D-096 / D-097 via `X-014`). Landflow does not use 2FA, TOTP, passkeys or WebAuthn; the starter implementation was removed in P1-002.
 
-- login;
-- registration;
-- password reset;
-- email verification feature;
-- 2FA;
-- passkeys;
-- rate limiting.
+Baseline after P1-002 (audit history: BACKLOG P1-001 `### Result`; changes: P1-002 `### Result`):
 
-Approved direction:
-
-`User` should implement `MustVerifyEmail` because email verification feature is enabled.
-
-Current state (verified in P0-027): `App\Models\User` already implements `MustVerifyEmail` (starter-kit baseline) and the dashboard route uses the `verified` middleware. P1-002 covers consistent enforcement across protected pages and regression tests.
+- Fortify features (`config/fortify.php`): registration, reset passwords, email verification. No 2FA / passkey features, routes, UI, schema (`passkeys` table and `users.two_factor_*` dropped by migration `2026_09_29_000001`) or direct npm dependencies. PHP packages `laravel/passkeys`, `pragmarx/google2fa`, `bacon/bacon-qr-code` remain installed as unused Fortify transitive dependencies (discovery exclusion in `X-011`). Fortify profile/password update features are not enabled; `app/Http/Controllers/Settings/*` replace them. `lowercase_usernames` is on.
+- Rate limits: `login` 5/min (email + IP), email verification resend `throttle:6,1`, password update `throttle:6,1`, profile update `throttle:6,1`, reset-token creation throttled per email (60 s). Registration, forgot-password / reset POST, `password.confirm.store` and `profile.destroy` have no route rate limit (`X-011`).
+- Sessions: regenerated on login; logout invalidates the session; database driver, HttpOnly, SameSite lax; `SESSION_SECURE_COOKIE` is a production setting (`X-013`). A successful password reset deletes all of the user's `sessions` rows (database driver only; other drivers → `X-013`) and Fortify rotates the remember token. Password change / email change do not end other sessions (policy in `X-013`). Password confirmation window: 3 hours.
+- Passwords: `Password::defaults()` — production min 12, mixed case, letters, numbers, symbols, uncompromised; min 8 outside production.
+- Email verification: `User` implements `MustVerifyEmail`; registration creates the user unverified and sends the verification email. Unverified users may use only the allowlist in SECURITY.md §3 (verification notice / link / resend, logout, `settings` redirect, profile view / update, Fortify password confirmation); everything else, including account deletion, requires `verified`.
+- Emails are stored trimmed and lowercased (registration, profile update); no backfill of existing rows (no production data). Email change requires the current password, clears verification, sends a new verification email and a Russian informational notice to the old address.
+- Account deletion: verified users only; hard delete after current-password confirmation. Future Workspace ownership guard: P1-003 / P1-005 (TENANCY.md §41); retention: D-094.
+- Russian localization covers auth UI, validation, the verify-email / reset-password / email-changed notifications and the 429 page (`lang/ru/*.php`, `lang/ru.json`).
+- Tests: PHPUnit 102 tests (`tests/Feature/Auth/*`, `tests/Feature/Settings/*`, `LocalizationTest`), including removed-feature, unverified-access, session-invalidation, normalization and email-change tests; Playwright 27 tests (setup 1, desktop 18, tablet 4, mobile 4) including the unverified-user and email-change flows.
 
 ---
 
@@ -1054,9 +1053,9 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P0-027 — Phase 0 Validation` (DONE; Phase 0 gate).
+Last completed task: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verification` (DONE; uncommitted, commit not authorized). Before it: `P1-001` DONE; Phase 0 gate `P0-027` DONE.
 
-**Next ready task: `P1-001 — Audit Authentication Baseline`** (Phase 1; determined by P0-027, not started).
+**Next ready task: `X-007 — ADR: Primary Identifier Strategy`** (trigger `before P1-003`; not started). Agents draft the ADR; `P1-003` stays blocked until the owner accepts D-085.
 
 No implementation task should be inferred from this alone.
 
@@ -1188,6 +1187,8 @@ Not chosen.
 `ADR_REQUIRED` / `OPEN`. Resolved through `X-008` (before P3-009), `X-009` (before P3-001), `X-010` (before P2-013). Not affecting Phase 1 as long as P1-009 stores no money columns.
 
 These decisions do not block Phase 0 or the start of Phase 1; D-085 stops Phase 1 at P1-003 until its ADR is accepted by the owner. Full register: `DECISIONS.md` (audit in P0-027 `### Result`).
+
+Known pre-production blockers (no deployment task exists yet): D-094 (personal data retention, `ADR_REQUIRED`) and `X-013 — Production Security Hardening Baseline` (from P1-001).
 
 ---
 
@@ -1612,7 +1613,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-001 — Audit Authentication Baseline`** (see §42). Phase 0 is COMPLETED (P0-027 DONE). Phase 1 runs through the autonomous workflow; it stops at `X-007` before P1-003 for owner acceptance of the identifier ADR.
+**`X-007 — ADR: Primary Identifier Strategy`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 and P1-002 DONE. Phase 1 runs through the autonomous workflow; it stops at `X-007` before P1-003 for owner acceptance of the identifier ADR.
 
 ---
 
@@ -1669,4 +1670,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-001 — Audit Authentication Baseline (not started).**
+Next ready task: X-007 — ADR: Primary Identifier Strategy (not started; owner acceptance of D-085 required before P1-003).**

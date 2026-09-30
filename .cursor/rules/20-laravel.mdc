@@ -886,8 +886,13 @@ Preserve:
 - registration;
 - login;
 - password reset;
-- verification;
-- 2FA/passkeys where currently configured.
+- verification.
+
+Supported sign-in methods are email + password (Fortify) and Yandex OAuth with a required email (D-095).
+
+Two-factor authentication, TOTP, passkeys and WebAuthn are not Landflow features (D-095; starter-kit implementation removed in P1-002). Do not reintroduce them.
+
+Yandex OAuth identities live in a separate user-level identity table, not in a provider column on `users` (`DATABASE.md` §4). Do not link an OAuth identity to an existing User by plain email match (D-096).
 
 ---
 

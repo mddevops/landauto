@@ -1,9 +1,11 @@
 import { Form } from '@inertiajs/react';
+import { Info } from 'lucide-react';
 import { useRef } from 'react';
 import ProfileController from '@/actions/App/Http/Controllers/Settings/ProfileController';
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Button } from '@/components/ui/button';
 import {
     Dialog,
@@ -16,8 +18,28 @@ import {
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
 
-export default function DeleteUser() {
+export default function DeleteUser({
+    unavailableReason,
+}: {
+    unavailableReason?: string;
+}) {
     const passwordInput = useRef<HTMLInputElement>(null);
+
+    if (unavailableReason) {
+        return (
+            <div className="space-y-6">
+                <Heading
+                    variant="small"
+                    title="Удаление аккаунта"
+                    description="Удаление аккаунта и всех связанных с ним данных"
+                />
+                <Alert role="note">
+                    <Info />
+                    <AlertDescription>{unavailableReason}</AlertDescription>
+                </Alert>
+            </div>
+        );
+    }
 
     return (
         <div className="space-y-6">

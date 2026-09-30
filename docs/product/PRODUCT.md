@@ -89,6 +89,17 @@ Workspaces:
 
 A user's identity must remain separate from Workspace membership.
 
+## Sign-up and Sign-in
+
+Supported methods (D-095):
+
+- **Email and password.** After registration the user receives a verification email; until the email is verified the account has no full access.
+- **Yandex ID (OAuth).** The email returned by Yandex is required and is considered verified; no separate verification email is sent. If Yandex does not provide an email, no account is created: the user sees an explanation in Russian and can register with email or sign in with Yandex again granting access to the email.
+
+Every account has an email.
+
+Two-factor authentication, one-time codes (TOTP) and passkeys are not part of Landflow.
+
 ---
 
 # 5. Workspace
@@ -1929,7 +1940,7 @@ Implementation agents must only build currently assigned scope.
 
 ## Phase 1 — Core Platform
 
-- authentication
+- authentication (email/password with verification, Yandex ID)
 - Workspace foundation
 - Sites
 - dashboard

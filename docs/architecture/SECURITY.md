@@ -60,13 +60,28 @@ Highly privileged but still explicitly authorized and auditable.
 
 Landflow uses standard authenticated user accounts.
 
+Supported sign-in methods (D-095):
+
+- email + password (Fortify) with mandatory email verification before full access;
+- Yandex OAuth; the email returned by Yandex is required and counts as verified; without an email no account is created.
+
+Two-factor authentication, TOTP, passkeys and WebAuthn are not Landflow features (D-095; the starter-kit implementation was removed in P1-002).
+
+Unverified email/password accounts (P1-002) may use only: the verification notice, the signed verification link, resend verification (throttled), logout, the `settings` redirect, profile view/update (to correct a mistyped email) and Fortify password confirmation (`password.confirm`, `password.confirm.store`, `password.confirmation`). Every other authenticated route requires `verified`, including account deletion. New authenticated routes require `verified` unless this list is deliberately extended.
+
+Account email rules (P1-002):
+
+- emails are stored trimmed and lowercased; uniqueness is checked on the normalized value;
+- changing the email requires the current password, clears verification, sends a new verification email to the new address and an informational notice (no link, no new address) to the old address; `profile.update` is rate-limited;
+- a successful password reset ends all of the user's database sessions and rotates the remember token.
+
 Authentication security should include:
 
 - secure password hashing;
-- email verification where enabled;
+- mandatory email verification for email/password accounts;
 - session protection;
 - rate limiting;
-- optional 2FA/passkeys according to product support.
+- for OAuth: `state` validation, server-side code exchange, client secret only in server configuration, no account linking by plain email match (D-096).
 
 Authentication alone never grants Workspace access.
 
@@ -223,7 +238,7 @@ Every raw HTML render path (e.g. React `dangerouslySetInnerHTML`) requires a doc
 
 Current documented safe sources:
 
-- `resources/js/components/two-factor-setup-modal.tsx` — the two-factor QR-code SVG. It is generated server-side by Fortify from the signed-in user's own two-factor secret and returned by the Fortify QR-code endpoint; it contains no customer-entered content.
+- none currently (the starter two-factor QR-code component was removed in P1-002, D-095).
 
 ---
 
@@ -434,6 +449,7 @@ Rate limits should protect:
 - login;
 - registration;
 - password reset;
+- OAuth sign-in redirect/callback;
 - public Form submission;
 - API/Webhook configuration tests;
 - domain verification endpoints;

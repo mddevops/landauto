@@ -1530,11 +1530,20 @@ Do not create alternate password storage.
 
 ---
 
-## 119. 2FA / Passkeys
+## 119. Sign-in Methods
 
-Preserve Fortify security model.
+Supported: email + password with mandatory email verification (Fortify), and Yandex OAuth with a required email (D-095).
 
-Do not bypass 2FA/passkeys for custom dashboard routes.
+Two-factor authentication, TOTP, passkeys and WebAuthn are not Landflow features. Do not reintroduce them.
+
+Yandex OAuth must:
+
+- validate `state` and exchange the code server-side;
+- keep the client secret in server configuration only;
+- refuse account creation when no email is returned;
+- never link to an existing User by plain email match (D-096).
+
+Do not bypass email verification for custom dashboard routes.
 
 Sensitive account-security changes may require re-authentication according to framework/product behavior.
 

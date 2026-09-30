@@ -6,6 +6,20 @@ import { guestStorageState, users } from './support/users';
 
 test.use({ storageState: guestStorageState });
 
+// Must match every word form of the removed passkey sign-in UI (D-095), e.g.
+// «Войти с помощью ключа доступа» and «Или войдите по электронной почте».
+const removedLoginUi =
+    /ключ\S* доступа|passkey|двухфактор|войдите по электронной почте/i;
+
+test('removed passkey sign-in copy is caught by the negative pattern', () => {
+    for (const removed of [
+        'Войти с помощью ключа доступа',
+        'Или войдите по электронной почте',
+    ]) {
+        expect(removed).toMatch(removedLoginUi);
+    }
+});
+
 async function submitLogin(page: Page, email: string, password: string) {
     await page.getByLabel('Электронная почта').fill(email);
     await page.getByLabel('Пароль', { exact: true }).fill(password);
@@ -32,6 +46,12 @@ test(
         await expect(
             page.getByRole('link', { name: 'Зарегистрироваться' }),
         ).toBeVisible();
+
+        // Passkeys are not a Landflow sign-in method (D-095).
+        await expect(
+            page.getByRole('button', { name: removedLoginUi }),
+        ).toHaveCount(0);
+        await expect(page.getByText(removedLoginUi)).toHaveCount(0);
         await expectNoHorizontalOverflow(page);
 
         await captureScreenshot(page, testInfo, 'auth', 'login');
@@ -80,6 +100,74 @@ test('user can log in with the keyboard and reach the dashboard', async ({
 
     await expect(page).toHaveURL('/dashboard');
     await expect(page).toHaveTitle('Панель управления - Landflow');
+});
+
+test('unverified user lands on the email verification notice after login', async ({
+    page,
+}, testInfo) => {
+    // The user is created through the real registration form; the E2E database is
+    // recreated on every run, so the address is unique within the run.
+    const unverified = {
+        name: 'Мария Неподтверждённая',
+        email: 'unverified@landflow.test',
+        password: 'e2e-password',
+    };
+
+    await page.goto('/register');
+    await page.getByLabel('Имя').fill(unverified.name);
+    await page.getByLabel('Электронная почта').fill(unverified.email);
+    await page.getByLabel('Пароль', { exact: true }).fill(unverified.password);
+    await page.getByLabel('Подтверждение пароля').fill(unverified.password);
+    await page.getByRole('button', { name: 'Создать аккаунт' }).click();
+
+    const notice = page.getByRole('heading', {
+        name: 'Подтверждение электронной почты',
+    });
+
+    await expect(page).toHaveURL('/email/verify');
+    await expect(notice).toBeVisible();
+
+    await page.getByRole('button', { name: 'Выйти' }).click();
+    await expect(page).toHaveURL('/');
+
+    await page.goto('/login');
+    await submitLogin(page, unverified.email, unverified.password);
+
+    await expect(page).toHaveURL('/email/verify');
+    await expect(notice).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Отправить письмо повторно' }),
+    ).toBeVisible();
+
+    await captureScreenshot(page, testInfo, 'auth', 'verify-email');
+
+    await page.goto('/dashboard');
+    await expect(page).toHaveURL('/email/verify');
+    await expect(notice).toBeVisible();
+
+    // The profile stays reachable to fix a mistyped email; account deletion does not.
+    await page.goto('/settings/profile');
+    await expect(page.getByLabel('Электронная почта')).toHaveValue(
+        unverified.email,
+    );
+    await expect(
+        page.getByText('Электронная почта не подтверждена.'),
+    ).toBeVisible();
+    await expect(
+        page.getByText('Удаление аккаунта и всех связанных с ним данных'),
+    ).toBeVisible();
+    await expect(
+        page
+            .getByRole('note')
+            .getByText(
+                'Удалить аккаунт можно после подтверждения электронной почты.',
+            ),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Удалить аккаунт' }),
+    ).toHaveCount(0);
+
+    await captureScreenshot(page, testInfo, 'settings', 'profile-unverified');
 });
 
 test('user can log out from the user menu', async ({ page }) => {

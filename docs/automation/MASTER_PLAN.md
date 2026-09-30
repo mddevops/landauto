@@ -421,10 +421,11 @@ Tasks:
 - verify Fortify configuration;
 - implement `MustVerifyEmail` if not already;
 - confirm auth flows;
-- keep existing 2FA/passkey features working;
-- test email verification behavior.
+- remove starter-kit 2FA / TOTP / passkey features (D-095);
+- test email verification behavior;
+- add Yandex OAuth sign-in with a required email after the Workspace foundation (D-095; requires D-096, D-097).
 
-Do not rebuild authentication.
+Do not rebuild authentication: Fortify remains the email/password engine.
 
 ---
 
