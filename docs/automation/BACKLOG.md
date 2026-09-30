@@ -66,9 +66,9 @@ Current phase:
 
 Current next task:
 
-`X-007 — ADR: Primary Identifier Strategy` (trigger `before P1-003`; P1-001 and P1-002 DONE). The ADR is drafted by agents; P1-003 stays blocked until the owner accepts D-085.
+`P1-003 — Create Workspace Schema` (X-007 DONE; D-085 APPROVED — bigint `id` + ULID `public_id`, ADR-001).
 
-Upcoming stops in Phase 1: `X-007` (before P1-003) requires owner acceptance of the identifier ADR (D-085); `X-014` (before P1-005A, Yandex OAuth) requires owner acceptance of the account-linking / Yandex client ADR (D-096, D-097); `X-011` fires before P1-006, `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
+Upcoming stops in Phase 1: `X-014` (before P1-005A, Yandex OAuth) requires owner acceptance of the account-linking / Yandex client ADR (D-096, D-097); `X-011` fires before P1-006, `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -1174,7 +1174,7 @@ Recorded minor notes: `X-011` (passkeys package discovery, array email 500 in Fo
 
 ### Decision gate
 
-Requires D-085 (primary identifier strategy) through `X-007` (trigger `before P1-003`). Not ready until X-007 is `DONE` (ADR accepted by the owner).
+Satisfied: D-085 APPROVED through `X-007` (ADR-001) — `BIGINT UNSIGNED` `id` + `foreignId`; Workspace and Workspace Membership (first-class entity, not a pivot) get an immutable ULID `public_id`.
 
 ### Notes from P0-027 validation
 
@@ -1230,7 +1230,7 @@ Implement Yandex OAuth as the second supported sign-in method (D-095).
 
 ### Scope
 
-- Separate external identity entity (`user_auth_identities`: `user_id`, `provider`, `provider_user_id`, `provider_email`, timestamps; unique `provider + provider_user_id` and `user_id + provider`), no `yandex_id` on `users` (DATABASE.md "External Auth Identities"); identifier strategy per the accepted D-085 ADR.
+- Separate external identity entity (`user_auth_identities`: `user_id`, `provider`, `provider_user_id`, `provider_email`, timestamps; unique `provider + provider_user_id` and `user_id + provider`), no `yandex_id` on `users` (DATABASE.md "External Auth Identities"); keys per D-085 (internal-only: bigint `id`, no `public_id`).
 - Redirect / callback with `state` check, server-side code exchange, client secret in server config (`config/services.php`, env; placeholders only in `.env.example`) (SECURITY.md §3).
 - Email required: if Yandex returns no email, create nothing, show a Russian explanation and offer email registration or re-authorization with the required access.
 - First sign-in creates the user with `email_verified_at` set server-side (no verification email) and the identity row in one transaction, through the shared new-account path of P1-005 (default Workspace).
@@ -1239,7 +1239,7 @@ Implement Yandex OAuth as the second supported sign-in method (D-095).
 
 ### Decision gate
 
-Requires D-096 (account linking) and D-097 (client implementation / package) through `X-014`; D-085 through `X-007` (already required before P1-003). Confirm in the current official Yandex ID documentation that the returned email is a confirmed address.
+Requires D-096 (account linking) and D-097 (client implementation / package) through `X-014`; D-085 is APPROVED (`X-007` DONE). Confirm in the current official Yandex ID documentation that the returned email is a confirmed address.
 
 ### Acceptance Criteria
 
@@ -2659,8 +2659,8 @@ Decision must cover:
 
 ## X-007 — ADR: Primary Identifier Strategy
 
-**Status:** NOT_STARTED  
-**Trigger:** before P1-003  
+**Status:** DONE
+**Trigger:** before P1-003
 **Resolves:** D-085
 
 The repository has only framework-default keys (`id()` on users, jobs; the starter `passkeys` table is removed in P1-002, D-095); no project identifier standard exists (DATABASE.md "to be finalized"). P1-003 is the first core domain migration.
@@ -2674,7 +2674,11 @@ Decision must cover:
 - SQLite test and production engine compatibility;
 - Laravel conventions to use (`foreignId` / `foreignUlid`, `HasUuids` / `HasUlids`).
 
-Lifecycle: `AUTONOMOUS_WORKFLOW.md` §14 "ADR tasks" (Architect drafts, owner accepts).
+Lifecycle: agents draft the ADR in `docs/architecture/decisions/`; only the owner accepts it (rule `10-architecture.mdc`).
+
+### Result
+
+2026-09-30: `docs/architecture/decisions/ADR-001-primary-identifier-strategy.md` Accepted by the owner — Option B (the draft recommended ULID primary keys; the owner chose mixed IDs). D-085 APPROVED. Convention: bigint `id()` + `foreignId` everywhere; externally addressed entities add a unique ULID `public_id` (`HasUlids` + `uniqueIds(): ['public_id']`), bind routes by it and never expose internal `id`; internal-only tables have no `public_id`; users have none for now; secrets use separate tokens. Recorded in rule `50-database.mdc`, DATABASE.md §2 / §95 / External Auth Identities. Docs only; no checks required. P1-003 unblocked.
 
 ---
 
@@ -2808,7 +2812,7 @@ Acceptance Criteria:
 **Trigger:** before P1-005A  
 **Resolves:** D-096, D-097
 
-Yandex OAuth (D-095) must not link an external identity to an existing Landflow account by plain email match. Architect and Security draft `docs/architecture/decisions/ADR-NNN-<slug>.md` covering: the account-linking flow for an email collision (never auto-link / link after proving control of the existing account / link only from a signed-in session / other), OAuth-only users without a password (password reset, email change, account deletion), and the Yandex client implementation (Socialite + provider vs in-repo provider vs Laravel HTTP client; package evaluation per rule `00-project-core.mdc` §8). Lifecycle: `AUTONOMOUS_WORKFLOW.md` §14 "ADR tasks" (owner accepts). Does not block P1-002.
+Yandex OAuth (D-095) must not link an external identity to an existing Landflow account by plain email match. Architect and Security draft `docs/architecture/decisions/ADR-NNN-<slug>.md` covering: the account-linking flow for an email collision (never auto-link / link after proving control of the existing account / link only from a signed-in session / other), OAuth-only users without a password (password reset, email change, account deletion), and the Yandex client implementation (Socialite + provider vs in-repo provider vs Laravel HTTP client; package evaluation per rule `00-project-core.mdc` §8). Lifecycle: agents draft, only the owner accepts (rule `10-architecture.mdc`). Does not block P1-002.
 
 ---
 
@@ -2826,7 +2830,7 @@ New task must:
 - reference architecture;
 - have acceptance criteria.
 
-Exception: cross-cutting tasks (ADR tasks and follow-ups that must precede a specific task) use the `X-` prefix and a `**Trigger:** before <ID>` line instead of a phase ID and dependencies; ADR tasks also name the decisions they resolve in `**Resolves:**` (`AUTONOMOUS_WORKFLOW.md` §5, §14).
+Exception: cross-cutting tasks (ADR tasks and follow-ups that must precede a specific task) use the `X-` prefix and a `**Trigger:** before <ID>` line instead of a phase ID and dependencies; ADR tasks also name the decisions they resolve in `**Resolves:**`; agents draft ADRs, only the owner accepts them.
 
 Do not add vague tasks like:
 
@@ -2935,7 +2939,8 @@ Phase 0 is COMPLETED. Phase 1 — Core Platform:
 ```text
 P1-001  Audit Authentication Baseline                            DONE
 P1-002  Remove 2FA / Passkeys and Enforce Email Verification     DONE
-X-007   ADR: Primary Identifier Strategy (before P1-003)          next (owner acceptance of D-085 required)
+X-007   ADR: Primary Identifier Strategy (before P1-003)          DONE (ADR-001 accepted, Option B)
+P1-003  Create Workspace Schema                                  next
 ```
 
 ---

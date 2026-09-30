@@ -12,6 +12,7 @@ Before adding a table/model classify it as Global, Workspace or Site scope.
 - Add FKs/indexes based on actual access patterns and ownership.
 - Never use float/double for money.
 - Do not expose internal numeric IDs as a security boundary.
-- Do not invent ID strategy, money strategy or deletion semantics if the relevant decision is still open.
+- IDs (D-085 / ADR-001): `BIGINT UNSIGNED` `id()` + `foreignId`; externally addressed entities (incl. Workspace Membership) add an immutable `ulid('public_id')->unique()` (`HasUlids` + `uniqueIds(): ['public_id']`, not fillable), bind routes by `public_id` and never expose their numeric `id` in URLs, props, API or exports.
+- Do not invent money strategy or deletion semantics if the relevant decision is still open.
 - Preserve migration safety for existing data; `down()` should be sensible where practical.
 - Test tenant/parent-child consistency for tenant-owned data.

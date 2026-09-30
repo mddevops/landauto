@@ -67,8 +67,8 @@ Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Valid
 Current focus:
 
 - last completed: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verification` (auth baseline in §5);
-- next ready task: `X-007 — ADR: Primary Identifier Strategy` (§42);
-- Phase 1 stops at `X-007` (before P1-003) until the owner accepts the primary identifier ADR (D-085, §46).
+- `X-007` DONE: D-085 APPROVED (ADR-001 Option B — bigint `id` + ULID `public_id`, §46);
+- next ready task: `P1-003 — Create Workspace Schema` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -170,7 +170,7 @@ Current frontend structure includes:
 
 Existing authentication uses Laravel Fortify.
 
-Supported Landflow sign-in methods (D-095, Product Owner, 2026-09-29): email + password with mandatory email verification (implemented), and Yandex OAuth with a required email that is treated as verified (not implemented; P1-005A after D-085 via `X-007` and D-096 / D-097 via `X-014`). Landflow does not use 2FA, TOTP, passkeys or WebAuthn; the starter implementation was removed in P1-002.
+Supported Landflow sign-in methods (D-095, Product Owner, 2026-09-29): email + password with mandatory email verification (implemented), and Yandex OAuth with a required email that is treated as verified (not implemented; P1-005A after D-096 / D-097 via `X-014`). Landflow does not use 2FA, TOTP, passkeys or WebAuthn; the starter implementation was removed in P1-002.
 
 Baseline after P1-002 (audit history: BACKLOG P1-001 `### Result`; changes: P1-002 `### Result`):
 
@@ -1055,7 +1055,9 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 Last completed task: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verification` (DONE; uncommitted, commit not authorized). Before it: `P1-001` DONE; Phase 0 gate `P0-027` DONE.
 
-**Next ready task: `X-007 — ADR: Primary Identifier Strategy`** (trigger `before P1-003`; not started). Agents draft the ADR; `P1-003` stays blocked until the owner accepts D-085.
+Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
+
+**Next ready task: `P1-003 — Create Workspace Schema`** (not started).
 
 No implementation task should be inferred from this alone.
 
@@ -1180,13 +1182,13 @@ Not chosen.
 
 ## Primary identifier strategy (D-085)
 
-`ADR_REQUIRED`. Resolved through `X-007` (trigger `before P1-003`). The repository has only framework-default keys, so no project standard exists yet. First affected task: `P1-003 — Create Workspace Schema`; through it every later Phase 1 schema task. P1-001 and P1-002 create no domain tables and are not affected.
+APPROVED 2026-09-30 (`X-007` DONE, `docs/architecture/decisions/ADR-001-primary-identifier-strategy.md`, Option B): bigint `id()` + `foreignId` on all tables; externally addressed entities add a unique ULID `public_id` (`HasUlids` + `uniqueIds(): ['public_id']`), routes bind by it and internal IDs are never exposed; internal-only tables have no `public_id`; users have none for now. Rule: `50-database.mdc`.
 
 ## Money storage (D-084), characteristic values (D-086), media ownership / asset versioning (D-087, D-075)
 
 `ADR_REQUIRED` / `OPEN`. Resolved through `X-008` (before P3-009), `X-009` (before P3-001), `X-010` (before P2-013). Not affecting Phase 1 as long as P1-009 stores no money columns.
 
-These decisions do not block Phase 0 or the start of Phase 1; D-085 stops Phase 1 at P1-003 until its ADR is accepted by the owner. Full register: `DECISIONS.md` (audit in P0-027 `### Result`).
+None of these block the current Phase 1 position (D-085 is approved). Full register: `DECISIONS.md` (audit in P0-027 `### Result`).
 
 Known pre-production blockers (no deployment task exists yet): D-094 (personal data retention, `ADR_REQUIRED`) and `X-013 — Production Security Hardening Baseline` (from P1-001).
 
@@ -1613,7 +1615,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`X-007 — ADR: Primary Identifier Strategy`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 and P1-002 DONE. Phase 1 runs through the autonomous workflow; it stops at `X-007` before P1-003 for owner acceptance of the identifier ADR.
+**`P1-003 — Create Workspace Schema`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001, P1-002 and X-007 DONE (D-085 APPROVED).
 
 ---
 
@@ -1670,4 +1672,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: X-007 — ADR: Primary Identifier Strategy (not started; owner acceptance of D-085 required before P1-003).**
+Next ready task: P1-003 — Create Workspace Schema (not started; D-085 APPROVED).**

@@ -41,7 +41,7 @@ Use:
 
 - snake_case table names;
 - plural table names;
-- bigint/uuid choice to be finalized once implementation begins;
+- primary keys: bigint `id()` with `foreignId`; externally addressed entities also have a unique ULID `public_id` used in URLs, props and API (D-085, `decisions/ADR-001-primary-identifier-strategy.md`);
 - explicit foreign keys;
 - timestamps;
 - soft deletes only where business recovery/history justifies them.
@@ -144,7 +144,7 @@ Constraints:
 
 No OAuth access/refresh tokens are stored unless a later feature requires them (then encrypted).
 
-Not created before D-085 (identifier strategy) is accepted; linking to existing Users follows D-096.
+Keys per D-085: bigint `id`, `foreignId('user_id')`, no `public_id` (internal-only). Linking to existing Users follows D-096.
 
 ---
 
@@ -2238,7 +2238,7 @@ Potential later approach:
 - separate public keys;
 - opaque tokens.
 
-Exact key strategy will be decided before migrations.
+Decided (D-085 / ADR-001): internal bigint keys; externally addressed entities expose a ULID `public_id`; secrets use separate random tokens.
 
 ---
 

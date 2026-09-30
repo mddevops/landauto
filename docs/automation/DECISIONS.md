@@ -1184,7 +1184,7 @@ Not supported: two-factor authentication, TOTP, passkeys, WebAuthn. They are not
 
 - The starter-kit 2FA / TOTP / passkey features (Fortify features, routes, UI, schema, frontend packages that are direct dependencies) are removed in `P1-002`. This replaces the P1-001 fix "2FA / passkey enrollment requires `verified`": the pre-account-takeover path is closed by removing the factors, not by adding verification checks.
 - Fortify remains the email/password engine (registration, login, password reset, email verification, password confirmation).
-- Yandex OAuth is a mandatory product method. Its implementation needs separate decisions: account linking (D-096) and OAuth client package (D-097). External identities are stored in a separate user-level entity, not in a provider column on `users` (`DATABASE.md` §4); its schema depends on D-085.
+- Yandex OAuth is a mandatory product method. Its implementation needs separate decisions: account linking (D-096) and OAuth client package (D-097). External identities are stored in a separate user-level entity, not in a provider column on `users` (`DATABASE.md` §4); its keys follow D-085 (internal-only table: bigint `id`, no `public_id`).
 - Yandex OAuth is not implemented in `P1-002`.
 
 ### References
@@ -1534,7 +1534,11 @@ BACKLOG `X-008 — ADR: Money Storage Representation` (trigger: before P3-009).
 
 ## D-085 — Primary Identifier Strategy
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED (owner, 2026-09-30) — mixed internal/public IDs, `ADR-001` Option B
+
+### Decision
+
+Internal primary / foreign keys are `BIGINT UNSIGNED` (`id()`, `foreignId`) on all tables; framework tables unchanged. Every externally addressed entity (URLs, route parameters, Inertia props used as identifiers, API, public runtime, exports) also has a unique, immutable ULID `public_id` (`HasUlids` + `uniqueIds(): ['public_id']`; set once on create, never changed or user-supplied); routes bind by `public_id` and numeric IDs of those entities are never exposed. Internal-only tables have no `public_id`; pure technical pivots may use composite keys. Workspace Membership is a first-class entity (own `id`, `public_id`), not a pivot. Users have no `public_id` for now (addressed via memberships). Secrets use separate random tokens, never IDs. Details: `docs/architecture/decisions/ADR-001-primary-identifier-strategy.md`.
 
 ### Decision Needed
 
@@ -1559,6 +1563,8 @@ Core domain migration implementation if not already standardized by project.
 ### Resolved By
 
 BACKLOG `X-007 — ADR: Primary Identifier Strategy` (trigger: before P1-003).
+
+Resolved 2026-09-30: the owner chose Option B (bigint + ULID `public_id`) over the drafted recommendation (ULID primary keys).
 
 ---
 
