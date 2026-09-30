@@ -66,7 +66,7 @@ Current phase:
 
 Current next task:
 
-`P1-003 — Create Workspace Schema` (X-007 DONE; D-085 APPROVED — bigint `id` + ULID `public_id`, ADR-001).
+`P1-004 — Workspace Domain Models` (P1-003 DONE: `workspaces`, `workspace_members`).
 
 Upcoming stops in Phase 1: `X-014` (before P1-005A, Yandex OAuth) requires owner acceptance of the account-linking / Yandex client ADR (D-096, D-097); `X-011` fires before P1-006, `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
@@ -1156,7 +1156,7 @@ Recorded minor notes: `X-011` (passkeys package discovery, array email 500 in Fo
 
 ## P1-003 — Create Workspace Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P1-002
 
 ### Scope
@@ -1185,6 +1185,18 @@ Satisfied: D-085 APPROVED through `X-007` (ADR-001) — `BIGINT UNSIGNED` `id` +
 
 - `TENANCY.md`
 - `DATABASE.md`
+
+### Result
+
+Completed 2026-09-30 (uncommitted).
+
+- Migrations `2026_09_30_000001_create_workspaces_table` (`id`, ULID `public_id` unique, `name`, `status` default `active` indexed, timestamps) and `2026_09_30_000002_create_workspace_members_table` (`id`, ULID `public_id` unique, `workspace_id` FK cascade, `user_id` FK restrict, `role`, `status` default `active`, `joined_at`, timestamps; unique `workspace_id + user_id`, indexes `workspace_id + role`, `user_id`).
+- Enums `App\Enums\WorkspaceStatus` (`active`, `suspended`) and `WorkspaceMemberStatus` (`active`, `invited`, `suspended`); removing a member deletes the row.
+- Owner source of truth: membership `role = owner` only (no `workspaces.owner_user_id`); "at least one Owner" enforced in application code (P1-004).
+- Account deletion: `user_id` restrict FK makes implicit deletion of a user with memberships fail; the explicit flow (sole-Owner guard, membership removal, `sessions` rows cleanup) moves to P1-005, where memberships are first created. No code path creates memberships yet, so current account deletion is unaffected.
+- DATABASE.md §5 updated to the implemented schema.
+- Checks: `WorkspaceSchemaTest` 10/10 (columns, defaults, unique public IDs, unique membership, FK existence, cascade on Workspace delete, restrict on User delete); `ProfileUpdateTest` 18/18 and `E2eSeederTest` 2/2 unchanged; Pint and Larastan on changed files PASS; migrate / rollback / migrate on a throwaway SQLite file PASS. Full `composer quality` / Playwright left to CI.
+- No security review: schema only, no routes or access paths (ownership enforcement arrives with P1-004 / P1-006 policies).
 
 ---
 
@@ -1215,7 +1227,8 @@ New account receives valid initial Workspace according to product flow.
 
 - no duplicate accidental Workspace;
 - owner membership created transactionally;
-- applies to every User creation path through one shared "new account" path (Fortify email/password registration now; Yandex OAuth in P1-005A).
+- applies to every User creation path through one shared "new account" path (Fortify email/password registration now; Yandex OAuth in P1-005A);
+- account deletion handles memberships explicitly (the `workspace_members.user_id` FK restricts implicit deletion, P1-003): sole-Owner guard (TENANCY.md §41), removal of the user's memberships / personal Workspace per the defined rule, deletion of the user's `sessions` rows; tested (moved from P1-003 notes).
 
 ---
 
@@ -2940,7 +2953,8 @@ Phase 0 is COMPLETED. Phase 1 — Core Platform:
 P1-001  Audit Authentication Baseline                            DONE
 P1-002  Remove 2FA / Passkeys and Enforce Email Verification     DONE
 X-007   ADR: Primary Identifier Strategy (before P1-003)          DONE (ADR-001 accepted, Option B)
-P1-003  Create Workspace Schema                                  next
+P1-003  Create Workspace Schema                                  DONE
+P1-004  Workspace Domain Models                                  next
 ```
 
 ---

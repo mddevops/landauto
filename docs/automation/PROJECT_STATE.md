@@ -68,7 +68,8 @@ Current focus:
 
 - last completed: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verification` (auth baseline in §5);
 - `X-007` DONE: D-085 APPROVED (ADR-001 Option B — bigint `id` + ULID `public_id`, §46);
-- next ready task: `P1-003 — Create Workspace Schema` (§42).
+- `P1-003` DONE: `workspaces` and `workspace_members` schema (DATABASE.md §5);
+- next ready task: `P1-004 — Workspace Domain Models` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -180,7 +181,7 @@ Baseline after P1-002 (audit history: BACKLOG P1-001 `### Result`; changes: P1-0
 - Passwords: `Password::defaults()` — production min 12, mixed case, letters, numbers, symbols, uncompromised; min 8 outside production.
 - Email verification: `User` implements `MustVerifyEmail`; registration creates the user unverified and sends the verification email. Unverified users may use only the allowlist in SECURITY.md §3 (verification notice / link / resend, logout, `settings` redirect, profile view / update, Fortify password confirmation); everything else, including account deletion, requires `verified`.
 - Emails are stored trimmed and lowercased (registration, profile update); no backfill of existing rows (no production data). Email change requires the current password, clears verification, sends a new verification email and a Russian informational notice to the old address.
-- Account deletion: verified users only; hard delete after current-password confirmation. Future Workspace ownership guard: P1-003 / P1-005 (TENANCY.md §41); retention: D-094.
+- Account deletion: verified users only; hard delete after current-password confirmation. A user with Workspace memberships cannot be deleted implicitly (`workspace_members.user_id` restrict FK, P1-003); explicit handling with sole-Owner guard in P1-005 (TENANCY.md §41); retention: D-094.
 - Russian localization covers auth UI, validation, the verify-email / reset-password / email-changed notifications and the 429 page (`lang/ru/*.php`, `lang/ru.json`).
 - Tests: PHPUnit 102 tests (`tests/Feature/Auth/*`, `tests/Feature/Settings/*`, `LocalizationTest`), including removed-feature, unverified-access, session-invalidation, normalization and email-change tests; Playwright 27 tests (setup 1, desktop 18, tablet 4, mobile 4) including the unverified-user and email-change flows.
 
@@ -1057,7 +1058,9 @@ Last completed task: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verific
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-**Next ready task: `P1-003 — Create Workspace Schema`** (not started).
+Also done: `P1-003 — Create Workspace Schema` (uncommitted).
+
+**Next ready task: `P1-004 — Workspace Domain Models`** (not started).
 
 No implementation task should be inferred from this alone.
 
@@ -1615,7 +1618,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-003 — Create Workspace Schema`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001, P1-002 and X-007 DONE (D-085 APPROVED).
+**`P1-004 — Workspace Domain Models`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001, P1-002, X-007 and P1-003 DONE.
 
 ---
 
@@ -1672,4 +1675,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-003 — Create Workspace Schema (not started; D-085 APPROVED).**
+Next ready task: P1-004 — Workspace Domain Models (not started).**

@@ -152,40 +152,42 @@ Keys per D-085: bigint `id`, `foreignId('user_id')`, no `public_id` (internal-on
 
 ## workspaces
 
-Suggested fields:
+Implemented in P1-003:
 
-- id
+- id (`BIGINT UNSIGNED`)
+- public_id (ULID, unique, immutable — D-085)
 - name
-- slug
-- owner_user_id
-- status
-- default_locale
-- timezone
+- status (`App\Enums\WorkspaceStatus`: `active`, `suspended`; default `active`; indexed)
 - timestamps
-- deleted_at if soft delete is approved
 
 Notes:
 
-- `owner_user_id` is the primary owner shortcut.
-- Membership still exists separately.
+- No `owner_user_id`: ownership is authoritative in `workspace_members` (`role = owner`). One source of truth; the "at least one Owner" rule (PERMISSIONS.md §22) is enforced by application code (P1-004 owner semantics).
+- No soft deletes (not approved); Workspace deletion stays a guarded application flow (TENANCY.md §38).
+- Slug, default locale and timezone are added by the task that needs them.
 
 ## workspace_members
 
-Suggested fields:
+First-class domain entity (managed through UI / routes), not a technical pivot.
 
-- id
-- workspace_id
-- user_id
-- role_id or role reference
-- status
-- invited_by_user_id nullable
-- invited_at nullable
+Implemented in P1-003:
+
+- id (`BIGINT UNSIGNED`)
+- public_id (ULID, unique, immutable)
+- workspace_id (FK, cascade on Workspace delete)
+- user_id (FK, restrict on User delete: account deletion must resolve memberships explicitly — sole-Owner guard, TENANCY.md §41)
+- role (system role slug: `owner`, `admin`, `designer`, `content_editor`; catalog / permissions in P1-008)
+- status (`App\Enums\WorkspaceMemberStatus`: `active`, `invited`, `suspended`; default `active`; only `active` grants access; removing a member deletes the row)
 - joined_at nullable
 - timestamps
 
-Unique constraint:
+Constraints / indexes:
 
-- workspace_id + user_id
+- unique workspace_id + user_id
+- index workspace_id + role (owner lookup)
+- index user_id
+
+Invitation fields (inviter, invited_at, token) are defined by the invite task (TENANCY.md §86–§87).
 
 ---
 
