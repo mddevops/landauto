@@ -66,9 +66,9 @@ Current phase:
 
 Current next task:
 
-`X-014 — Decision: OAuth Account Linking and Yandex Client` (required before P1-005A; P1-005 DONE).
+`P1-005A — Yandex OAuth Authentication` (X-014 DONE; D-096 and D-097 APPROVED).
 
-Upcoming stops in Phase 1: `X-014` (before P1-005A, Yandex OAuth) requires owner acceptance of the account-linking / Yandex client ADR (D-096, D-097); `X-011` fires before P1-006, `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
+Resolved stop: `X-014` DONE (ADR-002; D-096 and D-097 APPROVED), so P1-005A is ready. Upcoming stops: `X-011` before P1-006 and `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -1274,7 +1274,9 @@ Implement Yandex OAuth as the second supported sign-in method (D-095).
 
 ### Decision gate
 
-Requires D-096 (account linking) and D-097 (client implementation / package) through `X-014`; D-085 is APPROVED (`X-007` DONE). Confirm in the current official Yandex ID documentation that the returned email is a confirmed address.
+Satisfied: D-096 and D-097 APPROVED through `X-014` / ADR-002; D-085 is APPROVED (`X-007` DONE). Confirm in the current official Yandex ID documentation that the returned email is a confirmed address.
+
+Yandex-only Users must not receive an artificial password. This task owns the nullable `users.password` migration and safe adaptation of password-dependent flows/UI.
 
 ### Acceptance Criteria
 
@@ -2843,11 +2845,20 @@ Acceptance Criteria:
 
 ## X-014 — Decision: OAuth Account Linking and Yandex Client
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Trigger:** before P1-005A  
 **Resolves:** D-096, D-097
 
 Yandex OAuth (D-095) must not link an external identity to an existing Landflow account by plain email match. Architect and Security draft `docs/architecture/decisions/ADR-NNN-<slug>.md` covering: the account-linking flow for an email collision (never auto-link / link after proving control of the existing account / link only from a signed-in session / other), OAuth-only users without a password (password reset, email change, account deletion), and the Yandex client implementation (Socialite + provider vs in-repo provider vs Laravel HTTP client; package evaluation per rule `00-project-core.mdc` §8). Lifecycle: agents draft, only the owner accepts (rule `10-architecture.mdc`). Does not block P1-002.
+
+### Result
+
+Completed 2026-09-30 (docs only; owner decisions).
+
+- D-096 APPROVED: no email-based auto-link; known provider identity signs in; new identity creates a User only when email is free; collisions require authenticated explicit linking; provider ID is authoritative; provider email changes do not mutate `users.email`; identity cardinality and last-sign-in-method safeguards defined.
+- D-097 APPROVED: first-party adapter on Laravel HTTP client; server-only credentials, no persisted one-use access token; internal identity table with the approved unique constraints.
+- ADR-002 accepted. P1-005A must support Yandex-only Users through nullable passwords and adapted password flows/UI; it must not generate artificial passwords.
+- Tests: NOT_APPLICABLE (docs-only decision task).
 
 ---
 
@@ -2978,7 +2989,8 @@ X-007   ADR: Primary Identifier Strategy (before P1-003)          DONE (ADR-001 
 P1-003  Create Workspace Schema                                  DONE
 P1-004  Workspace Domain Models                                  DONE
 P1-005  Create Default Personal Workspace                        DONE
-X-014   Decision: OAuth Account Linking and Yandex Client         next
+X-014   Decision: OAuth Account Linking and Yandex Client         DONE (ADR-002 accepted)
+P1-005A Yandex OAuth Authentication                               next
 ```
 
 ---

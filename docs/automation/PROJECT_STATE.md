@@ -71,7 +71,8 @@ Current focus:
 - `P1-003` DONE: `workspaces` and `workspace_members` schema (DATABASE.md §5);
 - `P1-004` DONE: `Workspace` / `WorkspaceMember` models (immutable ULID `public_id`, last-Owner guard);
 - `P1-005` DONE: transactional personal Workspace creation and explicit account deletion lifecycle;
-- next ready task: `X-014 — Decision: OAuth Account Linking and Yandex Client` (§42).
+- `X-014` DONE: D-096 and D-097 APPROVED (ADR-002 — explicit Yandex linking and first-party HTTP client);
+- next ready task: `P1-005A — Yandex OAuth Authentication` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -173,7 +174,9 @@ Current frontend structure includes:
 
 Existing authentication uses Laravel Fortify.
 
-Supported Landflow sign-in methods (D-095, Product Owner, 2026-09-29): email + password with mandatory email verification (implemented), and Yandex OAuth with a required email that is treated as verified (not implemented; P1-005A after D-096 / D-097 via `X-014`). Landflow does not use 2FA, TOTP, passkeys or WebAuthn; the starter implementation was removed in P1-002.
+Supported Landflow sign-in methods (D-095, Product Owner, 2026-09-29): email + password with mandatory email verification (implemented), and Yandex OAuth with a required email that is treated as verified (not implemented; P1-005A, unblocked by X-014 / ADR-002). Landflow does not use 2FA, TOTP, passkeys or WebAuthn; the starter implementation was removed in P1-002.
+
+Approved Yandex baseline (D-096, D-097): provider identity is keyed by `provider_user_id`; email collisions never auto-link; explicit linking starts from an authenticated existing account; the client is a first-party adapter on Laravel HTTP client. Yandex-only Users have no artificial password, so P1-005A must make `users.password` nullable and adapt password-dependent flows/UI.
 
 Baseline after P1-002 (audit history: BACKLOG P1-001 `### Result`; changes: P1-002 `### Result`):
 
@@ -1060,9 +1063,9 @@ Last completed task: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verific
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace` (uncommitted).
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002).
 
-**Next ready task: `X-014 — Decision: OAuth Account Linking and Yandex Client`** (required before P1-005A).
+**Next ready task: `P1-005A — Yandex OAuth Authentication`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1620,7 +1623,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`X-014 — Decision: OAuth Account Linking and Yandex Client`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-005 and X-007 DONE.
+**`P1-005A — Yandex OAuth Authentication`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-005, X-007 and X-014 DONE.
 
 ---
 
@@ -1677,4 +1680,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: X-014 — Decision: OAuth Account Linking and Yandex Client.**
+Next ready task: P1-005A — Yandex OAuth Authentication.**

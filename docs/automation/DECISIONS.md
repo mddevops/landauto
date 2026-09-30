@@ -1195,6 +1195,47 @@ Not supported: two-factor authentication, TOTP, passkeys, WebAuthn. They are not
 
 ---
 
+## D-096 — OAuth Account Linking Policy
+
+**Status:** APPROVED
+
+### Decision
+
+- Never link a new Yandex identity to an existing Landflow User only because their email strings match.
+- A known `provider_user_id` signs in the already linked User.
+- A new `provider_user_id` with a free normalized email may create a new User and identity.
+- A new `provider_user_id` whose normalized email already exists in Landflow is refused: no login and no automatic link. The user must sign in to the existing account and explicitly connect Yandex.
+- `provider_user_id` is the stable external-identity key. Provider email is an attribute, not an authorization key, and later Yandex email changes do not update `users.email` automatically.
+- One Yandex identity belongs to one User; one User has at most one Yandex identity.
+- The last available sign-in method cannot be disconnected without an alternative.
+
+Yandex-only Users receive no artificial password. P1-005A must make `users.password` nullable and adapt password-dependent flows and UI safely.
+
+### Resolved By
+
+`X-014`; owner-approved `ADR-002-yandex-oauth-identity-and-client.md` (2026-09-30).
+
+---
+
+## D-097 — Yandex OAuth Client Implementation
+
+**Status:** APPROVED
+
+### Decision
+
+- Use a first-party Yandex OAuth adapter on Laravel's HTTP client; do not add a third-party Yandex Socialite provider/package initially.
+- Flow: redirect → state validation → code exchange → profile/email → normalization → Landflow authentication service.
+- Credentials live only in environment-backed server config; the client secret never reaches the frontend.
+- Do not persist an OAuth access token used only to retrieve the profile.
+- `user_auth_identities` is internal-only, without `public_id`, with unique (`provider`, `provider_user_id`) and (`user_id`, `provider`) constraints.
+- Verify current official Yandex endpoints, scopes, profile fields and email guarantees during implementation.
+
+### Resolved By
+
+`X-014`; owner-approved `ADR-002-yandex-oauth-identity-and-client.md` (2026-09-30).
+
+---
+
 # PROVISIONAL DECISIONS
 
 ---
@@ -1727,55 +1768,6 @@ Define for personal data (Submissions, contact fields, IP addresses, delivery pa
 
 - production launch;
 - Submission export (no BACKLOG task exists yet; the task must reference D-094 when created).
-
----
-
-## D-096 — OAuth Account Linking Policy
-
-**Status:** OPEN
-
-### Question
-
-An existing User `user@example.com` (email/password) signs in with Yandex, and Yandex returns `user@example.com`. When may the Yandex identity be attached to the existing User?
-
-Linking by plain email match is not allowed without an explicit safe policy (account-takeover risk: whoever controls the external account would gain the existing Landflow account; an unverified local account registered with someone else's email would capture the real owner's Yandex sign-in).
-
-### Options
-
-- never auto-link: the Yandex sign-in is refused for an email that already belongs to a User, with a Russian message to sign in with the password and link Yandex from account settings;
-- link only after the user proves control of the existing account: password login in the same flow, or a confirmation link sent to the existing email;
-- auto-link only when the existing User's email is already verified and the provider confirms the email is verified (weakest option; requires evidence of the provider's guarantee);
-- linking initiated only from an authenticated session (settings → "Привязать Яндекс"), combinable with any option above.
-
-Must also define: behavior for an existing *unverified* User with the same email, unlinking (a User must keep at least one sign-in method), what happens when the provider email later changes, re-authentication for OAuth-only Users without a password (`password.confirm`, email change, account deletion; nullable `users.password` or an unusable hash; whether password reset may add a password), and Russian user messages.
-
-### Blocking
-
-Yandex OAuth implementation. Does not block `P1-002`.
-
-### Resolved By
-
-A cross-cutting X- task before the Yandex OAuth task (security boundary: an ADR is recommended; owner accepts).
-
----
-
-## D-097 — Yandex OAuth Client Implementation
-
-**Status:** OPEN
-
-### Question
-
-How Landflow performs the Yandex OAuth authorization-code flow:
-
-- `laravel/socialite` with a community Yandex provider (e.g. `socialiteproviders/yandex`);
-- `laravel/socialite` with a small in-repo Yandex provider;
-- Laravel HTTP client without a new package.
-
-Adding a package requires evaluation under `.cursor/rules/00-project-core.mdc` §8 (maintenance, security, license). Provider endpoints, scopes and the email fields must be checked against current official Yandex ID documentation during implementation (`.cursor/rules/90-agent-workflow.mdc` §43).
-
-### Blocking
-
-Yandex OAuth implementation. Resolved together with D-096.
 
 ---
 
