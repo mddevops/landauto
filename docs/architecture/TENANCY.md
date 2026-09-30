@@ -737,7 +737,12 @@ User account deletion must not automatically destroy Workspace-owned business da
 
 If User is sole Workspace Owner, ownership transfer/Workspace handling is required before destructive deletion.
 
-Exact lifecycle will be defined later.
+Implemented account-deletion rule:
+
+- an empty Workspace where the deleting User is the only member is treated as that account's personal Workspace and deleted;
+- membership in a Workspace is removed when another active Owner remains;
+- deletion is blocked when the User is the sole active Owner of a Workspace with other members, until ownership is transferred or those members are removed;
+- the operation and session cleanup are transactional at the application layer.
 
 ---
 

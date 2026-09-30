@@ -1,4 +1,5 @@
 {
+    "A workspace must keep at least one owner.": "В рабочем пространстве должен остаться хотя бы один владелец.",
     "Password updated.": "Пароль обновлён.",
     "Profile updated.": "Профиль обновлён.",
 
@@ -29,6 +30,7 @@
     "Verify Email Address": "Подтвердить электронную почту",
     "If you did not create an account, no further action is required.": "Если вы не создавали аккаунт, просто проигнорируйте это письмо.",
     "Your account email address was changed": "Электронная почта аккаунта изменена",
+    "Transfer ownership or remove the other workspace members before deleting your account.": "Перед удалением аккаунта передайте права владельца или удалите других участников рабочего пространства.",
     "The email address of your :app account was changed. This address is no longer used to sign in.": "Электронная почта вашего аккаунта :app изменена. Этот адрес больше не используется для входа.",
     "If you did not make this change, contact support immediately.": "Если вы не меняли электронную почту, немедленно обратитесь в службу поддержки.",
     "Hello!": "Здравствуйте!",

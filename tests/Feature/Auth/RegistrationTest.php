@@ -3,7 +3,10 @@
 namespace Tests\Feature\Auth;
 
 use App\Actions\Fortify\CreateNewUser;
+use App\Enums\WorkspaceMemberStatus;
+use App\Enums\WorkspaceRole;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Auth\Notifications\VerifyEmail;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Notification;
@@ -59,6 +62,28 @@ class RegistrationTest extends TestCase
         Notification::assertSentTo($user, VerifyEmail::class);
 
         $this->get(route('dashboard'))->assertRedirect(route('verification.notice'));
+    }
+
+    public function test_registration_creates_one_personal_workspace_with_an_active_owner_membership()
+    {
+        Notification::fake();
+
+        $this->post(route('register.store'), [
+            'name' => 'Иван Петров',
+            'email' => 'owner@example.com',
+            'password' => 'password',
+            'password_confirmation' => 'password',
+        ])->assertSessionHasNoErrors();
+
+        $user = User::query()->where('email', 'owner@example.com')->firstOrFail();
+        $workspace = Workspace::query()->sole();
+        $membership = $user->memberships()->sole();
+
+        $this->assertSame('Иван Петров', $workspace->name);
+        $this->assertSame($workspace->id, $membership->workspace_id);
+        $this->assertSame(WorkspaceRole::Owner, $membership->role);
+        $this->assertSame(WorkspaceMemberStatus::Active, $membership->status);
+        $this->assertNotNull($membership->joined_at);
     }
 
     public function test_registration_stores_a_normalized_email()

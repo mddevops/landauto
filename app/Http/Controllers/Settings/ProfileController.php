@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Settings;
 
+use App\Actions\Accounts\DeleteUserAccount;
+use App\Exceptions\LastWorkspaceOwnerException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
@@ -59,13 +61,17 @@ class ProfileController extends Controller
     /**
      * Delete the user's profile.
      */
-    public function destroy(ProfileDeleteRequest $request): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, DeleteUserAccount $deleteUserAccount): RedirectResponse
     {
         $user = $request->user();
 
-        Auth::logout();
-
-        $user->delete();
+        try {
+            $deleteUserAccount->delete($user, fn () => Auth::logout());
+        } catch (LastWorkspaceOwnerException) {
+            return back()->withErrors([
+                'account' => __('Transfer ownership or remove the other workspace members before deleting your account.'),
+            ]);
+        }
 
         $request->session()->invalidate();
         $request->session()->regenerateToken();

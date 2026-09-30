@@ -162,8 +162,9 @@ Implemented in P1-003:
 
 Notes:
 
-- No `owner_user_id`: ownership is authoritative in `workspace_members` (`role = owner`). One source of truth; the "at least one Owner" rule (PERMISSIONS.md §22) is enforced by application code (P1-004 owner semantics).
+- No `owner_user_id`: ownership is authoritative in `workspace_members` (`role = owner`). One source of truth; the "at least one Owner" rule (PERMISSIONS.md §22) is enforced by `WorkspaceMember` model events (P1-004; Eloquent operations only, no bulk updates of memberships).
 - No soft deletes (not approved); Workspace deletion stays a guarded application flow (TENANCY.md §38).
+- P1-005 account deletion removes an empty single-member personal Workspace; a Workspace with other members must retain another active Owner before the User can be deleted (TENANCY.md §41).
 - Slug, default locale and timezone are added by the task that needs them.
 
 ## workspace_members

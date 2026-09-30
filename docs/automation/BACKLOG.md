@@ -66,7 +66,7 @@ Current phase:
 
 Current next task:
 
-`P1-004 — Workspace Domain Models` (P1-003 DONE: `workspaces`, `workspace_members`).
+`X-014 — Decision: OAuth Account Linking and Yandex Client` (required before P1-005A; P1-005 DONE).
 
 Upcoming stops in Phase 1: `X-014` (before P1-005A, Yandex OAuth) requires owner acceptance of the account-linking / Yandex client ADR (D-096, D-097); `X-011` fires before P1-006, `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
@@ -1202,7 +1202,7 @@ Completed 2026-09-30 (uncommitted).
 
 ## P1-004 — Workspace Domain Models
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P1-003
 
 ### Scope
@@ -1212,11 +1212,24 @@ Completed 2026-09-30 (uncommitted).
 - User relationships;
 - owner semantics.
 
+### Result
+
+Completed 2026-09-30 (uncommitted).
+
+- `App\Models\Workspace` and `App\Models\WorkspaceMember` with trait `App\Models\Concerns\HasImmutablePublicId` (`HasUlids` + `uniqueIds(): ['public_id']`, integer key kept, route key `public_id`, `public_id` change throws). Numeric `id` (and membership `workspace_id` / `user_id`) hidden from serialization; only `name` (Workspace) and `role` / `status` / `joined_at` (membership) are fillable.
+- Enum `App\Enums\WorkspaceRole` (`owner`, `admin`, `designer`, `content_editor`; permission catalog stays in P1-008); role / status cast to enums.
+- Relationships: `Workspace::members()`, `owners()` (active Owner memberships), `users()`; `WorkspaceMember::workspace()`, `user()`; `User::memberships()`, `workspaces()`, `activeWorkspaces()`, `activeMembershipIn()`.
+- `Workspace::addMember()` is the single creation path (ownership fields from server context; `joined_at` set for active members). Membership `workspace_id` / `user_id` cannot be reassigned.
+- Owner semantics: `Workspace::isOwnedBy()`; `WorkspaceMember` model events block demoting, suspending or deleting the last active Owner (`App\Exceptions\LastWorkspaceOwnerException`, Russian message; row locked while checking). Bulk query-builder updates bypass the guard and must not be used for memberships.
+- Factories: `WorkspaceFactory` (`suspended`), `WorkspaceMemberFactory` (`owner`, `invited`, `suspended`).
+- Checks: `WorkspaceModelTest` 17 + `WorkspaceSchemaTest` 10; with `ProfileUpdateTest`, `RegistrationTest`, `E2eSeederTest`, `LocalizationTest` — 63/63; Pint and Larastan on changed paths PASS. Full suite / Playwright left to CI.
+- No security review: no routes or authorization paths yet (policies / Workspace context in P1-006 / P1-008).
+
 ---
 
 ## P1-005 — Create Default Personal Workspace
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-004
 
 ### Objective
@@ -1229,6 +1242,15 @@ New account receives valid initial Workspace according to product flow.
 - owner membership created transactionally;
 - applies to every User creation path through one shared "new account" path (Fortify email/password registration now; Yandex OAuth in P1-005A);
 - account deletion handles memberships explicitly (the `workspace_members.user_id` FK restricts implicit deletion, P1-003): sole-Owner guard (TENANCY.md §41), removal of the user's memberships / personal Workspace per the defined rule, deletion of the user's `sessions` rows; tested (moved from P1-003 notes).
+
+### Result
+
+Completed 2026-09-30 (uncommitted).
+
+- `CreateNewAccount` is the shared transactional account path: it creates the User, one personal Workspace named after the user, and an active Owner membership. Fortify registration uses it; P1-005A can reuse it.
+- `DeleteUserAccount` resolves memberships transactionally. It deletes an empty single-member personal Workspace, removes memberships when another active Owner remains, and blocks deletion when the user is the sole active Owner of a Workspace with other members. Database sessions are removed explicitly.
+- The profile deletion UI shows the Russian ownership-transfer error without logging out a blocked user.
+- Targeted checks: PHPUnit 46 tests / 224 assertions PASS; focused shared-Workspace deletion regression 1 test / 4 assertions PASS; Pint targeted PASS; `npm run check` PASS; PHP syntax PASS; PHPStan level 7 PASS (0 errors).
 
 ---
 
@@ -2954,7 +2976,9 @@ P1-001  Audit Authentication Baseline                            DONE
 P1-002  Remove 2FA / Passkeys and Enforce Email Verification     DONE
 X-007   ADR: Primary Identifier Strategy (before P1-003)          DONE (ADR-001 accepted, Option B)
 P1-003  Create Workspace Schema                                  DONE
-P1-004  Workspace Domain Models                                  next
+P1-004  Workspace Domain Models                                  DONE
+P1-005  Create Default Personal Workspace                        DONE
+X-014   Decision: OAuth Account Linking and Yandex Client         next
 ```
 
 ---

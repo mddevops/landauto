@@ -1,4 +1,5 @@
 /.phpunit.cache
+/.phpstan-cache/
 /blob-report
 /playwright-report
 /playwright/.auth
