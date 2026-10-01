@@ -440,4 +440,27 @@ class ProfileUpdateTest extends TestCase
 
         $this->assertNotNull($user->fresh());
     }
+
+    public function test_passwordless_user_must_set_a_password_before_changing_email_or_deleting_account(): void
+    {
+        $user = User::factory()->create(['password' => null]);
+
+        $this->actingAs($user)
+            ->from(route('profile.edit'))
+            ->patch(route('profile.update'), [
+                'name' => $user->name,
+                'email' => 'new@example.com',
+            ])
+            ->assertSessionHasErrors(['email', 'current_password'])
+            ->assertRedirect(route('profile.edit'));
+
+        $this->actingAs($user)
+            ->from(route('profile.edit'))
+            ->delete(route('profile.destroy'), [])
+            ->assertSessionHasErrors('password')
+            ->assertRedirect(route('profile.edit'));
+
+        $this->assertSame($user->email, $user->refresh()->email);
+        $this->assertNotNull($user->fresh());
+    }
 }

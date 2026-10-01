@@ -4,15 +4,18 @@ import SecurityController from '@/actions/App/Http/Controllers/Settings/Security
 import Heading from '@/components/heading';
 import InputError from '@/components/input-error';
 import PasswordInput from '@/components/password-input';
+import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Label } from '@/components/ui/label';
 import { edit } from '@/routes/security';
+import { request as requestPasswordReset } from '@/routes/password';
 
 type Props = {
     passwordRules: string;
+    hasPassword: boolean;
 };
 
-export default function Security({ passwordRules }: Props) {
+export default function Security({ passwordRules, hasPassword }: Props) {
     const passwordInput = useRef<HTMLInputElement>(null);
     const currentPasswordInput = useRef<HTMLInputElement>(null);
 
@@ -25,97 +28,119 @@ export default function Security({ passwordRules }: Props) {
             <div className="space-y-6">
                 <Heading
                     variant="small"
-                    title="Смена пароля"
-                    description="Используйте длинный случайный пароль, чтобы защитить аккаунт"
+                    title={
+                        hasPassword ? 'Смена пароля' : 'Пароль не установлен'
+                    }
+                    description={
+                        hasPassword
+                            ? 'Используйте длинный случайный пароль, чтобы защитить аккаунт'
+                            : 'Добавьте пароль как дополнительный способ входа через подтверждение электронной почты'
+                    }
                 />
 
-                <Form
-                    {...SecurityController.update.form()}
-                    options={{
-                        preserveScroll: true,
-                    }}
-                    resetOnError={[
-                        'password',
-                        'password_confirmation',
-                        'current_password',
-                    ]}
-                    resetOnSuccess
-                    onError={(errors) => {
-                        if (errors.password) {
-                            passwordInput.current?.focus();
-                        }
+                {!hasPassword && (
+                    <p className="text-sm text-muted-foreground">
+                        Запросите ссылку на электронную почту на странице{' '}
+                        <TextLink href={requestPasswordReset()}>
+                            восстановления пароля
+                        </TextLink>
+                        .
+                    </p>
+                )}
 
-                        if (errors.current_password) {
-                            currentPasswordInput.current?.focus();
-                        }
-                    }}
-                    className="space-y-6"
-                >
-                    {({ errors, processing }) => (
-                        <>
-                            <div className="grid gap-2">
-                                <Label htmlFor="current_password">
-                                    Текущий пароль
-                                </Label>
+                {hasPassword && (
+                    <Form
+                        {...SecurityController.update.form()}
+                        options={{
+                            preserveScroll: true,
+                        }}
+                        resetOnError={[
+                            'password',
+                            'password_confirmation',
+                            'current_password',
+                        ]}
+                        resetOnSuccess
+                        onError={(errors) => {
+                            if (errors.password) {
+                                passwordInput.current?.focus();
+                            }
 
-                                <PasswordInput
-                                    id="current_password"
-                                    ref={currentPasswordInput}
-                                    name="current_password"
-                                    className="mt-1 block w-full"
-                                    autoComplete="current-password"
-                                    placeholder="Текущий пароль"
-                                />
+                            if (errors.current_password) {
+                                currentPasswordInput.current?.focus();
+                            }
+                        }}
+                        className="space-y-6"
+                    >
+                        {({ errors, processing }) => (
+                            <>
+                                <div className="grid gap-2">
+                                    <Label htmlFor="current_password">
+                                        Текущий пароль
+                                    </Label>
 
-                                <InputError message={errors.current_password} />
-                            </div>
+                                    <PasswordInput
+                                        id="current_password"
+                                        ref={currentPasswordInput}
+                                        name="current_password"
+                                        className="mt-1 block w-full"
+                                        autoComplete="current-password"
+                                        placeholder="Текущий пароль"
+                                    />
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password">Новый пароль</Label>
+                                    <InputError
+                                        message={errors.current_password}
+                                    />
+                                </div>
 
-                                <PasswordInput
-                                    id="password"
-                                    ref={passwordInput}
-                                    name="password"
-                                    className="mt-1 block w-full"
-                                    autoComplete="new-password"
-                                    placeholder="Новый пароль"
-                                    passwordrules={passwordRules}
-                                />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password">
+                                        Новый пароль
+                                    </Label>
 
-                                <InputError message={errors.password} />
-                            </div>
+                                    <PasswordInput
+                                        id="password"
+                                        ref={passwordInput}
+                                        name="password"
+                                        className="mt-1 block w-full"
+                                        autoComplete="new-password"
+                                        placeholder="Новый пароль"
+                                        passwordrules={passwordRules}
+                                    />
 
-                            <div className="grid gap-2">
-                                <Label htmlFor="password_confirmation">
-                                    Подтверждение пароля
-                                </Label>
+                                    <InputError message={errors.password} />
+                                </div>
 
-                                <PasswordInput
-                                    id="password_confirmation"
-                                    name="password_confirmation"
-                                    className="mt-1 block w-full"
-                                    autoComplete="new-password"
-                                    placeholder="Повторите новый пароль"
-                                    passwordrules={passwordRules}
-                                />
+                                <div className="grid gap-2">
+                                    <Label htmlFor="password_confirmation">
+                                        Подтверждение пароля
+                                    </Label>
 
-                                <InputError
-                                    message={errors.password_confirmation}
-                                />
-                            </div>
+                                    <PasswordInput
+                                        id="password_confirmation"
+                                        name="password_confirmation"
+                                        className="mt-1 block w-full"
+                                        autoComplete="new-password"
+                                        placeholder="Повторите новый пароль"
+                                        passwordrules={passwordRules}
+                                    />
 
-                            <div className="flex items-center gap-4">
-                                <Button
-                                    disabled={processing}
-                                    data-test="update-password-button"
-                                >
-                                    Сохранить
-                                </Button>
-                            </div>
-                        </>
-                    )}
-                </Form>
+                                    <InputError
+                                        message={errors.password_confirmation}
+                                    />
+                                </div>
+
+                                <div className="flex items-center gap-4">
+                                    <Button
+                                        disabled={processing}
+                                        data-test="update-password-button"
+                                    >
+                                        Сохранить
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </Form>
+                )}
             </div>
         </>
     );

@@ -66,9 +66,9 @@ Current phase:
 
 Current next task:
 
-`P1-005A — Yandex OAuth Authentication` (X-014 DONE; D-096 and D-097 APPROVED).
+`X-011 — Foundation Hygiene Follow-ups` (required before P1-006; P1-005A DONE).
 
-Resolved stop: `X-014` DONE (ADR-002; D-096 and D-097 APPROVED), so P1-005A is ready. Upcoming stops: `X-011` before P1-006 and `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
+Resolved stops: `X-014` and P1-005A are DONE. Upcoming stops: `X-011` before P1-006 and `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -1256,7 +1256,7 @@ Completed 2026-09-30 (uncommitted).
 
 ## P1-005A — Yandex OAuth Authentication
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-005
 
 ### Objective
@@ -1282,7 +1282,20 @@ Yandex-only Users must not receive an artificial password. This task owns the nu
 
 - mocked-provider Feature tests: new user, returning user, missing email, email collision per D-096, invalid `state`;
 - no secret in props, logs or repository;
-- security review PASS; a real Yandex sign-in smoke test is `BLOCKED_EXTERNAL` until the owner registers a Yandex OAuth application.
+- security review PASS; real Yandex OAuth smoke test PASS.
+
+### Result
+
+Completed 2026-10-01 (uncommitted).
+
+- Added internal `user_auth_identities` (`BIGINT` keys, no `public_id`, required provider email, cascade to User, both ADR-002 unique constraints) and nullable `users.password`; no OAuth token columns.
+- First-party Laravel HTTP client implements Yandex authorization-code exchange and authenticated profile fetch. Redirect/callback use one-time 10-minute session state, PKCE S256, rate limiting, server-only env/config credentials and provider `client_id` verification.
+- Known provider identity signs in without changing `users.email`; a new identity with a free normalized email transactionally creates a verified passwordless User, identity, personal Workspace and Owner membership; existing Landflow email is rejected without login/link.
+- Russian Yandex buttons were added to login/registration without auth-screen redesign. Passwordless settings expose no current-password form: password addition uses the email-confirmed reset flow; email change/account deletion require adding a password first. Existing password login/settings remain unchanged.
+- Official Yandex ID documentation checked 2026-10-01: authorization endpoint supports `state` and PKCE; token exchange uses authorization code; authenticated `/info` returns stable `id`, application `client_id` and `default_email` when email access is granted.
+- Targeted checks: PHPUnit 54 tests / 320 assertions PASS; Pint targeted PASS; PHPStan changed PHP surface PASS (0 errors); `npm run check` PASS.
+- Security-focused self-review: PASS after removing direct first-password creation from an old OAuth session.
+- Real Yandex OAuth smoke test: PASS — new Yandex User, repeat login through the existing identity, and email collision without automatic login/link or extra account/Workspace records. `BLOCKED_EXTERNAL` resolved 2026-10-01.
 
 ---
 
@@ -2990,7 +3003,8 @@ P1-003  Create Workspace Schema                                  DONE
 P1-004  Workspace Domain Models                                  DONE
 P1-005  Create Default Personal Workspace                        DONE
 X-014   Decision: OAuth Account Linking and Yandex Client         DONE (ADR-002 accepted)
-P1-005A Yandex OAuth Authentication                               next
+P1-005A Yandex OAuth Authentication                               DONE
+X-011   Foundation Hygiene Follow-ups                             next
 ```
 
 ---

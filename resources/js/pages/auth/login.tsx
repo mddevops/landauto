@@ -7,6 +7,7 @@ import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
+import YandexAuthButton from '@/components/yandex-auth-button';
 import { register } from '@/routes';
 import { store } from '@/routes/login';
 import { request } from '@/routes/password';
@@ -90,6 +91,10 @@ export default function Login({ status, canResetPassword }: Props) {
                                 Зарегистрироваться
                             </TextLink>
                         </div>
+
+                        <YandexAuthButton />
+
+                        <InputError message={errors.yandex} />
                     </>
                 )}
             </Form>

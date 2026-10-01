@@ -6,6 +6,7 @@ use App\Concerns\PasswordValidationRules;
 use App\Concerns\ProfileValidationRules;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Validator;
 
 class ProfileUpdateRequest extends FormRequest
 {
@@ -44,5 +45,20 @@ class ProfileUpdateRequest extends FormRequest
     public function changesEmail(): bool
     {
         return $this->input('email') !== $this->user()->email;
+    }
+
+    /**
+     * @return array<int, callable(Validator): void>
+     */
+    public function after(): array
+    {
+        return [function (Validator $validator): void {
+            if ($this->changesEmail() && ! $this->user()->hasPassword()) {
+                $validator->errors()->add(
+                    'email',
+                    __('Set a password in security settings before changing your email.'),
+                );
+            }
+        }];
     }
 }

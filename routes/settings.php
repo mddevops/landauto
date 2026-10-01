@@ -2,7 +2,7 @@
 
 use App\Http\Controllers\Settings\ProfileController;
 use App\Http\Controllers\Settings\SecurityController;
-use Illuminate\Auth\Middleware\RequirePassword;
+use App\Http\Middleware\RequirePasswordIfAvailable;
 use Illuminate\Support\Facades\Route;
 
 // Available to unverified users so they can fix a mistyped email address.
@@ -19,7 +19,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::delete('settings/profile', [ProfileController::class, 'destroy'])->name('profile.destroy');
 
     Route::get('settings/security', [SecurityController::class, 'edit'])
-        ->middleware(RequirePassword::class)
+        ->middleware(RequirePasswordIfAvailable::class)
         ->name('security.edit');
 
     Route::put('settings/password', [SecurityController::class, 'update'])

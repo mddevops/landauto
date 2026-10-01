@@ -81,6 +81,20 @@ class PasswordResetTest extends TestCase
         });
     }
 
+    public function test_passwordless_user_can_add_a_password_through_email_reset(): void
+    {
+        $user = User::factory()->create(['password' => null]);
+
+        $this->post(route('password.update'), [
+            'token' => Password::broker()->createToken($user),
+            'email' => $user->email,
+            'password' => 'new-password',
+            'password_confirmation' => 'new-password',
+        ])->assertSessionHasNoErrors()->assertRedirect(route('login'));
+
+        $this->assertTrue(password_verify('new-password', $user->refresh()->password));
+    }
+
     public function test_password_reset_ends_all_sessions_of_the_user_only(): void
     {
         config(['session.driver' => 'database']);

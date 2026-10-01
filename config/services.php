@@ -35,4 +35,13 @@ return [
         ],
     ],
 
+    'yandex' => [
+        'client_id' => env('YANDEX_CLIENT_ID'),
+        'client_secret' => env('YANDEX_CLIENT_SECRET'),
+        'redirect_uri' => env('YANDEX_REDIRECT_URI', env('APP_URL').'/auth/yandex/callback'),
+        'authorize_url' => 'https://oauth.yandex.ru/authorize',
+        'token_url' => 'https://oauth.yandex.ru/token',
+        'profile_url' => 'https://login.yandex.ru/info',
+    ],
+
 ];

@@ -78,4 +78,28 @@ class SecurityTest extends TestCase
             ->assertSessionHasErrors('current_password')
             ->assertRedirect(route('security.edit'));
     }
+
+    public function test_passwordless_user_can_open_security_settings_but_cannot_set_password_without_email_proof(): void
+    {
+        $user = User::factory()->create(['password' => null]);
+
+        $this->actingAs($user)
+            ->get(route('security.edit'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('settings/security')
+                ->where('hasPassword', false),
+            );
+
+        $this->actingAs($user)
+            ->from(route('security.edit'))
+            ->put(route('user-password.update'), [
+                'password' => 'new-password',
+                'password_confirmation' => 'new-password',
+            ])
+            ->assertSessionHasErrors('current_password')
+            ->assertRedirect(route('security.edit'));
+
+        $this->assertNull($user->refresh()->password);
+    }
 }

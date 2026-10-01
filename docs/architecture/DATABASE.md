@@ -111,7 +111,7 @@ Suggested fields:
 - name
 - email
 - email_verified_at
-- password
+- password (nullable for OAuth-only Users; no artificial password)
 - remember_token
 - timestamps
 
@@ -121,11 +121,11 @@ Only email/password authentication fields used by Fortify belong here. No two-fa
 
 Do not store Workspace role directly here.
 
-## External Auth Identities (planned)
+## External Auth Identities
 
 Scope: platform user-level (Global identity data, not Workspace or Site).
 
-Suggested table: `user_auth_identities` (final name set by the Yandex OAuth task).
+Implemented in P1-005A as `user_auth_identities`.
 
 Suggested fields:
 
@@ -133,7 +133,7 @@ Suggested fields:
 - user_id
 - provider (backed enum, e.g. `yandex`)
 - provider_user_id
-- provider_email
+- provider_email (required; normalized email returned by the authenticated provider profile)
 - timestamps
 
 Constraints:

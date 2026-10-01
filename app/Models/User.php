@@ -19,7 +19,7 @@ use Illuminate\Support\Carbon;
  * @property string $name
  * @property string $email
  * @property Carbon|null $email_verified_at
- * @property string $password
+ * @property string|null $password
  * @property string|null $remember_token
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -50,6 +50,19 @@ class User extends Authenticatable implements MustVerifyEmail
     public function memberships(): HasMany
     {
         return $this->hasMany(WorkspaceMember::class);
+    }
+
+    /**
+     * @return HasMany<UserAuthIdentity, $this>
+     */
+    public function authIdentities(): HasMany
+    {
+        return $this->hasMany(UserAuthIdentity::class);
+    }
+
+    public function hasPassword(): bool
+    {
+        return is_string($this->password) && $this->password !== '';
     }
 
     /**

@@ -25,9 +25,11 @@ function normalizeEmail(email: string): string {
 
 export default function Profile({
     mustVerifyEmail,
+    hasPassword,
     status,
 }: {
     mustVerifyEmail: boolean;
+    hasPassword: boolean;
     status?: string;
 }) {
     const { auth } = usePage<PageProps>().props;
@@ -99,6 +101,7 @@ export default function Profile({
                                     }
                                     name="email"
                                     required
+                                    readOnly={!hasPassword}
                                     autoComplete="username"
                                     placeholder="email@example.com"
                                 />
@@ -107,6 +110,13 @@ export default function Profile({
                                     className="mt-2"
                                     message={errors.email}
                                 />
+                                {!hasPassword && (
+                                    <p className="text-sm text-muted-foreground">
+                                        Чтобы изменить электронную почту,
+                                        сначала установите пароль в разделе
+                                        «Безопасность».
+                                    </p>
+                                )}
                             </div>
 
                             {emailUnverified && !emailChanged && (
@@ -181,7 +191,9 @@ export default function Profile({
                 unavailableReason={
                     emailUnverified
                         ? 'Удалить аккаунт можно после подтверждения электронной почты.'
-                        : undefined
+                        : !hasPassword
+                          ? 'Чтобы удалить аккаунт, сначала установите пароль в разделе «Безопасность».'
+                          : undefined
                 }
             />
         </>

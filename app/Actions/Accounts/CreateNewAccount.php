@@ -12,12 +12,13 @@ class CreateNewAccount
     /**
      * Create the identity and its initial personal Workspace as one account operation.
      *
-     * @param  array{name: string, email: string, password: string, email_verified_at?: mixed}  $attributes
+     * @param  array{name: string, email: string, password: string|null, email_verified_at?: mixed}  $attributes
      */
     public function create(array $attributes): User
     {
         return DB::transaction(function () use ($attributes): User {
-            $user = User::create($attributes);
+            $user = new User;
+            $user->forceFill($attributes)->save();
             $workspace = Workspace::create(['name' => $user->name]);
 
             $workspace->addMember($user, WorkspaceRole::Owner);

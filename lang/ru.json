@@ -1,4 +1,10 @@
 {
+    "Yandex sign-in is temporarily unavailable.": "Вход через Яндекс временно недоступен.",
+    "The Yandex sign-in request is invalid or expired. Please try again.": "Запрос на вход через Яндекс недействителен или устарел. Попробуйте ещё раз.",
+    "Yandex sign-in was not completed. Please try again.": "Вход через Яндекс не завершён. Попробуйте ещё раз.",
+    "An account with this email already exists. Sign in with your existing method, then connect Yandex in account settings.": "Аккаунт с такой электронной почтой уже существует. Войдите существующим способом, а затем подключите Яндекс в настройках аккаунта.",
+    "Yandex did not provide the required account data. Allow email access and try again, or register with email.": "Яндекс не передал необходимые данные аккаунта. Разрешите доступ к электронной почте и попробуйте снова или зарегистрируйтесь по электронной почте.",
+    "Set a password in security settings before changing your email.": "Перед изменением электронной почты установите пароль в настройках безопасности.",
     "A workspace must keep at least one owner.": "В рабочем пространстве должен остаться хотя бы один владелец.",
     "Password updated.": "Пароль обновлён.",
     "Profile updated.": "Профиль обновлён.",

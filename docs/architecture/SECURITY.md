@@ -83,6 +83,8 @@ Authentication security should include:
 - rate limiting;
 - for OAuth: `state` validation, server-side code exchange, client secret only in server configuration, no account linking by plain email match (D-096).
 
+P1-005A implements Yandex OAuth with one-time 10-minute session state, PKCE S256, rate-limited redirect/callback, server-side token/profile requests, provider `client_id` verification, no stored access token and session rotation after login. OAuth-only Users have a nullable password; adding one requires the email-confirmed password-reset flow. They cannot change email or delete the account until an alternative password method exists.
+
 Authentication alone never grants Workspace access.
 
 ---
