@@ -105,38 +105,24 @@ test('user can log in with the keyboard and reach the dashboard', async ({
 test('unverified user lands on the email verification notice after login', async ({
     page,
 }, testInfo) => {
-    // The user is created through the real registration form; the E2E database is
-    // recreated on every run, so the address is unique within the run.
-    const unverified = {
-        name: 'Мария Неподтверждённая',
-        email: 'unverified@landflow.test',
-        password: 'e2e-password',
-    };
-
-    await page.goto('/register');
-    await page.getByLabel('Имя').fill(unverified.name);
-    await page.getByLabel('Электронная почта').fill(unverified.email);
-    await page.getByLabel('Пароль', { exact: true }).fill(unverified.password);
-    await page.getByLabel('Подтверждение пароля').fill(unverified.password);
-    await page.getByRole('button', { name: 'Создать аккаунт' }).click();
-
     const notice = page.getByRole('heading', {
         name: 'Подтверждение электронной почты',
     });
 
-    await expect(page).toHaveURL('/email/verify');
-    await expect(notice).toBeVisible();
-
-    await page.getByRole('button', { name: 'Выйти' }).click();
-    await expect(page).toHaveURL('/');
-
     await page.goto('/login');
-    await submitLogin(page, unverified.email, unverified.password);
+    await submitLogin(page, users.unverified.email, users.unverified.password);
 
     await expect(page).toHaveURL('/email/verify');
     await expect(notice).toBeVisible();
     await expect(
         page.getByRole('button', { name: 'Отправить письмо повторно' }),
+    ).toBeVisible();
+
+    await page
+        .getByRole('button', { name: 'Отправить письмо повторно' })
+        .click();
+    await expect(
+        page.getByText('Новая ссылка для подтверждения отправлена.'),
     ).toBeVisible();
 
     await captureScreenshot(page, testInfo, 'auth', 'verify-email');
@@ -148,7 +134,7 @@ test('unverified user lands on the email verification notice after login', async
     // The profile stays reachable to fix a mistyped email; account deletion does not.
     await page.goto('/settings/profile');
     await expect(page.getByLabel('Электронная почта')).toHaveValue(
-        unverified.email,
+        users.unverified.email,
     );
     await expect(
         page.getByText('Электронная почта не подтверждена.'),

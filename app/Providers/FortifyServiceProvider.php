@@ -80,11 +80,34 @@ class FortifyServiceProvider extends ServiceProvider
     private function configureRateLimiting(): void
     {
         RateLimiter::for('login', function (Request $request) {
-            $throttleKey = Str::transliterate(Str::lower($request->input(Fortify::username())).'|'.$request->ip());
+            $email = $request->input(Fortify::username());
+            $email = is_string($email) ? Str::lower($email) : '';
+            $ip = $request->ip() ?? 'unknown';
+            $throttleKey = Str::transliterate($email.'|'.$ip);
 
-            return Limit::perMinute(5)->by($throttleKey);
+            return [
+                Limit::perMinute(5)->by($throttleKey),
+                Limit::perMinute(20)->by('ip:'.$ip),
+            ];
         });
 
         RateLimiter::for('yandex-oauth', fn (Request $request) => Limit::perMinute(10)->by($request->ip() ?? 'unknown'));
+
+        foreach (['registration', 'password-email', 'password-reset'] as $limiter) {
+            RateLimiter::for($limiter, fn (Request $request) => $this->authLimit($request->ip() ?? 'unknown'));
+        }
+
+        foreach (['password-confirm', 'account-delete'] as $limiter) {
+            RateLimiter::for($limiter, fn (Request $request) => $this->authLimit(
+                (string) ($request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown'),
+            ));
+        }
+    }
+
+    private function authLimit(string $key): Limit
+    {
+        return Limit::perMinute(5)
+            ->by($key)
+            ->response(fn () => response(__('Too Many Requests'), 429));
     }
 }

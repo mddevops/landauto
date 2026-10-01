@@ -26,14 +26,17 @@ class E2eSeeder extends Seeder
         // Separate user for login/logout flows so they do not share the login rate limit
         // with the authenticated storage state.
         $this->createUser('Иван Петров', 'login@landflow.test');
+
+        // Reused by verification-flow tests, including Playwright retries.
+        $this->createUser('Мария Неподтверждённая', 'unverified@landflow.test', false);
     }
 
-    private function createUser(string $name, string $email): void
+    private function createUser(string $name, string $email, bool $verified = true): void
     {
         (new User)->forceFill([
             'name' => $name,
             'email' => $email,
-            'email_verified_at' => now(),
+            'email_verified_at' => $verified ? now() : null,
             'password' => 'e2e-password',
         ])->save();
     }

@@ -34,6 +34,23 @@ export const test = base.extend<{ browserIssues: BrowserIssues }>({
                 }
             });
 
+            page.on('requestfailed', (request) => {
+                const failure = request.failure()?.errorText ?? 'unknown error';
+
+                // Chromium aborts an older document request when a newer navigation
+                // supersedes it; that expected cancellation is not a network failure.
+                if (
+                    request.isNavigationRequest() &&
+                    failure === 'net::ERR_ABORTED'
+                ) {
+                    return;
+                }
+
+                issues.failedRequests.push(
+                    `${failure} ${request.method()} ${request.url()}`,
+                );
+            });
+
             await use(issues);
 
             expect(

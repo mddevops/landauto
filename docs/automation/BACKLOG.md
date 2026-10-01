@@ -66,9 +66,9 @@ Current phase:
 
 Current next task:
 
-`X-011 — Foundation Hygiene Follow-ups` (required before P1-006; P1-005A DONE).
+`P1-006 — Workspace Context / Switcher Backend` (X-011 and P1-005A DONE).
 
-Resolved stops: `X-014` and P1-005A are DONE. Upcoming stops: `X-011` before P1-006 and `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
+Resolved stops: `X-014`, P1-005A and `X-011` are DONE. Upcoming stop: `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -1301,7 +1301,7 @@ Completed 2026-10-01 (uncommitted).
 
 ## P1-006 — Workspace Context / Switcher Backend
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P1-004
 
 ### Scope
@@ -2764,7 +2764,7 @@ Decision must cover: Site asset vs Workspace asset ownership/reference model, im
 
 ## X-011 — Foundation Hygiene Follow-ups (from P0-027)
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P1-006
 
 Non-blocking findings of the Phase 0 validation reviews. P1-006 is the first task that adds Workspace context to shared Inertia props, so the shared-props allowlist must exist before it. Primary: backend (frontend for the Playwright fixture item); reviews: security, qa, reviewer.
@@ -2792,6 +2792,19 @@ Acceptance Criteria:
 - tests added where listed;
 - `composer quality` and `npm run test:e2e` PASS;
 - security review (shared props, seeder, gitignore, auth rate limits).
+
+### Result
+
+- Shared Inertia User data now uses the explicit `name`, `email`, `email_verified_at` allowlist; a Feature test excludes internal IDs, password, remember token and timestamps.
+- Named five-per-minute Russian-response limiters protect registration, reset-link request, reset submit, password confirmation and account deletion; login also has a 20-per-minute IP-wide spraying limit.
+- `.env.*` is ignored except the two committed examples; `DatabaseSeeder` refuses environments other than `local` / `testing`.
+- Playwright records network failures and ignores only superseded navigation `net::ERR_ABORTED`; the unverified flow uses seeded data and checks resend success.
+- SSR is disabled and the stale `build:ssr` command removed; the forbidden Pest plugin allow-entry was removed.
+- `laravel/passkeys` remains a Fortify transitive dependency but is excluded from Laravel package discovery.
+- Structured email inputs on all four affected Fortify endpoints produce validation errors instead of 500 responses.
+- The unverified-route inventory and password-confirm submit are covered; notices to an old email are sent only when that old address was verified.
+- The optional migration rollback automation was re-classified as unnecessary: the reversible migration was already manually round-tripped on throwaway SQLite, and no migration behavior changed in X-011.
+- Lean verification used focused PHPUnit, Pint, PHPStan and `npm run check`; full `composer quality` / Playwright remain CI gates and were intentionally not run locally per the task instruction.
 
 ---
 

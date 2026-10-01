@@ -73,7 +73,8 @@ Current focus:
 - `P1-005` DONE: transactional personal Workspace creation and explicit account deletion lifecycle;
 - `X-014` DONE: D-096 and D-097 APPROVED (ADR-002 — explicit Yandex linking and first-party HTTP client);
 - `P1-005A` DONE: first-party Yandex OAuth, passwordless Users and external identities;
-- next ready task: `X-011 — Foundation Hygiene Follow-ups` (§42).
+- `X-011` DONE: foundation security and test hygiene follow-ups;
+- next ready task: `P1-006 — Workspace Context / Switcher Backend` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -183,8 +184,8 @@ Implemented Yandex baseline: internal `user_auth_identities` with both ADR-002 u
 
 Baseline after P1-002 (audit history: BACKLOG P1-001 `### Result`; changes: P1-002 `### Result`):
 
-- Fortify features (`config/fortify.php`): registration, reset passwords, email verification. No 2FA / passkey features, routes, UI, schema (`passkeys` table and `users.two_factor_*` dropped by migration `2026_09_29_000001`) or direct npm dependencies. PHP packages `laravel/passkeys`, `pragmarx/google2fa`, `bacon/bacon-qr-code` remain installed as unused Fortify transitive dependencies (discovery exclusion in `X-011`). Fortify profile/password update features are not enabled; `app/Http/Controllers/Settings/*` replace them. `lowercase_usernames` is on.
-- Rate limits: `login` 5/min (email + IP), email verification resend `throttle:6,1`, password update `throttle:6,1`, profile update `throttle:6,1`, reset-token creation throttled per email (60 s). Registration, forgot-password / reset POST, `password.confirm.store` and `profile.destroy` have no route rate limit (`X-011`).
+- Fortify features (`config/fortify.php`): registration, reset passwords, email verification. No 2FA / passkey features, routes, UI, schema (`passkeys` table and `users.two_factor_*` dropped by migration `2026_09_29_000001`) or direct npm dependencies. PHP packages `laravel/passkeys`, `pragmarx/google2fa`, `bacon/bacon-qr-code` remain installed as unused Fortify transitive dependencies; `laravel/passkeys` is excluded from package discovery. Fortify profile/password update features are not enabled; `app/Http/Controllers/Settings/*` replace them. `lowercase_usernames` is on.
+- Rate limits: `login` 5/min (email + IP) plus 20/min per IP; registration, forgot-password, reset-password POST, `password.confirm.store` and `profile.destroy` each use a named 5/min limiter with a Russian 429 response; email verification resend, password update and profile update use `throttle:6,1`; reset-token creation is additionally throttled per email (60 s).
 - Sessions: regenerated on login; logout invalidates the session; database driver, HttpOnly, SameSite lax; `SESSION_SECURE_COOKIE` is a production setting (`X-013`). A successful password reset deletes all of the user's `sessions` rows (database driver only; other drivers → `X-013`) and Fortify rotates the remember token. Password change / email change do not end other sessions (policy in `X-013`). Password confirmation window: 3 hours.
 - Passwords: `Password::defaults()` — production min 12, mixed case, letters, numbers, symbols, uncompromised; min 8 outside production.
 - Email verification: `User` implements `MustVerifyEmail`; registration creates the user unverified and sends the verification email. Unverified users may use only the allowlist in SECURITY.md §3 (verification notice / link / resend, logout, `settings` redirect, profile view / update, Fortify password confirmation); everything else, including account deletion, requires `verified`.
@@ -945,7 +946,7 @@ Custom Cursor commands/workflows: not used (owner starts the workflow with the p
 
 Still needed:
 
-- none for Phase 0; follow-ups `X-011` (before P1-006) and `X-012` (before P1-014) are tracked in BACKLOG.
+- none for Phase 0; `X-011` is DONE and follow-up `X-012` (before P1-014) remains tracked in BACKLOG.
 
 ---
 
@@ -1062,13 +1063,13 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P1-002 — Remove 2FA / Passkeys and Enforce Email Verification` (DONE; uncommitted, commit not authorized). Before it: `P1-001` DONE; Phase 0 gate `P0-027` DONE.
+Last completed task: `X-011 — Foundation Hygiene Follow-ups` (DONE; uncommitted, commit not authorized). Phase 0 gate `P0-027` is DONE.
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`.
 
-**Next ready task: `X-011 — Foundation Hygiene Follow-ups`** (required before P1-006).
+**Next ready task: `P1-006 — Workspace Context / Switcher Backend`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1626,7 +1627,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`X-011 — Foundation Hygiene Follow-ups`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-005A, X-007 and X-014 DONE.
+**`P1-006 — Workspace Context / Switcher Backend`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-005A, X-007, X-011 and X-014 DONE.
 
 ---
 
@@ -1683,4 +1684,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: X-011 — Foundation Hygiene Follow-ups.**
+Next ready task: P1-006 — Workspace Context / Switcher Backend.**

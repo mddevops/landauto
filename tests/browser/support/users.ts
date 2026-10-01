@@ -12,6 +12,11 @@ export const users = {
         email: 'login@landflow.test',
         password: 'e2e-password',
     },
+    unverified: {
+        name: 'Мария Неподтверждённая',
+        email: 'unverified@landflow.test',
+        password: 'e2e-password',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

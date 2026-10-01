@@ -37,6 +37,7 @@ class ProfileController extends Controller
     {
         $user = $request->user();
         $previousEmail = $user->email;
+        $previousEmailWasVerified = $user->hasVerifiedEmail();
 
         $user->fill($request->safe()->only(['name', 'email']));
 
@@ -51,7 +52,9 @@ class ProfileController extends Controller
         if ($emailChanged) {
             $user->sendEmailVerificationNotification();
 
-            Notification::route('mail', $previousEmail)->notify(new EmailChangedNotification);
+            if ($previousEmailWasVerified) {
+                Notification::route('mail', $previousEmail)->notify(new EmailChangedNotification);
+            }
         }
 
         Inertia::flash('toast', ['type' => 'success', 'message' => __('Profile updated.')]);

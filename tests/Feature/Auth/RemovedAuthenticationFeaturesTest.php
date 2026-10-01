@@ -24,6 +24,14 @@ class RemovedAuthenticationFeaturesTest extends TestCase
         $this->assertFalse(Features::enabled(Features::passkeys()));
     }
 
+    public function test_transitive_passkeys_package_is_excluded_from_discovery(): void
+    {
+        $composer = json_decode(file_get_contents(base_path('composer.json')), true, flags: JSON_THROW_ON_ERROR);
+
+        $this->assertContains('laravel/passkeys', $composer['extra']['laravel']['dont-discover']);
+        $this->assertArrayNotHasKey('laravel/passkeys', require base_path('bootstrap/cache/packages.php'));
+    }
+
     public function test_no_two_factor_passkey_or_webauthn_routes_are_registered()
     {
         $offending = collect(Route::getRoutes()->getRoutes())

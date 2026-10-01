@@ -235,11 +235,7 @@ class ProfileUpdateTest extends TestCase
             fn (VerifyEmail $notification, array $channels, User $notifiable) => $channels === ['mail']
                 && $notifiable->routeNotificationFor('mail') === 'correct.address@example.com',
         );
-        Notification::assertSentOnDemand(
-            EmailChangedNotification::class,
-            fn (EmailChangedNotification $notification, array $channels, AnonymousNotifiable $notifiable) => $channels === ['mail']
-                && $notifiable->routes['mail'] === 'mistyped@example.com',
-        );
+        Notification::assertCount(1);
     }
 
     public function test_email_change_to_an_address_taken_in_another_case_is_rejected()
@@ -285,7 +281,7 @@ class ProfileUpdateTest extends TestCase
 
         $this->assertSame('second@example.com', $user->refresh()->email);
         Notification::assertSentToTimes($user, VerifyEmail::class, 6);
-        Notification::assertSentTimes(EmailChangedNotification::class, 6);
+        Notification::assertSentTimes(EmailChangedNotification::class, 1);
     }
 
     public function test_name_only_updates_within_the_limit_work_and_further_requests_are_rejected()

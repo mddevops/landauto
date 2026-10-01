@@ -108,4 +108,21 @@ class AuthenticationTest extends TestCase
 
         $response->assertTooManyRequests();
     }
+
+    public function test_login_is_also_rate_limited_per_ip_across_different_emails(): void
+    {
+        for ($attempt = 0; $attempt < 20; $attempt++) {
+            $response = $this->post(route('login.store'), [
+                'email' => "unknown-{$attempt}@example.com",
+                'password' => 'wrong-password',
+            ]);
+
+            $this->assertNotSame(429, $response->getStatusCode());
+        }
+
+        $this->post(route('login.store'), [
+            'email' => 'another-unknown@example.com',
+            'password' => 'wrong-password',
+        ])->assertTooManyRequests();
+    }
 }
