@@ -5,12 +5,14 @@ export const users = {
         name: 'Александра Константиновна Преображенская',
         email: 'member@landflow.test',
         password: 'e2e-password',
+        workspaces: ['Личный автопарк', 'Автосалон Север'],
     },
     // Login/logout flows only, so they do not share the login rate limit with `member`.
     login: {
         name: 'Иван Петров',
         email: 'login@landflow.test',
         password: 'e2e-password',
+        workspace: 'Workspace Ивана',
     },
     unverified: {
         name: 'Мария Неподтверждённая',

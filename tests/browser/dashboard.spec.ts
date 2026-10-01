@@ -76,6 +76,72 @@ test('user menu shows the account and opens settings', async ({ page }) => {
     ).toBeVisible();
 });
 
+test('workspace switcher lists accessible workspaces and changes context', async ({
+    page,
+}) => {
+    await page.goto('/dashboard');
+
+    const switcher = page.getByRole('button', {
+        name: `Сменить рабочее пространство. Текущее: ${users.member.workspaces[0]}`,
+    });
+    await expect(switcher).toBeVisible();
+    await switcher.click();
+
+    const menu = page.getByRole('menu');
+    await expect(
+        menu.getByRole('menuitem', { name: /Личный автопарк/ }),
+    ).toBeDisabled();
+    await expect(
+        menu.getByRole('menuitem', { name: users.member.workspaces[1] }),
+    ).toBeVisible();
+    await expect(menu.getByText('Недоступный Workspace')).toHaveCount(0);
+
+    const switchRequest = page.waitForRequest(
+        (request) =>
+            request.method() === 'POST' &&
+            /\/workspaces\/[0-9A-HJKMNP-TV-Z]{26}\/switch$/.test(
+                new URL(request.url()).pathname,
+            ),
+    );
+
+    await menu
+        .getByRole('menuitem', { name: users.member.workspaces[1] })
+        .click();
+
+    const request = await switchRequest;
+    expect(request.url()).not.toMatch(/\/workspaces\/\d+\/switch$/);
+    await expect(
+        page.getByRole('button', {
+            name: `Сменить рабочее пространство. Текущее: ${users.member.workspaces[1]}`,
+        }),
+    ).toBeVisible();
+
+    await page.reload();
+    await expect(
+        page.getByRole('button', {
+            name: `Сменить рабочее пространство. Текущее: ${users.member.workspaces[1]}`,
+        }),
+    ).toBeVisible();
+});
+
+test('single workspace is shown without a switch menu', async ({ page }) => {
+    await page.context().clearCookies();
+    await page.goto('/login');
+    await page.getByLabel('Электронная почта').fill(users.login.email);
+    await page.getByLabel('Пароль', { exact: true }).fill(users.login.password);
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
+
+    await expect(page).toHaveURL('/dashboard');
+    await expect(
+        page.getByLabel(
+            `Текущее рабочее пространство: ${users.login.workspace}`,
+        ),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: /Сменить рабочее пространство/ }),
+    ).toHaveCount(0);
+});
+
 test('collapsed sidebar state survives a reload on desktop', async ({
     page,
 }) => {

@@ -3,6 +3,7 @@ import { LayoutGrid } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
+import { WorkspaceSwitcher } from '@/components/workspace-switcher';
 import {
     Sidebar,
     SidebarContent,
@@ -36,6 +37,7 @@ export function AppSidebar() {
                         </SidebarMenuButton>
                     </SidebarMenuItem>
                 </SidebarMenu>
+                <WorkspaceSwitcher />
             </SidebarHeader>
 
             <SidebarContent>

@@ -1322,7 +1322,7 @@ Completed 2026-10-01 (uncommitted).
 
 ## P1-007 — Workspace Switcher UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-006
 
 ### Acceptance Criteria
@@ -1330,6 +1330,13 @@ Completed 2026-10-01 (uncommitted).
 - only accessible Workspaces appear;
 - switching changes Dashboard context;
 - removed membership invalidates old context.
+
+### Result
+
+- Added a Russian, keyboard-accessible shadcn dropdown in the existing sidebar using only safe shared Workspace summaries and `public_id`.
+- The selected Workspace is posted to the P1-006 endpoint through the generated Wayfinder action; pending state disables repeat switching and the refreshed shared context updates the label.
+- A single Workspace is rendered as non-interactive current context; multiple Workspaces expose only the backend-provided accessible list.
+- Focused browser coverage verifies current/list/single/switch/persistence/public-ID behavior; local execution was blocked before browser startup by the sandbox system-temp restriction, while PHPUnit, Pint, PHPStan and `npm run check` pass.
 
 ---
 
