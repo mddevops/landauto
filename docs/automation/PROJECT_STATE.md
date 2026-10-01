@@ -74,7 +74,8 @@ Current focus:
 - `X-014` DONE: D-096 and D-097 APPROVED (ADR-002 — explicit Yandex linking and first-party HTTP client);
 - `P1-005A` DONE: first-party Yandex OAuth, passwordless Users and external identities;
 - `X-011` DONE: foundation security and test hygiene follow-ups;
-- next ready task: `P1-006 — Workspace Context / Switcher Backend` (§42).
+- `P1-006` DONE: membership-scoped current Workspace resolution and secure switching;
+- next ready task: `P1-007 — Workspace Switcher UI` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1067,9 +1068,9 @@ Last completed task: `X-011 — Foundation Hygiene Follow-ups` (DONE; uncommitte
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`.
 
-**Next ready task: `P1-006 — Workspace Context / Switcher Backend`.**
+**Next ready task: `P1-007 — Workspace Switcher UI`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1627,7 +1628,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-006 — Workspace Context / Switcher Backend`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-005A, X-007, X-011 and X-014 DONE.
+**`P1-007 — Workspace Switcher UI`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-006, X-007, X-011 and X-014 DONE.
 
 ---
 
@@ -1684,4 +1685,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-006 — Workspace Context / Switcher Backend.**
+Next ready task: P1-007 — Workspace Switcher UI.**

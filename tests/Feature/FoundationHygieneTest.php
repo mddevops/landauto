@@ -2,7 +2,9 @@
 
 namespace Tests\Feature;
 
+use App\Enums\WorkspaceRole;
 use App\Models\User;
+use App\Models\Workspace;
 use Database\Seeders\DatabaseSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
@@ -20,6 +22,7 @@ class FoundationHygieneTest extends TestCase
         $user = User::factory()->create([
             'remember_token' => 'sensitive-remember-token',
         ]);
+        Workspace::factory()->create()->addMember($user, WorkspaceRole::Owner);
 
         $this->actingAs($user)->get(route('dashboard'))->assertInertia(
             fn (Assert $page) => $page

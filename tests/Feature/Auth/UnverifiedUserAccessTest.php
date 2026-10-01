@@ -2,7 +2,9 @@
 
 namespace Tests\Feature\Auth;
 
+use App\Enums\WorkspaceRole;
 use App\Models\User;
+use App\Models\Workspace;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Tests\TestCase;
 
@@ -74,6 +76,7 @@ class UnverifiedUserAccessTest extends TestCase
     public function test_verified_user_can_access_the_protected_area()
     {
         $user = User::factory()->create();
+        Workspace::factory()->create()->addMember($user, WorkspaceRole::Owner);
 
         $this->actingAs($user)->get(route('dashboard'))->assertOk();
         $this->actingAs($user)->get(route('appearance.edit'))->assertOk();

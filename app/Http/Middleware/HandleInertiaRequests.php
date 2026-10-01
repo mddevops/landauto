@@ -2,11 +2,15 @@
 
 namespace App\Http\Middleware;
 
+use App\Models\Workspace;
+use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
+    public function __construct(private WorkspaceContext $workspaceContext) {}
+
     /**
      * The root template that's loaded on the first page visit.
      *
@@ -45,7 +49,25 @@ class HandleInertiaRequests extends Middleware
                     'email_verified_at',
                 ]),
             ],
+            'workspace' => fn () => [
+                'current' => $this->workspaceSummary($this->workspaceContext->current()),
+                'available' => $this->workspaceContext->available()
+                    ->map(fn (Workspace $workspace): array => $this->workspaceSummary($workspace))
+                    ->values()
+                    ->all(),
+            ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
+        ];
+    }
+
+    /**
+     * @return array{public_id: string, name: string}|null
+     */
+    private function workspaceSummary(?Workspace $workspace): ?array
+    {
+        return $workspace === null ? null : [
+            'public_id' => $workspace->public_id,
+            'name' => $workspace->name,
         ];
     }
 }

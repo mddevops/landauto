@@ -1301,7 +1301,7 @@ Completed 2026-10-01 (uncommitted).
 
 ## P1-006 — Workspace Context / Switcher Backend
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P1-004
 
 ### Scope
@@ -1309,6 +1309,14 @@ Completed 2026-10-01 (uncommitted).
 - resolve active Workspace;
 - validate membership;
 - remember last Workspace safely.
+
+### Result
+
+- Request-scoped Workspace context resolves only active Workspaces reached through the authenticated User's active membership and stores only the selected Workspace `public_id` in session.
+- Switching is a CSRF-protected verified-user POST using a ULID route parameter; foreign, suspended and nonexistent Workspaces receive the same 404 response.
+- Invalid remembered context falls back deterministically to the first accessible Workspace; Dashboard redirects home when none exists.
+- Shared Inertia context contains only `public_id` / name summaries for accessible Workspaces; numeric IDs, foreign Workspaces and role/permission behavior are not exposed or introduced.
+- Focused tenant-isolation tests, affected Dashboard/auth tests, Pint and PHPStan pass.
 
 ---
 
