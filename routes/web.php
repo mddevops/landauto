@@ -25,6 +25,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereUlid('workspace')
         ->name('workspace.switch');
 
+    Route::get('sites/create', [SiteController::class, 'create'])
+        ->middleware(RequireWorkspaceContext::class)
+        ->name('sites.create');
+
     Route::post('sites', [SiteController::class, 'store'])
         ->middleware(RequireWorkspaceContext::class)
         ->name('sites.store');

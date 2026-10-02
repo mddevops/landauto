@@ -1490,7 +1490,7 @@ Replaced the starter Dashboard placeholders with a responsive current-Workspace 
 
 ## P1-015 — Create Site Wizard UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-013, P1-014
 
 ### Flow
@@ -1500,6 +1500,10 @@ Replaced the starter Dashboard placeholders with a responsive current-Workspace 
 - name;
 - create;
 - open Site.
+
+### Result
+
+Added the verified, Workspace-context `sites.create` page authorized by the Site `create` policy. It lists only official Templates (public ULID and name), shows the backend-derived active-Site limit and posts to the P1-013 endpoint with Russian, input-linked validation errors. The Dashboard CTA now links to the wizard unless the limit is reached. Until a Site workspace exists (Designer, P2-006), "open Site" returns to the Dashboard, which confirms creation and highlights the new Site card only when it belongs to the current Workspace list. Checks: focused PHPUnit (Sites + Dashboard), Pint, PHPStan, `npm run check`, focused desktop Playwright dashboard spec.
 
 ---
 
