@@ -1428,7 +1428,8 @@ Added the Site model with immutable public ULID binding, safe serialization, Wor
 
 ## P1-012 — Template Foundation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
+
 **Dependencies:** P1-011
 
 ### Scope
@@ -1441,6 +1442,10 @@ Added the Site model with immutable public ULID binding, safe serialization, Wor
 ### Note from P0-027 validation
 
 Pages and Block Instances arrive in P2-001 (Phase 2). Before implementation, the Architect defines what a Template instantiates in Phase 1 (P1-012/P1-013 "Site-owned initial structure") so that P1-013 does not create Page/Block schema ahead of P2-001.
+
+### Result
+
+Added the global official Template model and schema with immutable public ULID binding, safe serialization and a separate internal Template version baseline. An idempotent seeder provides the official Blank Template at version `1.0.0`; Page/Block manifests, Site linkage, lifecycle statuses, pricing and Marketplace fields remain deferred to their owning tasks.
 
 ---
 
