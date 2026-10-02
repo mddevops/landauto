@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
@@ -32,6 +33,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('sites', [SiteController::class, 'store'])
         ->middleware(RequireWorkspaceContext::class)
         ->name('sites.store');
+
+    Route::get('sites/{site}/designer', SiteDesignerController::class)
+        ->middleware(RequireWorkspaceContext::class)
+        ->whereUlid('site')
+        ->name('sites.designer');
 });
 
 require __DIR__.'/settings.php';

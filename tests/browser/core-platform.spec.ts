@@ -48,6 +48,33 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
     ).toBeVisible();
 
     await page
+        .getByRole('link', { name: `Открыть дизайнер сайта «${siteName}»` })
+        .click();
+
+    await expect(page).toHaveURL(`/sites/${createdSiteId}/designer`);
+    await expect(page).toHaveTitle(`Дизайнер — ${siteName} - Landflow`);
+    await expect(
+        page.getByRole('heading', { level: 1, name: siteName }),
+    ).toBeVisible();
+    await expect(page.getByText('Главная', { exact: true })).toBeVisible();
+    await expect(page.getByRole('main', { name: 'Холст' })).toContainText(
+        'На странице пока нет блоков.',
+    );
+    await expect(
+        page.getByRole('complementary', { name: 'Блоки страницы' }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('complementary', { name: 'Свойства' }),
+    ).toContainText('Выберите блок, чтобы увидеть его свойства.');
+    await expectNoHorizontalOverflow(page);
+
+    await page.getByRole('link', { name: 'Назад к сайтам' }).click();
+    await expect(page).toHaveURL('/dashboard');
+    await expect(
+        page.getByRole('heading', { level: 1, name: creator.workspaces[0] }),
+    ).toBeVisible();
+
+    await page
         .getByRole('button', {
             name: `Сменить рабочее пространство. Текущее: ${creator.workspaces[0]}`,
         })

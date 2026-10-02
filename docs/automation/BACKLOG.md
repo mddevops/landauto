@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-006 — Designer Shell`.
+`P2-007 — Pages Panel`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1648,7 +1648,7 @@ Added `page_blocks` (`App\Models\BlockInstance`): bigint `id`, immutable public 
 
 ## P2-006 — Designer Shell
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004
 
 ### UI
@@ -1657,6 +1657,10 @@ Added `page_blocks` (`App\Models\BlockInstance`): bigint `id`, immutable public 
 - left panel;
 - canvas;
 - right Properties Panel.
+
+### Result
+
+Added `GET /sites/{site}/designer` (`sites.designer`, public ULID only, current-Workspace context required). A Site outside the current Workspace returns 404 even for a member of its Workspace; access is authorized by the Site `view` policy. Props are explicit and safe: Site public ID/name, the home Page public ID/title and its ordered Block Instances (public ID, Definition slug/name, pinned version, draft state). The full-screen Russian shell has a top bar (back to Dashboard, Site name, page title, "Черновик"), a left panel with the page's block list, a canvas rendering official Blocks through the P2-005 renderers with click/keyboard selection, and a read-only right "Свойства" panel showing the selected Block and version. Dashboard Site cards link to the Designer. Pages Panel, Navigator actions, schema-driven property editing, adding Blocks, autosave and preview remain in P2-007+. Checks: `SiteDesignerTest`, Sites/Dashboard feature tests, PHPStan, Pint, `npm run check`, focused desktop Playwright (core platform flow now opens the Designer).
 
 ---
 

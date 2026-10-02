@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Archive, CircleCheck, Plus } from 'lucide-react';
+import { Archive, CircleCheck, PencilRuler, Plus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -11,7 +11,7 @@ import {
 } from '@/components/ui/card';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { create as createSite } from '@/routes/sites';
+import { create as createSite, designer } from '@/routes/sites';
 
 type SiteSummary = {
     public_id: string;
@@ -190,10 +190,19 @@ export default function Dashboard({
                                         </div>
                                     </CardHeader>
                                     <CardContent>
-                                        <p className="text-sm text-muted-foreground">
-                                            Управление сайтом станет доступно в
-                                            следующих этапах.
-                                        </p>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={designer(site.public_id)}
+                                                aria-label={`Открыть дизайнер сайта «${site.name}»`}
+                                            >
+                                                <PencilRuler aria-hidden="true" />
+                                                Открыть дизайнер
+                                            </Link>
+                                        </Button>
                                     </CardContent>
                                 </Card>
                             ))}
