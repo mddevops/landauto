@@ -7,7 +7,6 @@ import {
     CardContent,
     CardDescription,
     CardHeader,
-    CardTitle,
 } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 
@@ -88,7 +87,9 @@ export default function Dashboard({
                 {!canViewSites ? (
                     <Card>
                         <CardHeader>
-                            <CardTitle>Нет доступа к сайтам</CardTitle>
+                            <h2 className="leading-none font-semibold">
+                                Нет доступа к сайтам
+                            </h2>
                             <CardDescription>
                                 Для просмотра сайтов требуется соответствующее
                                 разрешение рабочего пространства.
@@ -98,7 +99,9 @@ export default function Dashboard({
                 ) : sites.length === 0 ? (
                     <Card className="border-dashed">
                         <CardHeader className="items-start sm:items-center sm:text-center">
-                            <CardTitle>Здесь пока нет сайтов</CardTitle>
+                            <h2 className="leading-none font-semibold">
+                                Здесь пока нет сайтов
+                            </h2>
                             <CardDescription className="max-w-lg">
                                 Создайте первый сайт для этого рабочего
                                 пространства. На следующем шаге можно будет
@@ -130,9 +133,9 @@ export default function Dashboard({
                                 <Card key={site.public_id} className="min-w-0">
                                     <CardHeader>
                                         <div className="flex items-start justify-between gap-3">
-                                            <CardTitle className="min-w-0 text-lg leading-snug break-words">
+                                            <h3 className="min-w-0 text-lg leading-snug font-semibold break-words">
                                                 {site.name}
-                                            </CardTitle>
+                                            </h3>
                                             <Badge
                                                 variant={
                                                     site.status === 'active'

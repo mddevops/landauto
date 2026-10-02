@@ -94,6 +94,7 @@ export default defineConfig({
         url: `${baseURL}/up`,
         env: {
             APP_ENV: 'e2e',
+            VITE_APP_NAME: 'Landflow',
         },
         reuseExistingServer: false,
         timeout: 180_000,

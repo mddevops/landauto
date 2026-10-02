@@ -79,7 +79,7 @@ export default function Login({ status, canResetPassword }: Props) {
                                 />
                             </div>
 
-                            <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
+                            <div className="flex flex-col items-start gap-2 sm:flex-row sm:items-center sm:justify-between sm:gap-3">
                                 <div className="flex items-center space-x-3">
                                     <Checkbox id="remember" name="remember" />
                                     <Label htmlFor="remember">

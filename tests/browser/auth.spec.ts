@@ -120,10 +120,13 @@ test('registration uses natural keyboard order including password controls', asy
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('Электронная почта')).toBeFocused();
     await page.keyboard.press('Tab');
-    await expect(page.getByLabel('Пароль', { exact: true })).toBeFocused();
+    const passwordInput = page.getByLabel('Пароль', { exact: true });
+    await expect(passwordInput).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(
-        page.getByRole('button', { name: 'Показать пароль' }),
+        passwordInput
+            .locator('..')
+            .getByRole('button', { name: 'Показать пароль' }),
     ).toBeFocused();
     await page.keyboard.press('Tab');
     await expect(page.getByLabel('Подтверждение пароля')).toBeFocused();
