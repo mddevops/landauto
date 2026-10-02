@@ -259,6 +259,8 @@ Fields may include:
 - billing metadata
 - timestamps
 
+P1-009 foundation assigns an optional active Plan directly to a Workspace through internal `workspaces.plan_id`. This is a pre-billing entitlement source; business code consumes only the entitlement resolver, so a future Subscription model can replace the source without plan-name checks.
+
 ## plan_entitlements
 
 Suggested fields:

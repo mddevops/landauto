@@ -1369,7 +1369,7 @@ Added a centralized Workspace permission enum, role resolver, current-Workspace 
 
 ## P1-009 — Entitlement Foundation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-004
 
 ### Scope
@@ -1380,6 +1380,10 @@ Added a centralized Workspace permission enum, role resolver, current-Workspace 
 - future feature keys.
 
 No real billing provider. No plan price or other money columns (D-084 / X-008 unresolved).
+
+### Result
+
+Added internal Plan and typed Plan Entitlement models, nullable Workspace plan assignment, and a centralized resolver for boolean capabilities and numeric limits. The initial catalog is limited to `max_sites`, `max_members`, `custom_domain`, and `remove_branding`; missing or inactive values deny safely. Billing providers, prices, subscriptions, and plan-name business checks remain out of scope.
 
 ---
 
