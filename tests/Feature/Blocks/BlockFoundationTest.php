@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Blocks;
 
+use App\Exceptions\InvalidBlockSchemaException;
 use App\Models\BlockDefinition;
 use App\Models\BlockVersion;
 use Illuminate\Database\QueryException;
@@ -71,6 +72,22 @@ class BlockFoundationTest extends TestCase
         } catch (LogicException) {
             $this->assertSame(['fields' => []], $version->fresh()?->schema_json);
         }
+    }
+
+    public function test_invalid_schema_cannot_be_stored_as_block_version(): void
+    {
+        $definition = BlockDefinition::factory()->create();
+
+        try {
+            BlockVersion::factory()->for($definition, 'definition')->create([
+                'schema_json' => ['fields' => [['key' => 'title', 'type' => 'html', 'label' => 'HTML']]],
+            ]);
+            $this->fail('Invalid Block Schema must be rejected.');
+        } catch (InvalidBlockSchemaException $exception) {
+            $this->assertArrayHasKey('fields.0.type', $exception->errors);
+        }
+
+        $this->assertSame(0, $definition->versions()->count());
     }
 
     public function test_definition_with_versions_cannot_be_hard_deleted(): void

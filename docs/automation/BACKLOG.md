@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-003 — Block Schema Validator`.
+`P2-004 — Block Instance Schema`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1590,7 +1590,7 @@ Added global `block_definitions` (bigint key, immutable ULID `public_id`, name, 
 
 ## P2-003 — Block Schema Validator
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-002
 
 ### Initial field types
@@ -1602,6 +1602,10 @@ Added global `block_definitions` (bigint key, immutable ULID `public_id`, name, 
 - image
 - group
 - repeater
+
+### Result
+
+Added `App\Blocks\BlockSchemaValidator` and the `BlockFieldType` enum for the seven initial types. Schema syntax: `{"fields": [...]}`; each field has a snake_case `key` unique on its level, a supported `type`, a `label`, optional `help`, and only the options its type allows (unknown keys are rejected). Per type: text/textarea `max_length` (≤255 / ≤5000) and string `default`; boolean default; select non-empty unique `options` with a default from them; image declaration without default (asset reference format waits for X-010); group/repeater require nested fields, repeater requires `max_items` (1–50) with `min_items` ≤ max. Limits: container depth 3, repeater nesting 2; `id` is reserved inside Repeater items for stable item identity. Errors are Russian and keyed by schema path; Block Versions validate their schema on creation. Conditional fields stay out of the initial scope. Checks: validator unit tests, `BlockFoundationTest`, PHPStan, Pint.
 
 ---
 

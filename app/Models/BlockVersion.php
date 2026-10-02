@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Blocks\BlockSchemaValidator;
 use Database\Factories\BlockVersionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -41,6 +42,10 @@ class BlockVersion extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (BlockVersion $version): void {
+            app(BlockSchemaValidator::class)->assertValid($version->schema_json);
+        });
+
         static::updating(function (): void {
             throw new LogicException('Block versions are immutable; publish a new version instead.');
         });
