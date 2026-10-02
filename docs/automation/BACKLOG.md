@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-002 — Block Definition / Version Schema`.
+`P2-003 — Block Schema Validator`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1574,13 +1574,17 @@ Added the Site-owned `pages` table and `Page` model: bigint key, immutable ULID 
 
 ## P2-002 — Block Definition / Version Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-001
 
 ### References
 
 - `BLOCK_SYSTEM.md`
 - `DATABASE.md`
+
+### Result
+
+Added global `block_definitions` (bigint key, immutable ULID `public_id`, name, unique slug, explicit `is_official` scope) and `block_versions` (definition FK with restricted delete, per-definition unique version string, JSON `schema_json`, `created_at` only). `BlockVersion` is immutable at the model level; a change requires a new version. Developer ownership (D-093 open), Workspace-private scope, renderer reference, lifecycle statuses and `current_version_id` are deferred to the tasks that define them; schema validation is P2-003. Checks: `BlockFoundationTest`, PHPStan, Pint.
 
 ---
 
