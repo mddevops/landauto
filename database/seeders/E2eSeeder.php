@@ -45,7 +45,7 @@ class E2eSeeder extends Seeder
 
         // Core platform flow: creates Sites, so it is isolated from the `member` assertions.
         // The generous test-only limit keeps repeated runs against one server passing.
-        $this->call(TemplateSeeder::class);
+        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class]);
         $plan = Plan::factory()->create(['key' => 'e2e-sites', 'name' => 'E2E Sites']);
         $plan->setEntitlement(Entitlement::MaxSites, 100);
         $creator = $this->createUser('Олег Создатель', 'creator@landflow.test');

@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-005 — Initial Official Blocks`.
+`P2-006 — Designer Shell`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1628,7 +1628,7 @@ Added `page_blocks` (`App\Models\BlockInstance`): bigint `id`, immutable public 
 
 ## P2-005 — Initial Official Blocks
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004
 
 ### Blocks
@@ -1639,6 +1639,10 @@ Added `page_blocks` (`App\Models\BlockInstance`): bigint `id`, immutable public 
 - CTA
 - Contacts
 - Footer
+
+### Result
+
+`App\Blocks\OfficialBlockCatalog` defines the six official Blocks (slugs `header`, `hero`, `benefits`, `cta`, `contacts`, `footer`; Russian names) with version `1.0.0` schemas built only from the P2-003 field types (texts with limits and Russian defaults, button groups, menu/benefit/link repeaters, select options for alignment, columns and style). The idempotent `OfficialBlockSeeder` (called by `DatabaseSeeder` and `E2eSeeder`) validates each schema, upserts the official Definition by slug and only creates missing versions — existing versions are never changed. Frontend renderers live in `resources/js/blocks` and are resolved by Definition slug for the Designer canvas; they render text only (button links wait for the Action System P2-014, images for Assets P2-013) and use neutral styling until Site Design Tokens (P2-012). Checks: `OfficialBlocksTest`, Blocks/Templates/E2E seeder tests, PHPStan, Pint, `npm run check`.
 
 ---
 
