@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -61,5 +63,21 @@ class Site extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
+    }
+
+    /**
+     * @return HasMany<Page, $this>
+     */
+    public function pages(): HasMany
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    /**
+     * @return HasOne<Page, $this>
+     */
+    public function homePage(): HasOne
+    {
+        return $this->hasOne(Page::class)->where('is_home', true);
     }
 }

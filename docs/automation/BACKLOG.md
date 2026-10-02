@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-001 — Page Schema and Models`.
+`P2-002 — Block Definition / Version Schema`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1555,7 +1555,7 @@ All Phase 1 DoD gates pass.
 
 ## P2-001 — Page Schema and Models
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-017
 
 ### Scope
@@ -1565,6 +1565,10 @@ All Phase 1 DoD gates pass.
 - slug;
 - order;
 - Site ownership.
+
+### Result
+
+Added the Site-owned `pages` table and `Page` model: bigint key, immutable ULID `public_id`, immutable Site ownership, `title`, Site-unique `slug`, `sort_order` and `is_home`. `is_home` is stored as TRUE/NULL so the `(site_id, is_home)` unique index guarantees at most one home Page per Site on MySQL and SQLite. Site creation now creates the home Page (`Главная`, slug `home`) in the same transaction, and the migration backfills a home Page for existing Sites (insert-only). Site deletion is restricted while Pages exist (deletion workflow not decided). `parent_id`, Page `status` and `deleted_at` from DATABASE.md §12 are deferred to the tasks that define their behavior. Checks: focused PHPUnit (Pages, Sites, Database), PHPStan, Pint. Development MySQL needs `php artisan migrate`.
 
 ---
 

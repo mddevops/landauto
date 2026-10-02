@@ -38,6 +38,10 @@ class CreateSiteTest extends TestCase
         $this->assertSame('Автосалон Север', $site->name);
         $this->assertSame(SiteStatus::Active, $site->status);
         $this->assertTrue(Str::isUlid($site->public_id));
+        $home = $site->pages()->sole();
+        $this->assertTrue($home->is_home);
+        $this->assertSame('Главная', $home->title);
+        $this->assertSame('home', $home->slug);
         $location = $response->headers->get('Location');
         $this->assertIsString($location);
         parse_str((string) parse_url($location, PHP_URL_QUERY), $query);

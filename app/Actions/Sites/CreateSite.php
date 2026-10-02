@@ -5,6 +5,7 @@ namespace App\Actions\Sites;
 use App\Enums\Entitlement;
 use App\Enums\SiteStatus;
 use App\Exceptions\SiteLimitReachedException;
+use App\Models\Page;
 use App\Models\Site;
 use App\Models\Template;
 use App\Models\Workspace;
@@ -39,6 +40,15 @@ final class CreateSite
             $site = new Site(['name' => $name]);
             $site->workspace()->associate($lockedWorkspace);
             $site->save();
+
+            $homePage = new Page([
+                'title' => Page::HOME_TITLE,
+                'slug' => Page::HOME_SLUG,
+                'sort_order' => 0,
+            ]);
+            $homePage->is_home = true;
+            $homePage->site()->associate($site);
+            $homePage->save();
 
             return $site;
         });
