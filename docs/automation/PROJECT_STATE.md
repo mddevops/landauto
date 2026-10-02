@@ -60,9 +60,11 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 1 — Core Platform** (status: §54)
+**Phase 2 — Designer Foundation** (status: §54)
 
 Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Validation` DONE (phase report in BACKLOG P0-027 `### Result`).
+
+Phase 1 — Core Platform is COMPLETED: gate `P1-017 — Phase 1 Review` DONE (phase report in BACKLOG P1-017 `### Result`).
 
 Current focus:
 
@@ -86,7 +88,8 @@ Current focus:
 - `P1-014` DONE: responsive current-Workspace Dashboard with tenant-scoped safe Site cards, localized states and permission-aware create CTA;
 - `P1-015` DONE: permission-guarded Create Site wizard (official Template choice, name, create) linked from the Dashboard; after creation the Dashboard confirms and highlights the new Site;
 - `P1-016` DONE: browser E2E for Login → Workspace → Create Site → Template → Dashboard, plus cross-Workspace Site isolation;
-- next ready task: `P1-017 — Phase 1 Review` (§42).
+- `P1-017` DONE: Phase 1 gate — full `composer quality` and full Playwright PASS;
+- next ready task: `P2-001 — Page Schema and Models` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1075,15 +1078,15 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P1-016 — Core Platform E2E` (DONE). Phase 0 gate `P0-027` is DONE.
+Last completed task: `P1-017 — Phase 1 Review` (DONE; Phase 1 COMPLETED). Phase 0 gate `P0-027` is DONE.
 
 Open owner decision (not blocking Phase 1 tasks): no default plan is assigned to newly created Workspaces, so their effective `max_sites` is 0 and a newly registered customer cannot create a Site. Which plan/limit a new Workspace receives is a plan/billing rule that must be decided by the owner, not inferred.
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`.
 
-**Next ready task: `P1-017 — Phase 1 Review`.**
+**Next ready task: `P2-001 — Page Schema and Models`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1370,8 +1373,8 @@ Current:
 
 ```text
 Phase 0 — Foundation / Architecture / Automation: COMPLETED
-Phase 1 — Core Platform: IN_PROGRESS
-Phase 2 — Designer Foundation: NOT_STARTED
+Phase 1 — Core Platform: COMPLETED (gate P1-017)
+Phase 2 — Designer Foundation: IN_PROGRESS
 Phase 3 — Automotive Foundation: NOT_STARTED
 Phase 4 — Forms & Interactive Components: NOT_STARTED
 Phase 5 — Publishing: NOT_STARTED
@@ -1641,7 +1644,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-017 — Phase 1 Review`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-016, X-007, X-011, X-012 and X-014 DONE.
+**`P2-001 — Page Schema and Models`** (see §42). Phase 0 and Phase 1 are COMPLETED (P0-027, P1-017 DONE); X-007, X-011, X-012 and X-014 DONE.
 
 ---
 
@@ -1697,5 +1700,5 @@ Production deployment:        NOT_CONFIGURED
 Core Landflow implementation: NOT_STARTED
 ```
 
-**Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-017 — Phase 1 Review.**
+**Current phase: Phase 2 — Designer Foundation (IN_PROGRESS; Phase 0 and Phase 1 COMPLETED).
+Next ready task: P2-001 — Page Schema and Models.**

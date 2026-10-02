@@ -60,13 +60,15 @@ Use `DEFINITION_OF_DONE.md`.
 
 Phase 0 — Foundation / Automation: COMPLETED (gate `P0-027` DONE).
 
+Phase 1 — Core Platform: COMPLETED (gate `P1-017` DONE).
+
 Current phase:
 
-`P1 — Core Platform`
+`P2 — Designer Foundation`
 
 Current next task:
 
-`P1-006 — Workspace Context / Switcher Backend` (X-011 and P1-005A DONE).
+`P2-001 — Page Schema and Models`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1534,12 +1536,16 @@ Added `tests/browser/core-platform.spec.ts`: a seeded Owner logs in, opens the w
 
 ## P1-017 — Phase 1 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-001 through P1-016
 
 ### Acceptance Criteria
 
 All Phase 1 DoD gates pass.
+
+### Result
+
+2026-10-03 (autonomous night batch). P1-001 … P1-016 and the Phase 1 X-tasks (X-007, X-011, X-012, X-014) are DONE. Full gates on the final Phase 1 state: `composer quality` PASS (PHPUnit 232/232, PHPStan, Pint, `npm run check`, build) and `npm run test:e2e` PASS (37/37). Review was a single primary-agent risk review per the owner's batch instruction (no reviewer subagents): tenancy (Workspace-derived Site ownership, policy-guarded create page and endpoint, cross-Workspace isolation covered in PHPUnit and E2E), identifiers (ULID-only Site/Template references in props and URLs), Russian UI and safe Inertia props verified. Known limitations, not blocking the gate: a newly created Workspace has no plan, so `max_sites = 0` until the owner defines the default plan (open owner decision, PROJECT_STATE §42); `X-013` and D-094 remain launch blockers. Phase 2 has no open ADR/decision that directly blocks P2-001 … P2-006 (D-087 media → before P2-013).
 
 ---
 
