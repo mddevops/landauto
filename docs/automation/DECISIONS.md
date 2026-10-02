@@ -1771,6 +1771,23 @@ Define for personal data (Submissions, contact fields, IP addresses, delivery pa
 
 ---
 
+## D-098 — Canonical Workspace Permission Keys
+
+**Status:** APPROVED
+
+### Decision
+
+The centralized Workspace permission catalog uses stable semantic keys from `PERMISSIONS.md`.
+
+- `manage_integrations` is canonical; do not introduce `edit_integrations`.
+- `delete_site` is canonical; do not introduce `delete_sites`.
+- `publish_site` remains a separate permission and is never implied by edit or Admin checks.
+- permission resolution is deny-by-default and separate from subscription entitlements.
+
+Site-specific overrides remain outside P1-008 and wait for D-088.
+
+---
+
 # SUPERSEDED DECISIONS
 
 None currently.

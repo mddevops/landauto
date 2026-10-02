@@ -121,7 +121,7 @@ Typical permissions:
 - manage_roles
 - manage_billing
 - create_sites
-- delete_sites
+- delete_site
 - edit_design
 - edit_content
 - edit_vehicles
@@ -147,7 +147,7 @@ Admin generally manages most Workspace operations except highly sensitive owners
 Typical permissions:
 
 - create_sites
-- delete_sites
+- delete_site
 - edit_design
 - edit_content
 - edit_vehicles

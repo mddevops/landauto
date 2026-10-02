@@ -76,7 +76,8 @@ Current focus:
 - `X-011` DONE: foundation security and test hygiene follow-ups;
 - `P1-006` DONE: membership-scoped current Workspace resolution and secure switching;
 - `P1-007` DONE: accessible sidebar Workspace switcher over the P1-006 backend;
-- next ready task: `P1-008 — Permission Foundation` (§42).
+- `P1-008` DONE: centralized Workspace permission catalog, role resolution, backend Gates and safe Inertia permission props;
+- next ready task: `P1-009 — Entitlement Foundation` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1065,13 +1066,13 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `X-011 — Foundation Hygiene Follow-ups` (DONE; uncommitted, commit not authorized). Phase 0 gate `P0-027` is DONE.
+Last completed task: `P1-008 — Permission Foundation` (DONE; uncommitted, commit not authorized). Phase 0 gate `P0-027` is DONE.
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`.
 
-**Next ready task: `P1-008 — Permission Foundation`.**
+**Next ready task: `P1-009 — Entitlement Foundation`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1629,7 +1630,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-008 — Permission Foundation`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-007, X-007, X-011 and X-014 DONE.
+**`P1-009 — Entitlement Foundation`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-008, X-007, X-011 and X-014 DONE.
 
 ---
 
@@ -1686,4 +1687,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-008 — Permission Foundation.**
+Next ready task: P1-009 — Entitlement Foundation.**

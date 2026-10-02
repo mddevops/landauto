@@ -1342,7 +1342,7 @@ Completed 2026-10-01 (uncommitted).
 
 ## P1-008 — Permission Foundation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-004
 
 ### Objective
@@ -1360,6 +1360,10 @@ Implement initial system roles/permission catalog.
 
 - Permission key names conflict across docs (`edit_integrations` vs `manage_integrations`, `delete_sites` vs `delete_site`): record the canonical names in DECISIONS and align the docs as an acceptance criterion.
 - Workspace system roles only; Site-specific overrides wait for D-088.
+
+### Result
+
+Added a centralized Workspace permission enum, role resolver, current-Workspace authorization service, backend Gates, and safe Inertia permission keys. Active membership in the server-resolved current Workspace is required; permissions default to deny. Canonical keys are recorded in D-098. Site-specific overrides and entitlements remain separate and out of scope.
 
 ---
 

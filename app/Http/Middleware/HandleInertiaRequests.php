@@ -3,13 +3,17 @@
 namespace App\Http\Middleware;
 
 use App\Models\Workspace;
+use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
 use Inertia\Middleware;
 
 class HandleInertiaRequests extends Middleware
 {
-    public function __construct(private WorkspaceContext $workspaceContext) {}
+    public function __construct(
+        private WorkspaceContext $workspaceContext,
+        private WorkspaceAuthorization $workspaceAuthorization,
+    ) {}
 
     /**
      * The root template that's loaded on the first page visit.
@@ -55,6 +59,9 @@ class HandleInertiaRequests extends Middleware
                     ->map(fn (Workspace $workspace): array => $this->workspaceSummary($workspace))
                     ->values()
                     ->all(),
+                'permissions' => $request->user() === null
+                    ? []
+                    : $this->workspaceAuthorization->permissionKeys($request->user()),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
