@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-004 — Block Instance Schema`.
+`P2-005 — Initial Official Blocks`.
 
 Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1611,7 +1611,7 @@ Added `App\Blocks\BlockSchemaValidator` and the `BlockFieldType` enum for the se
 
 ## P2-004 — Block Instance Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-002, P2-003
 
 ### Acceptance Criteria
@@ -1619,6 +1619,10 @@ Added `App\Blocks\BlockSchemaValidator` and the `BlockFieldType` enum for the se
 - pinned Block Version;
 - validated JSON state;
 - Site/Page ownership.
+
+### Result
+
+Added `page_blocks` (`App\Models\BlockInstance`): bigint `id`, immutable public ULID, `page_id` and `block_version_id` (both restrict on delete, both immutable after creation), `sort_order` and draft `state_json`; internal IDs are hidden from serialization. Ownership is Site → Page → Block Instance; `Page::blocks()` returns instances in order. Only official Block Definitions can be placed. `App\Blocks\BlockStateValidator` validates state against the pinned Block Version schema on every save: unknown keys are rejected, values must match their field type (text/textarea `max_length`, select option, group object, repeater list ≤ `max_items` with unique ULID item `id`), missing keys and `null` are allowed for incomplete drafts; `required`/`min_items` are left for publish-time validation, and non-null image values are rejected until the asset reference format (X-010) exists. Errors are Russian and keyed by state path. Checks: validator unit tests, `BlockInstanceTest`, Pages/Blocks feature tests, PHPStan, Pint.
 
 ---
 
