@@ -65,6 +65,22 @@ test(
     },
 );
 
+test('empty dashboard shows workspace context and create site CTA', async ({
+    page,
+}) => {
+    await page.goto('/dashboard');
+
+    await expect(
+        page.getByRole('heading', { name: users.member.workspaces[0] }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Здесь пока нет сайтов' }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('button', { name: 'Создать сайт' }),
+    ).toBeVisible();
+});
+
 test('user menu shows the account and opens settings', async ({ page }) => {
     await page.goto('/dashboard');
 
@@ -121,6 +137,14 @@ test('workspace switcher lists accessible workspaces and changes context', async
             name: `Сменить рабочее пространство. Текущее: ${users.member.workspaces[1]}`,
         }),
     ).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Сайт автосалона' }),
+    ).toBeVisible();
+    await expect(page.getByText('Активен')).toBeVisible();
+    await expect(
+        page.getByRole('heading', { name: 'Архивный лендинг' }),
+    ).toBeVisible();
+    await expect(page.getByText('В архиве')).toBeVisible();
 
     await page.reload();
     await expect(

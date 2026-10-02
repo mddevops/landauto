@@ -4,6 +4,7 @@ import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { logout } from '@/routes';
+import { edit as editProfile } from '@/routes/profile';
 import { send } from '@/routes/verification';
 
 export default function VerifyEmail({ status }: { status?: string }) {
@@ -25,6 +26,13 @@ export default function VerifyEmail({ status }: { status?: string }) {
                             {processing && <Spinner />}
                             Отправить письмо повторно
                         </Button>
+
+                        <TextLink
+                            href={editProfile()}
+                            className="mx-auto block text-sm"
+                        >
+                            Исправить электронную почту в профиле
+                        </TextLink>
 
                         <TextLink
                             href={logout()}

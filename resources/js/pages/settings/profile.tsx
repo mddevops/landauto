@@ -80,9 +80,14 @@ export default function Profile({
                                     required
                                     autoComplete="name"
                                     placeholder="Имя и фамилия"
+                                    aria-invalid={Boolean(errors.name)}
+                                    aria-describedby={
+                                        errors.name ? 'name-error' : undefined
+                                    }
                                 />
 
                                 <InputError
+                                    id="name-error"
                                     className="mt-2"
                                     message={errors.name}
                                 />
@@ -104,9 +109,14 @@ export default function Profile({
                                     readOnly={!hasPassword}
                                     autoComplete="username"
                                     placeholder="email@example.com"
+                                    aria-invalid={Boolean(errors.email)}
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                 />
 
                                 <InputError
+                                    id="email-error"
                                     className="mt-2"
                                     message={errors.email}
                                 />
@@ -156,7 +166,14 @@ export default function Profile({
                                         className="mt-1 block w-full"
                                         autoComplete="current-password"
                                         placeholder="Текущий пароль"
-                                        aria-describedby="current_password_help"
+                                        aria-invalid={Boolean(
+                                            errors.current_password,
+                                        )}
+                                        aria-describedby={
+                                            errors.current_password
+                                                ? 'current_password_help current-password-error'
+                                                : 'current_password_help'
+                                        }
                                     />
 
                                     <p
@@ -169,6 +186,7 @@ export default function Profile({
                                     </p>
 
                                     <InputError
+                                        id="current-password-error"
                                         message={errors.current_password}
                                     />
                                 </div>
@@ -203,7 +221,7 @@ export default function Profile({
 Profile.layout = {
     breadcrumbs: [
         {
-            title: 'Настройки профиля',
+            title: 'Профиль',
             href: edit(),
         },
     ],

@@ -81,7 +81,10 @@ Current focus:
 - `P1-010` DONE: minimal Workspace-owned Site schema with unique public ULID and restricted implicit tenant deletion;
 - `P1-011` DONE: Site domain model, public-ID binding, Workspace relations and tenant-scoped permission policies;
 - `P1-012` DONE: global official Template model, internal version baseline and idempotent Blank Template seed;
-- next ready task: `P1-013 — Create Site Flow Backend` (§42).
+- `P1-013` DONE: permission- and entitlement-guarded Site creation in the current Workspace from an official Template public ID;
+- `X-012` DONE: foundation UI/accessibility follow-ups for navigation, tab order, validation semantics and responsive browser coverage;
+- `P1-014` DONE: responsive current-Workspace Dashboard with tenant-scoped safe Site cards, localized states and permission-aware create CTA;
+- next ready task: `P1-015 — Create Site Wizard UI` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -953,7 +956,7 @@ Custom Cursor commands/workflows: not used (owner starts the workflow with the p
 
 Still needed:
 
-- none for Phase 0; `X-011` is DONE and follow-up `X-012` (before P1-014) remains tracked in BACKLOG.
+- none for Phase 0; follow-ups `X-011` and `X-012` are DONE.
 
 ---
 
@@ -1070,13 +1073,13 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P1-012 — Template Foundation` (DONE; uncommitted, commit not authorized). Phase 0 gate `P0-027` is DONE.
+Last completed task: `X-012 — Foundation UI Follow-ups` (DONE; uncommitted, commit not authorized). `P1-014 — Dashboard UI` remains DONE. Phase 0 gate `P0-027` is DONE.
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`.
 
-**Next ready task: `P1-013 — Create Site Flow Backend`.**
+**Next ready task: `P1-015 — Create Site Wizard UI`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1634,7 +1637,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-013 — Create Site Flow Backend`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-012, X-007, X-011 and X-014 DONE.
+**`P1-015 — Create Site Wizard UI`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-014, X-007, X-011, X-012 and X-014 DONE.
 
 ---
 
@@ -1691,4 +1694,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-013 — Create Site Flow Backend.**
+Next ready task: P1-015 — Create Site Wizard UI.**

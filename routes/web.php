@@ -1,6 +1,8 @@
 <?php
 
 use App\Http\Controllers\Auth\YandexOAuthController;
+use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\SiteController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
@@ -15,13 +17,17 @@ Route::middleware(['guest', 'throttle:yandex-oauth'])->group(function () {
 });
 
 Route::middleware(['auth', 'verified'])->group(function () {
-    Route::inertia('dashboard', 'dashboard')
+    Route::get('dashboard', DashboardController::class)
         ->middleware(RequireWorkspaceContext::class)
         ->name('dashboard');
 
     Route::post('workspaces/{workspace}/switch', [WorkspaceContextController::class, 'update'])
         ->whereUlid('workspace')
         ->name('workspace.switch');
+
+    Route::post('sites', [SiteController::class, 'store'])
+        ->middleware(RequireWorkspaceContext::class)
+        ->name('sites.store');
 });
 
 require __DIR__.'/settings.php';

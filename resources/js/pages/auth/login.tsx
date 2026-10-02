@@ -4,6 +4,7 @@ import PasswordInput from '@/components/password-input';
 import TextLink from '@/components/text-link';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
+import { Alert, AlertDescription } from '@/components/ui/alert';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
@@ -21,6 +22,12 @@ export default function Login({ status, canResetPassword }: Props) {
     return (
         <>
             <Head title="Вход" />
+
+            {status && (
+                <Alert>
+                    <AlertDescription>{status}</AlertDescription>
+                </Alert>
+            )}
 
             <Form
                 {...store.form()}
@@ -40,8 +47,15 @@ export default function Login({ status, canResetPassword }: Props) {
                                     autoFocus
                                     autoComplete="email"
                                     placeholder="email@example.com"
+                                    aria-invalid={Boolean(errors.email)}
+                                    aria-describedby={
+                                        errors.email ? 'email-error' : undefined
+                                    }
                                 />
-                                <InputError message={errors.email} />
+                                <InputError
+                                    id="email-error"
+                                    message={errors.email}
+                                />
                             </div>
 
                             <div className="grid gap-2">
@@ -52,8 +66,17 @@ export default function Login({ status, canResetPassword }: Props) {
                                     required
                                     autoComplete="current-password"
                                     placeholder="Пароль"
+                                    aria-invalid={Boolean(errors.password)}
+                                    aria-describedby={
+                                        errors.password
+                                            ? 'password-error'
+                                            : undefined
+                                    }
                                 />
-                                <InputError message={errors.password} />
+                                <InputError
+                                    id="password-error"
+                                    message={errors.password}
+                                />
                             </div>
 
                             <div className="flex flex-wrap items-center justify-between gap-x-3 gap-y-2">
@@ -98,12 +121,6 @@ export default function Login({ status, canResetPassword }: Props) {
                     </>
                 )}
             </Form>
-
-            {status && (
-                <div className="mb-4 text-center text-sm font-medium text-green-600">
-                    {status}
-                </div>
-            )}
         </>
     );
 }

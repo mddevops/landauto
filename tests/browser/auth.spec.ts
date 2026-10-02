@@ -77,6 +77,14 @@ test('wrong password shows a Russian error and keeps the user on login', async (
         page.getByText('Неверная электронная почта или пароль.'),
     ).toBeVisible();
     await expect(page).toHaveURL('/login');
+    await expect(page.getByLabel('Электронная почта')).toHaveAttribute(
+        'aria-invalid',
+        'true',
+    );
+    await expect(page.getByLabel('Электронная почта')).toHaveAttribute(
+        'aria-describedby',
+        'email-error',
+    );
 
     await captureScreenshot(
         page,
@@ -84,6 +92,41 @@ test('wrong password shows a Russian error and keeps the user on login', async (
         'auth',
         'login-invalid-credentials',
     );
+});
+
+test('login controls keep natural order and wrap at 320px', async ({
+    page,
+}) => {
+    await page.setViewportSize({ width: 320, height: 720 });
+    await page.goto('/login');
+
+    await expectNoHorizontalOverflow(page);
+    const remember = await page.getByLabel('Запомнить меня').boundingBox();
+    const forgot = await page
+        .getByRole('link', { name: 'Забыли пароль?' })
+        .boundingBox();
+
+    expect(remember).not.toBeNull();
+    expect(forgot).not.toBeNull();
+    expect(forgot!.y).toBeGreaterThan(remember!.y);
+});
+
+test('registration uses natural keyboard order including password controls', async ({
+    page,
+}) => {
+    await page.goto('/register');
+
+    await expect(page.getByLabel('Имя')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Электронная почта')).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Пароль', { exact: true })).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(
+        page.getByRole('button', { name: 'Показать пароль' }),
+    ).toBeFocused();
+    await page.keyboard.press('Tab');
+    await expect(page.getByLabel('Подтверждение пароля')).toBeFocused();
 });
 
 test('user can log in with the keyboard and reach the dashboard', async ({
@@ -102,61 +145,89 @@ test('user can log in with the keyboard and reach the dashboard', async ({
     await expect(page).toHaveTitle('Панель управления - Landflow');
 });
 
-test('unverified user lands on the email verification notice after login', async ({
-    page,
-}, testInfo) => {
-    const notice = page.getByRole('heading', {
-        name: 'Подтверждение электронной почты',
-    });
+test(
+    'unverified user lands on the email verification notice after login',
+    {
+        tag: '@responsive',
+    },
+    async ({ page }, testInfo) => {
+        const notice = page.getByRole('heading', {
+            name: 'Подтверждение электронной почты',
+        });
 
-    await page.goto('/login');
-    await submitLogin(page, users.unverified.email, users.unverified.password);
+        await page.goto('/login');
+        await submitLogin(
+            page,
+            users.unverified.email,
+            users.unverified.password,
+        );
 
-    await expect(page).toHaveURL('/email/verify');
-    await expect(notice).toBeVisible();
-    await expect(
-        page.getByRole('button', { name: 'Отправить письмо повторно' }),
-    ).toBeVisible();
+        await expect(page).toHaveURL('/email/verify');
+        await expect(notice).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Отправить письмо повторно' }),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('link', {
+                name: 'Исправить электронную почту в профиле',
+            }),
+        ).toBeVisible();
 
-    await page
-        .getByRole('button', { name: 'Отправить письмо повторно' })
-        .click();
-    await expect(
-        page.getByText(
-            'Новая ссылка для подтверждения отправлена на электронную почту, указанную при регистрации.',
-        ),
-    ).toBeVisible();
-
-    await captureScreenshot(page, testInfo, 'auth', 'verify-email');
-
-    await page.goto('/dashboard');
-    await expect(page).toHaveURL('/email/verify');
-    await expect(notice).toBeVisible();
-
-    // The profile stays reachable to fix a mistyped email; account deletion does not.
-    await page.goto('/settings/profile');
-    await expect(page.getByLabel('Электронная почта')).toHaveValue(
-        users.unverified.email,
-    );
-    await expect(
-        page.getByText('Электронная почта не подтверждена.'),
-    ).toBeVisible();
-    await expect(
-        page.getByText('Удаление аккаунта и всех связанных с ним данных'),
-    ).toBeVisible();
-    await expect(
-        page
-            .getByRole('note')
-            .getByText(
-                'Удалить аккаунт можно после подтверждения электронной почты.',
+        await page
+            .getByRole('button', { name: 'Отправить письмо повторно' })
+            .click();
+        await expect(
+            page.getByText(
+                'Новая ссылка для подтверждения отправлена на электронную почту, указанную при регистрации.',
             ),
-    ).toBeVisible();
-    await expect(
-        page.getByRole('button', { name: 'Удалить аккаунт' }),
-    ).toHaveCount(0);
+        ).toBeVisible();
 
-    await captureScreenshot(page, testInfo, 'settings', 'profile-unverified');
-});
+        await captureScreenshot(page, testInfo, 'auth', 'verify-email');
+
+        await page.goto('/dashboard');
+        await expect(page).toHaveURL('/email/verify');
+        await expect(notice).toBeVisible();
+
+        // The profile stays reachable to fix a mistyped email; account deletion does not.
+        await page.goto('/settings/profile');
+        await expect(page.getByLabel('Электронная почта')).toHaveValue(
+            users.unverified.email,
+        );
+        await expect(
+            page.getByText('Электронная почта не подтверждена.'),
+        ).toBeVisible();
+        await expect(
+            page.getByText('Удаление аккаунта и всех связанных с ним данных'),
+        ).toBeVisible();
+        await expect(
+            page
+                .getByRole('note')
+                .getByText(
+                    'Удалить аккаунт можно после подтверждения электронной почты.',
+                ),
+        ).toBeVisible();
+        await expect(
+            page.getByRole('button', { name: 'Удалить аккаунт' }),
+        ).toHaveCount(0);
+        await expect(
+            page
+                .getByRole('navigation', { name: 'Настройки' })
+                .getByRole('link'),
+        ).toHaveText(['Профиль']);
+        await expect(
+            page
+                .locator('[data-slot="sidebar"]')
+                .getByRole('link', { name: 'Панель управления' }),
+        ).toHaveCount(0);
+
+        await captureScreenshot(
+            page,
+            testInfo,
+            'settings',
+            'profile-unverified',
+        );
+    },
+);
 
 test('user can log out from the user menu', async ({ page }) => {
     await page.goto('/login');

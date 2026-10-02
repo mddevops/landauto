@@ -545,6 +545,8 @@ Required:
 
 Both authorization and entitlement checks are mandatory.
 
+Only active Sites count toward `max_sites`. Archived Sites do not consume a slot. A future restore from archived to active must re-check the effective limit and deny restoration when the active-Site limit is already reached (D-099).
+
 ---
 
 # 27. Site Deletion

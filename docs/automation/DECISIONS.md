@@ -1788,6 +1788,24 @@ Site-specific overrides remain outside P1-008 and wait for D-088.
 
 ---
 
+## D-099 — Active Site Counting for `max_sites`
+
+**Status:** APPROVED
+
+### Decision
+
+- `max_sites` counts only Sites whose status is `active`.
+- Archived Sites do not consume the limit; archiving an active Site releases a slot.
+- Creation counts active Sites only inside the current Workspace; Sites in other Workspaces never affect that count.
+- A future restore from `archived` to `active` must re-check the effective `max_sites` limit and must be denied when the limit is already reached.
+- P1-013 does not implement the restore flow; the restore rule is a future enforcement invariant.
+
+### Resolved By
+
+Owner approval during P1-013 (2026-10-02).
+
+---
+
 # SUPERSEDED DECISIONS
 
 None currently.

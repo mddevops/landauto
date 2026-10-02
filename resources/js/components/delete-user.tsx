@@ -98,9 +98,20 @@ export default function DeleteUser({
                                             ref={passwordInput}
                                             placeholder="Пароль"
                                             autoComplete="current-password"
+                                            aria-invalid={Boolean(
+                                                errors.password,
+                                            )}
+                                            aria-describedby={
+                                                errors.password
+                                                    ? 'delete-password-error'
+                                                    : undefined
+                                            }
                                         />
 
-                                        <InputError message={errors.password} />
+                                        <InputError
+                                            id="delete-password-error"
+                                            message={errors.password}
+                                        />
                                         <InputError message={errors.account} />
                                     </div>
 

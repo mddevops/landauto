@@ -68,7 +68,7 @@ Current next task:
 
 `P1-006 — Workspace Context / Switcher Backend` (X-011 and P1-005A DONE).
 
-Resolved stops: `X-014`, P1-005A and `X-011` are DONE. Upcoming stop: `X-012` before P1-014. Before the first production deployment: `X-013` and D-094.
+Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -1451,7 +1451,8 @@ Added the global official Template model and schema with immutable public ULID b
 
 ## P1-013 — Create Site Flow Backend
 
-**Status:** NOT_STARTED  
+**Status:** DONE
+
 **Dependencies:** P1-011, P1-012
 
 ### Acceptance Criteria
@@ -1461,11 +1462,16 @@ Added the global official Template model and schema with immutable public ULID b
 - creates Site-owned initial structure;
 - tenant-safe.
 
+### Result
+
+Added a verified-auth backend endpoint for Site creation in the current Workspace. The flow authorizes canonical `create_sites`, enforces the effective `max_sites` entitlement against active Sites only (D-099), accepts only an available official Template by public ULID, serializes concurrent creation through a Workspace row lock and creates the active Site root transactionally without storing a live Template dependency or premature Page/Block state.
+
 ---
 
 ## P1-014 — Dashboard UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
+
 **Dependencies:** P1-007, P1-013
 
 ### Scope
@@ -1475,6 +1481,10 @@ Added the global official Template model and schema with immutable public ULID b
 - create Site;
 - empty state;
 - Site cards.
+
+### Result
+
+Replaced the starter Dashboard placeholders with a responsive current-Workspace header, tenant-scoped Site cards, localized active/archived states and a Russian empty state. The backend supplies only explicit safe Site props, applies the Site view policy, exposes safe create-permission/active-limit state and never sends numeric identifiers; the create CTA is shown only with `create_sites` and remains non-navigating until the P1-015 wizard provides an approved destination.
 
 ---
 
@@ -2846,7 +2856,8 @@ Acceptance Criteria:
 
 ## X-012 — Foundation UI Follow-ups (from P0-027)
 
-**Status:** NOT_STARTED  
+**Status:** DONE
+
 **Trigger:** before P1-014
 
 Non-blocking findings of the Phase 0 UI review (screenshots of the P0-024 baseline). P1-014 is the first task that reworks the Dashboard, so the starter scaffolding and the foundation accessibility gaps are fixed before it. Primary: frontend; reviews: ui-reviewer, qa (keyboard / tab order), reviewer.
@@ -2873,6 +2884,16 @@ Acceptance Criteria:
 - all UI remains Russian;
 - `composer quality` and `npm run test:e2e` PASS (update baseline selectors/screenshots if affected);
 - ui-reviewer review of updated screenshots.
+
+### Result
+
+- The starter Dashboard finding was superseded and resolved by the semantic, responsive current-Workspace Dashboard delivered in P1-014.
+- Registration uses natural DOM tab order; password visibility controls are keyboard reachable; the auth logo has the accurate `На главную` accessible name.
+- Login success feedback now uses the shared theme-aware Alert above the form; the profile breadcrumb is `Профиль`; active settings links expose `aria-current="page"`.
+- Verify-email links directly to profile correction. Unverified users no longer receive Dashboard, Workspace switcher, Security or Appearance navigation that would redirect silently.
+- All current form validation messages are live alerts linked to their inputs with `aria-describedby` and `aria-invalid`.
+- Focused browser coverage now includes the 320px login row, confirm-password screenshot, responsive email-change state and responsive unverified-profile/navigation state. Local Playwright remains environment-blocked at config webServer startup; CI is the browser gate.
+- The undefined support-contact wording remains intentionally assigned to X-013 before launch; no unsupported contact was invented in X-012.
 
 ---
 

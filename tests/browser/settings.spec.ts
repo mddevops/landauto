@@ -94,6 +94,8 @@ test('security settings require password confirmation', async ({
     ).toHaveCount(0);
     await expect(page.getByText(removedConfirmPasswordUi)).toHaveCount(0);
 
+    await captureScreenshot(page, testInfo, 'auth', 'confirm-password');
+
     await page
         .getByLabel('Пароль', { exact: true })
         .fill(users.member.password);
@@ -121,42 +123,55 @@ test('security settings require password confirmation', async ({
     await captureScreenshot(page, testInfo, 'settings', 'security');
 });
 
-test('changing the email asks for the current password', async ({
-    page,
-}, testInfo) => {
-    await page.goto('/settings/profile');
+test(
+    'changing the email asks for the current password',
+    {
+        tag: '@responsive',
+    },
+    async ({ page }, testInfo) => {
+        await page.goto('/settings/profile');
 
-    const currentPassword = page.getByLabel('Текущий пароль');
-    await expect(currentPassword).toHaveCount(0);
+        const currentPassword = page.getByLabel('Текущий пароль');
+        await expect(currentPassword).toHaveCount(0);
 
-    await page.getByLabel('Электронная почта').fill('member-new@landflow.test');
-    await expect(currentPassword).toBeVisible();
-    await expect(
-        page.getByText('На новую почту придёт письмо со ссылкой', {
-            exact: false,
-        }),
-    ).toBeVisible();
+        await page
+            .getByLabel('Электронная почта')
+            .fill('member-new@landflow.test');
+        await expect(currentPassword).toBeVisible();
+        await expect(
+            page.getByText('На новую почту придёт письмо со ссылкой', {
+                exact: false,
+            }),
+        ).toBeVisible();
 
-    await captureScreenshot(page, testInfo, 'settings', 'profile-email-change');
+        await captureScreenshot(
+            page,
+            testInfo,
+            'settings',
+            'profile-email-change',
+        );
 
-    // The same address in another case/with spaces is not a change.
-    await page
-        .getByLabel('Электронная почта')
-        .fill(`  ${users.member.email.toUpperCase()} `);
-    await expect(currentPassword).toHaveCount(0);
+        // The same address in another case/with spaces is not a change.
+        await page
+            .getByLabel('Электронная почта')
+            .fill(`  ${users.member.email.toUpperCase()} `);
+        await expect(currentPassword).toHaveCount(0);
 
-    await page.getByLabel('Электронная почта').fill('member-new@landflow.test');
-    await currentPassword.fill('wrong-password');
-    await page.getByRole('button', { name: 'Сохранить' }).click();
+        await page
+            .getByLabel('Электронная почта')
+            .fill('member-new@landflow.test');
+        await currentPassword.fill('wrong-password');
+        await page.getByRole('button', { name: 'Сохранить' }).click();
 
-    await expect(page.getByText('Неверный пароль.')).toBeVisible();
-    await expect(currentPassword).toHaveValue('');
+        await expect(page.getByText('Неверный пароль.')).toBeVisible();
+        await expect(currentPassword).toHaveValue('');
 
-    await page.reload();
-    await expect(page.getByLabel('Электронная почта')).toHaveValue(
-        users.member.email,
-    );
-});
+        await page.reload();
+        await expect(page.getByLabel('Электронная почта')).toHaveValue(
+            users.member.email,
+        );
+    },
+);
 
 test('profile validation errors are shown in Russian', async ({ page }) => {
     await page.goto('/settings/profile');

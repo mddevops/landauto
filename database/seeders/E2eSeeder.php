@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Models\Site;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Database\Seeder;
@@ -26,7 +27,9 @@ class E2eSeeder extends Seeder
         // Long Russian name on purpose: layouts must survive realistic long user data.
         $member = $this->createUser('Александра Константиновна Преображенская', 'member@landflow.test');
         $this->createWorkspace($member, 'Личный автопарк');
-        $this->createWorkspace($member, 'Автосалон Север');
+        $workspaceWithSites = $this->createWorkspace($member, 'Автосалон Север');
+        Site::factory()->for($workspaceWithSites)->create(['name' => 'Сайт автосалона']);
+        Site::factory()->for($workspaceWithSites)->archived()->create(['name' => 'Архивный лендинг']);
         $this->createWorkspace($member, 'Недоступный Workspace', WorkspaceMemberStatus::Suspended);
 
         // Separate user for login/logout flows so they do not share the login rate limit
@@ -56,8 +59,10 @@ class E2eSeeder extends Seeder
         User $user,
         string $name,
         WorkspaceMemberStatus $status = WorkspaceMemberStatus::Active,
-    ): void {
+    ): Workspace {
         $workspace = Workspace::create(['name' => $name]);
         $workspace->addMember($user, WorkspaceRole::Owner, $status);
+
+        return $workspace;
     }
 }
