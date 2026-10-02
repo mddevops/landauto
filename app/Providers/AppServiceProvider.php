@@ -3,7 +3,9 @@
 namespace App\Providers;
 
 use App\Enums\WorkspacePermission;
+use App\Models\Site;
 use App\Models\User;
+use App\Policies\SitePolicy;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use Carbon\CarbonImmutable;
@@ -30,6 +32,7 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        Gate::policy(Site::class, SitePolicy::class);
 
         foreach (WorkspacePermission::cases() as $permission) {
             Gate::define(

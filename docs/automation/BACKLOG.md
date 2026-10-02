@@ -1412,13 +1412,17 @@ Added the minimal `sites` table with bigint internal keys, unique ULID `public_i
 
 ## P1-011 — Site Domain Models and Policies
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-010, P1-008
 
 ### Acceptance Criteria
 
 - foreign Workspace Site access denied;
 - Site ownership resolved through Workspace.
+
+### Result
+
+Added the Site model with immutable public ULID binding, safe serialization, Workspace relationships and immutable tenant ownership. SitePolicy delegates canonical `view_site`, `create_sites`, `edit_site_settings` and `delete_site` checks to the current-Workspace authorization foundation; foreign and inactive memberships deny by default.
 
 ---
 

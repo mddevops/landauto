@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Enums\WorkspacePermission;
 use App\Models\User;
+use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 
 final class WorkspaceAuthorization
@@ -20,6 +21,15 @@ final class WorkspaceAuthorization
         return $this->membershipBelongsTo($membership, $user)
             && $membership->isActive()
             && $this->permissions->roleAllows($membership->role, $permission);
+    }
+
+    public function allowsForWorkspace(
+        User $user,
+        Workspace $workspace,
+        WorkspacePermission $permission,
+    ): bool {
+        return $this->context->current()?->is($workspace) === true
+            && $this->allows($user, $permission);
     }
 
     /**
