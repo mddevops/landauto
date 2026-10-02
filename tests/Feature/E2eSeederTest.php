@@ -2,7 +2,10 @@
 
 namespace Tests\Feature;
 
+use App\Enums\Entitlement;
+use App\Models\Template;
 use App\Models\User;
+use App\Support\WorkspaceEntitlements;
 use Database\Seeders\E2eSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use RuntimeException;
@@ -30,8 +33,18 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['login@landflow.test', 'member@landflow.test'],
+            ['creator@landflow.test', 'login@landflow.test', 'member@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
+
+        $creatorWorkspaces = User::query()->where('email', 'creator@landflow.test')->sole()
+            ->workspaces()->orderBy('name')->get();
+        $entitlements = app(WorkspaceEntitlements::class);
+
+        $this->assertCount(2, $creatorWorkspaces);
+        foreach ($creatorWorkspaces as $workspace) {
+            $this->assertSame(100, $entitlements->limit($workspace, Entitlement::MaxSites));
+        }
+        $this->assertTrue(Template::query()->where('slug', 'blank')->where('is_official', true)->exists());
     }
 }

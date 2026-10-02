@@ -19,6 +19,14 @@ export const users = {
         email: 'unverified@landflow.test',
         password: 'e2e-password',
     },
+    // Core platform flow: two Workspaces with a Site limit and the official Blank Template.
+    creator: {
+        name: 'Олег Создатель',
+        email: 'creator@landflow.test',
+        password: 'e2e-password',
+        workspaces: ['Автосалон Юг', 'Сервисный центр Юг'],
+        template: 'Пустой шаблон',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

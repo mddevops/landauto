@@ -1509,7 +1509,7 @@ Added the verified, Workspace-context `sites.create` page authorized by the Site
 
 ## P1-016 — Core Platform E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-015
 
 ### Required flow
@@ -1525,6 +1525,10 @@ Register/Login
 ### Security test
 
 Another Workspace cannot access created Site.
+
+### Result
+
+Added `tests/browser/core-platform.spec.ts`: a seeded Owner logs in, opens the wizard from the Dashboard, chooses the official Blank Template, names and creates a Site, and sees it confirmed in the Dashboard with a ULID-only Site reference. After switching to the user's second Workspace the Site is absent, and replaying its public ID in the Dashboard URL neither reveals nor confirms it. `E2eSeeder` adds an isolated creator with two Workspaces on a test-only plan and seeds the official Templates. The flow starts from Login, not Registration: newly registered Workspaces have no plan and therefore `max_sites = 0` until the owner defines a default plan (see open decision in PROJECT_STATE §42). Checks: focused desktop Playwright (core platform + dashboard), `E2eSeederTest`, Pint, PHPStan, `npm run check`.
 
 ---
 
