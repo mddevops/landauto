@@ -1389,7 +1389,7 @@ Added internal Plan and typed Plan Entitlement models, nullable Workspace plan a
 
 ## P1-010 — Site Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-003, P1-009
 
 ### Scope
@@ -1403,6 +1403,10 @@ Added internal Plan and typed Plan Entitlement models, nullable Workspace plan a
 
 - No publication pointer columns (`current_draft_version_id`, `current_published_version_id`) before the snapshot ADR (X-002).
 - A Site folder must belong to the same Workspace as the Site (TENANCY.md).
+
+### Result
+
+Added the minimal `sites` table with bigint internal keys, unique ULID `public_id`, required Workspace ownership, `name`, `active`/`archived` status, and timestamps. Workspace hard deletion is restricted while Sites exist. Site folders and feature-specific columns remain deferred.
 
 ---
 

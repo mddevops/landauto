@@ -320,6 +320,8 @@ Suggested fields:
 - timestamps
 - deleted_at if approved
 
+P1-010 implements only the foundation subset: bigint `id` / required `workspace_id`, unique ULID `public_id` (ADR-001), `name`, `active` / `archived` status and timestamps. Workspace hard deletion is restricted while Sites exist. All other suggested fields remain deferred to their owning tasks.
+
 Important:
 
 Site owns commercial configuration.
