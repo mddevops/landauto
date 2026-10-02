@@ -49,7 +49,13 @@ test(
                 },
             );
 
-            await page.keyboard.press('Escape');
+            const overlay = page.locator('[data-slot="sheet-overlay"]');
+            const overlayBox = await overlay.boundingBox();
+            expect(overlayBox).not.toBeNull();
+            await page.mouse.click(
+                overlayBox!.x + overlayBox!.width - 2,
+                overlayBox!.y + overlayBox!.height - 2,
+            );
             await expect(sidebar).toBeHidden();
         } else {
             // Tablet/desktop: the sidebar is always rendered and can collapse to icons.
@@ -99,7 +105,7 @@ test('workspace switcher lists accessible workspaces and changes context', async
     const switchRequest = page.waitForRequest(
         (request) =>
             request.method() === 'POST' &&
-            /\/workspaces\/[0-9A-HJKMNP-TV-Z]{26}\/switch$/.test(
+            /\/workspaces\/[0-9A-HJKMNP-TV-Z]{26}\/switch$/i.test(
                 new URL(request.url()).pathname,
             ),
     );

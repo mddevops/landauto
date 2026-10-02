@@ -122,7 +122,9 @@ test('unverified user lands on the email verification notice after login', async
         .getByRole('button', { name: 'Отправить письмо повторно' })
         .click();
     await expect(
-        page.getByText('Новая ссылка для подтверждения отправлена.'),
+        page.getByText(
+            'Новая ссылка для подтверждения отправлена на электронную почту, указанную при регистрации.',
+        ),
     ).toBeVisible();
 
     await captureScreenshot(page, testInfo, 'auth', 'verify-email');
