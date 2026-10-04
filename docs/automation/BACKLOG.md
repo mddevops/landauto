@@ -66,11 +66,13 @@ Phase 2 — Designer Foundation: COMPLETED (gate `P2-018` DONE).
 
 Phase 3 — Automotive Foundation: COMPLETED (gate `P3-017` DONE; Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`).
 
+Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
+
 Current phase:
 
-`P4 — Forms & Interactive Components` — NOT_STARTED; starts only on explicit owner go-ahead.
+`P5 — Publishing` — NOT_STARTED; starts only on explicit owner go-ahead.
 
-Next ready task: `P4-001 — Popup Schema / Runtime`. Admin role matrix reconciled by `X-020` (D-107). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
+Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2609,8 +2611,30 @@ Result:
 
 ## P4-014 — Phase 4 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-013
+
+### Result
+
+Phase 4 COMPLETED. Gate checks:
+- `composer quality` PASS: 509 PHPUnit tests, PHPStan, Pint, `vp check` and the production build.
+- `npm run test:e2e` PASS: 41 tests, including both interactive flows.
+- `git diff --check` PASS.
+
+Risk-focused review:
+- **Ownership:** Popup, Form, Submission and Blacklist entries are Site- or Workspace-scoped. The public endpoint derives Site and Workspace from the Form `public_id`, and never trusts browser workspace, site, form, popup or price data. Form and Popup stay separate, and the Popup owns no delivery.
+- **Pipeline:** the order is Form → validation → honeypot → blacklist → rate limits and duplicates → CAPTCHA → trusted context → persist. Nothing is delivered; there are no integrations or CRM.
+- **Secrets and PII:** the SmartCaptcha server key exists only in env/config, and the browser gets the client key only. Logs contain no token, key, IP, phone or blacklisted value, and rate-limit keys are hashed.
+- **Permissions:** popups need `edit_popups`, forms `edit_forms`, leads `view_submissions`, the security policy and Site blacklist `edit_site_settings`, and the Workspace blacklist `edit_workspace`. Global blacklist changes go only through the audited platform command.
+- **Accessibility:** popup, carousel and lightbox are keyboard-usable with focus return. Reduced motion is respected, and there is no horizontal overflow at 375 px.
+
+Known limits, carried forward:
+- The public endpoint accepts any active Form of an active Site, because there is no Published state yet. Phase 5 must bind submissions to published reachability.
+- Preview submissions are real persisted Submissions.
+- Phone normalization does not rewrite a Russian trunk-8 prefix; this needs an owner decision (P4-006).
+- Admin lacks `edit_popups` and `edit_site_settings`, and Designer lacks `edit_forms`, per the approved role matrix.
+- Retention and deletion of Submissions (D-094) remain a production blocker; the schema allows row deletion.
+- Blacklist UI shows normalized values only to editors. A management screen for global entries is not built; the command is used instead.
 
 ---
 

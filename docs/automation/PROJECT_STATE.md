@@ -60,7 +60,9 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 4 — Forms & Interactive Components: NOT_STARTED** (status: §54). Next ready task: `P4-001 — Popup Schema / Runtime`.
+**Phase 5 — Publishing: NOT_STARTED** (status: §54). Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002).
+
+Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
 Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Validation` DONE (phase report in BACKLOG P0-027 `### Result`).
 
@@ -136,7 +138,7 @@ Current focus:
 - `X-019` DONE: `preview_site` for Admin and Designer (D-105); Designer still without `publish_site`; ContentEditor unchanged;
 - `P3-017` DONE: Phase 3 gate (composer quality 440 tests, 39 E2E passed, diff check); Phase 3 COMPLETED;
 - `X-020` DONE: Admin gets `view_site`, `view_vehicles` and `edit_benefits` (D-107). Offer saves now authorize by what changes: `edit_prices` for offer fields, `edit_benefits` for benefits, both when both change. Designer and ContentEditor are unchanged.
-- Phase 4 IN_PROGRESS:
+- Phase 4 COMPLETED:
 - `P4-001` DONE: Site-owned reusable Popups (presentation only, D-035), «Попапы» section, accessible `PopupView` runtime in designer/preview props.
 - `P4-002` DONE: `open_popup` action (same-Site active Popups only), preview runtime with per-trigger public-ID context (block/vehicle/offer/media set) and focus return.
 - `P4-003` DONE: Site-owned Forms with stable-key fields (8 types, consent text is customer-owned, hidden values untrusted), «Формы» UI under `edit_forms`, same-Site Popup→Form attach; preview Popups render the form (display-only until P4-004).
@@ -150,6 +152,7 @@ Current focus:
 - `P4-011` DONE: reusable vendor-neutral `Carousel` (scroll-snap, accessible, pausable autoplay, reduced motion); `vehicle-grid` 1.1.0 carousel mode.
 - `P4-012` DONE: reusable `Lightbox` (D-033; keyboard, focus trap/return, alt text) adopted in the Vehicle Gallery.
 - `P4-013` DONE: interactive Playwright flows (form/popup/submission, vehicle offer trusted context + spoofed price, duplicate, honeypot, fake CAPTCHA, carousel, lightbox, 375 px); fixture monitors all tabs.
+- `P4-014` DONE: Phase 4 gate (composer quality 509 tests, 41 E2E passed, diff check); Phase 4 COMPLETED.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1146,7 +1149,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P4-001 — Popup Schema / Runtime`** (Phase 4 — Forms & Interactive Components, NOT_STARTED) per `BACKLOG.md`.
+**Next: `P5-001 — Publishing Runtime ADR`** (Phase 5 — Publishing, NOT_STARTED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1436,7 +1439,7 @@ Phase 0 — Foundation / Architecture / Automation: COMPLETED
 Phase 1 — Core Platform: COMPLETED (gate P1-017)
 Phase 2 — Designer Foundation: COMPLETED (gate P2-018)
 Phase 3 — Automotive Foundation: COMPLETED (gate P3-017)
-Phase 4 — Forms & Interactive Components: NOT_STARTED
+Phase 4 — Forms & Interactive Components: COMPLETED
 Phase 5 — Publishing: NOT_STARTED
 Phase 6 — Integrations & Analytics: NOT_STARTED
 Phase 7 — Paid Features: NOT_STARTED
@@ -1704,7 +1707,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P4-001 — Popup Schema / Runtime`** (see §42). Phase 0, Phase 1, Phase 2 and Phase 3 are COMPLETED (P0-027, P1-017, P2-018, P3-017 DONE); Phase 4 is NOT_STARTED.
+**`P5-001 — Publishing Runtime ADR`** (see §42). Phases 0–4 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014 DONE); Phase 5 is NOT_STARTED.
 
 ---
 
@@ -1757,8 +1760,8 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–3 COMPLETED)
+Core Landflow implementation: IN_PROGRESS (Phases 0–4 COMPLETED)
 ```
 
-**Current phase: Phase 4 — Forms & Interactive Components (NOT_STARTED; Phase 0, Phase 1, Phase 2 and Phase 3 COMPLETED).
-Next: `P4-001 — Popup Schema / Runtime` per `BACKLOG.md`.**
+**Current phase: Phase 5 — Publishing (NOT_STARTED; Phases 0–4 COMPLETED).
+Next: `P5-001 — Publishing Runtime ADR` per `BACKLOG.md`.**
