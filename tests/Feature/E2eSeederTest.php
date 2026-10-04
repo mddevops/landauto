@@ -33,7 +33,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['creator@landflow.test', 'login@landflow.test', 'member@landflow.test'],
+            ['creator@landflow.test', 'designer@landflow.test', 'login@landflow.test', 'member@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 

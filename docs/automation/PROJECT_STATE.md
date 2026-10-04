@@ -107,7 +107,8 @@ Current focus:
 - `P2-014` DONE: safe `action` field (open_url http/https, open_page same Site, scroll_to same Page, phone, email), action-enabled official block versions;
 - `P2-015` DONE: debounced draft autosave of Block content with status indicator (never publishes);
 - `P2-016` DONE: authenticated draft preview (`preview_site`), visible blocks with tokens/assets, anchors for scroll actions;
-- next ready task: `P2-017 — Designer Browser QA` (§42).
+- `P2-017` DONE: Playwright designer flow (blocks, properties, repeater, action, upload, style, autosave, reorder, reload, preview);
+- next ready task: `P2-018 — Phase 2 Review` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1096,7 +1097,7 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P2-016 — Draft Preview` (DONE). Phase 1 gate `P1-017` is DONE. Phase 0 gate `P0-027` is DONE.
+Last completed task: `P2-017 — Designer Browser QA` (DONE). Phase 1 gate `P1-017` is DONE. Phase 0 gate `P0-027` is DONE.
 
 Resolved owner decision: D-100 (X-015 DONE) — every new personal Workspace gets the active system Free plan (`max_sites = 2`); Workspaces created before X-015 are not backfilled.
 
@@ -1104,7 +1105,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next ready task: `P2-017 — Designer Browser QA`.**
+**Next ready task: `P2-018 — Phase 2 Review`.**
 
 No implementation task should be inferred from this alone.
 
@@ -1662,7 +1663,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P2-017 — Designer Browser QA`** (see §42). Phase 0 and Phase 1 are COMPLETED (P0-027, P1-017 DONE); X-007, X-011, X-012 and X-014 DONE.
+**`P2-018 — Phase 2 Review`** (see §42). Phase 0 and Phase 1 are COMPLETED (P0-027, P1-017 DONE); X-007, X-011, X-012 and X-014 DONE.
 
 ---
 
@@ -1719,4 +1720,4 @@ Core Landflow implementation: NOT_STARTED
 ```
 
 **Current phase: Phase 2 — Designer Foundation (IN_PROGRESS; Phase 0 and Phase 1 COMPLETED).
-Next ready task: P2-017 — Designer Browser QA.**
+Next ready task: P2-018 — Phase 2 Review.**

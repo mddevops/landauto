@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-017 — Designer Browser QA`.
+`P2-018 — Phase 2 Review`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1863,7 +1863,7 @@ Checks: `SitePreviewTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ## P2-017 — Designer Browser QA
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-005 through P2-016
 
 ### Flow
@@ -1877,6 +1877,19 @@ Open Site
 → reload
 → Preview
 ```
+
+### Result
+
+`tests/browser/designer.spec.ts` runs with a dedicated E2E Owner (`designer@landflow.test`, own Workspace with the E2E site limit). The flow:
+1. Log in and create a Site from the Blank Template.
+2. Add Hero, edit the title, set a phone action on the primary button and upload an in-memory PNG through the image library.
+3. Switch the site style to outline buttons.
+4. Add Benefits with two repeater items.
+5. Wait for autosave «Сохранено» and move Benefits up.
+6. Reload: order, title and action come back from the server.
+7. Open Preview in a new tab: draft heading, items, a `tel:` link, the loaded asset image and no designer chrome.
+
+The run found a real race: saving the site style could be cancelled by the next designer action, so the style save is now an async Inertia request. The fixture's console-error and failed-request guards stay strict. Checks: the Playwright spec (desktop), `E2eSeederTest`.
 
 ---
 

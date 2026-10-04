@@ -51,6 +51,10 @@ class E2eSeeder extends Seeder
         $creator = $this->createUser('Олег Создатель', 'creator@landflow.test');
         $this->createWorkspace($creator, 'Автосалон Юг', plan: $plan);
         $this->createWorkspace($creator, 'Сервисный центр Юг', plan: $plan);
+
+        // Designer flow: creates its own Site, so it never touches the `creator` assertions.
+        $designer = $this->createUser('Дина Дизайнерова', 'designer@landflow.test');
+        $this->createWorkspace($designer, 'Студия Дины', plan: $plan);
     }
 
     private function createUser(string $name, string $email, bool $verified = true): User

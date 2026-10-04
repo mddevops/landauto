@@ -27,6 +27,14 @@ export const users = {
         workspaces: ['Автосалон Юг', 'Сервисный центр Юг'],
         template: 'Пустой шаблон',
     },
+    // Designer flow on its own Site (Workspace Owner, so preview is allowed).
+    designer: {
+        name: 'Дина Дизайнерова',
+        email: 'designer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Студия Дины',
+        template: 'Пустой шаблон',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

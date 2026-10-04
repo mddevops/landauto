@@ -110,6 +110,7 @@ export default function Designer({
         }
 
         router.patch(updateDesign.url(site.public_id), draft, {
+            async: true,
             preserveScroll: true,
             preserveState: true,
             onStart: () => setSaving(true),
