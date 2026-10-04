@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-008 — Navigator`.
+`P2-009 — Properties Panel from Schema`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1677,7 +1677,7 @@ Designer left panel "Страницы": list (home first, then sort order), open
 
 ## P2-008 — Navigator
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004, P2-006
 
 ### Actions
@@ -1687,6 +1687,10 @@ Designer left panel "Страницы": list (home first, then sort order), open
 - duplicate;
 - hide/show;
 - delete.
+
+### Result
+
+Designer "Блоки" tab: Navigator over the page's Block Instances (select, move up/down, duplicate after the source, hide/show via new `page_blocks.is_hidden`, delete with confirmation) plus an "Добавить блок" list of official Blocks. A new instance pins the latest version of an official Definition and starts from its schema defaults; order stays dense (0..n-1) through `ArrangePageBlocks`. Structure changes require `edit_design`; foreign Blocks/Pages return 404. Hidden Blocks stay visible but dimmed on the canvas. Checks: `PageBlocksTest`, Sites/Blocks feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 

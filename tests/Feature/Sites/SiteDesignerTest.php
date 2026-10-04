@@ -42,6 +42,7 @@ class SiteDesignerTest extends TestCase
                     'slug' => 'header',
                     'name' => 'Шапка',
                     'version' => '1.0.0',
+                    'is_hidden' => false,
                     'state' => [],
                 ])
                 ->where('blocks.1.public_id', $hero->public_id)

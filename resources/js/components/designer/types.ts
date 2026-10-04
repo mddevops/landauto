@@ -17,5 +17,11 @@ export type DesignerBlock = {
     slug: string;
     name: string;
     version: string;
+    is_hidden: boolean;
     state: BlockState;
+};
+
+export type DesignerLibraryBlock = {
+    slug: string;
+    name: string;
 };

@@ -1,0 +1,136 @@
+<?php
+
+namespace Tests\Feature\Sites;
+
+use App\Enums\WorkspaceRole;
+use App\Models\BlockDefinition;
+use App\Models\BlockInstance;
+use App\Models\BlockVersion;
+use App\Models\Page;
+use App\Models\Site;
+use App\Models\User;
+use App\Models\Workspace;
+use App\Support\WorkspaceContext;
+use Database\Seeders\OfficialBlockSeeder;
+use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
+use Inertia\Testing\AssertableInertia as Assert;
+use Tests\TestCase;
+
+class PageBlocksTest extends TestCase
+{
+    use RefreshDatabase;
+
+    private User $user;
+
+    private Workspace $workspace;
+
+    private Site $site;
+
+    private Page $page;
+
+    protected function setUp(): void
+    {
+        parent::setUp();
+
+        $this->seed(OfficialBlockSeeder::class);
+        $this->user = User::factory()->create();
+        $this->workspace = Workspace::factory()->create();
+        $this->workspace->addMember($this->user, WorkspaceRole::Designer);
+        $this->site = Site::factory()->for($this->workspace)->create();
+        $this->page = Page::factory()->for($this->site)->home()->create();
+    }
+
+    public function test_official_block_is_added_with_schema_defaults_and_selected(): void
+    {
+        $this->add('header');
+        $response = $this->add('hero');
+
+        $hero = $this->page->blocks()->get()->last();
+        $this->assertNotNull($hero);
+        $response->assertRedirect(route('sites.designer', [
+            'site' => $this->site, 'page' => $this->page->public_id, 'block' => $hero->public_id,
+        ]));
+        $this->assertSame(1, $hero->sort_order);
+        $this->assertSame('hero', $hero->version->definition->slug);
+        $this->assertSame('Новые автомобили в наличии', $hero->state_json['title']);
+        $this->assertSame('left', $hero->state_json['align']);
+        $this->assertSame(['label' => 'Подобрать автомобиль'], $hero->state_json['primary_button']);
+
+        $this->as()->get(route('sites.designer', ['site' => $this->site, 'block' => $hero->public_id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('selectedBlock', $hero->public_id)
+                ->where('blocks.1.is_hidden', false)
+                ->has('library', 6)
+                ->where('library.1', ['slug' => 'hero', 'name' => 'Первый экран']));
+    }
+
+    public function test_only_existing_official_blocks_can_be_added(): void
+    {
+        $private = BlockDefinition::factory()->create(['is_official' => false, 'slug' => 'private']);
+        BlockVersion::factory()->for($private, 'definition')->create();
+
+        $this->add('private')->assertSessionHasErrors('block');
+        $this->add('missing')->assertSessionHasErrors('block');
+        $this->assertSame(0, BlockInstance::query()->count());
+    }
+
+    public function test_blocks_are_moved_duplicated_hidden_and_deleted_in_dense_order(): void
+    {
+        foreach (['header', 'hero', 'footer'] as $slug) {
+            $this->add($slug);
+        }
+        [$header, $hero, $footer] = $this->page->blocks()->get()->all();
+
+        $this->as()->post(route('sites.blocks.move', [$this->site, $footer]), ['direction' => 'up'])->assertSessionHasNoErrors();
+        $this->as()->post(route('sites.blocks.move', [$this->site, $header]), ['direction' => 'up'])->assertSessionHasNoErrors();
+        $this->assertOrder([$header->id, $footer->id, $hero->id]);
+
+        $this->as()->patch(route('sites.blocks.visibility', [$this->site, $footer]), ['hidden' => true])->assertSessionHasNoErrors();
+        $this->as()->post(route('sites.blocks.duplicate', [$this->site, $footer]))->assertSessionHasNoErrors();
+        $copy = BlockInstance::query()->latest('id')->firstOrFail();
+        $this->assertOrder([$header->id, $footer->id, $copy->id, $hero->id]);
+        $this->assertTrue($copy->is_hidden);
+        $this->assertSame($footer->fresh()?->state_json, $copy->state_json);
+        $this->assertSame($footer->block_version_id, $copy->block_version_id);
+
+        $this->as()->delete(route('sites.blocks.destroy', [$this->site, $footer]))->assertRedirect();
+        $this->assertModelMissing($footer);
+        $this->assertSame([$header->id, $copy->id, $hero->id], $this->page->blocks()->pluck('id')->all());
+    }
+
+    public function test_content_editor_cannot_change_structure_and_foreign_blocks_are_not_found(): void
+    {
+        $this->add('hero');
+        $block = $this->page->blocks()->sole();
+        $editor = User::factory()->create();
+        $this->workspace->addMember($editor, WorkspaceRole::ContentEditor);
+
+        $this->actingAs($editor)->withSession([WorkspaceContext::SESSION_KEY => $this->workspace->public_id])
+            ->delete(route('sites.blocks.destroy', [$this->site, $block]))->assertForbidden();
+
+        $foreign = BlockInstance::factory()->create();
+        $this->as()->delete(route('sites.blocks.destroy', [$this->site, $foreign]))->assertNotFound();
+        $this->as()->post(route('sites.blocks.store', [$this->site, $foreign->page]), ['block' => 'hero'])->assertNotFound();
+        $this->assertModelExists($foreign);
+    }
+
+    private function add(string $slug): TestResponse
+    {
+        return $this->as()->post(route('sites.blocks.store', [$this->site, $this->page]), ['block' => $slug]);
+    }
+
+    /**
+     * @param  list<int>  $ids
+     */
+    private function assertOrder(array $ids): void
+    {
+        $this->assertSame($ids, $this->page->blocks()->pluck('id')->all());
+        $this->assertSame(range(0, count($ids) - 1), $this->page->blocks()->pluck('sort_order')->all());
+    }
+
+    private function as(): static
+    {
+        return $this->actingAs($this->user)->withSession([WorkspaceContext::SESSION_KEY => $this->workspace->public_id]);
+    }
+}

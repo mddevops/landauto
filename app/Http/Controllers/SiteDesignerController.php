@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
@@ -50,7 +51,20 @@ class SiteDesignerController extends Controller
                     'slug' => $block->version->definition->slug,
                     'name' => $block->version->definition->name,
                     'version' => $block->version->version,
+                    'is_hidden' => $block->is_hidden,
                     'state' => (object) $block->state_json,
+                ])
+                ->values()
+                ->all(),
+            'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
+            'library' => BlockDefinition::query()
+                ->where('is_official', true)
+                ->whereHas('versions')
+                ->orderBy('id')
+                ->get(['slug', 'name'])
+                ->map(fn (BlockDefinition $definition): array => [
+                    'slug' => $definition->slug,
+                    'name' => $definition->name,
                 ])
                 ->values()
                 ->all(),

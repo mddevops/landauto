@@ -3,9 +3,11 @@ import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { blockRenderer } from '@/blocks/registry';
+import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import type {
     DesignerBlock,
+    DesignerLibraryBlock,
     DesignerPage,
     DesignerSite,
 } from '@/components/designer/types';
@@ -19,6 +21,8 @@ type DesignerProps = {
     page: { public_id: string; title: string };
     pages: DesignerPage[];
     blocks: DesignerBlock[];
+    selectedBlock: string | null;
+    library: DesignerLibraryBlock[];
     can: { editDesign: boolean };
 };
 
@@ -29,9 +33,18 @@ export default function Designer({
     page,
     pages,
     blocks,
+    selectedBlock,
+    library,
     can,
 }: DesignerProps) {
-    const [selectedId, setSelectedId] = useState<string | null>(null);
+    const [selectedId, setSelectedId] = useState<string | null>(selectedBlock);
+    const [serverSelection, setServerSelection] = useState(selectedBlock);
+
+    if (selectedBlock !== serverSelection) {
+        setServerSelection(selectedBlock);
+        setSelectedId(selectedBlock);
+    }
+
     const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
     const selected = blocks.find((block) => block.public_id === selectedId);
 
@@ -82,37 +95,16 @@ export default function Designer({
                                     currentPageId={page.public_id}
                                     canEdit={can.editDesign}
                                 />
-                            ) : blocks.length === 0 ? (
-                                <p className="text-sm text-muted-foreground">
-                                    Блоков пока нет.
-                                </p>
                             ) : (
-                                <ul className="flex flex-col gap-1">
-                                    {blocks.map((block) => (
-                                        <li key={block.public_id}>
-                                            <button
-                                                type="button"
-                                                aria-pressed={
-                                                    block.public_id ===
-                                                    selectedId
-                                                }
-                                                onClick={() =>
-                                                    setSelectedId(
-                                                        block.public_id,
-                                                    )
-                                                }
-                                                className={cn(
-                                                    'w-full rounded-md px-2 py-1.5 text-left text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                                    block.public_id ===
-                                                        selectedId &&
-                                                        'bg-muted font-medium',
-                                                )}
-                                            >
-                                                {block.name}
-                                            </button>
-                                        </li>
-                                    ))}
-                                </ul>
+                                <Navigator
+                                    siteId={site.public_id}
+                                    pageId={page.public_id}
+                                    blocks={blocks}
+                                    library={library}
+                                    selectedId={selectedId}
+                                    onSelect={setSelectedId}
+                                    canEdit={can.editDesign}
+                                />
                             )}
                         </div>
                     </aside>
@@ -228,7 +220,12 @@ function CanvasBlock({
 
     return (
         <div className="relative">
-            <div inert>
+            {block.is_hidden && (
+                <span className="absolute top-2 right-2 z-10 rounded bg-neutral-900/80 px-2 py-0.5 text-xs text-white">
+                    Скрыт
+                </span>
+            )}
+            <div inert className={cn(block.is_hidden && 'opacity-40')}>
                 {Renderer ? (
                     <Renderer state={block.state} />
                 ) : (

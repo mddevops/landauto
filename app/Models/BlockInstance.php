@@ -21,6 +21,7 @@ use LogicException;
  * @property int $page_id
  * @property int $block_version_id
  * @property int $sort_order
+ * @property bool $is_hidden
  * @property array<string, mixed> $state_json
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -41,6 +42,7 @@ class BlockInstance extends Model
     {
         return [
             'sort_order' => 'integer',
+            'is_hidden' => 'boolean',
             'state_json' => 'array',
         ];
     }
