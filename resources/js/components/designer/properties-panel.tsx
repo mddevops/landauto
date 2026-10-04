@@ -1,5 +1,6 @@
 import type { SchemaField } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
+import { RepeaterControl } from '@/components/designer/repeater-control';
 import type { DesignerBlock } from '@/components/designer/types';
 import InputError from '@/components/input-error';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -188,6 +189,16 @@ function FieldControl({
                     />
                     {errorMessage}
                 </fieldset>
+            );
+        case 'repeater':
+            return (
+                <RepeaterControl
+                    field={field}
+                    value={value}
+                    path={path}
+                    errors={errors}
+                    onChange={onChange}
+                />
             );
         default:
             return null;

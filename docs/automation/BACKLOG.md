@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-010 — Repeater Editing`.
+`P2-011 — Conditional Schema Fields`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1711,7 +1711,7 @@ The right "Свойства" panel renders controls generically from the pinned 
 
 ## P2-010 — Repeater Editing
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-009
 
 ### Acceptance Criteria
@@ -1721,6 +1721,10 @@ The right "Свойства" panel renders controls generically from the pinned 
 - duplicate;
 - reorder;
 - stable item IDs.
+
+### Result
+
+Repeater fields in the Properties panel support add (with item field defaults), delete, duplicate (new ID) and move up/down, limited by the schema `max_items`, with nested item fields and per-item errors. Each item gets a client-generated ULID `id` that survives edits and reordering; the backend validator still enforces ULID format, uniqueness and limits. Checks: `PageBlocksTest` (order and IDs persist, duplicate IDs rejected), `npm run check`.
 
 ---
 

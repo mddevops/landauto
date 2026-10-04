@@ -127,6 +127,26 @@ class PageBlocksTest extends TestCase
         $this->assertSame('Весеннее предложение', $block->fresh()?->state_json['title']);
     }
 
+    public function test_repeater_items_keep_client_ulids_and_order_and_reject_duplicates(): void
+    {
+        $this->add('benefits');
+        $block = $this->page->blocks()->sole();
+        $first = '01J9Z3QK5V8W2X4Y6Z8A0B2C4D';
+        $second = '01J9Z3QK5V8W2X4Y6Z8A0B2C4E';
+
+        $this->as()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => ['items' => [
+            ['id' => $second, 'title' => 'Трейд-ин'],
+            ['id' => $first, 'title' => 'Гарантия', 'text' => 'Пять лет'],
+        ]]])->assertSessionHasNoErrors();
+
+        $this->assertSame([$second, $first], array_column($block->fresh()?->state_json['items'] ?? [], 'id'));
+
+        $this->as()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => ['items' => [
+            ['id' => $first, 'title' => 'А'],
+            ['id' => $first, 'title' => 'Б'],
+        ]]])->assertSessionHasErrors('state.items.1.id');
+    }
+
     public function test_content_editor_cannot_change_structure_and_foreign_blocks_are_not_found(): void
     {
         $this->add('hero');
