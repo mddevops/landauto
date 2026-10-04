@@ -2,16 +2,19 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
 import { blockRenderer } from '@/blocks/registry';
+import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
+import { DesignerAssetsContext } from '@/components/designer/assets-context';
 import { DesignPanel } from '@/components/designer/design-panel';
 import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import { PropertiesPanel } from '@/components/designer/properties-panel';
 import type {
+    DesignerAsset,
     DesignerBlock,
     DesignerLibraryBlock,
     DesignerPage,
@@ -30,9 +33,10 @@ type DesignerProps = {
     page: { public_id: string; title: string };
     pages: DesignerPage[];
     blocks: DesignerBlock[];
+    assets: DesignerAsset[];
     selectedBlock: string | null;
     library: DesignerLibraryBlock[];
-    can: { editDesign: boolean; editContent: boolean };
+    can: { editDesign: boolean; editContent: boolean; manageAssets: boolean };
 };
 
 type LeftTab = 'pages' | 'blocks';
@@ -44,10 +48,26 @@ export default function Designer({
     page,
     pages,
     blocks,
+    assets,
     selectedBlock,
     library,
     can,
 }: DesignerProps) {
+    const renderContext = useMemo(() => {
+        const urls = new Map(
+            assets.map((asset) => [asset.public_id, asset.url]),
+        );
+
+        return { assetUrl: (id: string) => urls.get(id) ?? null };
+    }, [assets]);
+    const assetsContext = useMemo(
+        () => ({
+            siteId: site.public_id,
+            assets,
+            canUpload: can.manageAssets,
+        }),
+        [site.public_id, assets, can.manageAssets],
+    );
     const [selectedId, setSelectedId] = useState<string | null>(selectedBlock);
     const [serverSelection, setServerSelection] = useState(selectedBlock);
 
@@ -178,27 +198,32 @@ export default function Designer({
                         className="min-w-0 flex-1 p-3 sm:p-6 lg:overflow-y-auto"
                     >
                         <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-lg border bg-white shadow-sm">
-                            <SiteTheme tokens={tokens}>
-                                {blocks.length === 0 ? (
-                                    <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm text-neutral-500">
-                                        На странице пока нет блоков.
-                                    </div>
-                                ) : (
-                                    blocks.map((block) => (
-                                        <CanvasBlock
-                                            key={block.public_id}
-                                            block={block}
-                                            state={stateOf(block)}
-                                            selected={
-                                                block.public_id === selectedId
-                                            }
-                                            onSelect={() =>
-                                                setSelectedId(block.public_id)
-                                            }
-                                        />
-                                    ))
-                                )}
-                            </SiteTheme>
+                            <BlockRenderContext value={renderContext}>
+                                <SiteTheme tokens={tokens}>
+                                    {blocks.length === 0 ? (
+                                        <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm text-neutral-500">
+                                            На странице пока нет блоков.
+                                        </div>
+                                    ) : (
+                                        blocks.map((block) => (
+                                            <CanvasBlock
+                                                key={block.public_id}
+                                                block={block}
+                                                state={stateOf(block)}
+                                                selected={
+                                                    block.public_id ===
+                                                    selectedId
+                                                }
+                                                onSelect={() =>
+                                                    setSelectedId(
+                                                        block.public_id,
+                                                    )
+                                                }
+                                            />
+                                        ))
+                                    )}
+                                </SiteTheme>
+                            </BlockRenderContext>
                         </div>
                     </main>
 
@@ -248,19 +273,23 @@ export default function Designer({
                                             {` · версия ${selected.version}`}
                                         </span>
                                     </p>
-                                    <PropertiesPanel
-                                        key={selected.public_id}
-                                        block={selected}
-                                        state={stateOf(selected)}
-                                        errors={errors}
-                                        disabled={!can.editContent}
-                                        onChange={(state) =>
-                                            setDrafts((current) => ({
-                                                ...current,
-                                                [selected.public_id]: state,
-                                            }))
-                                        }
-                                    />
+                                    <DesignerAssetsContext
+                                        value={assetsContext}
+                                    >
+                                        <PropertiesPanel
+                                            key={selected.public_id}
+                                            block={selected}
+                                            state={stateOf(selected)}
+                                            errors={errors}
+                                            disabled={!can.editContent}
+                                            onChange={(state) =>
+                                                setDrafts((current) => ({
+                                                    ...current,
+                                                    [selected.public_id]: state,
+                                                }))
+                                            }
+                                        />
+                                    </DesignerAssetsContext>
                                     {can.editContent && (
                                         <Button
                                             type="button"

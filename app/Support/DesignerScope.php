@@ -5,6 +5,7 @@ namespace App\Support;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
+use App\Models\SiteAsset;
 
 /**
  * Designer resources are addressed only inside the current Workspace; anything else is
@@ -35,5 +36,13 @@ final class DesignerScope
         abort_unless($block->page->site_id === $site->id, 404);
 
         return $block;
+    }
+
+    public function asset(Site $site, SiteAsset $asset): SiteAsset
+    {
+        $this->site($site);
+        abort_unless($asset->site_id === $site->id, 404);
+
+        return $asset;
     }
 }

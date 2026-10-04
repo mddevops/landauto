@@ -3,6 +3,7 @@
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageBlockController;
+use App\Http\Controllers\SiteAssetController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDesignController;
 use App\Http\Controllers\SiteDesignerController;
@@ -44,6 +45,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('designer', SiteDesignerController::class)->name('designer');
             Route::patch('design', SiteDesignController::class)->name('design.update');
+            Route::post('assets', [SiteAssetController::class, 'store'])->middleware('throttle:60,1')->name('assets.store');
+            Route::get('assets/{asset}', [SiteAssetController::class, 'show'])->whereUlid('asset')->name('assets.show');
 
             Route::post('pages', [SitePageController::class, 'store'])->name('pages.store');
             Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');

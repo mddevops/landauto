@@ -66,7 +66,17 @@ class BlockInstance extends Model
         });
 
         static::saving(function (BlockInstance $instance): void {
-            app(BlockStateValidator::class)->assertValid($instance->version->schema_json, $instance->state_json);
+            $siteId = $instance->page->site_id;
+
+            app(BlockStateValidator::class)->assertValid(
+                $instance->version->schema_json,
+                $instance->state_json,
+                fn (array $ids): array => SiteAsset::query()
+                    ->where('site_id', $siteId)
+                    ->whereIn('public_id', $ids)
+                    ->pluck('public_id')
+                    ->all(),
+            );
         });
     }
 

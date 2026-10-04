@@ -76,6 +76,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteAsset, $this>
+     */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(SiteAsset::class);
+    }
+
+    /**
      * @return HasOne<Page, $this>
      */
     public function homePage(): HasOne

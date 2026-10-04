@@ -1,6 +1,7 @@
 import { isFieldVisible } from '@/blocks/schema';
 import type { SchemaField } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
+import { ImageControl } from '@/components/designer/image-control';
 import { RepeaterControl } from '@/components/designer/repeater-control';
 import type { DesignerBlock } from '@/components/designer/types';
 import InputError from '@/components/input-error';
@@ -192,6 +193,16 @@ function FieldControl({
                     />
                     {errorMessage}
                 </fieldset>
+            );
+        case 'image':
+            return (
+                <ImageControl
+                    field={field}
+                    value={value}
+                    id={id}
+                    error={error}
+                    onChange={onChange}
+                />
             );
         case 'repeater':
             return (

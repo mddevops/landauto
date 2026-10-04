@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-013 — Asset Upload / Image Picker`.
+`P2-014 — Action System Foundation`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1760,12 +1760,25 @@ Any schema field may declare `visible_if: {"field": key, "equals": value}`. The 
 
 ## P2-013 — Asset Upload / Image Picker
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-006
 
 ### Security
 
 Upload validation required.
+
+### Result
+
+Implements ADR-003.
+
+- **Storage.** `site_assets` holds Site-owned immutable images (ULID `public_id`, server-generated private-disk path `site-assets/{site}/{asset}.{ext}`, MIME type, size, dimensions). The model forbids changes to the file fields.
+- **Upload.** `POST sites/{site}/assets` (`UploadSiteAssetRequest`) runs the Workspace scope check (404 before validation), requires `manage_assets` and is throttled to 60 per minute. It accepts only JPEG/PNG/WebP by detected MIME type up to 10 MB. Decoded `getimagesize` type must match, and each side is limited to 10 000 px. SVG and disguised files are rejected with Russian messages.
+- **Serving.** `GET sites/{site}/assets/{asset}` checks scope and `view_site`, and serves with `nosniff` and `private, immutable` caching. Another Site's asset returns 404.
+- **Block state.** An image value is a Site Asset ULID; `BlockStateValidator` checks the format, and the `BlockInstance` saving hook verifies the asset belongs to the Block's own Site.
+- **Designer.** It receives `assets` (public ID, name, relative URL, size) and `can.manageAssets`. The Properties panel image picker offers the library dialog, upload and remove.
+- **Renderers.** They resolve URLs through a render context: the `header` logo and the `hero` background with an overlay.
+
+Checks: `SiteAssetsTest`, `BlockStateValidatorTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 

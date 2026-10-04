@@ -23,6 +23,14 @@ export type DesignerBlock = {
     state: BlockState;
 };
 
+export type DesignerAsset = {
+    public_id: string;
+    name: string;
+    url: string;
+    width: number;
+    height: number;
+};
+
 export type DesignerLibraryBlock = {
     slug: string;
     name: string;

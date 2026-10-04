@@ -1,6 +1,7 @@
 import type { ReactNode } from 'react';
 import { useButtonStyle } from '@/blocks/design';
-import type { BlockRendererProps } from '@/blocks/state';
+import { useBlockRenderContext } from '@/blocks/render-context';
+import type { BlockRendererProps, BlockState } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
 import { cn } from '@/lib/utils';
 
@@ -57,14 +58,29 @@ function ButtonPreview({
     );
 }
 
+function useImage(state: BlockState, key: string): string | null {
+    const { assetUrl } = useBlockRenderContext();
+    const id = text(state, key);
+
+    return id === null ? null : assetUrl(id);
+}
+
 export function HeaderBlock({ state }: BlockRendererProps) {
     const phone = flag(state, 'show_phone', true) ? text(state, 'phone') : null;
     const menu = items(state, 'menu');
+    const logo = useImage(state, 'logo');
 
     return (
         <header className="border-b border-neutral-200 bg-white text-neutral-900">
             <Container className="flex flex-wrap items-center gap-x-8 gap-y-3 py-4">
-                <span className="text-lg font-semibold">
+                <span className="flex items-center gap-3 text-lg font-semibold">
+                    {logo && (
+                        <img
+                            src={logo}
+                            alt={text(state, 'logo_text') ? '' : 'Логотип'}
+                            className="h-10 w-auto max-w-40 object-contain"
+                        />
+                    )}
                     {text(state, 'logo_text')}
                 </span>
                 {menu.length > 0 && (
@@ -91,9 +107,27 @@ export function HeaderBlock({ state }: BlockRendererProps) {
 
 export function HeroBlock({ state }: BlockRendererProps) {
     const centered = state.align === 'center';
+    const image = useImage(state, 'image');
 
     return (
-        <section className="bg-neutral-100 py-20 text-neutral-900">
+        <section
+            className={cn(
+                'relative isolate overflow-hidden py-20',
+                image
+                    ? 'bg-neutral-900 text-white'
+                    : 'bg-neutral-100 text-neutral-900',
+            )}
+        >
+            {image && (
+                <>
+                    <img
+                        src={image}
+                        alt=""
+                        className="absolute inset-0 -z-10 size-full object-cover"
+                    />
+                    <div className="absolute inset-0 -z-10 bg-black/55" />
+                </>
+            )}
             <Container
                 className={cn(
                     'flex flex-col gap-5',
@@ -101,7 +135,12 @@ export function HeroBlock({ state }: BlockRendererProps) {
                 )}
             >
                 {text(state, 'eyebrow') && (
-                    <p className="text-sm font-medium tracking-wide text-(--lf-secondary) uppercase">
+                    <p
+                        className={cn(
+                            'text-sm font-medium tracking-wide uppercase',
+                            image ? 'text-white/80' : 'text-(--lf-secondary)',
+                        )}
+                    >
                         {text(state, 'eyebrow')}
                     </p>
                 )}
@@ -109,7 +148,12 @@ export function HeroBlock({ state }: BlockRendererProps) {
                     {text(state, 'title')}
                 </h2>
                 {text(state, 'subtitle') && (
-                    <p className="max-w-2xl text-lg whitespace-pre-line text-neutral-600">
+                    <p
+                        className={cn(
+                            'max-w-2xl text-lg whitespace-pre-line',
+                            image ? 'text-white/85' : 'text-neutral-600',
+                        )}
+                    >
                         {text(state, 'subtitle')}
                     </p>
                 )}

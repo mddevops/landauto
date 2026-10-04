@@ -6,6 +6,7 @@ use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
+use App\Models\SiteAsset;
 use App\Support\DesignerScope;
 use App\Support\SiteDesignTokens;
 use Illuminate\Http\Request;
@@ -59,6 +60,19 @@ class SiteDesignerController extends Controller
                 ])
                 ->values()
                 ->all(),
+            'assets' => $site->assets()
+                ->latest('id')
+                ->limit(200)
+                ->get()
+                ->map(fn (SiteAsset $asset): array => [
+                    'public_id' => $asset->public_id,
+                    'name' => $asset->original_name,
+                    'url' => route('sites.assets.show', [$site, $asset], false),
+                    'width' => $asset->width,
+                    'height' => $asset->height,
+                ])
+                ->values()
+                ->all(),
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
             'library' => BlockDefinition::query()
                 ->where('is_official', true)
@@ -74,6 +88,7 @@ class SiteDesignerController extends Controller
             'can' => [
                 'editDesign' => Gate::allows('editDesign', $site),
                 'editContent' => Gate::allows('editContent', $site),
+                'manageAssets' => Gate::allows('manageAssets', $site),
             ],
         ]);
     }

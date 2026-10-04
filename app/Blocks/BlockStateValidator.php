@@ -4,6 +4,7 @@ namespace App\Blocks;
 
 use App\Enums\BlockFieldType;
 use App\Exceptions\InvalidBlockStateException;
+use Closure;
 use Illuminate\Support\Str;
 
 /**
@@ -18,29 +19,48 @@ final class BlockStateValidator
     /** @var array<string, string> */
     private array $errors = [];
 
+    /** @var array<string, string> State path => referenced Site Asset public ID. */
+    private array $assetReferences = [];
+
     /**
      * @param  array<string, mixed>  $schema
+     * @param  (Closure(list<string>): array<mixed>)|null  $existingAssets  Returns which of the given asset IDs
+     *                                                                      belong to the Block's Site; without it every image reference is rejected.
      * @return array<string, string> State path => Russian message; empty when valid.
      */
-    public function errors(array $schema, mixed $state): array
+    public function errors(array $schema, mixed $state, ?Closure $existingAssets = null): array
     {
         $this->errors = [];
+        $this->assetReferences = [];
         /** @var list<array<string, mixed>> $fields */
         $fields = $schema['fields'] ?? [];
 
         $this->validateObject($fields, $state, 'state', false);
+
+        if ($this->assetReferences !== []) {
+            $existing = $existingAssets === null
+                ? []
+                : $existingAssets(array_values(array_unique($this->assetReferences)));
+
+            foreach ($this->assetReferences as $path => $id) {
+                if (! in_array($id, $existing, true)) {
+                    $this->errors[$path] = 'Изображение не найдено в библиотеке этого сайта.';
+                }
+            }
+        }
 
         return $this->errors;
     }
 
     /**
      * @param  array<string, mixed>  $schema
+     * @param  (Closure(list<string>): array<mixed>)|null  $existingAssets
      *
      * @throws InvalidBlockStateException
      */
-    public function assertValid(array $schema, mixed $state): void
+    public function assertValid(array $schema, mixed $state, ?Closure $existingAssets = null): void
     {
-        $errors = $this->errors($schema, $state);
+        $errors = $this->errors($schema, $state, $existingAssets);
 
         if ($errors !== []) {
             throw new InvalidBlockStateException($errors);
@@ -97,7 +117,7 @@ final class BlockStateValidator
             BlockFieldType::Textarea => $this->validateString($value, $path, (int) ($field['max_length'] ?? BlockSchemaValidator::TEXTAREA_MAX_LENGTH)),
             BlockFieldType::Boolean => $this->validateBoolean($value, $path),
             BlockFieldType::Select => $this->validateSelect($field, $value, $path),
-            BlockFieldType::Image => $this->rejectImage($path),
+            BlockFieldType::Image => $this->validateImage($value, $path),
             BlockFieldType::Group => $this->validateObject($this->nestedFields($field), $value, $path, false),
             BlockFieldType::Repeater => $this->validateRepeater($field, $value, $path),
         };
@@ -111,11 +131,17 @@ final class BlockStateValidator
     }
 
     /**
-     * Image references wait for the media ownership ADR (X-010); only an empty value is accepted.
+     * An image value is the public ID of a Site Asset (ADR-003); ownership is checked after traversal.
      */
-    private function rejectImage(string $path): void
+    private function validateImage(mixed $value, string $path): void
     {
-        $this->errors[$path] = 'Изображения пока не поддерживаются в состоянии блока.';
+        if (! is_string($value) || ! Str::isUlid($value)) {
+            $this->errors[$path] = 'Выберите изображение из библиотеки сайта.';
+
+            return;
+        }
+
+        $this->assetReferences[$path] = $value;
     }
 
     private function validateString(mixed $value, string $path, int $maxLength): void
