@@ -3,7 +3,7 @@ import { useState } from 'react';
 import { ButtonPreview, Container } from '@/blocks/official-blocks';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import type { BlockRendererProps, BlockState } from '@/blocks/state';
-import { flag, group, text } from '@/blocks/state';
+import { flag, group, items, text } from '@/blocks/state';
 import type { VehicleBinding, VehicleMediaSet } from '@/blocks/vehicles';
 import { cn } from '@/lib/utils';
 
@@ -162,6 +162,94 @@ export function offersCount(count: number): string {
               : 'предложений';
 
     return `${count} ${word}`;
+}
+
+const gridColumns: Record<string, string> = {
+    two: 'sm:grid-cols-2',
+    three: 'sm:grid-cols-2 lg:grid-cols-3',
+    four: 'sm:grid-cols-2 lg:grid-cols-4',
+};
+
+export function VehicleGridBlock({ state }: BlockRendererProps) {
+    const { vehicle, vehicles } = useBlockRenderContext();
+    const selectedOnly = state.source === 'selected';
+    const columns =
+        typeof state.columns === 'string' && state.columns in gridColumns
+            ? gridColumns[state.columns]
+            : gridColumns.three;
+    const buttonLabel = text(state, 'button_label');
+    const cards = selectedOnly
+        ? items(state, 'items').flatMap((item) => {
+              const id = text(item, 'vehicle');
+              const binding = id === null ? null : vehicle(id);
+
+              return binding
+                  ? [
+                        {
+                            key: item.id,
+                            vehicle: binding,
+                            button: item.action
+                                ? { label: buttonLabel, action: item.action }
+                                : {},
+                        },
+                    ]
+                  : [];
+          })
+        : vehicles.map((binding) => ({
+              key: binding.public_id,
+              vehicle: binding,
+              button: {},
+          }));
+
+    return (
+        <section className="bg-white py-16 text-neutral-900">
+            <Container className="flex flex-col gap-8">
+                {(text(state, 'title') || text(state, 'subtitle')) && (
+                    <div className="flex flex-col gap-3">
+                        {text(state, 'title') && (
+                            <h2 className="text-3xl font-bold">
+                                {text(state, 'title')}
+                            </h2>
+                        )}
+                        {text(state, 'subtitle') && (
+                            <p className="max-w-2xl whitespace-pre-line text-neutral-600">
+                                {text(state, 'subtitle')}
+                            </p>
+                        )}
+                    </div>
+                )}
+                {cards.length > 0 ? (
+                    <ul className={cn('grid gap-6', columns)}>
+                        {cards.map((card) => (
+                            <li key={card.key}>
+                                <VehicleCard
+                                    vehicle={card.vehicle}
+                                    showPrice={flag(state, 'show_price', true)}
+                                    showBenefit={flag(
+                                        state,
+                                        'show_benefit',
+                                        true,
+                                    )}
+                                    showColors={flag(
+                                        state,
+                                        'show_colors',
+                                        true,
+                                    )}
+                                    button={card.button}
+                                />
+                            </li>
+                        ))}
+                    </ul>
+                ) : (
+                    <div className="rounded-(--lf-radius) border border-dashed border-neutral-300 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-500">
+                        {selectedOnly
+                            ? 'Выберите автомобили в свойствах блока.'
+                            : 'Добавьте автомобили в разделе «Автомобили» сайта.'}
+                    </div>
+                )}
+            </Container>
+        </section>
+    );
 }
 
 export function VehicleCardBlock({ state }: BlockRendererProps) {

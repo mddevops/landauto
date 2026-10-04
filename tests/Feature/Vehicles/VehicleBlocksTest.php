@@ -12,6 +12,7 @@ use App\Models\Workspace;
 use App\Support\WorkspaceContext;
 use Database\Seeders\OfficialBlockSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Inertia\Testing\AssertableInertia as Assert;
 use PHPUnit\Framework\Attributes\DataProvider;
 use Tests\Concerns\RefreshCatalogDatabase;
@@ -76,6 +77,24 @@ class VehicleBlocksTest extends TestCase
                 ->where('blocks.0.slug', $slug)
                 ->where('blocks.0.state.vehicle', $own->public_id)
                 ->where('vehicles.0.public_id', $own->public_id));
+    }
+
+    public function test_vehicle_grid_shows_all_vehicles_by_default_or_a_validated_selection(): void
+    {
+        $series = AutoSeries::factory()->create();
+        $own = SiteVehicle::factory()->for($this->site)->forSeries($series)->create();
+        $foreign = SiteVehicle::factory()->forSeries($series)->create();
+        $this->as()->post(route('sites.blocks.store', [$this->site, $this->page]), ['block' => 'vehicle-grid'])->assertSessionHasNoErrors();
+        $block = $this->page->blocks()->sole();
+        $this->assertSame('all', $block->state_json['source']);
+        $item = fn (string $vehicle): array => ['id' => (string) Str::ulid(), 'vehicle' => $vehicle, 'action' => ['type' => 'open_page', 'page' => $this->page->public_id]];
+        $save = fn (array $items) => $this->as()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => ['source' => 'selected', 'items' => $items]]);
+
+        $save([$item($own->public_id), $item($foreign->public_id)])
+            ->assertSessionHasErrors(['state.items.1.vehicle' => 'Автомобиль не найден на этом сайте.']);
+        $save([$item($own->public_id)])->assertSessionHasNoErrors();
+
+        $this->assertSame($own->public_id, $block->fresh()?->state_json['items'][0]['vehicle']);
     }
 
     private function as(): static

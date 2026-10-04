@@ -2275,8 +2275,20 @@ Missing or hidden vehicles render as a Russian placeholder. Checks: `VehicleBloc
 
 ## P3-014 — Vehicle Grid Block
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-013
+
+### Result
+
+New official Block `vehicle-grid` («Каталог автомобилей»):
+- **Header:** title and subtitle.
+- **Source** («Все автомобили сайта» or «Выбранные»):
+  - «Все автомобили сайта» (the default) shows every visible vehicle in Site order.
+  - «Выбранные» shows a repeater (up to 24) of same-Site vehicle references, each with an optional safe action.
+- **Layout and flags:** columns, plus flags for price, benefit and colors.
+- **Card button label:** used with each item's action.
+
+Each card reuses the Vehicle Card renderer, so it shows the color-specific image, swatches, «от» price and benefit. The empty state is shown in Russian. Checks: `VehicleBlocksTest`.
 
 ---
 

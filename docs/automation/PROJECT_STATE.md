@@ -126,7 +126,8 @@ Current focus:
 - `P3-011` DONE: `VehicleMediaResolver` (Site selection → Global active Series media sets; Workspace level not in Phase 3), bulk resolution;
 - `P3-012` DONE: `VehicleBindings` display-ready vehicle/offer view models (visible + available only, formatted money, no numeric IDs) in designer/preview, same-Site `vehicle` Block field;
 - `P3-013` DONE: official `vehicle-card` Block (same-Site vehicle reference, color swatches, «от» price, benefit, action button);
-- next: `P3-014` (§42).
+- `P3-014` DONE: official `vehicle-grid` Block (all visible Site vehicles or a validated selection with per-item actions, columns, price/benefit/colors);
+- next: `P3-015` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

@@ -121,6 +121,20 @@ final class OfficialBlockCatalog
                 ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать цвета', 'default' => true],
                 self::actionButton('button', 'Кнопка', 'Подробнее'),
             ]),
+            self::block('vehicle-grid', 'Каталог автомобилей', [
+                self::text('title', 'Заголовок', 120, 'Автомобили в наличии'),
+                self::textarea('subtitle', 'Подзаголовок', 500),
+                self::select('source', 'Какие автомобили показывать', ['all' => 'Все автомобили сайта', 'selected' => 'Выбранные'], 'all'),
+                [...self::repeater('items', 'Автомобили', 24, [
+                    self::vehicle(),
+                    self::action(),
+                ]), 'visible_if' => ['field' => 'source', 'equals' => 'selected']],
+                self::select('columns', 'Колонок', ['two' => '2', 'three' => '3', 'four' => '4'], 'three'),
+                ['key' => 'show_price', 'type' => 'boolean', 'label' => 'Показывать цену', 'default' => true],
+                ['key' => 'show_benefit', 'type' => 'boolean', 'label' => 'Показывать выгоду', 'default' => true],
+                ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать цвета', 'default' => true],
+                [...self::text('button_label', 'Текст кнопки карточки', 40, 'Подробнее'), 'help' => 'Кнопка видна у выбранных автомобилей с настроенным действием.'],
+            ]),
         ];
     }
 
