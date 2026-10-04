@@ -2056,10 +2056,28 @@ Checks: `SeriesMediaSetTest`.
 
 ## P3-006 — Series Media Images
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-005
 
 Prepared images per media set and angle (front, front_3_4, side, rear_3_4, rear, interior). JPEG/PNG/WebP (transparency allowed), no SVG, 10 MB max, immutable objects with server-generated storage keys, no URL fetch. Controlled by `manage_catalog_media`; never stored as Site Assets.
+
+### Result
+
+Table and model:
+- Table `series_media_images`, one image per (set, angle).
+- `SeriesMediaImage` is immutable, stored on the private disk at `series-media/{set}/{image}.{ext}`.
+- `MediaAngle` enum with Russian labels.
+
+Upload validation, shared with Site Assets through `App\Support\ImageUpload`:
+- JPEG/PNG/WebP only, ≤10 MB, side ≤10000 px;
+- the decoded type must match the MIME type;
+- SVG and polyglot files are rejected.
+
+Routes:
+- `POST platform/catalog/media-sets/{set}/images` and `DELETE platform/catalog/media-images/{image}` require `view_catalog` plus `manage_catalog_media`; deleting also removes the file.
+- `GET media/series/{image}` serves with nosniff; any signed-in user can read images of active sets, and inactive sets are visible to catalog staff only.
+
+Checks: `SeriesMediaImagesTest`, `SiteAssetsTest`.
 
 ---
 

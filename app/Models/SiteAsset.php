@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\HasImmutablePublicId;
+use App\Support\ImageUpload;
 use Database\Factories\SiteAssetFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -33,16 +34,12 @@ class SiteAsset extends Model
 {
     public const DISK = 'local';
 
-    public const MAX_KILOBYTES = 10240;
+    public const MAX_KILOBYTES = ImageUpload::MAX_KILOBYTES;
 
-    public const MAX_SIDE = 10000;
+    public const MAX_SIDE = ImageUpload::MAX_SIDE;
 
     /** Detected MIME type => stored extension. */
-    public const TYPES = [
-        'image/jpeg' => 'jpg',
-        'image/png' => 'png',
-        'image/webp' => 'webp',
-    ];
+    public const TYPES = ImageUpload::TYPES;
 
     /** @use HasFactory<SiteAssetFactory> */
     use HasFactory, HasImmutablePublicId;

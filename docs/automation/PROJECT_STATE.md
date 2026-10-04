@@ -118,7 +118,8 @@ Current focus:
 - `P3-003` DONE: two-level characteristic dictionary and Equipment values (ADR-005) with server validation and canonical values;
 - `P3-004` DONE: two-level option dictionary and Equipment option values (`is_base` explicit, missing row = unknown);
 - `P3-005` DONE: platform Series Media Sets in the main database (`catalog_series_public_id`, name, display swatch, status, order); no catalog color tables;
-- next: `P3-006` (§42).
+- `P3-006` DONE: immutable Series media images per angle (private storage, server keys, JPEG/PNG/WebP ≤10 MB, no SVG), platform-only upload/delete, nosniff serving; shared `ImageUpload` rules;
+- next: `P3-007` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

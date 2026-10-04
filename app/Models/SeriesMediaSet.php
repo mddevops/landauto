@@ -11,6 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -59,6 +60,14 @@ class SeriesMediaSet extends Model
                 throw new InvalidCatalogDataException('Swatch must be a lowercase #rrggbb color.');
             }
         });
+    }
+
+    /**
+     * @return HasMany<SeriesMediaImage, $this>
+     */
+    public function images(): HasMany
+    {
+        return $this->hasMany(SeriesMediaImage::class);
     }
 
     /**

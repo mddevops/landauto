@@ -1,8 +1,10 @@
 <?php
 
+use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageBlockController;
+use App\Http\Controllers\Platform\SeriesMediaImageController;
 use App\Http\Controllers\SiteAssetController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDesignController;
@@ -10,6 +12,7 @@ use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\WorkspaceContextController;
+use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
 
@@ -60,6 +63,24 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [PageBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
+        });
+
+    Route::get('media/series/{image}', [SeriesMediaImageController::class, 'show'])
+        ->whereUlid('image')
+        ->name('catalog-media.show');
+
+    // Platform surface: explicit platform permissions only, never Workspace roles (D-058).
+    Route::prefix('platform/catalog')
+        ->name('platform.catalog.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ViewCatalog->value)
+        ->group(function () {
+            Route::post('media-sets/{set}/images', [SeriesMediaImageController::class, 'store'])
+                ->whereUlid('set')
+                ->middleware('throttle:60,1')
+                ->name('media.images.store');
+            Route::delete('media-images/{image}', [SeriesMediaImageController::class, 'destroy'])
+                ->whereUlid('image')
+                ->name('media.images.destroy');
         });
 });
 
