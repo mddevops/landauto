@@ -3,6 +3,8 @@
 namespace App\Http\Controllers;
 
 use App\Automotive\VehicleBindings;
+use App\Forms\Captcha\CaptchaVerifier;
+use App\Forms\SiteSecurityPolicy;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
@@ -21,7 +23,7 @@ use Inertia\Response;
  */
 class SitePreviewController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha): Response
     {
         $scope->site($site);
         Gate::authorize('preview', $site);
@@ -62,6 +64,7 @@ class SitePreviewController extends Controller
                 ->all(),
             'vehicles' => $vehicleBindings->forSite($site),
             'popups' => $popups->forSite($site),
+            'captcha' => SiteSecurityPolicy::forSite($site)->captchaRequired && $captcha->isConfigured() ? $captcha->widget() : null,
         ]);
     }
 }

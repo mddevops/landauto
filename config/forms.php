@@ -22,4 +22,16 @@ return [
         'captcha_required' => false,
     ],
 
+    /*
+    |--------------------------------------------------------------------------
+    | CAPTCHA verifier
+    |--------------------------------------------------------------------------
+    |
+    | `yandex` uses Yandex SmartCaptcha (credentials in services.yandex_smartcaptcha).
+    | `fake` is a deterministic verifier honoured only in the testing/e2e environments.
+    |
+    */
+
+    'captcha_driver' => env('FORMS_CAPTCHA_DRIVER', 'yandex'),
+
 ];

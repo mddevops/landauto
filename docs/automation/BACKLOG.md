@@ -2555,12 +2555,18 @@ Result:
 
 ## P4-010 — Yandex SmartCaptcha Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-008
 
 ### Requirement
 
 Verify current official documentation during implementation.
+
+Result:
+- The contract was checked against the official «Валидация пользователя» docs: form-urlencoded POST of `secret`, `token` and `ip` to `/validate`. Only `status` is evaluated: `ok` passes, `failed` fails closed. Network errors, non-200 responses and malformed bodies fail open with a safe warning log (D-043).
+- `CaptchaVerifier` interface with a `YandexSmartCaptchaVerifier` implementation using the Laravel HTTP client with a 3 s timeout. Credentials come from `YANDEX_SMARTCAPTCHA_CLIENT_KEY` / `YANDEX_SMARTCAPTCHA_SERVER_KEY`. A `FakeCaptchaVerifier` is honoured only in `testing`/`e2e` (`FORMS_CAPTCHA_DRIVER=fake`).
+- The pipeline runs CAPTCHA after rate limits and before context. It applies only when the Site policy `captcha_required` is on and the platform is configured. A missing or failed token is rejected; the token is never persisted or logged.
+- «Защита форм» has a toggle that cannot be enabled without platform credentials. The preview receives the provider and client key only, and the widget renders in Russian with reserved height and a fresh token after each failed attempt.
 
 ---
 

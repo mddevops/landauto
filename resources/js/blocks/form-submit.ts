@@ -17,6 +17,7 @@ export type SubmissionPayload = {
     context: SubmissionContext;
     tracking: Record<string, string>;
     lf_hp: string;
+    captcha_token?: string;
 };
 
 const utmKeys = [

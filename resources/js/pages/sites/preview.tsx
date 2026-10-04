@@ -2,6 +2,7 @@ import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
+import type { CaptchaConfig } from '@/blocks/captcha';
 import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
 import { currentTracking, submitForm } from '@/blocks/form-submit';
@@ -32,6 +33,7 @@ type PreviewProps = {
     assets: { public_id: string; url: string }[];
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
+    captcha: CaptchaConfig | null;
 };
 
 type OpenedPopup = {
@@ -49,6 +51,7 @@ export default function Preview({
     assets,
     vehicles,
     popups,
+    captcha,
 }: PreviewProps) {
     const [opened, setOpened] = useState<OpenedPopup | null>(null);
     const renderContext = useMemo(() => {
@@ -155,10 +158,14 @@ export default function Preview({
                     {openedForm && (
                         <FormView
                             form={openedForm}
+                            captcha={captcha}
                             onSubmit={(values, meta) =>
                                 submitForm(openedForm.public_id, {
                                     fields: values,
                                     lf_hp: meta.honeypot,
+                                    ...(meta.captchaToken !== null && {
+                                        captcha_token: meta.captchaToken,
+                                    }),
                                     context: {
                                         ...opened.context,
                                         page: page.public_id,

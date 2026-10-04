@@ -759,6 +759,8 @@ Landflow should support Yandex SmartCaptcha for the primary Russian-market workf
 
 Implementation must verify current official documentation.
 
+Owner-approved verification policy (P4-010): `status: ok` passes, `status: failed` fails closed (never branch on `message`); network errors and non-200 responses fail open with a safe log (no token, key or IP). The server key stays in env/config only.
+
 ---
 
 ## D-044 — Yandex Metrica Is the Primary Analytics Integration

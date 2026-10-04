@@ -1,6 +1,10 @@
 import { useId, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
+import { CaptchaWidget } from './captcha';
+import type { CaptchaConfig } from './captcha';
+
+const captchaErrorKey = 'captcha_token';
 
 export type FormFieldType =
     | 'text'
@@ -34,7 +38,7 @@ export type FormRuntime = {
 export type FormValues = Record<string, string | boolean>;
 
 /** Anti-spam signals collected by the form; the backend decides what they mean. */
-export type FormSubmitMeta = { honeypot: string };
+export type FormSubmitMeta = { honeypot: string; captchaToken: string | null };
 
 export type FormSubmitResult =
     | { ok: true; message: string }
@@ -95,6 +99,7 @@ export function FormView({
     form,
     onSubmit,
     extra,
+    captcha = null,
 }: {
     form: FormRuntime;
     onSubmit?: (
@@ -102,10 +107,13 @@ export function FormView({
         meta: FormSubmitMeta,
     ) => Promise<FormSubmitResult>;
     extra?: ReactNode;
+    captcha?: CaptchaConfig | null;
 }) {
     const id = useId();
     const [values, setValues] = useState<FormValues>(() => initialValues(form));
     const [honeypot, setHoneypot] = useState('');
+    const [captchaToken, setCaptchaToken] = useState('');
+    const [captchaRound, setCaptchaRound] = useState(0);
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [message, setMessage] = useState<string | null>(null);
     const [status, setStatus] = useState<
@@ -131,6 +139,11 @@ export function FormView({
         }
 
         const local = clientErrors(form, values);
+
+        if (captcha && captchaToken === '') {
+            local[captchaErrorKey] = 'Подтвердите, что вы не робот.';
+        }
+
         setErrors(local);
         setMessage(null);
 
@@ -141,7 +154,10 @@ export function FormView({
         }
 
         setStatus('submitting');
-        const result = await onSubmit(values, { honeypot });
+        const result = await onSubmit(values, {
+            honeypot,
+            captchaToken: captcha ? captchaToken : null,
+        });
 
         if (result.ok) {
             setMessage(result.message);
@@ -150,6 +166,11 @@ export function FormView({
             setErrors(result.errors);
             setMessage(result.message);
             setStatus('error');
+
+            if (captcha) {
+                setCaptchaToken('');
+                setCaptchaRound((round) => round + 1);
+            }
         }
     }
 
@@ -300,6 +321,19 @@ export function FormView({
                     onChange={(event) => setHoneypot(event.target.value)}
                 />
             </div>
+            {captcha && onSubmit && (
+                <div className="flex flex-col gap-1">
+                    <CaptchaWidget
+                        key={captchaRound}
+                        config={captcha}
+                        onToken={setCaptchaToken}
+                    />
+                    <FieldError
+                        id={`${id}-captcha-error`}
+                        message={errors[captchaErrorKey]}
+                    />
+                </div>
+            )}
             {extra}
             <button
                 type="submit"

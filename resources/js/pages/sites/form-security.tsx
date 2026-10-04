@@ -3,6 +3,7 @@ import type { FormEvent } from 'react';
 import { BlacklistSection } from '@/components/forms/blacklist-section';
 import type { BlacklistRow } from '@/components/forms/blacklist-section';
 import type { Choice } from '@/components/platform/form-fields';
+import InputError from '@/components/input-error';
 import { TextField } from '@/components/platform/form-fields';
 import { Button } from '@/components/ui/button';
 import {
@@ -11,6 +12,8 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
+import { Checkbox } from '@/components/ui/checkbox';
+import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import { designer } from '@/routes/sites';
@@ -32,6 +35,7 @@ type FormSecurityProps = {
     bounds: Record<NumericKey, [number, number]>;
     blacklist: { site: BlacklistRow[]; workspace: BlacklistRow[] };
     choices: { types: Choice[] };
+    captcha: { configured: boolean };
     can: { edit: boolean; editWorkspace: boolean };
 };
 
@@ -77,6 +81,7 @@ export default function FormSecurity({
     bounds,
     blacklist,
     choices,
+    captcha,
     can,
 }: FormSecurityProps) {
     const form = useForm({
@@ -85,6 +90,7 @@ export default function FormSecurity({
         phone_limit: String(policy.phone_limit),
         phone_window_minutes: String(policy.phone_window_minutes),
         duplicate_window_minutes: String(policy.duplicate_window_minutes),
+        captcha_required: policy.captcha_required,
     });
 
     function submit(event: FormEvent) {
@@ -157,6 +163,52 @@ export default function FormSecurity({
                                 </CardContent>
                             </Card>
                         ))}
+                        <Card className="lg:col-span-3">
+                            <CardHeader>
+                                <h2 className="leading-none font-semibold">
+                                    Капча
+                                </h2>
+                                <CardDescription>
+                                    Посетитель подтверждает, что он не робот,
+                                    через Yandex SmartCaptcha. Если сервис
+                                    проверки недоступен, заявка всё равно
+                                    принимается.
+                                </CardDescription>
+                            </CardHeader>
+                            <CardContent className="grid gap-2">
+                                <div className="flex items-center gap-2">
+                                    <Checkbox
+                                        id="security-captcha_required"
+                                        checked={form.data.captcha_required}
+                                        disabled={
+                                            !captcha.configured &&
+                                            !form.data.captcha_required
+                                        }
+                                        aria-describedby="security-captcha-hint"
+                                        onCheckedChange={(checked) =>
+                                            form.setData(
+                                                'captcha_required',
+                                                checked === true,
+                                            )
+                                        }
+                                    />
+                                    <Label htmlFor="security-captcha_required">
+                                        Требовать капчу во всех формах сайта
+                                    </Label>
+                                </div>
+                                <p
+                                    id="security-captcha-hint"
+                                    className="text-sm text-muted-foreground"
+                                >
+                                    {captcha.configured
+                                        ? 'Капча подключена на платформе.'
+                                        : 'Капча пока не подключена на платформе — включить её нельзя.'}
+                                </p>
+                                <InputError
+                                    message={form.errors.captcha_required}
+                                />
+                            </CardContent>
+                        </Card>
                     </fieldset>
                     {can.edit ? (
                         <div>

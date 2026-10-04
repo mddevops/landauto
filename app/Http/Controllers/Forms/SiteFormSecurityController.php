@@ -5,6 +5,7 @@ namespace App\Http\Controllers\Forms;
 use App\Enums\BlacklistScope;
 use App\Enums\BlacklistType;
 use App\Enums\WorkspacePermission;
+use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\SiteSecurityPolicy;
 use App\Http\Controllers\Controller;
 use App\Models\BlacklistEntry;
@@ -15,6 +16,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -31,7 +33,7 @@ class SiteFormSecurityController extends Controller
         private WorkspaceAuthorization $authorization,
     ) {}
 
-    public function show(Request $request, Site $site): Response
+    public function show(Request $request, Site $site, CaptchaVerifier $captcha): Response
     {
         $this->scope->site($site);
         Gate::authorize('view', $site);
@@ -52,11 +54,12 @@ class SiteFormSecurityController extends Controller
             'choices' => [
                 'types' => array_map(fn (BlacklistType $type): array => ['value' => $type->value, 'label' => $type->label()], BlacklistType::cases()),
             ],
+            'captcha' => ['configured' => $captcha->isConfigured()],
             'can' => ['edit' => $canEdit, 'editWorkspace' => $canEditWorkspace],
         ]);
     }
 
-    public function update(Request $request, Site $site): RedirectResponse
+    public function update(Request $request, Site $site, CaptchaVerifier $captcha): RedirectResponse
     {
         $this->scope->site($site);
         Gate::authorize('update', $site);
@@ -67,17 +70,38 @@ class SiteFormSecurityController extends Controller
             $rules[$key] = ['required', 'integer', "min:{$min}", "max:{$max}"];
         }
 
+        $rules['captcha_required'] = ['sometimes', 'boolean'];
+
         $validated = $request->validate($rules, [], [
             'ip_limit' => 'Заявок с одного IP',
             'ip_window_minutes' => 'Период для IP',
             'phone_limit' => 'Заявок с одного телефона',
             'phone_window_minutes' => 'Период для телефона',
             'duplicate_window_minutes' => 'Интервал повторной заявки',
+            'captcha_required' => 'Капча',
         ]);
+
+        $settings = [];
+
+        foreach (array_keys(SiteSecurityPolicy::BOUNDS) as $key) {
+            $settings[$key] = (int) $validated[$key];
+        }
+
+        if (array_key_exists('captcha_required', $validated)) {
+            $captchaRequired = (bool) $validated['captcha_required'];
+
+            if ($captchaRequired && ! $captcha->isConfigured()) {
+                throw ValidationException::withMessages([
+                    'captcha_required' => 'Капча не подключена на платформе. Обратитесь в поддержку.',
+                ]);
+            }
+
+            $settings['captcha_required'] = $captchaRequired;
+        }
 
         $site->form_security = [
             ...($site->form_security ?? []),
-            ...array_map(intval(...), $validated),
+            ...$settings,
         ];
         $site->save();
 

@@ -4,6 +4,8 @@ namespace App\Forms;
 
 use App\Enums\FormFieldType;
 use App\Enums\SiteStatus;
+use App\Forms\Captcha\CaptchaVerdict;
+use App\Forms\Captcha\CaptchaVerifier;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\Submission;
@@ -17,16 +19,38 @@ use Illuminate\Support\Str;
  */
 class SubmissionPipeline
 {
+    public const CAPTCHA_KEY = 'captcha_token';
+
+    public const CAPTCHA_MESSAGE = 'Подтвердите, что вы не робот.';
+
     /** Top-level payload keys a visitor may send; anything else is rejected. */
-    public const PAYLOAD_KEYS = ['fields', 'context', 'tracking', SubmissionGuard::HONEYPOT_KEY];
+    public const PAYLOAD_KEYS = ['fields', 'context', 'tracking', SubmissionGuard::HONEYPOT_KEY, self::CAPTCHA_KEY];
 
     public function __construct(
         private SubmissionFieldValidator $validator,
         private PhoneNormalizer $phones,
         private Blacklist $blacklist,
         private SubmissionGuard $guard,
+        private CaptchaVerifier $captcha,
         private SubmissionContextResolver $context,
     ) {}
+
+    /**
+     * CAPTCHA applies when the Site requires it and the platform verifier is configured.
+     * A missing token is rejected; a provider outage is accepted (fail open).
+     */
+    private function passesCaptcha(SiteSecurityPolicy $policy, mixed $token, ?string $ip): bool
+    {
+        if (! $policy->captchaRequired || ! $this->captcha->isConfigured()) {
+            return true;
+        }
+
+        if (! is_string($token) || $token === '' || strlen($token) > 4096) {
+            return false;
+        }
+
+        return $this->captcha->verify($token, $ip) !== CaptchaVerdict::Failed;
+    }
 
     /**
      * @param  array<array-key, mixed>  $payload
@@ -66,6 +90,10 @@ class SubmissionPipeline
 
         if ($this->guard->blocks($form, $policy, $ip, $normalizedPhone)) {
             return SubmissionResult::throttled(SubmissionGuard::REJECTION_MESSAGE);
+        }
+
+        if (! $this->passesCaptcha($policy, $payload[self::CAPTCHA_KEY] ?? null, $ip)) {
+            return SubmissionResult::rejected(self::CAPTCHA_MESSAGE);
         }
 
         $context = $this->context->resolve($form, $payload['context'] ?? null, $payload['tracking'] ?? null);
