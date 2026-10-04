@@ -61,6 +61,9 @@ class SitePreviewTest extends TestCase
     {
         [$admin, $adminWorkspace, $adminSite] = $this->siteFor(WorkspaceRole::Admin);
         $this->as($admin, $adminWorkspace)->get(route('sites.preview', $adminSite))->assertOk();
+        $this->as($admin, $adminWorkspace)->get(route('sites.designer', $adminSite))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('can.preview', true));
 
         [$designer, $designerWorkspace, $designerSite] = $this->siteFor(WorkspaceRole::Designer);
         $this->as($designer, $designerWorkspace)->get(route('sites.preview', $designerSite))->assertOk();

@@ -54,7 +54,7 @@ class DashboardController extends Controller
                 : [],
             'canViewSites' => $canViewSites,
             'canViewVehicles' => array_intersect(
-                [WorkspacePermission::ViewVehicles->value, WorkspacePermission::EditVehicles->value, WorkspacePermission::EditPrices->value],
+                [WorkspacePermission::ViewVehicles->value, WorkspacePermission::EditVehicles->value, WorkspacePermission::EditPrices->value, WorkspacePermission::EditBenefits->value],
                 $authorization->permissionKeys($user),
             ) !== [],
             'canCreateSites' => $canCreateSites,

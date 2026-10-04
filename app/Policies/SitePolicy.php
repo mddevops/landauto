@@ -61,7 +61,7 @@ final class SitePolicy
 
     public function viewVehicles(User $user, Site $site): bool
     {
-        foreach ([WorkspacePermission::ViewVehicles, WorkspacePermission::EditVehicles, WorkspacePermission::EditPrices] as $permission) {
+        foreach ([WorkspacePermission::ViewVehicles, WorkspacePermission::EditVehicles, WorkspacePermission::EditPrices, WorkspacePermission::EditBenefits] as $permission) {
             if ($this->authorization->allowsForWorkspace($user, $site->workspace, $permission)) {
                 return true;
             }
@@ -78,6 +78,11 @@ final class SitePolicy
     public function editPrices(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditPrices);
+    }
+
+    public function editBenefits(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditBenefits);
     }
 
     public function delete(User $user, Site $site): bool

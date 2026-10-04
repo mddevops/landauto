@@ -70,7 +70,7 @@ Current phase:
 
 `P4 — Forms & Interactive Components` — NOT_STARTED; starts only on explicit owner go-ahead.
 
-Open owner decision: Admin role matrix (`view_site`, `view_vehicles`, `edit_benefits` missing; see P3-017). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
+Next ready task: `P4-001 — Popup Schema / Runtime`. Admin role matrix reconciled by `X-020` (D-107). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3507,6 +3507,28 @@ Result: `WorkspacePermissionResolver` grants `preview_site` to Admin and Designe
 - ContentEditor is still forbidden.
 
 Found while testing: the Admin role has no `view_site`, so Admins cannot open the dashboard Site list or the designer. This is the same stale Admin matrix as the missing `view_vehicles` / `edit_benefits`, and it is left for the owner.
+
+---
+
+## X-020 — Admin Permission Matrix Reconciliation
+
+**Status:** DONE
+**Trigger:** before P4-001
+**Decision:** D-107
+
+Grant Admin `view_site`, `view_vehicles` and `edit_benefits`; keep Designer without `publish_site`, `edit_prices` and `edit_benefits`; keep ContentEditor unchanged; enforce `edit_benefits` separately from `edit_prices`.
+
+Result:
+- `WorkspacePermissionResolver` grants Admin `view_site`, `view_vehicles` and `edit_benefits`.
+- `SitePolicy::editBenefits` is added, and `viewVehicles` also accepts `edit_benefits`.
+- `SaveSiteOfferRequest` authorizes by what changes. Offer fields (price, RRP, availability, badge, Equipment, status, order) need `edit_prices`. A changed benefit list needs `edit_benefits`. A request that changes both needs both.
+- The vehicle page exposes `can.editBenefits`, and the offer dialog disables the sections the member cannot change.
+- Tests cover:
+  - Admin access to the dashboard Site list, the designer and vehicles;
+  - Admin editing benefits;
+  - a role with `edit_prices` but without `edit_benefits`, which can change the price but gets 403 for benefit changes and for combined changes;
+  - Designer preview allowed and publish denied;
+  - ContentEditor unchanged.
 
 ---
 

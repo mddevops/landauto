@@ -5,7 +5,7 @@ namespace App\Support;
 use App\Enums\WorkspacePermission;
 use App\Enums\WorkspaceRole;
 
-final class WorkspacePermissionResolver
+class WorkspacePermissionResolver
 {
     /**
      * @return list<WorkspacePermission>
@@ -17,12 +17,15 @@ final class WorkspacePermissionResolver
             WorkspaceRole::Admin => [
                 WorkspacePermission::ManageMembers,
                 WorkspacePermission::CreateSites,
+                WorkspacePermission::ViewSite,
                 WorkspacePermission::DeleteSite,
                 WorkspacePermission::EditDesign,
                 WorkspacePermission::EditContent,
                 WorkspacePermission::EditForms,
+                WorkspacePermission::ViewVehicles,
                 WorkspacePermission::EditVehicles,
                 WorkspacePermission::EditPrices,
+                WorkspacePermission::EditBenefits,
                 WorkspacePermission::ManageIntegrations,
                 WorkspacePermission::ViewSubmissions,
                 WorkspacePermission::EditSeo,

@@ -1922,6 +1922,22 @@ Owner approval in the automotive autopilot instruction (2026-10-04).
 
 ---
 
+## D-107 — Admin Permission Matrix and Separate Benefits Permission
+
+**Status:** APPROVED
+
+### Decision
+
+The Admin Workspace role additionally receives `view_site`, `view_vehicles` and `edit_benefits` (it already had `edit_prices`, `edit_vehicles`, `preview_site`, `publish_site`). Designer keeps `preview_site` and receives neither `publish_site`, `edit_prices` nor `edit_benefits`. ContentEditor is unchanged.
+
+`edit_benefits` is enforced separately from `edit_prices`: changing price, RRP, availability or badge requires `edit_prices`; changing benefits requires `edit_benefits`; a request changing both requires both; an unchanged benefit list does not require `edit_benefits`.
+
+### Resolved By
+
+Owner approval in the pre-Phase-4 reconciliation instruction (2026-10-04); X-020.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

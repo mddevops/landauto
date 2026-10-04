@@ -212,6 +212,7 @@ class SiteVehicleController extends Controller
             'can' => [
                 'editVehicles' => Gate::allows('editVehicles', $site),
                 'editPrices' => Gate::allows('editPrices', $site),
+                'editBenefits' => Gate::allows('editBenefits', $site),
             ],
         ]);
     }

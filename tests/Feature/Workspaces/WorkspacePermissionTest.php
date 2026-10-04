@@ -34,12 +34,15 @@ class WorkspacePermissionTest extends TestCase
         $this->assertSame([
             WorkspacePermission::ManageMembers,
             WorkspacePermission::CreateSites,
+            WorkspacePermission::ViewSite,
             WorkspacePermission::DeleteSite,
             WorkspacePermission::EditDesign,
             WorkspacePermission::EditContent,
             WorkspacePermission::EditForms,
+            WorkspacePermission::ViewVehicles,
             WorkspacePermission::EditVehicles,
             WorkspacePermission::EditPrices,
+            WorkspacePermission::EditBenefits,
             WorkspacePermission::ManageIntegrations,
             WorkspacePermission::ViewSubmissions,
             WorkspacePermission::EditSeo,
@@ -63,6 +66,7 @@ class WorkspacePermissionTest extends TestCase
         $this->assertContains(WorkspacePermission::PreviewSite, $permissions);
         $this->assertNotContains(WorkspacePermission::PublishSite, $permissions);
         $this->assertNotContains(WorkspacePermission::EditPrices, $permissions);
+        $this->assertNotContains(WorkspacePermission::EditBenefits, $permissions);
     }
 
     public function test_content_editor_receives_only_content_permissions(): void

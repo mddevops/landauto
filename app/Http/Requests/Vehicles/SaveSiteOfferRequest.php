@@ -7,6 +7,7 @@ use App\Enums\BenefitType;
 use App\Enums\OfferAvailability;
 use App\Models\Site;
 use App\Models\SiteOffer;
+use App\Models\SiteOfferBenefit;
 use App\Models\SiteVehicle;
 use App\Support\DesignerScope;
 use App\Support\Money;
@@ -18,6 +19,9 @@ use Illuminate\Validation\Validator;
 /**
  * Offer form: human decimal prices are parsed into minor units on the server (ADR-004) and the
  * Equipment must belong to the vehicle's Series (D-104).
+ *
+ * Authorization follows what actually changes: offer fields (price, RRP, availability, badge,
+ * Equipment, status, order) need `edit_prices`, benefits need `edit_benefits`, both when both change.
  */
 class SaveSiteOfferRequest extends FormRequest
 {
@@ -27,10 +31,60 @@ class SaveSiteOfferRequest extends FormRequest
     {
         $site = $this->site();
         $scope = app(DesignerScope::class);
-        $offer = $this->route('offer');
+        $offer = $this->offer();
         $offer instanceof SiteOffer ? $scope->offer($site, $offer) : $scope->vehicle($site, $this->vehicle());
 
-        return Gate::allows('editPrices', $site);
+        return Gate::any(['editPrices', 'editBenefits'], $site);
+    }
+
+    protected function passedValidation(): void
+    {
+        $site = $this->site();
+
+        if (($this->offerFieldsChange() && Gate::denies('editPrices', $site))
+            || ($this->benefitsChange() && Gate::denies('editBenefits', $site))) {
+            $this->failedAuthorization();
+        }
+    }
+
+    private function offerFieldsChange(): bool
+    {
+        $offer = $this->offer();
+
+        if ($offer === null) {
+            return true;
+        }
+
+        $current = [
+            'catalog_equipment_public_id' => $offer->catalog_equipment_public_id,
+            'price_minor' => $offer->price_minor,
+            'rrp_minor' => $offer->rrp_minor,
+            'currency' => $offer->currency,
+            'availability' => $offer->availability?->value,
+            'badge' => $offer->badge,
+            'status' => $offer->status,
+            'sort_order' => $offer->sort_order,
+        ];
+
+        return $current !== $this->offerAttributes();
+    }
+
+    private function benefitsChange(): bool
+    {
+        $current = $this->offer()?->benefits->map(fn (SiteOfferBenefit $benefit): array => [
+            'type' => $benefit->type,
+            'amount_minor' => $benefit->amount_minor,
+            'label' => $benefit->label,
+        ])->values()->all() ?? [];
+
+        return $current !== $this->benefits();
+    }
+
+    private function offer(): ?SiteOffer
+    {
+        $offer = $this->route('offer');
+
+        return $offer instanceof SiteOffer ? $offer : null;
     }
 
     /**

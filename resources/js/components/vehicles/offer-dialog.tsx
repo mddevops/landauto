@@ -65,6 +65,8 @@ type OfferDialogProps = {
     vehiclePublicId: string;
     modifications: ModificationChoice[];
     choices: OfferChoices;
+    canEditPrices: boolean;
+    canEditBenefits: boolean;
     offer?: Offer;
     trigger: ReactNode;
 };
@@ -87,6 +89,8 @@ export function OfferDialog({
     vehiclePublicId,
     modifications,
     choices,
+    canEditPrices,
+    canEditBenefits,
     offer,
     trigger,
 }: OfferDialogProps) {
@@ -166,123 +170,147 @@ export function OfferDialog({
                 </DialogHeader>
 
                 <form onSubmit={submit} className="grid gap-4">
-                    <SelectField
-                        id={`${prefix}-modification`}
-                        label="Модификация"
-                        choices={modifications.map((modification) => ({
-                            value: modification.public_id,
-                            label: modification.summary
-                                ? `${modification.name} — ${modification.summary}`
-                                : modification.name,
-                        }))}
-                        emptyLabel="Выберите модификацию"
-                        value={form.data.modification}
-                        onChange={(event) => {
-                            form.setData((data) => ({
-                                ...data,
-                                modification: event.target.value,
-                                equipment: '',
-                            }));
-                        }}
-                        required
-                    />
-                    <SelectField
-                        id={`${prefix}-equipment`}
-                        label="Комплектация"
-                        choices={equipments.map((equipment) => ({
-                            value: equipment.public_id,
-                            label: equipment.name,
-                        }))}
-                        emptyLabel={
-                            form.data.modification
-                                ? 'Выберите комплектацию'
-                                : 'Сначала выберите модификацию'
-                        }
-                        value={form.data.equipment}
-                        onChange={(event) =>
-                            form.setData('equipment', event.target.value)
-                        }
-                        disabled={!form.data.modification}
-                        required
-                        error={errors.equipment}
-                    />
-                    <div className="grid gap-4 sm:grid-cols-2">
-                        <TextField
-                            id={`${prefix}-price`}
-                            label="Цена, ₽"
-                            inputMode="decimal"
-                            autoComplete="off"
-                            placeholder="1 850 000"
-                            value={form.data.price}
-                            onChange={(event) =>
-                                form.setData('price', event.target.value)
-                            }
+                    <fieldset disabled={!canEditPrices} className="grid gap-4">
+                        <legend className="sr-only">Предложение</legend>
+                        {!canEditPrices && (
+                            <p className="text-sm text-muted-foreground">
+                                Цену и параметры предложения может менять только
+                                участник с правом на цены.
+                            </p>
+                        )}
+                        <SelectField
+                            id={`${prefix}-modification`}
+                            label="Модификация"
+                            choices={modifications.map((modification) => ({
+                                value: modification.public_id,
+                                label: modification.summary
+                                    ? `${modification.name} — ${modification.summary}`
+                                    : modification.name,
+                            }))}
+                            emptyLabel="Выберите модификацию"
+                            value={form.data.modification}
+                            onChange={(event) => {
+                                form.setData((data) => ({
+                                    ...data,
+                                    modification: event.target.value,
+                                    equipment: '',
+                                }));
+                            }}
                             required
-                            error={errors.price}
-                        />
-                        <TextField
-                            id={`${prefix}-rrp`}
-                            label="Цена без скидки, ₽"
-                            inputMode="decimal"
-                            autoComplete="off"
-                            hint="Необязательно"
-                            value={form.data.rrp}
-                            onChange={(event) =>
-                                form.setData('rrp', event.target.value)
-                            }
-                            error={errors.rrp}
                         />
                         <SelectField
-                            id={`${prefix}-availability`}
-                            label="Наличие"
-                            choices={choices.availability}
-                            emptyLabel="Не указано"
-                            value={form.data.availability}
-                            onChange={(event) =>
-                                form.setData('availability', event.target.value)
+                            id={`${prefix}-equipment`}
+                            label="Комплектация"
+                            choices={equipments.map((equipment) => ({
+                                value: equipment.public_id,
+                                label: equipment.name,
+                            }))}
+                            emptyLabel={
+                                form.data.modification
+                                    ? 'Выберите комплектацию'
+                                    : 'Сначала выберите модификацию'
                             }
-                            error={errors.availability}
-                        />
-                        <TextField
-                            id={`${prefix}-badge`}
-                            label="Метка"
-                            maxLength={40}
-                            autoComplete="off"
-                            placeholder="Например, Хит продаж"
-                            value={form.data.badge}
+                            value={form.data.equipment}
                             onChange={(event) =>
-                                form.setData('badge', event.target.value)
+                                form.setData('equipment', event.target.value)
                             }
-                            error={errors.badge}
-                        />
-                        <SelectField
-                            id={`${prefix}-status`}
-                            label="Показ на сайте"
-                            choices={statusChoices}
-                            value={form.data.status}
-                            onChange={(event) =>
-                                form.setData('status', event.target.value)
-                            }
-                            error={errors.status}
-                        />
-                        <TextField
-                            id={`${prefix}-sort_order`}
-                            label="Сортировка"
-                            type="number"
-                            min={0}
-                            value={form.data.sort_order}
-                            onChange={(event) =>
-                                form.setData('sort_order', event.target.value)
-                            }
+                            disabled={!form.data.modification}
                             required
-                            error={errors.sort_order}
+                            error={errors.equipment}
                         />
-                    </div>
+                        <div className="grid gap-4 sm:grid-cols-2">
+                            <TextField
+                                id={`${prefix}-price`}
+                                label="Цена, ₽"
+                                inputMode="decimal"
+                                autoComplete="off"
+                                placeholder="1 850 000"
+                                value={form.data.price}
+                                onChange={(event) =>
+                                    form.setData('price', event.target.value)
+                                }
+                                required
+                                error={errors.price}
+                            />
+                            <TextField
+                                id={`${prefix}-rrp`}
+                                label="Цена без скидки, ₽"
+                                inputMode="decimal"
+                                autoComplete="off"
+                                hint="Необязательно"
+                                value={form.data.rrp}
+                                onChange={(event) =>
+                                    form.setData('rrp', event.target.value)
+                                }
+                                error={errors.rrp}
+                            />
+                            <SelectField
+                                id={`${prefix}-availability`}
+                                label="Наличие"
+                                choices={choices.availability}
+                                emptyLabel="Не указано"
+                                value={form.data.availability}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'availability',
+                                        event.target.value,
+                                    )
+                                }
+                                error={errors.availability}
+                            />
+                            <TextField
+                                id={`${prefix}-badge`}
+                                label="Метка"
+                                maxLength={40}
+                                autoComplete="off"
+                                placeholder="Например, Хит продаж"
+                                value={form.data.badge}
+                                onChange={(event) =>
+                                    form.setData('badge', event.target.value)
+                                }
+                                error={errors.badge}
+                            />
+                            <SelectField
+                                id={`${prefix}-status`}
+                                label="Показ на сайте"
+                                choices={statusChoices}
+                                value={form.data.status}
+                                onChange={(event) =>
+                                    form.setData('status', event.target.value)
+                                }
+                                error={errors.status}
+                            />
+                            <TextField
+                                id={`${prefix}-sort_order`}
+                                label="Сортировка"
+                                type="number"
+                                min={0}
+                                value={form.data.sort_order}
+                                onChange={(event) =>
+                                    form.setData(
+                                        'sort_order',
+                                        event.target.value,
+                                    )
+                                }
+                                required
+                                error={errors.sort_order}
+                            />
+                        </div>
+                    </fieldset>
 
-                    <fieldset className="grid gap-3">
+                    <fieldset
+                        disabled={!canEditBenefits}
+                        className="grid gap-3"
+                    >
                         <legend className="mb-2 text-sm font-medium">
                             Выгоды
                         </legend>
+                        {!canEditBenefits && (
+                            <p className="text-sm text-muted-foreground">
+                                Выгоды может менять только участник с правом на
+                                выгоды.
+                            </p>
+                        )}
                         {form.data.benefits.length === 0 && (
                             <p className="text-sm text-muted-foreground">
                                 Выгоды не добавлены.

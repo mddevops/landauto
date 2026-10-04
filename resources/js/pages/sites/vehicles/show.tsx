@@ -53,7 +53,7 @@ type ShowVehicleProps = {
     modifications: ModificationChoice[];
     offers: Offer[];
     choices: OfferChoices;
-    can: { editVehicles: boolean; editPrices: boolean };
+    can: { editVehicles: boolean; editPrices: boolean; editBenefits: boolean };
 };
 
 function MediaSelection({
@@ -330,6 +330,8 @@ export default function ShowVehicle({
                                 vehiclePublicId={vehicle.public_id}
                                 modifications={modifications}
                                 choices={choices}
+                                canEditPrices={can.editPrices}
+                                canEditBenefits={can.editBenefits}
                                 trigger={
                                     <Button>
                                         <Plus aria-hidden="true" />
@@ -405,7 +407,7 @@ export default function ShowVehicle({
                                             )}
                                         </ul>
                                     )}
-                                    {can.editPrices && (
+                                    {(can.editPrices || can.editBenefits) && (
                                         <div className="flex gap-2">
                                             <OfferDialog
                                                 sitePublicId={site.public_id}
@@ -414,6 +416,10 @@ export default function ShowVehicle({
                                                 }
                                                 modifications={modifications}
                                                 choices={choices}
+                                                canEditPrices={can.editPrices}
+                                                canEditBenefits={
+                                                    can.editBenefits
+                                                }
                                                 offer={offer}
                                                 trigger={
                                                     <Button
@@ -425,24 +431,26 @@ export default function ShowVehicle({
                                                     </Button>
                                                 }
                                             />
-                                            <Button
-                                                size="sm"
-                                                variant="ghost"
-                                                onClick={() =>
-                                                    router.delete(
-                                                        destroyOffer.url({
-                                                            site: site.public_id,
-                                                            offer: offer.public_id,
-                                                        }),
-                                                        {
-                                                            preserveScroll: true,
-                                                        },
-                                                    )
-                                                }
-                                            >
-                                                <Trash2 aria-hidden="true" />
-                                                Удалить
-                                            </Button>
+                                            {can.editPrices && (
+                                                <Button
+                                                    size="sm"
+                                                    variant="ghost"
+                                                    onClick={() =>
+                                                        router.delete(
+                                                            destroyOffer.url({
+                                                                site: site.public_id,
+                                                                offer: offer.public_id,
+                                                            }),
+                                                            {
+                                                                preserveScroll: true,
+                                                            },
+                                                        )
+                                                    }
+                                                >
+                                                    <Trash2 aria-hidden="true" />
+                                                    Удалить
+                                                </Button>
+                                            )}
                                         </div>
                                     )}
                                 </li>

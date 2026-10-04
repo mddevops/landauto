@@ -60,11 +60,15 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 2 — Designer Foundation** (status: §54)
+**Phase 4 — Forms & Interactive Components: NOT_STARTED** (status: §54). Next ready task: `P4-001 — Popup Schema / Runtime`.
 
 Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Validation` DONE (phase report in BACKLOG P0-027 `### Result`).
 
 Phase 1 — Core Platform is COMPLETED: gate `P1-017 — Phase 1 Review` DONE (phase report in BACKLOG P1-017 `### Result`).
+
+Phase 2 — Designer Foundation is COMPLETED: gate `P2-018 — Phase 2 Review` DONE.
+
+Phase 3 — Automotive Foundation is COMPLETED: gate `P3-017 — Phase 3 Review` DONE.
 
 Current focus:
 
@@ -131,7 +135,8 @@ Current focus:
 - `P3-016` DONE: automotive Playwright flow (platform media sets + characteristics → dealer vehicle/offer → Vehicle Grid/Offers → preview price, image, color switch, expanded offer); idempotent `CatalogDemoSeeder`;
 - `X-019` DONE: `preview_site` for Admin and Designer (D-105); Designer still without `publish_site`; ContentEditor unchanged;
 - `P3-017` DONE: Phase 3 gate (composer quality 440 tests, 39 E2E passed, diff check); Phase 3 COMPLETED;
-- next: Phase 4 — not started; requires explicit owner go-ahead. Open: Admin role matrix (`view_site`, `view_vehicles`, `edit_benefits`).
+- `X-020` DONE: Admin gets `view_site`, `view_vehicles` and `edit_benefits` (D-107). Offer saves now authorize by what changes: `edit_prices` for offer fields, `edit_benefits` for benefits, both when both change. Designer and ContentEditor are unchanged.
+- next: `P4-001 — Popup Schema / Runtime` (Phase 4 NOT_STARTED).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1120,7 +1125,7 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `P2-018 — Phase 2 Review` (DONE). Phase 2 gate `P2-018` is DONE. Phase 1 gate `P1-017` is DONE. Phase 0 gate `P0-027` is DONE.
+Last completed task: `X-020 — Admin Permission Matrix Reconciliation` (DONE). Phase 3 gate `P3-017` is DONE. Phase 2 gate `P2-018` is DONE. Phase 1 gate `P1-017` is DONE. Phase 0 gate `P0-027` is DONE.
 
 Resolved owner decision: D-100 (X-015 DONE) — every new personal Workspace gets the active system Free plan (`max_sites = 2`); Workspaces created before X-015 are not backfilled.
 
@@ -1128,7 +1133,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: Phase 3 — Automotive Foundation.** The agreed Catalog V2 schema is adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`; `X-016` is DONE; continue with `X-009`, then `P3-001` per `BACKLOG.md`.
+**Next: `P4-001 — Popup Schema / Runtime`** (Phase 4 — Forms & Interactive Components, NOT_STARTED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1417,7 +1422,7 @@ Current:
 Phase 0 — Foundation / Architecture / Automation: COMPLETED
 Phase 1 — Core Platform: COMPLETED (gate P1-017)
 Phase 2 — Designer Foundation: COMPLETED (gate P2-018)
-Phase 3 — Automotive Foundation: IN_PROGRESS
+Phase 3 — Automotive Foundation: COMPLETED (gate P3-017)
 Phase 4 — Forms & Interactive Components: NOT_STARTED
 Phase 5 — Publishing: NOT_STARTED
 Phase 6 — Integrations & Analytics: NOT_STARTED
@@ -1686,7 +1691,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**Phase 3 — Automotive Foundation** (see §42): Catalog V2 adopted (`docs/architecture/AUTO_CATALOG_SCHEMA.md`). Phase 0, Phase 1 and Phase 2 are COMPLETED (P0-027, P1-017, P2-018 DONE).
+**`P4-001 — Popup Schema / Runtime`** (see §42). Phase 0, Phase 1, Phase 2 and Phase 3 are COMPLETED (P0-027, P1-017, P2-018, P3-017 DONE); Phase 4 is NOT_STARTED.
 
 ---
 
@@ -1739,8 +1744,8 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: NOT_STARTED
+Core Landflow implementation: IN_PROGRESS (Phases 0–3 COMPLETED)
 ```
 
-**Current phase: Phase 3 — Automotive Foundation (IN_PROGRESS; Phase 0, Phase 1 and Phase 2 COMPLETED).
-Next: per `BACKLOG.md`.**
+**Current phase: Phase 4 — Forms & Interactive Components (NOT_STARTED; Phase 0, Phase 1, Phase 2 and Phase 3 COMPLETED).
+Next: `P4-001 — Popup Schema / Runtime` per `BACKLOG.md`.**
