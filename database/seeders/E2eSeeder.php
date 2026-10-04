@@ -3,9 +3,11 @@
 namespace Database\Seeders;
 
 use App\Enums\Entitlement;
+use App\Enums\PlatformRole;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Plan;
+use App\Models\PlatformRoleAssignment;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Workspace;
@@ -55,6 +57,15 @@ class E2eSeeder extends Seeder
         // Designer flow: creates its own Site, so it never touches the `creator` assertions.
         $designer = $this->createUser('Дина Дизайнерова', 'designer@landflow.test');
         $this->createWorkspace($designer, 'Студия Дины', plan: $plan);
+
+        // Automotive flow: a platform catalog administrator (explicit platform role, no
+        // Workspace access) and a dealer who builds a vehicle page on a separate Site.
+        $this->call(CatalogDemoSeeder::class);
+        $catalogAdmin = $this->createUser('Пётр Каталогов', 'catalog@landflow.test');
+        $this->createWorkspace($catalogAdmin, 'Workspace Петра');
+        PlatformRoleAssignment::query()->create(['user_id' => $catalogAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);
+        $dealer = $this->createUser('Денис Дилеров', 'dealer@landflow.test');
+        $this->createWorkspace($dealer, 'Автосалон Восток', plan: $plan);
     }
 
     private function createUser(string $name, string $email, bool $verified = true): User

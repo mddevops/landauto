@@ -35,6 +35,19 @@ export const users = {
         workspace: 'Студия Дины',
         template: 'Пустой шаблон',
     },
+    // Automotive flow: platform super admin (catalog + Series media) and a dealer Owner.
+    catalogAdmin: {
+        name: 'Пётр Каталогов',
+        email: 'catalog@landflow.test',
+        password: 'e2e-password',
+    },
+    dealer: {
+        name: 'Денис Дилеров',
+        email: 'dealer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Восток',
+        template: 'Пустой шаблон',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

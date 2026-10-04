@@ -2325,7 +2325,7 @@ Checks: `VehicleBlocksTest` (same-Site reference for every vehicle Block), `Offi
 
 ## P3-016 — Automotive E2E
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-010 through P3-015
 
 ### Flow
@@ -2337,6 +2337,27 @@ Platform admin manages catalog
 → adds Vehicle Grid
 → sees price/image/colors
 ```
+
+### Result
+
+`tests/browser/automotive.spec.ts` runs the whole flow in one test:
+1. The platform super admin:
+   - opens `/platform/catalog`;
+   - creates two Series media sets with swatches and uploads a front three-quarter image to each;
+   - saves an Equipment characteristic through the bracket-named form, and the value survives a reload.
+2. The dealer:
+   - creates a Site and adds Kia Rio IV Рестайлинг Седан by Series;
+   - adds an offer with a price and a benefit;
+   - adds the Vehicle Grid, which shows the price and benefit;
+   - adds an Offers block bound to the vehicle.
+3. The preview shows:
+   - the price and a loaded image;
+   - color switching by swatch;
+   - the expanded offer with the platform characteristic and option data.
+
+Supporting data:
+- `Database\Seeders\CatalogDemoSeeder` is an idempotent demo catalog branch that refuses to run in production (`CatalogDemoSeederTest`).
+- `E2eSeeder` adds the test-only users `catalog@landflow.test` (`super_admin`) and `dealer@landflow.test`.
 
 ---
 
