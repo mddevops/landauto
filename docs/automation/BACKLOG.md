@@ -70,7 +70,7 @@ Current phase:
 
 The earlier catalog BLOCKED_DECISION is RESOLVED: the owner delivered the agreed Catalog V2 schema (version 2, 04.10.2026), adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`.
 
-Next tasks: `X-016`, then `X-009`, then `P3-001`.
+Next tasks: `X-009`, then `P3-001` … `P3-017` (X-019 before the P3-017 gate). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1916,72 +1916,73 @@ Non-blocking follow-ups:
 
 # PHASE 3 — AUTOMOTIVE FOUNDATION
 
+Reconciled with Catalog V2 by `X-016` (D-101 … D-104). Source of truth for the catalog schema: `docs/architecture/AUTO_CATALOG_SCHEMA.md`. Technical catalog = separate physical database (connection `catalog`). Terms: Mark (not Make), Equipment = «Комплектация», Option = factory option.
+
 ---
 
-## P3-001 — Global Catalog Core Schema
+## P3-001 — Catalog Core Schema
 
 **Status:** NOT_STARTED  
-**Dependencies:** P2-018
+**Dependencies:** P2-018, X-016, X-009
 
-### Entities
+### Scope
 
-- Make
-- Model
-- Series
-- Generation
-- Modification
-- Trim
+- Laravel connection `catalog` (separate database, local suggestion `landflow_catalog`), dedicated migration directory, explicit catalog migration command that refuses to target the main database.
+- Core tables exactly per V2: `auto_marks`, `auto_models`, `auto_generations`, `auto_series`, `auto_modifications`, `auto_equipments`; additive immutable ULID `public_id`.
+- Catalog models in the `App\Models\Catalog` namespace, explicitly on the `catalog` connection.
+- Status-chain availability (a disabled parent hides the branch), RESTRICT deletes, application rules (model parent: same Mark, no self/cycles; `year_to >= year_from`; modification codes).
+- Isolated test catalog connection; CI never depends on developer MySQL.
 
 ---
 
-## P3-002 — Catalog Policies / Platform Permissions
+## P3-002 — Platform Catalog Authorization
 
 **Status:** NOT_STARTED  
 **Dependencies:** P3-001
 
 ### Acceptance Criteria
 
-Customers cannot mutate catalog.
+- Platform roles `super_admin`, `catalog_manager` are persistent explicit assignments, separate from Workspace roles.
+- Platform permissions at minimum `view_catalog`, `edit_catalog`, `manage_catalog_media`.
+- Never identified by email or user ID; no automatic super admin.
+- Safe local Artisan command grants an existing User a platform role.
+- Workspace Owner/Admin cannot mutate the catalog.
 
 ---
 
 ## P3-003 — Characteristics
 
 **Status:** NOT_STARTED  
-**Dependencies:** P3-001
+**Dependencies:** P3-001, X-009
+
+V2 `auto_characteristics` (two-level group → parameter, unit on the definition) and `auto_characteristic_values` (TEXT value per Equipment + parameter). Server validation; no fake empty rows; no editable duplicates of Modification filter fields (ADR-005).
 
 ---
 
-## P3-004 — Equipment / Options
+## P3-004 — Options
 
 **Status:** NOT_STARTED  
 **Dependencies:** P3-001
 
+V2 `auto_options` (two-level group → option) and `auto_option_values` (per Equipment, `is_base` explicit, no default). Missing row = unknown.
+
 ---
 
-## P3-005 — Automotive Colors / Swatches
+## P3-005 — Series Media Sets
 
 **Status:** NOT_STARTED  
-**Dependencies:** P3-001
+**Dependencies:** P3-002
 
-### Acceptance Criteria
-
-Two-tone color supported.
+Supersedes "Automotive Colors / Swatches" (D-103). Platform-owned media sets in the main database referencing a catalog Series by `catalog_series_public_id`: `public_id`, name, nullable `swatch_hex` (display metadata), status, sort order. No `auto_colors` / `auto_paints`. Customer read-only.
 
 ---
 
-## P3-006 — Automotive Images
+## P3-006 — Series Media Images
 
 **Status:** NOT_STARTED  
 **Dependencies:** P3-005
 
-### Metadata
-
-- Trim;
-- Color;
-- angle;
-- transparency;
-- order.
+Prepared images per media set and angle (front, front_3_4, side, rear_3_4, rear, interior). JPEG/PNG/WebP (transparency allowed), no SVG, 10 MB max, immutable objects with server-generated storage keys, no URL fetch. Controlled by `manage_catalog_media`; never stored as Site Assets.
 
 ---
 
@@ -1990,6 +1991,8 @@ Two-tone color supported.
 **Status:** NOT_STARTED  
 **Dependencies:** P3-002 through P3-006
 
+Separate platform surface on the existing Laravel/React/Inertia/shadcn stack (no Filament): «Каталог автомобилей» with marks, models, generations, series, modifications, equipments (cascading; changing an upper selection clears lower levels; backend verifies hierarchy), characteristic and option dictionaries, Equipment characteristics/options page and Series media page. Create, edit, activate/deactivate (status instead of hard delete), sort.
+
 ---
 
 ## P3-008 — Site Vehicle Schema
@@ -1997,19 +2000,25 @@ Two-tone color supported.
 **Status:** NOT_STARTED  
 **Dependencies:** P3-001
 
+SiteVehicle in the main database: belongs to a Site, references `catalog_series_public_id` (vehicle family/body page), selected Series media sets, status and order. Tenant isolation mandatory.
+
 ---
 
 ## P3-009 — Site Offer / Benefits Schema
 
 **Status:** NOT_STARTED  
-**Dependencies:** P3-008
+**Dependencies:** P3-008, X-008
+
+SiteOffer belongs to a SiteVehicle and references `catalog_equipment_public_id`; the Equipment chain must reach the SiteVehicle's Series. Money per ADR-004 (integer minor units, `CHAR(3)` currency), availability, badge, benefits (amount-based). Factory data stays catalog-side.
 
 ---
 
-## P3-010 — Customer Vehicle Import
+## P3-010 — Customer Vehicle Flow
 
 **Status:** NOT_STARTED  
-**Dependencies:** P3-007, P3-008
+**Dependencies:** P3-007, P3-008, P3-009
+
+Supersedes "Customer Vehicle Import". Site → «Автомобили» → «Добавить автомобиль»: Mark → Model → Generation → Series creates a SiteVehicle; then one or more Offers (Modification → Equipment → price). Dealer selects which active Series media sets are shown (stored as references, never copied).
 
 ---
 
@@ -2020,9 +2029,9 @@ Two-tone color supported.
 
 ### Priority
 
-Site
-→ Workspace when available
-→ Global.
+Site selection
+→ Workspace when available (not implemented in Phase 3)
+→ Global (active Series media sets).
 
 ---
 
@@ -2030,6 +2039,8 @@ Site
 
 **Status:** NOT_STARTED  
 **Dependencies:** P3-008, P3-009, P2-003
+
+Approved automotive view model / binding: SiteVehicle identity, Mark, Model, Generation, Series, selected media variants and angles, Offers (Modification, Equipment, price, benefits, characteristics, factory options). Blocks never query the raw catalog database.
 
 ---
 
@@ -2054,10 +2065,10 @@ Site
 
 ### Blocks
 
-- Price/Offer
+- Gallery (media variant/color selector + angles)
+- Price/Offer (dealer Offers, expandable to modification data)
 - Characteristics
-- Equipment
-- Gallery
+- Equipment (factory options)
 
 ---
 
@@ -2069,9 +2080,9 @@ Site
 ### Flow
 
 ```text
-Admin creates vehicle
-→ customer imports
-→ sets price
+Platform admin manages catalog
+→ customer adds vehicle (Series)
+→ adds offer with price
 → adds Vehicle Grid
 → sees price/image/colors
 ```
@@ -3126,6 +3137,62 @@ Acceptance Criteria:
 ### Result
 
 Added the stable system key `Plan::FREE_KEY` and `App\Support\DefaultWorkspacePlan`, which idempotently creates the active Free plan (`createOrFirst` on the unique key, `max_sites = 2` only on first creation) and never overwrites existing values. `CreateNewAccount` assigns it to the personal Workspace inside the account transaction, so registration and Yandex OAuth share the same default. Existing Workspaces are not backfilled. Checks: `DefaultFreePlanTest` (Free plan and limit on registration, shared idempotent plan, two active Sites allowed / third denied / archived Site frees a slot, no raw plan-name checks in `app/` and `resources/js`), extended Yandex new-user test, Registration/Workspaces/Sites/E2E seeder tests, PHPStan, Pint.
+
+---
+
+## X-016 — Automotive Catalog Architecture V2
+
+**Status:** DONE
+**Trigger:** before P3-001
+
+Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/architecture/AUTO_CATALOG_SCHEMA.md`).
+
+### Result
+
+- `AUTOMOTIVE_DATA.md` §0 is the authoritative V2 summary; incompatible sections are marked SUPERSEDED, not deleted.
+- `DATABASE.md` §19, `TENANCY.md` and `PERMISSIONS.md` record:
+  - the separate physical catalog database (connection `catalog`, no cross-database foreign keys, `public_id` references);
+  - the platform permissions `view_catalog` / `edit_catalog` / `manage_catalog_media`.
+- New decisions:
+  - D-101 — V2 hierarchy and ten tables; supersedes D-018;
+  - D-102 — separate catalog database;
+  - D-103 — platform Series Media Library; supersedes D-023/D-024;
+  - D-104 — SiteVehicle → Series, SiteOffer → Equipment;
+  - D-105 — preview permission;
+  - D-106 — storage quota direction.
+- Phase 3 tasks were rewritten to the V2 scope:
+  - P3-005 → Series Media Sets;
+  - P3-006 → Series Media Images;
+  - P3-010 → Customer Vehicle Flow.
+
+---
+
+## X-017 — Workspace Asset Storage Quota
+
+**Status:** NOT_STARTED
+**Trigger:** before the first public production deployment
+**Decision:** D-106
+
+Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage limit) aggregating Site Assets owned by the Workspace's Sites, enforced on upload. No plan-name checks; numeric plan values require owner approval. Not a Phase 3 blocker.
+
+---
+
+## X-018 — Designer Action Reference Integrity
+
+**Status:** NOT_STARTED
+**Trigger:** before Phase 5 Publishing
+
+`open_page` / `scroll_to` action targets can become stale after the referenced Page or Block is deleted (saves are validated, existing states are not rewritten). Before publishing, detect or clear stale references (for example, validation at publish time and a visible warning in the Designer). Non-blocking for Phase 3.
+
+---
+
+## X-019 — Preview Permission for Admin and Designer
+
+**Status:** NOT_STARTED
+**Trigger:** before the Phase 3 gate (P3-017)
+**Decision:** D-105
+
+Add `preview_site` to the Admin and Designer roles; Designer must not receive `publish_site`; ContentEditor unchanged. Focused permission tests.
 
 ---
 

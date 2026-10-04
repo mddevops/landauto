@@ -111,7 +111,8 @@ Current focus:
 - `P2-018` DONE: Phase 2 gate (composer quality, 38 E2E passed); Phase 2 COMPLETED;
 - `X-008` DONE: D-084 APPROVED — ADR-004 integer minor-unit money (`BIGINT UNSIGNED *_minor`, `CHAR(3)` currency, basis points);
 - Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md` (owner input, version 2); the catalog BLOCKED_DECISION is RESOLVED;
-- next: `X-016`, `X-009`, then `P3-001` (§42).
+- `X-016` DONE: automotive architecture reconciled with Catalog V2 (D-101 … D-106; Mark, Equipment under Modification, separate `catalog` database, Series Media Library, SiteVehicle → Series / SiteOffer → Equipment); follow-ups `X-017` (storage quota), `X-018` (action reference integrity), `X-019` (preview permission) recorded;
+- next: `X-009`, then `P3-001` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1108,7 +1109,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: Phase 3 — Automotive Foundation.** The agreed Catalog V2 schema is adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`; continue with `X-016`, `X-009`, then `P3-001` per `BACKLOG.md`.
+**Next: Phase 3 — Automotive Foundation.** The agreed Catalog V2 schema is adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`; `X-016` is DONE; continue with `X-009`, then `P3-001` per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 

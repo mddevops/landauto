@@ -351,7 +351,7 @@ All customer changes belong to Workspace or Site layers.
 
 ## D-018 — Automotive Hierarchy
 
-**Status:** APPROVED
+**Status:** SUPERSEDED by D-101 (Catalog V2: Mark → Model → Generation → Series → Modification → Equipment)
 
 ### Decision
 
@@ -442,7 +442,7 @@ Future synchronization must be explicit and visible.
 
 ## D-023 — Automotive Colors May Be Multi-Tone
 
-**Status:** APPROVED
+**Status:** SUPERSEDED by D-103 (no catalog color tables; platform Series Media Library)
 
 ### Decision
 
@@ -456,7 +456,7 @@ Support multiple swatches/layers.
 
 ## D-024 — Automotive Images May Be Color-Specific
 
-**Status:** APPROVED
+**Status:** SUPERSEDED by D-103 (images by media set and angle in the platform Series Media Library)
 
 ### Decision
 
@@ -1825,9 +1825,108 @@ Owner approval for X-015 (2026-10-04).
 
 ---
 
+## D-101 — Automotive Catalog V2 Hierarchy and Tables
+
+**Status:** APPROVED (supersedes D-018)
+
+### Decision
+
+- Technical selection chain: Mark → Model → Generation → Series → Modification → Equipment. The term is Mark (UI «Марка»), never Make.
+- Equipment («Комплектация») belongs directly to a Modification and is the confirmed real Modification + trim combination. There is no AutoConfiguration / Trim level.
+- V1 has exactly ten tables as defined in `docs/architecture/AUTO_CATALOG_SCHEMA.md`; `auto_configurations`, `auto_body_types`, `auto_colors`, `auto_paints`, `auto_markets`, `auto_configuration_prices` are not created.
+- Characteristic values and option values belong to Equipment; a missing option row means unknown, not unavailable.
+- Additive: externally addressable catalog rows get an immutable ULID `public_id` (ADR-001); numeric catalog IDs are never exposed.
+
+### Resolved By
+
+Owner-approved Catalog V2 (version 2, 04.10.2026); X-016.
+
+---
+
+## D-102 — Separate Physical Catalog Database
+
+**Status:** APPROVED
+
+### Decision
+
+- The technical catalog lives in a separate physical database on Laravel connection `catalog` (local suggestion `landflow_catalog`); the main application database stays `landauto`.
+- Catalog migrations live in their own directory and run only against `catalog` through an explicit command that refuses to target the main database.
+- No SQL foreign keys across connections; cross-database references use immutable `public_id` values validated by the application.
+- Tests use an isolated catalog connection that never depends on a developer MySQL server.
+
+### Resolved By
+
+Owner approval in the automotive autopilot instruction (2026-10-04); X-016.
+
+---
+
+## D-103 — Platform Series Media Library
+
+**Status:** APPROVED (supersedes D-023 and D-024)
+
+### Decision
+
+- The catalog has no color tables. Prepared vehicle pictures by visual variant (usually a color) and angle form a platform Series Media Library attached to a catalog Series by `catalog_series_public_id`.
+- The library is platform-owned and curated by the Landflow team (`manage_catalog_media`); customers are read-only and only select which active media sets their SiteVehicle shows. Files are never copied into a Site.
+- A media set has an optional `swatch_hex` as display metadata only; it is not an automotive color domain.
+- It is not part of the ten-table catalog and is not a Site Asset (ADR-003 Site Assets stay customer-owned and separate). Future dealer photo overrides use the Site Asset layer.
+
+### Resolved By
+
+Owner approval in the automotive autopilot instruction (2026-10-04); X-016.
+
+---
+
+## D-104 — SiteVehicle at Series Level, SiteOffer at Equipment Level
+
+**Status:** APPROVED
+
+### Decision
+
+- SiteVehicle belongs to a Site and references `catalog_series_public_id` (a vehicle family/body page such as KIA Rio / IV Рестайлинг / Седан).
+- SiteOffer belongs to a SiteVehicle and references `catalog_equipment_public_id`; the backend rejects an Equipment whose chain does not reach the SiteVehicle's Series.
+- Commercial values use integer minor units (ADR-004). Factory characteristics/options are resolved from Equipment and never re-entered by the customer.
+- Blocks receive vehicle data only through the approved automotive view model; they never query the catalog database.
+
+### Resolved By
+
+Owner approval in the automotive autopilot instruction (2026-10-04); X-016.
+
+---
+
+## D-105 — Preview Permission for Admin and Designer
+
+**Status:** APPROVED
+
+### Decision
+
+`preview_site` is granted to the Admin and Designer Workspace roles (Owner already has every permission). Designer still does not receive `publish_site`. ContentEditor is unchanged.
+
+### Resolved By
+
+Owner approval in the automotive autopilot instruction (2026-10-04); X-019.
+
+---
+
+## D-106 — Workspace Asset Storage Quota Direction
+
+**Status:** APPROVED (direction); numeric values OPEN
+
+### Decision
+
+A cumulative Workspace asset storage quota is required before the first public production launch. Direction: a typed Workspace entitlement (`max_storage_mb` or an equivalent typed storage limit) that aggregates Site Assets owned by the Workspace's Sites. No plan-name checks; no numeric plan values are defined yet. Tracked by X-017; not a Phase 3 blocker.
+
+### Resolved By
+
+Owner approval in the automotive autopilot instruction (2026-10-04).
+
+---
+
 # SUPERSEDED DECISIONS
 
-None currently.
+- D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).
+- D-023 — Automotive Colors May Be Multi-Tone → superseded by D-103 (no catalog color tables; Series Media Library).
+- D-024 — Automotive Images May Be Color-Specific → superseded by D-103.
 
 ---
 
