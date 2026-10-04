@@ -1,5 +1,6 @@
 import { Car } from 'lucide-react';
 import { useState } from 'react';
+import { Carousel, carouselSettings } from '@/blocks/carousel';
 import { ButtonPreview, Container } from '@/blocks/official-blocks';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import type { BlockRendererProps, BlockState } from '@/blocks/state';
@@ -208,6 +209,16 @@ export function VehicleGridBlock({ state }: BlockRendererProps) {
               vehicle: binding,
               button: {},
           }));
+    const carousel = carouselSettings(state);
+    const renderCard = (card: (typeof cards)[number]) => (
+        <VehicleCard
+            vehicle={card.vehicle}
+            showPrice={flag(state, 'show_price', true)}
+            showBenefit={flag(state, 'show_benefit', true)}
+            showColors={flag(state, 'show_colors', true)}
+            button={card.button}
+        />
+    );
 
     return (
         <section className="bg-white py-16 text-neutral-900">
@@ -226,26 +237,19 @@ export function VehicleGridBlock({ state }: BlockRendererProps) {
                         )}
                     </div>
                 )}
-                {cards.length > 0 ? (
+                {cards.length > 0 && carousel.enabled ? (
+                    <Carousel
+                        label={text(state, 'title') ?? 'Автомобили'}
+                        settings={carousel}
+                        slides={cards.map((card) => ({
+                            key: card.key,
+                            content: renderCard(card),
+                        }))}
+                    />
+                ) : cards.length > 0 ? (
                     <ul className={cn('grid gap-6', columns)}>
                         {cards.map((card) => (
-                            <li key={card.key}>
-                                <VehicleCard
-                                    vehicle={card.vehicle}
-                                    showPrice={flag(state, 'show_price', true)}
-                                    showBenefit={flag(
-                                        state,
-                                        'show_benefit',
-                                        true,
-                                    )}
-                                    showColors={flag(
-                                        state,
-                                        'show_colors',
-                                        true,
-                                    )}
-                                    button={card.button}
-                                />
-                            </li>
+                            <li key={card.key}>{renderCard(card)}</li>
                         ))}
                     </ul>
                 ) : (

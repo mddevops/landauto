@@ -2572,8 +2572,13 @@ Result:
 
 ## P4-011 — Carousel Capability
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-003
+
+Result:
+- Vendor-neutral `carousel` schema group (D-032) with bounded choices: enabled, cards per view (1–4), gap, arrows, dots, loop, autoplay and delay (3/5/8 s). Each field is stored as a plain Block state value; there is no library-specific config.
+- The reusable `Carousel` component uses dependency-free CSS scroll-snap. It shows one card on phones and at most two on tablets; the arrow and dot buttons are labelled in Russian, and Left/Right keys work on the region. Slides stay in the normal tab order, so there is no keyboard trap. Autoplay pauses on hover or focus, has a pause/play button, and is disabled for `prefers-reduced-motion`.
+- Adopted in the new `vehicle-grid` 1.1.0 as a carousel mode. Existing 1.0.0 instances are unchanged.
 
 ---
 

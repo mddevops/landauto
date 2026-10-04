@@ -135,6 +135,21 @@ final class OfficialBlockCatalog
                 ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать цвета', 'default' => true],
                 [...self::text('button_label', 'Текст кнопки карточки', 40, 'Подробнее'), 'help' => 'Кнопка видна у выбранных автомобилей с настроенным действием.'],
             ]),
+            self::block('vehicle-grid', 'Каталог автомобилей', [
+                self::text('title', 'Заголовок', 120, 'Автомобили в наличии'),
+                self::textarea('subtitle', 'Подзаголовок', 500),
+                self::select('source', 'Какие автомобили показывать', ['all' => 'Все автомобили сайта', 'selected' => 'Выбранные'], 'all'),
+                [...self::repeater('items', 'Автомобили', 24, [
+                    self::vehicle(),
+                    self::action(),
+                ]), 'visible_if' => ['field' => 'source', 'equals' => 'selected']],
+                self::select('columns', 'Колонок', ['two' => '2', 'three' => '3', 'four' => '4'], 'three'),
+                self::carousel(),
+                ['key' => 'show_price', 'type' => 'boolean', 'label' => 'Показывать цену', 'default' => true],
+                ['key' => 'show_benefit', 'type' => 'boolean', 'label' => 'Показывать выгоду', 'default' => true],
+                ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать цвета', 'default' => true],
+                [...self::text('button_label', 'Текст кнопки карточки', 40, 'Подробнее'), 'help' => 'Кнопка видна у выбранных автомобилей с настроенным действием.'],
+            ], '1.1.0'),
             self::block('vehicle-gallery', 'Галерея автомобиля', [
                 self::vehicle(),
                 ['key' => 'show_title', 'type' => 'boolean', 'label' => 'Показывать название и цену', 'default' => true],
@@ -234,6 +249,28 @@ final class OfficialBlockCatalog
         return ['key' => $key, 'type' => 'group', 'label' => $label, 'fields' => [
             self::text('label', 'Текст кнопки', 40, $default),
             self::action(),
+        ]];
+    }
+
+    /**
+     * Reusable vendor-neutral Carousel capability (D-032); the frontend maps these values to
+     * one implementation. Bounded choices keep autoplay delay and layout within safe limits.
+     *
+     * @return array<string, mixed>
+     */
+    private static function carousel(): array
+    {
+        $whenEnabled = ['visible_if' => ['field' => 'enabled', 'equals' => true]];
+
+        return ['key' => 'carousel', 'type' => 'group', 'label' => 'Карусель', 'fields' => [
+            ['key' => 'enabled', 'type' => 'boolean', 'label' => 'Показывать каруселью', 'default' => false],
+            [...self::select('per_view', 'Карточек на экране', ['one' => '1', 'two' => '2', 'three' => '3', 'four' => '4'], 'three'), ...$whenEnabled, 'help' => 'На телефоне всегда одна карточка, на планшете — не больше двух.'],
+            [...self::select('gap', 'Отступ между карточками', ['small' => 'Маленький', 'medium' => 'Средний', 'large' => 'Большой'], 'medium'), ...$whenEnabled],
+            ['key' => 'arrows', 'type' => 'boolean', 'label' => 'Показывать стрелки', 'default' => true, ...$whenEnabled],
+            ['key' => 'dots', 'type' => 'boolean', 'label' => 'Показывать точки', 'default' => true, ...$whenEnabled],
+            ['key' => 'loop', 'type' => 'boolean', 'label' => 'Зацикливать прокрутку', 'default' => false, ...$whenEnabled],
+            ['key' => 'autoplay', 'type' => 'boolean', 'label' => 'Автопрокрутка', 'default' => false, ...$whenEnabled, 'help' => 'Останавливается при наведении и фокусе; выключена, если посетитель просит уменьшить анимацию.'],
+            [...self::select('delay', 'Интервал автопрокрутки', ['s3' => '3 секунды', 's5' => '5 секунд', 's8' => '8 секунд'], 's5'), 'visible_if' => ['field' => 'autoplay', 'equals' => true]],
         ]];
     }
 

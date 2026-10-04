@@ -43,6 +43,7 @@ class OfficialBlocksTest extends TestCase
         $this->assertSame(count(self::SLUGS), BlockVersion::query()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->count());
         $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
         $this->assertSame(['1.0.0', '1.1.0', '1.2.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'header')->orderBy('id')->pluck('version')->all());
+        $this->assertSame(['1.0.0', '1.1.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'vehicle-grid')->orderBy('id')->pluck('version')->all());
         $this->assertSame($publicId, BlockDefinition::query()->where('slug', 'hero')->value('public_id'));
         $this->assertTrue(Str::isUlid($publicId));
         $this->assertSame('Первый экран', $hero->definition->name);

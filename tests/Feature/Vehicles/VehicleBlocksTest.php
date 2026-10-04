@@ -101,6 +101,25 @@ class VehicleBlocksTest extends TestCase
         $this->assertSame($own->public_id, $block->fresh()?->state_json['items'][0]['vehicle']);
     }
 
+    public function test_vehicle_grid_carousel_settings_use_bounded_vendor_neutral_values(): void
+    {
+        $this->as()->post(route('sites.blocks.store', [$this->site, $this->page]), ['block' => 'vehicle-grid'])->assertSessionHasNoErrors();
+        $block = $this->page->blocks()->sole();
+        $this->assertSame('1.1.0', $block->version->version);
+        $this->assertSame(
+            ['enabled' => false, 'per_view' => 'three', 'gap' => 'medium', 'arrows' => true, 'dots' => true, 'loop' => false, 'autoplay' => false, 'delay' => 's5'],
+            $block->state_json['carousel'],
+        );
+        $save = fn (array $carousel) => $this->as()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => ['carousel' => $carousel]]);
+
+        $save(['enabled' => true, 'per_view' => 'two', 'autoplay' => true, 'delay' => 's1'])->assertSessionHasErrors('state.carousel.delay');
+        $save(['enabled' => true, 'per_view' => 'ten'])->assertSessionHasErrors('state.carousel.per_view');
+        $save(['enabled' => true, 'per_view' => 'two', 'autoplay' => true, 'delay' => 's3', 'swiper' => ['speed' => 1]])->assertSessionHasErrors('state.carousel.swiper');
+        $save(['enabled' => true, 'per_view' => 'two', 'autoplay' => true, 'delay' => 's3'])->assertSessionHasNoErrors();
+
+        $this->assertTrue($block->fresh()?->state_json['carousel']['enabled']);
+    }
+
     private function as(): static
     {
         return $this->actingAs($this->user)->withSession([WorkspaceContext::SESSION_KEY => $this->workspace->public_id]);
