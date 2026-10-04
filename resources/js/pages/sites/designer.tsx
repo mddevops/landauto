@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft } from 'lucide-react';
+import { ArrowLeft, Eye } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
@@ -25,7 +25,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
-import { designer } from '@/routes/sites';
+import { designer, preview } from '@/routes/sites';
 import { update as updateDesign } from '@/routes/sites/design';
 
 type DesignerProps = {
@@ -37,7 +37,12 @@ type DesignerProps = {
     assets: DesignerAsset[];
     selectedBlock: string | null;
     library: DesignerLibraryBlock[];
-    can: { editDesign: boolean; editContent: boolean; manageAssets: boolean };
+    can: {
+        editDesign: boolean;
+        editContent: boolean;
+        manageAssets: boolean;
+        preview: boolean;
+    };
 };
 
 type LeftTab = 'pages' | 'blocks';
@@ -136,6 +141,27 @@ export default function Designer({
                     </div>
                     <AutosaveIndicator status={autosave.status} />
                     <Badge variant="outline">Черновик</Badge>
+                    {can.preview &&
+                        (autosave.status === 'pending' ||
+                        autosave.status === 'saving' ? (
+                            <Button variant="outline" size="sm" disabled>
+                                <Eye aria-hidden="true" />
+                                Предпросмотр
+                            </Button>
+                        ) : (
+                            <Button asChild variant="outline" size="sm">
+                                <a
+                                    href={preview.url(site.public_id, {
+                                        query: { page: page.public_id },
+                                    })}
+                                    target="_blank"
+                                    rel="noopener"
+                                >
+                                    <Eye aria-hidden="true" />
+                                    Предпросмотр
+                                </a>
+                            </Button>
+                        ))}
                 </header>
 
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">

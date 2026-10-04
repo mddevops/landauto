@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-016 — Draft Preview`.
+`P2-017 — Designer Browser QA`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1846,8 +1846,18 @@ Only draft `state_json` is written; nothing is published. Site style keeps its e
 
 ## P2-016 — Draft Preview
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-015
+
+### Result
+
+`GET sites/{site}/preview?page=` (`SitePreviewController`) runs the Workspace scope check (404), requires `preview_site` (Owner in the current role matrix) and resolves the page (404 if foreign). It renders the current draft's visible Blocks only, with resolved design tokens and Site Asset URLs, inside a chrome-less page with «Вернуться в дизайнер» and a `noindex` meta tag.
+
+- Block wrappers carry `block-{ULID}` anchors for `scroll_to`; `open_page` links stay inside the preview.
+- No Published state is read or written.
+- The Designer shows «Предпросмотр» (new tab) only when `can.preview`, and disables it while autosave is pending.
+
+Checks: `SitePreviewTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 

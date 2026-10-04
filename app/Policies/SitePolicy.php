@@ -49,6 +49,11 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditContent);
     }
 
+    public function preview(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::PreviewSite);
+    }
+
     public function manageAssets(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageAssets);

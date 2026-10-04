@@ -8,6 +8,7 @@ use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDesignController;
 use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
+use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
@@ -44,6 +45,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('sites.')
         ->group(function () {
             Route::get('designer', SiteDesignerController::class)->name('designer');
+            Route::get('preview', SitePreviewController::class)->name('preview');
             Route::patch('design', SiteDesignController::class)->name('design.update');
             Route::post('assets', [SiteAssetController::class, 'store'])->middleware('throttle:60,1')->name('assets.store');
             Route::get('assets/{asset}', [SiteAssetController::class, 'show'])->whereUlid('asset')->name('assets.show');
