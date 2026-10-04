@@ -2674,8 +2674,10 @@ Result: `published_versions` (ULID `public_id`, per-Site unique `version_number`
 
 ## P5-003 — Publication Records
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-002
+
+Result: `publications` table and `Publication` model — one row per Publish attempt with audit actor, status (validating → building → activating → succeeded, or failed from any in-progress state; transitions enforced, finished attempts frozen, never deleted), `safe_error_code`/`safe_error_summary` from the `PublishFailure` enum and safe `metadata_json`. `SitePolicy::publish` (`publish_site`) and `SitePolicy::restoreVersion` (`restore_version`): Owner/Admin publish, only Owner restores, Designer/Content Editor denied, foreign Workspace denied.
 
 ---
 

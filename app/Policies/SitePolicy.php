@@ -69,6 +69,16 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditForms);
     }
 
+    public function publish(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::PublishSite);
+    }
+
+    public function restoreVersion(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::RestoreVersion);
+    }
+
     public function viewSubmissions(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ViewSubmissions);

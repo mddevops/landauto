@@ -143,6 +143,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<Publication, $this>
+     */
+    public function publications(): HasMany
+    {
+        return $this->hasMany(Publication::class);
+    }
+
+    /**
      * The production pointer; changed only by the atomic Publish activation (ADR-006 §5).
      *
      * @return BelongsTo<PublishedVersion, $this>
