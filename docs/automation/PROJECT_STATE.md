@@ -145,6 +145,7 @@ Current focus:
 - `P4-006` DONE: central `PhoneNormalizer` (digits only, 10–15 digits, no trunk-8 rewrite pending owner decision); original + normalized stored.
 - `P4-007` DONE: `SubmissionContextResolver` turns public-ID hints into a trusted same-Site snapshot (vehicle/offer/equipment/server price/media set/page/block/popup); visitor URL/referrer/UTMs stored separately.
 - `P4-008` DONE: centralized `SubmissionGuard` (honeypot, IP 5/10m and phone 2/30m per Site via RateLimiter, Form+phone duplicate 15m); per-Site overrides on «Защита форм» (`edit_site_settings`); spam never persisted.
+- `P4-009` DONE: scoped `blacklist_entries` (global/workspace/site × ip/phone, expiry); Global only via audited `blacklist:global` command (super admin + reason); tenant lists on «Защита форм».
 
 No product feature implementation should begin merely because architecture documents now exist.
 

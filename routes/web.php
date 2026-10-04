@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormSubmissionController;
+use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
@@ -102,6 +103,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('submissions', [SiteSubmissionController::class, 'index'])->name('submissions.index');
             Route::get('form-security', [SiteFormSecurityController::class, 'show'])->name('form-security.show');
             Route::put('form-security', [SiteFormSecurityController::class, 'update'])->name('form-security.update');
+            Route::post('blacklist', [SiteBlacklistController::class, 'store'])->name('blacklist.store');
+            Route::delete('blacklist/{entry}', [SiteBlacklistController::class, 'destroy'])->whereUlid('entry')->name('blacklist.destroy');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');

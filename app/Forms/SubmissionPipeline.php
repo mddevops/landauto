@@ -23,6 +23,7 @@ class SubmissionPipeline
     public function __construct(
         private SubmissionFieldValidator $validator,
         private PhoneNormalizer $phones,
+        private Blacklist $blacklist,
         private SubmissionGuard $guard,
         private SubmissionContextResolver $context,
     ) {}
@@ -58,6 +59,10 @@ class SubmissionPipeline
         $phone = $this->firstValue($form, $values, FormFieldType::Phone);
         $normalizedPhone = $this->phones->normalize($phone);
         $policy = SiteSecurityPolicy::forSite($form->site);
+
+        if ($this->blacklist->blocks($form->site, $ip, $normalizedPhone)) {
+            return SubmissionResult::rejected(SubmissionGuard::REJECTION_MESSAGE);
+        }
 
         if ($this->guard->blocks($form, $policy, $ip, $normalizedPhone)) {
             return SubmissionResult::throttled(SubmissionGuard::REJECTION_MESSAGE);

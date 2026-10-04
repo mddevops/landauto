@@ -1,5 +1,8 @@
 import { Head, Link, useForm } from '@inertiajs/react';
 import type { FormEvent } from 'react';
+import { BlacklistSection } from '@/components/forms/blacklist-section';
+import type { BlacklistRow } from '@/components/forms/blacklist-section';
+import type { Choice } from '@/components/platform/form-fields';
 import { TextField } from '@/components/platform/form-fields';
 import { Button } from '@/components/ui/button';
 import {
@@ -27,7 +30,9 @@ type FormSecurityProps = {
     policy: Policy;
     defaults: Policy;
     bounds: Record<NumericKey, [number, number]>;
-    can: { edit: boolean };
+    blacklist: { site: BlacklistRow[]; workspace: BlacklistRow[] };
+    choices: { types: Choice[] };
+    can: { edit: boolean; editWorkspace: boolean };
 };
 
 const groups: {
@@ -70,6 +75,8 @@ export default function FormSecurity({
     policy,
     defaults,
     bounds,
+    blacklist,
+    choices,
     can,
 }: FormSecurityProps) {
     const form = useForm({
@@ -165,6 +172,27 @@ export default function FormSecurity({
                         </p>
                     )}
                 </form>
+
+                {can.edit && (
+                    <BlacklistSection
+                        sitePublicId={site.public_id}
+                        scope="site"
+                        title="Чёрный список сайта"
+                        description="Заявки с этих телефонов и IP-адресов не принимаются формами этого сайта."
+                        entries={blacklist.site}
+                        types={choices.types}
+                    />
+                )}
+                {can.editWorkspace && (
+                    <BlacklistSection
+                        sitePublicId={site.public_id}
+                        scope="workspace"
+                        title="Чёрный список рабочего пространства"
+                        description="Действует на формы всех сайтов рабочего пространства."
+                        entries={blacklist.workspace}
+                        types={choices.types}
+                    />
+                )}
             </main>
         </>
     );

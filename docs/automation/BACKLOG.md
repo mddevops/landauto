@@ -2536,8 +2536,14 @@ Result:
 
 ## P4-009 — Blacklist
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-008
+
+Result:
+- `blacklist_entries` has explicit scope columns: `global` has no owner, `workspace` sets `workspace_id`, `site` sets `site_id`. It stores type (`ip`/`phone`), the normalized value (canonical IP or normalized phone), reason, `expires_at` and `created_by_user_id`. The model enforces scope consistency and immutability.
+- Resolution: an active Global, Workspace or Site entry rejects the submission with the generic message before any rate limiting. Expired entries are ignored, and there is no leak across Workspaces or Sites.
+- Global entries are platform-only, through the `blacklist:global add|remove|list` operator command. Each change requires a platform super admin and a reason, and is logged for audit. Removal expires the entry instead of deleting it. Global entries are never exposed to tenants.
+- «Защита форм» manages Site entries under `edit_site_settings` and Workspace entries under `edit_workspace`. Each list is sent only to members who may edit it.
 
 ### Scopes
 
