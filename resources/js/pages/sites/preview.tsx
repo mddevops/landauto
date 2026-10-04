@@ -4,6 +4,7 @@ import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
+import { submitForm } from '@/blocks/form-submit';
 import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
@@ -84,6 +85,7 @@ export default function Preview({
             },
         };
     }, [assets, pages, vehicles, popups, site.public_id]);
+    const openedForm = opened?.popup.form ?? null;
 
     return (
         <>
@@ -150,7 +152,16 @@ export default function Preview({
                     onOpenChange={(open) => !open && setOpened(null)}
                     returnFocusTo={opened.trigger}
                 >
-                    {opened.popup.form && <FormView form={opened.popup.form} />}
+                    {openedForm && (
+                        <FormView
+                            form={openedForm}
+                            onSubmit={(values) =>
+                                submitForm(openedForm.public_id, {
+                                    fields: values,
+                                })
+                            }
+                        />
+                    )}
                 </PopupView>
             )}
         </>

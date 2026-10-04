@@ -2442,8 +2442,15 @@ Result:
 
 ## P4-004 — Public Form Identifier / Endpoint
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-003
+
+Result:
+- `POST /forms/{form_public_id}/submissions` is unauthenticated, JSON-only and CSRF-exempt, behind a coarse per-IP backstop of 30 per minute. Numeric IDs return 404.
+- Reachability: an active Form of an active Site. Inactive or missing Forms and archived Sites get a generic Russian 404. Which published hosts may call the endpoint is decided in Phase 5.
+- Only `fields` is accepted at the top level for now. Keys such as `workspace_id`, `site_id`, `destination` and `price`, and any other unknown key, are rejected. Unknown field keys are rejected as well.
+- Values are validated on the server against the current Form definition (required, consent accepted, length, email, select options). Errors come back as Russian messages keyed by field.
+- The preview popup form submits to this endpoint.
 
 ---
 
