@@ -55,6 +55,14 @@ class AutoEquipment extends CatalogModel
     }
 
     /**
+     * @return HasMany<AutoOptionValue, $this>
+     */
+    public function optionValues(): HasMany
+    {
+        return $this->hasMany(AutoOptionValue::class, 'equipment_id');
+    }
+
+    /**
      * @param  Builder<static>  $query
      */
     public function scopeAvailable(Builder $query): void

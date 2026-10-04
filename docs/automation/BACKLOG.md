@@ -2013,10 +2013,19 @@ Checks: `CatalogCharacteristicsTest`.
 
 ## P3-004 — Options
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-001
 
 V2 `auto_options` (two-level group → option) and `auto_option_values` (per Equipment, `is_base` explicit, no default). Missing row = unknown.
+
+### Result
+
+- Catalog migration: `is_base` is NOT NULL with no default.
+- `AutoOption` is a two-level dictionary. `AutoOptionValue` requires an explicit `is_base` and refers to options only, never groups.
+- `OptionAvailability` (unknown / standard / optional) is a view: unknown is never stored.
+- `App\Catalog\EquipmentOptions::sync()`: unknown deletes the row.
+
+Checks: `CatalogOptionsTest`.
 
 ---
 
