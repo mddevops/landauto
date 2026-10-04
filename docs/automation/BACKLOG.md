@@ -2139,10 +2139,31 @@ Checks: `SiteVehicleSchemaTest`. The policy is covered over HTTP in P3-010.
 
 ## P3-009 — Site Offer / Benefits Schema
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-008, X-008
 
 SiteOffer belongs to a SiteVehicle and references `catalog_equipment_public_id`; the Equipment chain must reach the SiteVehicle's Series. Money per ADR-004 (integer minor units, `CHAR(3)` currency), availability, badge, benefits (amount-based). Factory data stays catalog-side.
+
+### Result
+
+Tables in the main database:
+- `site_offers`: public_id, site_vehicle_id, catalog_equipment_public_id, `price_minor`, nullable `rrp_minor`, `currency CHAR(3)` (default RUB), availability, badge (up to 40 characters), status, sort_order.
+- `site_offer_benefits`: type, `amount_minor`, optional label, order.
+
+Availability values are «В наличии», «В пути» and «Под заказ». Benefit types are «Скидка», «Выгода по трейд-ин», «Выгода в кредит» and «Выгода в лизинг».
+
+`SiteOffer` rules:
+- The Equipment must exist, and its chain must reach the vehicle's Series. This is checked again whenever the Equipment changes.
+- The vehicle cannot be changed after creation.
+- Only supported currencies are allowed, and amounts must be in range.
+- `replaceBenefits()` replaces all benefits in one transaction; each benefit amount must be at least 1.
+
+`App\Support\Money` is the shared ADR-004 helper:
+- parses decimal strings into integer minor units, with no floats and at most two decimal places for RUB;
+- `toInput()` returns a decimal string for form fields;
+- `format()` returns the Russian display form, for example `1 850 000 ₽`.
+
+Checks: `SiteOfferSchemaTest`, `MoneyTest`.
 
 ---
 
