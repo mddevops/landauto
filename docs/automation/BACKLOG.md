@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`X-010 — ADR: Media Ownership and Asset Versioning` (before `P2-013`).
+`P2-013 — Asset Upload / Image Picker`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2862,11 +2862,23 @@ Decision must cover: storage of characteristic values across Generation / Modifi
 
 ## X-010 — ADR: Media Ownership and Asset Versioning
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P2-013  
 **Resolves:** D-087, D-075
 
 Decision must cover: Site asset vs Workspace asset ownership/reference model, immutable/versioned public asset strategy compatible with Published Version stability.
+
+### Result
+
+ADR-003 (`docs/architecture/decisions/ADR-003-site-asset-ownership-and-versioning.md`) is based on the owner instruction "P2 Site assets are customer Site assets":
+- Assets are Site-owned and referenced from Block state by ULID, with same-Site validation.
+- Files are immutable; replacement means a new asset; deletion must respect references.
+- Storage is private, served through an authenticated policy-checked controller.
+- Accepted formats are JPEG, PNG and WebP up to 10 MB; SVG is rejected.
+- Uploading requires `manage_assets`.
+- The Workspace Media Library is deferred, and the Series Media Library stays separate.
+
+D-087 is APPROVED for the Phase 2 scope; D-075 is APPROVED (direction).
 
 ---
 

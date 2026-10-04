@@ -1378,7 +1378,7 @@ Phase 5.
 
 ## D-075 — Public Asset Versioning Strategy
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED (direction) — ADR-003: asset files are immutable, replacement creates a new asset, Published Versions reference asset IDs; deletion must respect draft/published references. Public delivery/CDN stays with D-076.
 
 ### Decision Needed
 
@@ -1637,7 +1637,7 @@ BACKLOG `X-009 — ADR: Characteristic Value Schema` (trigger: before P3-001).
 
 ## D-087 — Site Asset / Workspace Asset Relationship
 
-**Status:** OPEN
+**Status:** APPROVED for Phase 2 scope — ADR-003: direct Site-owned assets (owner instruction "P2 Site assets are customer Site assets"); a Workspace Media Library is deferred and needs its own decision.
 
 ### Question
 
