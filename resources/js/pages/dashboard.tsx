@@ -1,5 +1,5 @@
 import { Head, Link, usePage } from '@inertiajs/react';
-import { Archive, CircleCheck, PencilRuler, Plus } from 'lucide-react';
+import { Archive, Car, CircleCheck, PencilRuler, Plus } from 'lucide-react';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -12,6 +12,7 @@ import {
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { create as createSite, designer } from '@/routes/sites';
+import { index as vehicles } from '@/routes/sites/vehicles';
 
 type SiteSummary = {
     public_id: string;
@@ -26,6 +27,7 @@ type DashboardProps = {
     };
     sites: SiteSummary[];
     canViewSites: boolean;
+    canViewVehicles: boolean;
     canCreateSites: boolean;
     siteLimit: {
         active: number;
@@ -43,6 +45,7 @@ export default function Dashboard({
     currentWorkspace,
     sites,
     canViewSites,
+    canViewVehicles,
     canCreateSites,
     siteLimit,
 }: DashboardProps) {
@@ -189,7 +192,7 @@ export default function Dashboard({
                                             </Badge>
                                         </div>
                                     </CardHeader>
-                                    <CardContent>
+                                    <CardContent className="flex flex-wrap gap-2">
                                         <Button
                                             asChild
                                             variant="outline"
@@ -203,6 +206,23 @@ export default function Dashboard({
                                                 Открыть дизайнер
                                             </Link>
                                         </Button>
+                                        {canViewVehicles && (
+                                            <Button
+                                                asChild
+                                                variant="outline"
+                                                size="sm"
+                                            >
+                                                <Link
+                                                    href={vehicles(
+                                                        site.public_id,
+                                                    )}
+                                                    aria-label={`Автомобили сайта «${site.name}»`}
+                                                >
+                                                    <Car aria-hidden="true" />
+                                                    Автомобили
+                                                </Link>
+                                            </Button>
+                                        )}
                                     </CardContent>
                                 </Card>
                             ))}

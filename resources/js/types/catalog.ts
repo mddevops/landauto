@@ -14,6 +14,14 @@ export type CatalogItem = {
     [field: string]: string | number | boolean | null;
 };
 
+export type VehicleCatalogTitle = {
+    mark: string;
+    model: string;
+    generation: string;
+    series: string;
+    title: string;
+};
+
 export type CatalogLevelColumn = {
     key: CatalogLevelKey;
     label: string;

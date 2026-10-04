@@ -17,6 +17,8 @@ use App\Http\Controllers\SiteDesignController;
 use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
+use App\Http\Controllers\Vehicles\SiteOfferController;
+use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\RequireWorkspaceContext;
@@ -69,6 +71,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [PageBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
+
+            Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
+            Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
+            Route::post('vehicles', [SiteVehicleController::class, 'store'])->name('vehicles.store');
+            Route::get('vehicles/{vehicle}', [SiteVehicleController::class, 'show'])->whereUlid('vehicle')->name('vehicles.show');
+            Route::patch('vehicles/{vehicle}', [SiteVehicleController::class, 'update'])->whereUlid('vehicle')->name('vehicles.update');
+            Route::put('vehicles/{vehicle}/media', [SiteVehicleController::class, 'media'])->whereUlid('vehicle')->name('vehicles.media');
+            Route::delete('vehicles/{vehicle}', [SiteVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('vehicles.destroy');
+            Route::post('vehicles/{vehicle}/offers', [SiteOfferController::class, 'store'])->whereUlid('vehicle')->name('offers.store');
+            Route::patch('offers/{offer}', [SiteOfferController::class, 'update'])->whereUlid('offer')->name('offers.update');
+            Route::delete('offers/{offer}', [SiteOfferController::class, 'destroy'])->whereUlid('offer')->name('offers.destroy');
         });
 
     Route::get('media/series/{image}', [SeriesMediaImageController::class, 'show'])

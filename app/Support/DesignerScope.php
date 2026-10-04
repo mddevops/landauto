@@ -6,6 +6,8 @@ use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Models\SiteOffer;
+use App\Models\SiteVehicle;
 
 /**
  * Designer resources are addressed only inside the current Workspace; anything else is
@@ -44,5 +46,21 @@ final class DesignerScope
         abort_unless($asset->site_id === $site->id, 404);
 
         return $asset;
+    }
+
+    public function vehicle(Site $site, SiteVehicle $vehicle): SiteVehicle
+    {
+        $this->site($site);
+        abort_unless($vehicle->site_id === $site->id, 404);
+
+        return $vehicle;
+    }
+
+    public function offer(Site $site, SiteOffer $offer): SiteOffer
+    {
+        $this->site($site);
+        abort_unless($offer->vehicle->site_id === $site->id, 404);
+
+        return $offer;
     }
 }

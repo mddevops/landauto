@@ -2169,10 +2169,34 @@ Checks: `SiteOfferSchemaTest`, `MoneyTest`.
 
 ## P3-010 — Customer Vehicle Flow
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-007, P3-008, P3-009
 
 Supersedes "Customer Vehicle Import". Site → «Автомобили» → «Добавить автомобиль»: Mark → Model → Generation → Series creates a SiteVehicle; then one or more Offers (Modification → Equipment → price). Dealer selects which active Series media sets are shown (stored as references, never copied).
+
+### Result
+
+Pages:
+- **Dashboard:** each site card has an «Автомобили» button, shown to users with any vehicle permission.
+- **List** (`sites/{site}/vehicles`): vehicles with their offer and media-set counts, and a warning when the Series has been switched off in the catalog.
+- **«Добавить автомобиль»:** four cascading columns (Mark, Model, Generation, Series) showing only available catalog rows, with the selection carried in ULID query parameters. A Series that is already on the site is marked «Уже на сайте». The server accepts only an available Series and rejects duplicates.
+- **Vehicle page:**
+  - show or hide on the site, and delete the vehicle together with its offers;
+  - «Цвета и ракурсы»: tick active media sets of this Series; they are stored as references;
+  - «Предложения»: the offer dialog picks a Modification, then an Equipment (available ones only), and takes price, price without discount, availability, badge, display, order and up to 10 benefits.
+
+Offer saving (`SaveSiteOfferRequest`):
+- Prices and benefit amounts arrive as decimal strings and are parsed on the server with `Money`; a numeric JSON value is rejected.
+- A newly chosen Equipment must be available and belong to the vehicle's Series. An offer can keep its current Equipment after the catalog switches it off.
+
+Authorization:
+- The Site must be in the current Workspace, and the vehicle or offer must belong to that Site; otherwise the response is 404.
+- Viewing requires `viewVehicles`, vehicle changes require `editVehicles`, and offer changes require `editPrices`.
+- Designer and ContentEditor get 403.
+
+`App\Automotive\VehicleCatalog` provides read-only bulk catalog lookups and the Russian modification summary.
+
+Checks: `SiteVehicleFlowTest`, PHPStan, `npm run check`.
 
 ---
 

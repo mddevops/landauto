@@ -122,7 +122,8 @@ Current focus:
 - `P3-007` DONE: platform catalog UI at `/platform/catalog` (cascading hierarchy, dictionaries, Equipment characteristics/options, Series media); no Filament;
 - `P3-008` DONE: Site-owned `site_vehicles` (Series reference, one per Series per Site) and media-set selection by reference; vehicle policy abilities;
 - `P3-009` DONE: `site_offers` (Equipment of the vehicle Series, ADR-004 `*_minor` money, availability, badge) and amount-based `site_offer_benefits`; shared `App\Support\Money`;
-- next: `P3-010` (§42).
+- `P3-010` DONE: customer «Автомобили» flow (cascading Series picker, media-set selection by reference, offers with server-parsed prices and benefits, tenant-scoped 404s);
+- next: `P3-011` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
