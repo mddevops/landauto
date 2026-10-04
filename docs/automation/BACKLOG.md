@@ -2584,8 +2584,13 @@ Result:
 
 ## P4-012 — Gallery / Lightbox
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-011
+
+Result:
+- The reusable `Lightbox` is a media viewer separate from the business Popup (D-033). It shows only already authorized image URLs with their alt text, and is responsive up to full screen.
+- Navigation: previous/next buttons with Russian labels, Left/Right keys and a live «N из M» counter. Escape and the close button close it; focus is trapped while open and returns to the opening element.
+- Adopted in the Vehicle Gallery: the main image is a labelled button that opens the current color's angles, and navigating in the viewer keeps the selected angle in sync. There is no schema change, and the designer canvas stays inert.
 
 ---
 

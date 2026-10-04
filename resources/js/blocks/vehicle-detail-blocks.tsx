@@ -1,6 +1,7 @@
-import { Car, Check, ChevronDown, Plus } from 'lucide-react';
+import { Car, Check, ChevronDown, Expand, Plus } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
+import { Lightbox } from '@/blocks/lightbox';
 import { ButtonPreview, Container } from '@/blocks/official-blocks';
 import type { BlockRendererProps } from '@/blocks/state';
 import { flag, group, text } from '@/blocks/state';
@@ -218,23 +219,60 @@ function Gallery({
     const image =
         set?.images.find((candidate) => candidate.angle === angle) ??
         cardImage(set);
+    const [lightboxOpen, setLightboxOpen] = useState(false);
+    const photoButton = useRef<HTMLButtonElement>(null);
+    const imageAlt = (label: string) =>
+        `${vehicleFullTitle(vehicle)}, ${set?.name ?? ''}, ${label}`;
+    const lightboxImages = (set?.images ?? []).map((candidate) => ({
+        url: candidate.url,
+        alt: imageAlt(candidate.label),
+        width: candidate.width,
+        height: candidate.height,
+    }));
+    const imageIndex = Math.max(
+        0,
+        set?.images.findIndex(
+            (candidate) => candidate.angle === image?.angle,
+        ) ?? 0,
+    );
 
     return (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
             <div className="flex flex-col gap-3">
                 <div className="flex aspect-[16/10] items-center justify-center overflow-hidden rounded-(--lf-radius) bg-neutral-100">
                     {image ? (
-                        <img
-                            src={image.url}
-                            alt={`${vehicleFullTitle(vehicle)}, ${set?.name ?? ''}, ${image.label}`}
-                            width={image.width}
-                            height={image.height}
-                            className="size-full object-contain"
-                        />
+                        <button
+                            ref={photoButton}
+                            type="button"
+                            aria-label={`Открыть фото на весь экран: ${imageAlt(image.label)}`}
+                            aria-haspopup="dialog"
+                            onClick={() => setLightboxOpen(true)}
+                            className="group relative size-full cursor-zoom-in focus-visible:ring-2 focus-visible:ring-(--lf-primary) focus-visible:outline-none focus-visible:ring-inset"
+                        >
+                            <img
+                                src={image.url}
+                                alt={imageAlt(image.label)}
+                                width={image.width}
+                                height={image.height}
+                                className="size-full object-contain"
+                            />
+                            <span className="absolute right-3 bottom-3 inline-flex size-9 items-center justify-center rounded-full bg-white/90 text-neutral-800 opacity-0 shadow transition group-hover:opacity-100 group-focus-visible:opacity-100">
+                                <Expand aria-hidden="true" className="size-4" />
+                            </span>
+                        </button>
                     ) : (
                         <Car className="size-12 text-neutral-400" aria-hidden />
                     )}
                 </div>
+                <Lightbox
+                    label={`Фото: ${vehicleFullTitle(vehicle)}`}
+                    images={lightboxImages}
+                    index={imageIndex}
+                    onIndexChange={(next) => setAngle(set?.images[next]?.angle)}
+                    open={lightboxOpen}
+                    onOpenChange={setLightboxOpen}
+                    returnFocusTo={photoButton}
+                />
                 {set && set.images.length > 1 && (
                     <div
                         role="group"

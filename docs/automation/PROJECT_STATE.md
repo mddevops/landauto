@@ -148,6 +148,7 @@ Current focus:
 - `P4-009` DONE: scoped `blacklist_entries` (global/workspace/site × ip/phone, expiry); Global only via audited `blacklist:global` command (super admin + reason); tenant lists on «Защита форм».
 - `P4-010` DONE: `CaptchaVerifier` + `YandexSmartCaptchaVerifier` (ok passes, failed fails closed, outage fails open with safe log), fake verifier for testing/e2e; Site toggle `captcha_required`; client key only in browser.
 - `P4-011` DONE: reusable vendor-neutral `Carousel` (scroll-snap, accessible, pausable autoplay, reduced motion); `vehicle-grid` 1.1.0 carousel mode.
+- `P4-012` DONE: reusable `Lightbox` (D-033; keyboard, focus trap/return, alt text) adopted in the Vehicle Gallery.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
