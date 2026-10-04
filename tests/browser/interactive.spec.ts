@@ -154,4 +154,40 @@ test('owner builds a form, attaches it to a popup and opens it from a button', a
     await preview.keyboard.press('Escape');
     await expect(popup).toBeHidden();
     await expect(trigger).toBeFocused();
+
+    // Client-side hints first, then a real submission persisted by the backend.
+    await trigger.click();
+    await popup.getByRole('button', { name: 'Отправить' }).click();
+    await expect(popup.getByText('Заполните это поле.')).toBeVisible();
+    await expect(popup.getByText('Подтвердите согласие.')).toBeVisible();
+
+    await popup.getByLabel('Ваше имя').fill('Иван Покупатель');
+    await popup.getByLabel(/Телефон/).fill('+7 (999) 111-22-33');
+    await popup
+        .getByRole('checkbox', { name: /Тестовое согласие клиента/ })
+        .check();
+    const submitted = preview.waitForResponse(
+        (response) =>
+            response.url().includes('/submissions') &&
+            response.request().method() === 'POST',
+    );
+    await popup.getByRole('button', { name: 'Отправить' }).click();
+    expect((await submitted).status()).toBe(201);
+    await expect(popup.getByRole('status')).toHaveText(
+        'Спасибо! Мы свяжемся с вами.',
+    );
+
+    // The lead is visible in «Заявки» with its trusted context.
+    await page.getByRole('button', { name: 'Разделы сайта' }).click();
+    await page.getByRole('menuitem', { name: 'Заявки' }).click();
+    await expect(
+        page.getByRole('heading', { level: 1, name: 'Заявки' }),
+    ).toBeVisible();
+    const lead = page.getByRole('article').first();
+    await expect(lead).toContainText('Заявка на звонок');
+    await expect(lead).toContainText('Иван Покупатель');
+    await expect(lead).toContainText('+7 (999) 111-22-33');
+    const leadContext = lead.getByRole('region', { name: 'Контекст заявки' });
+    await expect(leadContext).toContainText('Обратный звонок');
+    await expect(leadContext).toContainText('Главная');
 });
