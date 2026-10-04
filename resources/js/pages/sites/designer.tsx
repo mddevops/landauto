@@ -7,6 +7,8 @@ import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
+import { vehicleFullTitle } from '@/blocks/vehicles';
+import type { VehicleBinding } from '@/blocks/vehicles';
 import { DesignerContext } from '@/components/designer/designer-context';
 import { DesignPanel } from '@/components/designer/design-panel';
 import { useBlockAutosave } from '@/components/designer/use-block-autosave';
@@ -35,6 +37,7 @@ type DesignerProps = {
     pages: DesignerPage[];
     blocks: DesignerBlock[];
     assets: DesignerAsset[];
+    vehicles: VehicleBinding[];
     selectedBlock: string | null;
     library: DesignerLibraryBlock[];
     can: {
@@ -55,6 +58,7 @@ export default function Designer({
     pages,
     blocks,
     assets,
+    vehicles,
     selectedBlock,
     library,
     can,
@@ -64,6 +68,9 @@ export default function Designer({
             assets.map((asset) => [asset.public_id, asset.url]),
         );
         const pageIds = new Set(pages.map((sitePage) => sitePage.public_id));
+        const vehicleMap = new Map(
+            vehicles.map((vehicle) => [vehicle.public_id, vehicle]),
+        );
 
         return {
             assetUrl: (id: string) => urls.get(id) ?? null,
@@ -71,8 +78,10 @@ export default function Designer({
                 pageIds.has(id)
                     ? designer.url(site.public_id, { query: { page: id } })
                     : null,
+            vehicle: (id: string) => vehicleMap.get(id) ?? null,
+            vehicles,
         };
-    }, [assets, pages, site.public_id]);
+    }, [assets, pages, vehicles, site.public_id]);
     const designerContext = useMemo(
         () => ({
             siteId: site.public_id,
@@ -80,8 +89,12 @@ export default function Designer({
             canUpload: can.manageAssets,
             pages,
             blocks,
+            vehicles: vehicles.map((vehicle) => ({
+                public_id: vehicle.public_id,
+                title: vehicleFullTitle(vehicle),
+            })),
         }),
-        [site.public_id, assets, can.manageAssets, pages, blocks],
+        [site.public_id, assets, can.manageAssets, pages, blocks, vehicles],
     );
     const [selectedId, setSelectedId] = useState<string | null>(selectedBlock);
     const [serverSelection, setServerSelection] = useState(selectedBlock);

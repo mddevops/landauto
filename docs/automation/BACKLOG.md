@@ -2229,10 +2229,23 @@ Checks: `VehicleMediaResolverTest`.
 
 ## P3-012 — Automotive Binding Registry
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-008, P3-009, P2-003
 
 Approved automotive view model / binding: SiteVehicle identity, Mark, Model, Generation, Series, selected media variants and angles, Offers (Modification, Equipment, price, benefits, characteristics, factory options). Blocks never query the raw catalog database.
+
+### Result
+
+`App\Automotive\VehicleBindings::forSite()` builds display-ready view models for the designer and the preview (prop `vehicles`):
+- **Included:** only visible vehicles whose Series is available, and only visible offers whose Equipment is available.
+- **Vehicle fields:** identity, Mark/Model/Generation/Series, resolved media sets with angle labels, a «from» price and the largest benefit total.
+- **Offer fields:** Modification summary and specs, Equipment name, price, RRP, availability, badge, benefits, grouped characteristics and known factory options (standard or optional).
+- **Money:** passed only as formatted labels.
+- **Never included:** numeric IDs and raw `*_minor` values.
+
+The new Block field type `vehicle` references a vehicle of the same Site by `public_id`. References are validated on the server, and the designer offers a picker for it. Renderers read bindings through `BlockRenderContext.vehicle()` / `vehicles`.
+
+Checks: `VehicleBindingsTest`.
 
 ---
 

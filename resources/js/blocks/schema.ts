@@ -5,6 +5,7 @@ export type SchemaFieldType =
     | 'select'
     | 'image'
     | 'action'
+    | 'vehicle'
     | 'group'
     | 'repeater';
 

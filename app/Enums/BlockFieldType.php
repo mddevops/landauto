@@ -10,6 +10,7 @@ enum BlockFieldType: string
     case Select = 'select';
     case Image = 'image';
     case Action = 'action';
+    case Vehicle = 'vehicle';
     case Group = 'group';
     case Repeater = 'repeater';
 
@@ -29,7 +30,7 @@ enum BlockFieldType: string
             self::Text, self::Textarea => [...$common, 'required', 'max_length', 'default'],
             self::Boolean => [...$common, 'default'],
             self::Select => [...$common, 'required', 'options', 'default'],
-            self::Image, self::Action => [...$common, 'required'],
+            self::Image, self::Action, self::Vehicle => [...$common, 'required'],
             self::Group => [...$common, 'fields'],
             self::Repeater => [...$common, 'fields', 'min_items', 'max_items'],
         };

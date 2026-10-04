@@ -5,6 +5,7 @@ import { ActionControl } from '@/components/designer/action-control';
 import { ImageControl } from '@/components/designer/image-control';
 import { RepeaterControl } from '@/components/designer/repeater-control';
 import type { DesignerBlock } from '@/components/designer/types';
+import { VehicleControl } from '@/components/designer/vehicle-control';
 import InputError from '@/components/input-error';
 import { Checkbox } from '@/components/ui/checkbox';
 import { Input } from '@/components/ui/input';
@@ -213,6 +214,16 @@ function FieldControl({
                     path={path}
                     id={id}
                     errors={errors}
+                    onChange={onChange}
+                />
+            );
+        case 'vehicle':
+            return (
+                <VehicleControl
+                    field={field}
+                    value={value}
+                    id={id}
+                    error={error}
                     onChange={onChange}
                 />
             );

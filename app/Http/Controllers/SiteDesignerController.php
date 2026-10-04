@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Automotive\VehicleBindings;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
@@ -16,7 +17,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -28,6 +29,7 @@ class SiteDesignerController extends Controller
         abort_if($page === null, 404);
 
         $blocks = $page->blocks()->with('version.definition')->get();
+        $vehicles = $vehicleBindings->forSite($site);
 
         return Inertia::render('sites/designer', [
             'site' => [
@@ -73,6 +75,7 @@ class SiteDesignerController extends Controller
                 ])
                 ->values()
                 ->all(),
+            'vehicles' => $vehicles,
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
             'library' => BlockDefinition::query()
                 ->where('is_official', true)

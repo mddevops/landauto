@@ -25,4 +25,10 @@ interface BlockReferenceResolver
      * @return array<mixed>
      */
     public function existingBlocks(array $ids): array;
+
+    /**
+     * @param  list<string>  $ids
+     * @return array<mixed>
+     */
+    public function existingVehicles(array $ids): array;
 }

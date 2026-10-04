@@ -127,7 +127,7 @@ final class BlockSchemaValidator
                 BlockFieldType::Textarea => $this->validateText($field, $fieldPath, self::TEXTAREA_MAX_LENGTH),
                 BlockFieldType::Boolean => $this->validateBoolean($field, $fieldPath),
                 BlockFieldType::Select => $this->validateSelect($field, $fieldPath),
-                BlockFieldType::Image, BlockFieldType::Action => null,
+                BlockFieldType::Image, BlockFieldType::Action, BlockFieldType::Vehicle => null,
                 BlockFieldType::Group, BlockFieldType::Repeater => $this->validateContainer(
                     $field,
                     $type,

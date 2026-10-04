@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Automotive\VehicleBindings;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
@@ -19,7 +20,7 @@ use Inertia\Response;
  */
 class SitePreviewController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings): Response
     {
         $scope->site($site);
         Gate::authorize('preview', $site);
@@ -58,6 +59,7 @@ class SitePreviewController extends Controller
                 ])
                 ->values()
                 ->all(),
+            'vehicles' => $vehicleBindings->forSite($site),
         ]);
     }
 }

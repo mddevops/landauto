@@ -26,8 +26,8 @@ final class BlockStateValidator
 
     private const PHONE_PATTERN = '/^\+?[0-9 ()\-]{3,32}$/';
 
-    /** @var array{assets: array<string, string>, pages: array<string, string>, blocks: array<string, string>} State path => referenced public ID. */
-    private array $references = ['assets' => [], 'pages' => [], 'blocks' => []];
+    /** @var array{assets: array<string, string>, pages: array<string, string>, blocks: array<string, string>, vehicles: array<string, string>} State path => referenced public ID. */
+    private array $references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => []];
 
     /**
      * @param  array<string, mixed>  $schema
@@ -37,7 +37,7 @@ final class BlockStateValidator
     public function errors(array $schema, mixed $state, ?BlockReferenceResolver $resolver = null): array
     {
         $this->errors = [];
-        $this->references = ['assets' => [], 'pages' => [], 'blocks' => []];
+        $this->references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => []];
         /** @var list<array<string, mixed>> $fields */
         $fields = $schema['fields'] ?? [];
 
@@ -46,6 +46,7 @@ final class BlockStateValidator
         $this->checkReferences($this->references['assets'], fn (array $ids): array => $resolver?->existingAssets($ids) ?? [], 'Изображение не найдено в библиотеке этого сайта.');
         $this->checkReferences($this->references['pages'], fn (array $ids): array => $resolver?->existingPages($ids) ?? [], 'Страница не найдена на этом сайте.');
         $this->checkReferences($this->references['blocks'], fn (array $ids): array => $resolver?->existingBlocks($ids) ?? [], 'Блок не найден на этой странице.');
+        $this->checkReferences($this->references['vehicles'], fn (array $ids): array => $resolver?->existingVehicles($ids) ?? [], 'Автомобиль не найден на этом сайте.');
 
         return $this->errors;
     }
@@ -116,6 +117,7 @@ final class BlockStateValidator
             BlockFieldType::Select => $this->validateSelect($field, $value, $path),
             BlockFieldType::Image => $this->validateImage($value, $path),
             BlockFieldType::Action => $this->validateAction($value, $path),
+            BlockFieldType::Vehicle => $this->reference('vehicles', is_string($value) ? $value : '', $path, 'Выберите автомобиль этого сайта.'),
             BlockFieldType::Group => $this->validateObject($this->nestedFields($field), $value, $path, false),
             BlockFieldType::Repeater => $this->validateRepeater($field, $value, $path),
         };
@@ -213,7 +215,7 @@ final class BlockStateValidator
     }
 
     /**
-     * @param  'pages'|'blocks'  $kind
+     * @param  'pages'|'blocks'|'vehicles'  $kind
      */
     private function reference(string $kind, string $id, string $path, string $message): void
     {

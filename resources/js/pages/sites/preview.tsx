@@ -7,6 +7,7 @@ import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
+import type { VehicleBinding } from '@/blocks/vehicles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { designer, preview } from '@/routes/sites';
@@ -23,6 +24,7 @@ type PreviewProps = {
         state: BlockState;
     }[];
     assets: { public_id: string; url: string }[];
+    vehicles: VehicleBinding[];
 };
 
 export default function Preview({
@@ -32,12 +34,16 @@ export default function Preview({
     design,
     blocks,
     assets,
+    vehicles,
 }: PreviewProps) {
     const renderContext = useMemo(() => {
         const urls = new Map(
             assets.map((asset) => [asset.public_id, asset.url]),
         );
         const pageIds = new Set(pages.map((sitePage) => sitePage.public_id));
+        const vehicleMap = new Map(
+            vehicles.map((vehicle) => [vehicle.public_id, vehicle]),
+        );
 
         return {
             assetUrl: (id: string) => urls.get(id) ?? null,
@@ -45,8 +51,10 @@ export default function Preview({
                 pageIds.has(id)
                     ? preview.url(site.public_id, { query: { page: id } })
                     : null,
+            vehicle: (id: string) => vehicleMap.get(id) ?? null,
+            vehicles,
         };
-    }, [assets, pages, site.public_id]);
+    }, [assets, pages, vehicles, site.public_id]);
 
     return (
         <>

@@ -7,6 +7,7 @@ export type DesignerContextValue = {
     canUpload: boolean;
     pages: { public_id: string; title: string }[];
     blocks: { public_id: string; name: string }[];
+    vehicles: { public_id: string; title: string }[];
 };
 
 export const DesignerContext = createContext<DesignerContextValue>({
@@ -15,6 +16,7 @@ export const DesignerContext = createContext<DesignerContextValue>({
     canUpload: false,
     pages: [],
     blocks: [],
+    vehicles: [],
 });
 
 export function useDesignerContext(): DesignerContextValue {
