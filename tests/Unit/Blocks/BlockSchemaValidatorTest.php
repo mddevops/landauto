@@ -45,6 +45,8 @@ class BlockSchemaValidatorTest extends TestCase
     public static function invalidSchemas(): array
     {
         $text = ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок'];
+        $toggle = ['key' => 'on', 'type' => 'boolean', 'label' => 'Вкл'];
+        $select = ['key' => 'mode', 'type' => 'select', 'label' => 'Режим', 'options' => [['value' => 'a', 'label' => 'А'], ['value' => 'b', 'label' => 'Б']]];
         $repeater = fn (array $fields, int $max = 3): array => ['key' => 'items', 'type' => 'repeater', 'label' => 'Элементы', 'max_items' => $max, 'fields' => $fields];
 
         return [
@@ -84,7 +86,28 @@ class BlockSchemaValidatorTest extends TestCase
                     ]],
                 ]],
             ]]]], 'fields.0.fields.0.fields.0.fields.0'],
+            'condition not object' => [['fields' => [$toggle, [...$text, 'visible_if' => 'on']]], 'fields.1.visible_if'],
+            'condition unknown key' => [['fields' => [$toggle, [...$text, 'visible_if' => ['field' => 'on', 'equals' => true, 'not' => 1]]]], 'fields.1.visible_if.not'],
+            'condition on later field' => [['fields' => [[...$text, 'visible_if' => ['field' => 'on', 'equals' => true]], $toggle]], 'fields.0.visible_if.field'],
+            'condition on text field' => [['fields' => [$text, [...$text, 'key' => 'other', 'visible_if' => ['field' => 'title', 'equals' => 'x']]]], 'fields.1.visible_if.field'],
+            'condition boolean type' => [['fields' => [$toggle, [...$text, 'visible_if' => ['field' => 'on', 'equals' => 'yes']]]], 'fields.1.visible_if.equals'],
+            'condition unknown option' => [['fields' => [$select, [...$text, 'visible_if' => ['field' => 'mode', 'equals' => 'c']]]], 'fields.1.visible_if.equals'],
+            'condition on outer level' => [['fields' => [$toggle, ['key' => 'g', 'type' => 'group', 'label' => 'Группа', 'fields' => [
+                [...$text, 'visible_if' => ['field' => 'on', 'equals' => true]],
+            ]]]], 'fields.1.fields.0.visible_if.field'],
         ];
+    }
+
+    public function test_conditions_on_previous_boolean_and_select_siblings_are_valid(): void
+    {
+        $schema = ['fields' => [
+            ['key' => 'on', 'type' => 'boolean', 'label' => 'Вкл'],
+            ['key' => 'mode', 'type' => 'select', 'label' => 'Режим', 'options' => [['value' => 'a', 'label' => 'А'], ['value' => 'b', 'label' => 'Б']]],
+            ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'visible_if' => ['field' => 'on', 'equals' => true]],
+            ['key' => 'img', 'type' => 'image', 'label' => 'Фото', 'visible_if' => ['field' => 'mode', 'equals' => 'b']],
+        ]];
+
+        $this->assertSame([], (new BlockSchemaValidator)->errors($schema));
     }
 
     #[DataProvider('invalidSchemas')]

@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-011 — Conditional Schema Fields`.
+`P2-012 — Site Design Tokens`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1730,8 +1730,12 @@ Repeater fields in the Properties panel support add (with item field defaults), 
 
 ## P2-011 — Conditional Schema Fields
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-009
+
+### Result
+
+Any schema field may declare `visible_if: {"field": key, "equals": value}`. The rule may reference only an earlier boolean/select sibling on the same level; `equals` must be a boolean or one of that select's option values. `BlockSchemaValidator` enforces this with Russian path errors. The Properties panel hides fields whose condition is not met; their stored values stay in state (draft data is never silently dropped). The official catalog now supports several versions per slug; `header` 1.1.0 shows «Телефон» only when «Показывать телефон» is on. Existing 1.0.0 instances stay pinned, and new placements use the latest version. Checks: schema validator unit tests, `OfficialBlocksTest`, designer/block feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 

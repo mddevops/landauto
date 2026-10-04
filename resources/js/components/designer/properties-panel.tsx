@@ -1,3 +1,4 @@
+import { isFieldVisible } from '@/blocks/schema';
 import type { SchemaField } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
 import { RepeaterControl } from '@/components/designer/repeater-control';
@@ -51,18 +52,20 @@ export function FieldList({
 }) {
     return (
         <>
-            {fields.map((field) => (
-                <FieldControl
-                    key={field.key}
-                    field={field}
-                    value={value[field.key]}
-                    path={`${path}.${field.key}`}
-                    errors={errors}
-                    onChange={(next) =>
-                        onChange({ ...value, [field.key]: next })
-                    }
-                />
-            ))}
+            {fields
+                .filter((field) => isFieldVisible(field, value))
+                .map((field) => (
+                    <FieldControl
+                        key={field.key}
+                        field={field}
+                        value={value[field.key]}
+                        path={`${path}.${field.key}`}
+                        errors={errors}
+                        onChange={(next) =>
+                            onChange({ ...value, [field.key]: next })
+                        }
+                    />
+                ))}
         </>
     );
 }

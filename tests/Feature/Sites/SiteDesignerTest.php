@@ -94,7 +94,7 @@ class SiteDesignerTest extends TestCase
      */
     private function place(Page $page, string $slug, int $sortOrder, array $state): BlockInstance
     {
-        $version = BlockVersion::query()->whereRelation('definition', 'slug', $slug)->sole();
+        $version = BlockVersion::query()->whereRelation('definition', 'slug', $slug)->where('version', '1.0.0')->sole();
 
         return BlockInstance::factory()->for($page)->for($version, 'version')->create([
             'sort_order' => $sortOrder,

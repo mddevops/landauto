@@ -22,7 +22,7 @@ class OfficialBlocksTest extends TestCase
     {
         $blocks = OfficialBlockCatalog::blocks();
 
-        $this->assertSame(self::SLUGS, array_column($blocks, 'slug'));
+        $this->assertSame(self::SLUGS, array_values(array_unique(array_column($blocks, 'slug'))));
 
         foreach ($blocks as $block) {
             $this->assertSame([], (new BlockSchemaValidator)->errors($block['schema']), $block['slug']);
@@ -41,6 +41,8 @@ class OfficialBlocksTest extends TestCase
 
         $this->assertSame(6, BlockDefinition::query()->where('is_official', true)->count());
         $this->assertSame(6, BlockVersion::query()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->count());
+        $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
+        $this->assertSame(['1.0.0', '1.1.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'header')->orderBy('id')->pluck('version')->all());
         $this->assertSame($publicId, BlockDefinition::query()->where('slug', 'hero')->value('public_id'));
         $this->assertTrue(Str::isUlid($publicId));
         $this->assertSame('Первый экран', $hero->definition->name);

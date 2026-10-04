@@ -79,6 +79,8 @@ final class BlockSchemaValidator
         }
 
         $keys = [];
+        /** @var array<string, array<string, mixed>> $controllers */
+        $controllers = [];
 
         foreach ($fields as $index => $field) {
             $fieldPath = "{$path}.{$index}";
@@ -134,6 +136,48 @@ final class BlockSchemaValidator
                     $repeaterNesting,
                 ),
             };
+
+            if (array_key_exists('visible_if', $field)) {
+                $this->validateCondition($field['visible_if'], $controllers, $fieldPath);
+            }
+
+            if (is_string($key) && in_array($type, [BlockFieldType::Boolean, BlockFieldType::Select], true)) {
+                $controllers[$key] = $field;
+            }
+        }
+    }
+
+    /**
+     * A field may depend only on an earlier boolean/select sibling: {"field": key, "equals": value}.
+     *
+     * @param  array<string, array<string, mixed>>  $controllers
+     */
+    private function validateCondition(mixed $condition, array $controllers, string $path): void
+    {
+        $path .= '.visible_if';
+
+        if (! is_array($condition) || array_is_list($condition)) {
+            $this->errors[$path] = 'Условие показа должно быть объектом.';
+
+            return;
+        }
+
+        $this->rejectUnknownKeys($condition, ['field', 'equals'], $path);
+        $controller = is_string($condition['field'] ?? null) ? ($controllers[$condition['field']] ?? null) : null;
+
+        if ($controller === null) {
+            $this->errors["{$path}.field"] = 'Условие должно ссылаться на предыдущее поле-переключатель или список того же уровня.';
+
+            return;
+        }
+
+        $equals = $condition['equals'] ?? null;
+        $valid = $controller['type'] === BlockFieldType::Boolean->value
+            ? is_bool($equals)
+            : in_array($equals, array_column(is_array($controller['options'] ?? null) ? $controller['options'] : [], 'value'), true);
+
+        if (! $valid) {
+            $this->errors["{$path}.equals"] = 'Значение условия не подходит к типу поля.';
         }
     }
 

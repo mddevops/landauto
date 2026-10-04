@@ -19,8 +19,25 @@ export type SchemaField = {
     fields?: SchemaField[];
     min_items?: number;
     max_items?: number;
+    visible_if?: { field: string; equals: string | boolean };
 };
 
 export type BlockSchema = {
     fields: SchemaField[];
 };
+
+export function isFieldVisible(
+    field: SchemaField,
+    siblings: Record<string, unknown>,
+): boolean {
+    if (!field.visible_if) {
+        return true;
+    }
+
+    const controller = field.visible_if.field;
+    const value = Object.hasOwn(siblings, controller)
+        ? siblings[controller]
+        : null;
+
+    return value === field.visible_if.equals;
+}

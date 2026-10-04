@@ -22,7 +22,7 @@ enum BlockFieldType: string
      */
     public function allowedKeys(): array
     {
-        $common = ['key', 'type', 'label', 'help'];
+        $common = ['key', 'type', 'label', 'help', 'visible_if'];
 
         return match ($this) {
             self::Text, self::Textarea => [...$common, 'required', 'max_length', 'default'],

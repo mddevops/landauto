@@ -11,6 +11,8 @@ final class OfficialBlockCatalog
     public const INITIAL_VERSION = '1.0.0';
 
     /**
+     * Entries are ordered oldest-to-newest per slug; the seeder appends missing versions.
+     *
      * @return list<array{slug: string, name: string, version: string, schema: array{fields: list<array<string, mixed>>}}>
      */
     public static function blocks(): array
@@ -26,6 +28,16 @@ final class OfficialBlockCatalog
                 ['key' => 'show_phone', 'type' => 'boolean', 'label' => 'Показывать телефон', 'default' => true],
                 self::button('button', 'Кнопка', 'Оставить заявку'),
             ]),
+            self::block('header', 'Шапка', [
+                self::text('logo_text', 'Название', 80, 'Автосалон'),
+                ['key' => 'logo', 'type' => 'image', 'label' => 'Логотип'],
+                self::repeater('menu', 'Пункты меню', 8, [
+                    self::text('label', 'Текст пункта', 40, required: true),
+                ]),
+                ['key' => 'show_phone', 'type' => 'boolean', 'label' => 'Показывать телефон', 'default' => true],
+                [...self::text('phone', 'Телефон', 32), 'visible_if' => ['field' => 'show_phone', 'equals' => true]],
+                self::button('button', 'Кнопка', 'Оставить заявку'),
+            ], '1.1.0'),
             self::block('hero', 'Первый экран', [
                 self::text('eyebrow', 'Надзаголовок', 80),
                 self::text('title', 'Заголовок', 120, 'Новые автомобили в наличии', required: true),
@@ -73,9 +85,9 @@ final class OfficialBlockCatalog
      * @param  list<array<string, mixed>>  $fields
      * @return array{slug: string, name: string, version: string, schema: array{fields: list<array<string, mixed>>}}
      */
-    private static function block(string $slug, string $name, array $fields): array
+    private static function block(string $slug, string $name, array $fields, string $version = self::INITIAL_VERSION): array
     {
-        return ['slug' => $slug, 'name' => $name, 'version' => self::INITIAL_VERSION, 'schema' => ['fields' => $fields]];
+        return ['slug' => $slug, 'name' => $name, 'version' => $version, 'schema' => ['fields' => $fields]];
     }
 
     /**
