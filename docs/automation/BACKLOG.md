@@ -2482,8 +2482,22 @@ Result:
 
 ## P4-007 — Context Passing
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-002, P4-003, P3-012
+
+Result:
+- Visitors send only public-ID hints: page, block, popup, vehicle, offer and media set. `SubmissionContextResolver` resolves each one inside the Form's Site.
+  - The page must belong to the Site, and the block to that page.
+  - The popup must be active and attached to this Form.
+  - The vehicle and offer must be active, and the offer must belong to the vehicle; an offer on its own resolves its vehicle.
+  - The media set must be selected and active on that vehicle.
+  - Catalog titles, equipment, modification and the offer price are read on the server.
+- A malformed, foreign or mismatched hint rejects the submission with a Russian message. Visitor price keys are ignored: the price always comes from the Site Offer.
+- `context.trusted` holds the snapshot. `context.visitor` separately holds the page URL, referrer and UTMs, kept only when well-formed.
+- The same Popup opened from Vehicle A or B records different context.
+- The «Заявки» list shows the context.
+
+### Context
 
 ### Context
 

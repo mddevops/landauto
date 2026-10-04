@@ -13,6 +13,15 @@ type SubmittedValue = {
     value: string | boolean | null;
 };
 
+type TrustedContext = {
+    page?: { title: string };
+    block?: { name: string };
+    popup?: { name: string };
+    vehicle?: { title: string; series: string };
+    offer?: { modification: string; equipment: string; price_label: string };
+    media_set?: { name: string };
+};
+
 type SubmissionRow = {
     public_id: string;
     form: { public_id: string; name: string };
@@ -20,7 +29,59 @@ type SubmissionRow = {
     submitted_at: string;
     phone_normalized: string | null;
     values: SubmittedValue[];
+    context: { trusted: TrustedContext; visitor: Record<string, string> };
 };
+
+const visitorLabels: Record<string, string> = {
+    page_url: 'Адрес страницы',
+    referrer: 'Источник перехода',
+    utm_source: 'utm_source',
+    utm_medium: 'utm_medium',
+    utm_campaign: 'utm_campaign',
+    utm_content: 'utm_content',
+    utm_term: 'utm_term',
+};
+
+function contextRows({ trusted, visitor }: SubmissionRow['context']) {
+    const rows: { label: string; value: string }[] = [];
+
+    if (trusted.vehicle) {
+        rows.push({
+            label: 'Автомобиль',
+            value: `${trusted.vehicle.title}, ${trusted.vehicle.series}`,
+        });
+    }
+
+    if (trusted.offer) {
+        rows.push({
+            label: 'Комплектация',
+            value: `${trusted.offer.modification} · ${trusted.offer.equipment}`,
+        });
+        rows.push({ label: 'Цена на сайте', value: trusted.offer.price_label });
+    }
+
+    if (trusted.media_set) {
+        rows.push({ label: 'Цвет', value: trusted.media_set.name });
+    }
+
+    if (trusted.page) {
+        rows.push({ label: 'Страница', value: trusted.page.title });
+    }
+
+    if (trusted.block) {
+        rows.push({ label: 'Блок', value: trusted.block.name });
+    }
+
+    if (trusted.popup) {
+        rows.push({ label: 'Попап', value: trusted.popup.name });
+    }
+
+    for (const [key, value] of Object.entries(visitor)) {
+        rows.push({ label: visitorLabels[key] ?? key, value });
+    }
+
+    return rows;
+}
 
 type SubmissionsIndexProps = {
     site: { public_id: string; name: string };
@@ -144,6 +205,34 @@ export default function SubmissionsIndex({
                                             </div>
                                         ))}
                                     </dl>
+                                    {contextRows(submission.context).length >
+                                        0 && (
+                                        <section
+                                            aria-label="Контекст заявки"
+                                            className="border-t pt-3"
+                                        >
+                                            <h3 className="mb-2 text-sm font-medium">
+                                                Контекст
+                                            </h3>
+                                            <dl className="grid gap-x-4 gap-y-2 text-sm sm:grid-cols-[minmax(0,12rem)_minmax(0,1fr)]">
+                                                {contextRows(
+                                                    submission.context,
+                                                ).map((row) => (
+                                                    <div
+                                                        key={row.label}
+                                                        className="contents"
+                                                    >
+                                                        <dt className="truncate text-muted-foreground">
+                                                            {row.label}
+                                                        </dt>
+                                                        <dd className="min-w-0 break-all">
+                                                            {row.value}
+                                                        </dd>
+                                                    </div>
+                                                ))}
+                                            </dl>
+                                        </section>
+                                    )}
                                 </article>
                             </li>
                         ))}

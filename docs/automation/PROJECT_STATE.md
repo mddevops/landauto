@@ -143,6 +143,7 @@ Current focus:
 - `P4-004` DONE: public `POST /forms/{form_public_id}/submissions` (guest, CSRF-exempt JSON, per-IP backstop), active Form + active Site only, strict payload keys and server-side field validation; published reachability deferred to Phase 5.
 - `P4-005` DONE: `SubmissionPipeline` persists valid Submissions (immutable field snapshot, no raw request) before responding; read-only «Заявки» list under `view_submissions`.
 - `P4-006` DONE: central `PhoneNormalizer` (digits only, 10–15 digits, no trunk-8 rewrite pending owner decision); original + normalized stored.
+- `P4-007` DONE: `SubmissionContextResolver` turns public-ID hints into a trusted same-Site snapshot (vehicle/offer/equipment/server price/media set/page/block/popup); visitor URL/referrer/UTMs stored separately.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

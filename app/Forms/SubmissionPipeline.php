@@ -17,11 +17,12 @@ use Illuminate\Support\Str;
 class SubmissionPipeline
 {
     /** Top-level payload keys a visitor may send; anything else is rejected. */
-    public const PAYLOAD_KEYS = ['fields'];
+    public const PAYLOAD_KEYS = ['fields', 'context', 'tracking'];
 
     public function __construct(
         private SubmissionFieldValidator $validator,
         private PhoneNormalizer $phones,
+        private SubmissionContextResolver $context,
     ) {}
 
     /**
@@ -47,15 +48,22 @@ class SubmissionPipeline
             return SubmissionResult::invalid($validated['errors']);
         }
 
-        $submission = $this->persist($form, $validated['values'], $ip, $userAgent);
+        $context = $this->context->resolve($form, $payload['context'] ?? null, $payload['tracking'] ?? null);
+
+        if ($context === null) {
+            return SubmissionResult::rejected('Данные страницы устарели. Обновите страницу и отправьте заявку снова.');
+        }
+
+        $submission = $this->persist($form, $validated['values'], $context, $ip, $userAgent);
 
         return SubmissionResult::accepted($submission, $form->success_message);
     }
 
     /**
      * @param  array<string, string|bool|null>  $values
+     * @param  array{trusted: array<string, array<string, mixed>>, visitor: array<string, string>}  $context
      */
-    private function persist(Form $form, array $values, ?string $ip, ?string $userAgent): Submission
+    private function persist(Form $form, array $values, array $context, ?string $ip, ?string $userAgent): Submission
     {
         $phone = $this->firstValue($form, $values, FormFieldType::Phone);
         $email = $this->firstValue($form, $values, FormFieldType::Email);
@@ -70,6 +78,7 @@ class SubmissionPipeline
                 'label' => $field->label,
                 'value' => $values[$field->key] ?? null,
             ])->all()),
+            'context' => $context['trusted'] === [] && $context['visitor'] === [] ? null : $context,
             'phone_original' => $phone,
             'phone_normalized' => $this->phones->normalize($phone),
             'email_normalized' => $email !== null ? Str::lower($email) : null,

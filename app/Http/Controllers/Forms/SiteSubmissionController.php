@@ -41,6 +41,7 @@ class SiteSubmissionController extends Controller
                 'submitted_at' => $submission->submitted_at->toIso8601String(),
                 'phone_normalized' => $submission->phone_normalized,
                 'values' => $submission->payload,
+                'context' => $submission->context ?? ['trusted' => (object) [], 'visitor' => (object) []],
             ])->all()),
             'pagination' => [
                 'current' => $submissions->currentPage(),

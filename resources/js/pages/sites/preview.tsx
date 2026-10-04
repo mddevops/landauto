@@ -4,7 +4,7 @@ import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
-import { submitForm } from '@/blocks/form-submit';
+import { currentTracking, submitForm } from '@/blocks/form-submit';
 import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
@@ -158,6 +158,12 @@ export default function Preview({
                             onSubmit={(values) =>
                                 submitForm(openedForm.public_id, {
                                     fields: values,
+                                    context: {
+                                        ...opened.context,
+                                        page: page.public_id,
+                                        popup: opened.popup.public_id,
+                                    },
+                                    tracking: currentTracking(),
                                 })
                             }
                         />
