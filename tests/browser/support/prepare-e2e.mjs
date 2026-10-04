@@ -66,15 +66,11 @@ function resolveConnection(connection) {
     const target = connection === null ? [] : [`--database=${connection}`];
 
     return JSON.parse(
-        execFileSync(
-            'php',
-            ['artisan', 'db:show', '--json', ...target],
-            {
-                cwd: root,
-                env: { ...process.env, APP_ENV: 'e2e' },
-                encoding: 'utf8',
-            },
-        ),
+        execFileSync('php', ['artisan', 'db:show', '--json', ...target], {
+            cwd: root,
+            env: { ...process.env, APP_ENV: 'e2e' },
+            encoding: 'utf8',
+        }),
     ).platform.config;
 }
 

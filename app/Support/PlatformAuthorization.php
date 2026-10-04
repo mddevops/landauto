@@ -4,7 +4,6 @@ namespace App\Support;
 
 use App\Enums\PlatformPermission;
 use App\Enums\PlatformRole;
-use App\Models\PlatformRoleAssignment;
 use App\Models\User;
 
 /**
@@ -32,10 +31,13 @@ final class PlatformAuthorization
      */
     public function roles(User $user): array
     {
-        return $user->platformRoleAssignments
-            ->map(fn (PlatformRoleAssignment $assignment): PlatformRole => $assignment->role)
-            ->values()
-            ->all();
+        $roles = [];
+
+        foreach ($user->platformRoleAssignments as $assignment) {
+            $roles[] = $assignment->role;
+        }
+
+        return $roles;
     }
 
     /**
