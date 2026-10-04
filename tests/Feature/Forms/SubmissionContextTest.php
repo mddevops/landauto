@@ -64,7 +64,7 @@ class SubmissionContextTest extends TestCase
         $vehicleA->selectMediaSets([$black->public_id]);
 
         $this->submit($this->context(['vehicle' => $vehicleA->public_id, 'offer' => $offerA->public_id, 'media_set' => $black->public_id]))->assertCreated();
-        $this->submit($this->context(['vehicle' => $vehicleB->public_id, 'offer' => $offerB->public_id]))->assertCreated();
+        $this->submit($this->context(['vehicle' => $vehicleB->public_id, 'offer' => $offerB->public_id]), fields: ['phone' => '+7 (999) 222-33-44'])->assertCreated();
 
         [$first, $second] = Submission::query()->orderBy('id')->get()->all();
         $trustedA = $first->context['trusted'] ?? [];

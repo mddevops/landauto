@@ -12,16 +12,18 @@ use Illuminate\Support\Str;
 
 /**
  * Canonical public submission pipeline (FORMS_AND_INTEGRATIONS.md §9): resolve the Form,
- * validate, then persist the Submission before anything else may happen with it.
+ * validate, normalize, apply anti-spam, resolve trusted context, then persist the
+ * Submission before anything else may happen with it.
  */
 class SubmissionPipeline
 {
     /** Top-level payload keys a visitor may send; anything else is rejected. */
-    public const PAYLOAD_KEYS = ['fields', 'context', 'tracking'];
+    public const PAYLOAD_KEYS = ['fields', 'context', 'tracking', SubmissionGuard::HONEYPOT_KEY];
 
     public function __construct(
         private SubmissionFieldValidator $validator,
         private PhoneNormalizer $phones,
+        private SubmissionGuard $guard,
         private SubmissionContextResolver $context,
     ) {}
 
@@ -42,10 +44,23 @@ class SubmissionPipeline
             return SubmissionResult::invalid([]);
         }
 
+        if ($this->guard->isHoneypotFilled($payload[SubmissionGuard::HONEYPOT_KEY] ?? null)) {
+            return SubmissionResult::rejected(SubmissionGuard::REJECTION_MESSAGE);
+        }
+
         $validated = $this->validator->validate($form, $fields);
 
         if ($validated['errors'] !== []) {
             return SubmissionResult::invalid($validated['errors']);
+        }
+
+        $values = $validated['values'];
+        $phone = $this->firstValue($form, $values, FormFieldType::Phone);
+        $normalizedPhone = $this->phones->normalize($phone);
+        $policy = SiteSecurityPolicy::forSite($form->site);
+
+        if ($this->guard->blocks($form, $policy, $ip, $normalizedPhone)) {
+            return SubmissionResult::throttled(SubmissionGuard::REJECTION_MESSAGE);
         }
 
         $context = $this->context->resolve($form, $payload['context'] ?? null, $payload['tracking'] ?? null);
@@ -54,20 +69,7 @@ class SubmissionPipeline
             return SubmissionResult::rejected('Данные страницы устарели. Обновите страницу и отправьте заявку снова.');
         }
 
-        $submission = $this->persist($form, $validated['values'], $context, $ip, $userAgent);
-
-        return SubmissionResult::accepted($submission, $form->success_message);
-    }
-
-    /**
-     * @param  array<string, string|bool|null>  $values
-     * @param  array{trusted: array<string, array<string, mixed>>, visitor: array<string, string>}  $context
-     */
-    private function persist(Form $form, array $values, array $context, ?string $ip, ?string $userAgent): Submission
-    {
-        $phone = $this->firstValue($form, $values, FormFieldType::Phone);
         $email = $this->firstValue($form, $values, FormFieldType::Email);
-
         $submission = new Submission([]);
         $submission->forceFill([
             'site_id' => $form->site_id,
@@ -80,14 +82,16 @@ class SubmissionPipeline
             ])->all()),
             'context' => $context['trusted'] === [] && $context['visitor'] === [] ? null : $context,
             'phone_original' => $phone,
-            'phone_normalized' => $this->phones->normalize($phone),
+            'phone_normalized' => $normalizedPhone,
             'email_normalized' => $email !== null ? Str::lower($email) : null,
             'ip' => $ip,
             'user_agent' => $userAgent !== null ? mb_substr($userAgent, 0, 255) : null,
             'submitted_at' => now(),
         ])->save();
 
-        return $submission;
+        $this->guard->record($form, $policy, $ip, $normalizedPhone);
+
+        return SubmissionResult::accepted($submission, $form->success_message);
     }
 
     /**

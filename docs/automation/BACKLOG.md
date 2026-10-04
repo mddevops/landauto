@@ -2513,8 +2513,18 @@ Result:
 
 ## P4-008 — Anti-Spam Base
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-005
+
+Result:
+- `SubmissionGuard` runs inside the single public pipeline, so every Form uses it.
+  - A filled honeypot (`lf_hp`) is rejected.
+  - IP limit: 5 per 10 minutes per Site. Phone limit: 2 per 30 minutes per Site, counted across Forms.
+  - Same Form + normalized phone is a duplicate within 15 minutes.
+  - Phone checks are skipped for Forms without a phone field.
+- Counters use the cache through RateLimiter, with hashed keys, and only persisted Submissions consume them. Duplicate detection reads existing Submissions through an index.
+- Spam is never persisted. Visitors get one generic Russian message (422 for the honeypot, 429 for limits).
+- Defaults live in `config/forms.php`. Each Site can override them in `sites.form_security` from the «Защита форм» page, gated by `edit_site_settings`. Missing or invalid stored values fall back to the defaults.
 
 ### Features
 

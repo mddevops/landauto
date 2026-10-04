@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormSubmissionController;
 use App\Http\Controllers\Forms\SiteFormController;
+use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
@@ -99,6 +100,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
 
             Route::get('submissions', [SiteSubmissionController::class, 'index'])->name('submissions.index');
+            Route::get('form-security', [SiteFormSecurityController::class, 'show'])->name('form-security.show');
+            Route::put('form-security', [SiteFormSecurityController::class, 'update'])->name('form-security.update');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');

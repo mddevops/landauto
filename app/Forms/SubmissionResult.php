@@ -37,6 +37,11 @@ final readonly class SubmissionResult
         return new self(422, $message);
     }
 
+    public static function throttled(string $message): self
+    {
+        return new self(429, $message);
+    }
+
     public static function unavailable(): self
     {
         return new self(404, 'Форма недоступна.');

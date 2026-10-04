@@ -16,6 +16,7 @@ export type SubmissionPayload = {
     fields: FormValues;
     context: SubmissionContext;
     tracking: Record<string, string>;
+    lf_hp: string;
 };
 
 const utmKeys = [

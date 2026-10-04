@@ -155,9 +155,10 @@ export default function Preview({
                     {openedForm && (
                         <FormView
                             form={openedForm}
-                            onSubmit={(values) =>
+                            onSubmit={(values, meta) =>
                                 submitForm(openedForm.public_id, {
                                     fields: values,
+                                    lf_hp: meta.honeypot,
                                     context: {
                                         ...opened.context,
                                         page: page.public_id,

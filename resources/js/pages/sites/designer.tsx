@@ -36,6 +36,7 @@ import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { designer, preview } from '@/routes/sites';
 import { update as updateDesign } from '@/routes/sites/design';
+import { show as formSecurity } from '@/routes/sites/form-security';
 import { index as formsIndex } from '@/routes/sites/forms';
 import { index as popupsIndex } from '@/routes/sites/popups';
 import { index as submissionsIndex } from '@/routes/sites/submissions';
@@ -395,6 +396,14 @@ function SiteSectionsMenu({
                         href={popupsIndex(siteId)}
                     >
                         Попапы
+                    </Link>
+                </DropdownMenuItem>
+                <DropdownMenuItem asChild>
+                    <Link
+                        className="block w-full cursor-pointer"
+                        href={formSecurity(siteId)}
+                    >
+                        Защита форм
                     </Link>
                 </DropdownMenuItem>
                 {canViewSubmissions && (

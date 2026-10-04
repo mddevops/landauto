@@ -22,6 +22,7 @@ use LogicException;
  * @property string $name
  * @property SiteStatus $status
  * @property array<string, string>|null $design_tokens
+ * @property array<string, int|bool>|null $form_security
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -47,6 +48,7 @@ class Site extends Model
         return [
             'status' => SiteStatus::class,
             'design_tokens' => 'array',
+            'form_security' => 'array',
         ];
     }
 

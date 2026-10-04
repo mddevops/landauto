@@ -33,6 +33,9 @@ export type FormRuntime = {
 
 export type FormValues = Record<string, string | boolean>;
 
+/** Anti-spam signals collected by the form; the backend decides what they mean. */
+export type FormSubmitMeta = { honeypot: string };
+
 export type FormSubmitResult =
     | { ok: true; message: string }
     | { ok: false; message: string | null; errors: Record<string, string> };
@@ -94,11 +97,15 @@ export function FormView({
     extra,
 }: {
     form: FormRuntime;
-    onSubmit?: (values: FormValues) => Promise<FormSubmitResult>;
+    onSubmit?: (
+        values: FormValues,
+        meta: FormSubmitMeta,
+    ) => Promise<FormSubmitResult>;
     extra?: ReactNode;
 }) {
     const id = useId();
     const [values, setValues] = useState<FormValues>(() => initialValues(form));
+    const [honeypot, setHoneypot] = useState('');
     const [errors, setErrors] = useState<Record<string, string>>({});
     const [message, setMessage] = useState<string | null>(null);
     const [status, setStatus] = useState<
@@ -134,7 +141,7 @@ export function FormView({
         }
 
         setStatus('submitting');
-        const result = await onSubmit(values);
+        const result = await onSubmit(values, { honeypot });
 
         if (result.ok) {
             setMessage(result.message);
@@ -283,6 +290,16 @@ export function FormView({
                     </div>
                 );
             })}
+            <div aria-hidden="true" className="sr-only">
+                <input
+                    type="text"
+                    name="lf_website"
+                    tabIndex={-1}
+                    autoComplete="off"
+                    value={honeypot}
+                    onChange={(event) => setHoneypot(event.target.value)}
+                />
+            </div>
             {extra}
             <button
                 type="submit"
