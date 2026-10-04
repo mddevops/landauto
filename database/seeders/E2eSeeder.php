@@ -2,16 +2,27 @@
 
 namespace Database\Seeders;
 
+use App\Actions\Sites\CreateSite;
 use App\Enums\Entitlement;
+use App\Enums\MediaAngle;
 use App\Enums\PlatformRole;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Models\Catalog\AutoEquipment;
+use App\Models\Catalog\AutoMark;
+use App\Models\Catalog\AutoModification;
 use App\Models\Plan;
 use App\Models\PlatformRoleAssignment;
+use App\Models\SeriesMediaImage;
+use App\Models\SeriesMediaSet;
 use App\Models\Site;
+use App\Models\SiteOffer;
+use App\Models\SiteVehicle;
+use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
 use Illuminate\Database\Seeder;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 
 /**
@@ -69,7 +80,50 @@ class E2eSeeder extends Seeder
 
         // Interactive flow: Forms, Popups and submissions on its own Site.
         $interactive = $this->createUser('Инна Интерактивова', 'interactive@landflow.test');
-        $this->createWorkspace($interactive, 'Автосалон Запад', plan: $plan);
+        $this->createVehicleShowcase($this->createWorkspace($interactive, 'Автосалон Запад', plan: $plan));
+    }
+
+    /**
+     * Site «Витрина Запад» for the Carousel, Lightbox and Offer → Popup flows: two vehicles of a
+     * dedicated catalog branch (never touched by other specs), one priced Offer and a two-angle
+     * media set backed by real image files.
+     */
+    private function createVehicleShowcase(Workspace $workspace): void
+    {
+        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Витрина Запад');
+        // Many preview submissions from one IP across retries must not hit the default IP limit.
+        $site->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
+
+        $mark = AutoMark::query()->firstOrCreate(['url' => 'lada'], ['name' => 'Lada', 'name_ru' => 'Лада', 'country' => 'Россия', 'status' => true]);
+        $model = $mark->models()->firstOrCreate(['url' => 'vesta'], ['name' => 'Vesta', 'name_ru' => 'Веста', 'year_from' => 2015, 'status' => true]);
+        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2015, 'status' => true]);
+        $sedan = $generation->series()->firstOrCreate(['url' => 'sedan'], ['name' => 'Седан', 'status' => true]);
+        $wagon = $generation->series()->firstOrCreate(['url' => 'sw-cross'], ['name' => 'SW Cross', 'status' => true]);
+        $equipment = AutoEquipment::factory()
+            ->for(AutoModification::factory()->for($sedan, 'series')->state(['name' => '1.6 MT 106 л.с.']), 'modification')
+            ->create(['name' => 'Comfort']);
+
+        $vehicle = SiteVehicle::factory()->for($site)->forSeries($sedan)->create(['sort_order' => 0]);
+        SiteVehicle::factory()->for($site)->forSeries($wagon)->create(['sort_order' => 1]);
+        SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 125_000_000]);
+
+        $set = new SeriesMediaSet(['name' => 'Серебристый', 'swatch_hex' => '#c0c0c0', 'status' => true, 'sort_order' => 0]);
+        $set->catalog_series_public_id = $sedan->public_id;
+        $set->save();
+        $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+
+        foreach ([MediaAngle::FrontThreeQuarter, MediaAngle::Side] as $angle) {
+            $path = "series-media/e2e/{$angle->value}.png";
+            Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
+            SeriesMediaImage::factory()->for($set, 'set')->create([
+                'angle' => $angle,
+                'path' => $path,
+                'original_name' => "{$angle->value}.png",
+                'size_bytes' => strlen($png),
+                'width' => 1,
+                'height' => 1,
+            ]);
+        }
     }
 
     private function createUser(string $name, string $email, bool $verified = true): User

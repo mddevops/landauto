@@ -5,12 +5,15 @@ namespace Tests\Feature;
 use App\Enums\Entitlement;
 use App\Enums\PlatformPermission;
 use App\Models\Catalog\AutoSeries;
+use App\Models\Site;
+use App\Models\SiteOffer;
 use App\Models\Template;
 use App\Models\User;
 use App\Support\WorkspaceEntitlements;
 use Database\Seeders\E2eSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Storage;
 use RuntimeException;
 use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
@@ -33,6 +36,7 @@ class E2eSeederTest extends TestCase
     public function test_e2e_seeder_creates_verified_test_users_in_the_e2e_environment(): void
     {
         $this->app['env'] = 'e2e';
+        Storage::fake('local');
 
         $this->seed(E2eSeeder::class);
 
@@ -56,5 +60,10 @@ class E2eSeederTest extends TestCase
         $this->assertTrue(Gate::forUser($catalogAdmin)->allows(PlatformPermission::EditCatalog->value));
         $this->assertFalse(Gate::forUser($dealer)->allows(PlatformPermission::EditCatalog->value));
         $this->assertTrue(AutoSeries::query()->available()->where('url', 'sedan')->exists());
+
+        $showcase = Site::query()->where('name', 'Витрина Запад')->sole();
+        $this->assertSame(2, $showcase->vehicles()->count());
+        $this->assertSame(1, SiteOffer::query()->count());
+        Storage::disk('local')->assertExists(['series-media/e2e/front_3_4.png', 'series-media/e2e/side.png']);
     }
 }

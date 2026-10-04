@@ -149,6 +149,7 @@ Current focus:
 - `P4-010` DONE: `CaptchaVerifier` + `YandexSmartCaptchaVerifier` (ok passes, failed fails closed, outage fails open with safe log), fake verifier for testing/e2e; Site toggle `captcha_required`; client key only in browser.
 - `P4-011` DONE: reusable vendor-neutral `Carousel` (scroll-snap, accessible, pausable autoplay, reduced motion); `vehicle-grid` 1.1.0 carousel mode.
 - `P4-012` DONE: reusable `Lightbox` (D-033; keyboard, focus trap/return, alt text) adopted in the Vehicle Gallery.
+- `P4-013` DONE: interactive Playwright flows (form/popup/submission, vehicle offer trusted context + spoofed price, duplicate, honeypot, fake CAPTCHA, carousel, lightbox, 375 px); fixture monitors all tabs.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

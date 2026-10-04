@@ -104,7 +104,9 @@ export default function Preview({
                             })}
                         >
                             <ArrowLeft aria-hidden="true" />
-                            Вернуться в дизайнер
+                            <span className="max-sm:sr-only">
+                                Вернуться в дизайнер
+                            </span>
                         </Link>
                     </Button>
                     <p className="min-w-0 flex-1 truncate text-muted-foreground">

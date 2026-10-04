@@ -2596,8 +2596,14 @@ Result:
 
 ## P4-013 — Interactive E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-001 through P4-012
+
+Result:
+- `tests/browser/interactive.spec.ts`, end-to-end flow: owner → Site → Form (name, phone, consent) → Popup → CTA `open_popup` → Preview → keyboard-usable popup → submit → success → lead with context in «Заявки».
+- Seeded «Витрина Запад» (E2eSeeder, dedicated Lada Vesta catalog branch, priced Offer, two-angle media). The vehicle Offer button opens a popup and the lead stores the server-side vehicle, offer and price while a spoofed `price` in the request is ignored. Also covered: duplicate rejected (429), honeypot rejected (422), fake CAPTCHA (required, then passes), carousel buttons, dots and arrow keys, and Lightbox open, next, arrow key, Escape and focus return. At 375 px there is no horizontal overflow; this check found and fixed preview toolbar overflow on phones.
+- The blacklist is covered by backend tests (`BlacklistTest`).
+- The browser fixture now watches every page of the context (preview tabs included), and intentionally provoked 4xx responses must be declared with `expectFailedResponse`.
 
 ---
 
