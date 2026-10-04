@@ -1330,7 +1330,7 @@ Provider selection is tracked by D-076 (ADR_REQUIRED), resolved by BACKLOG `X-00
 
 ## D-073 — Public Site Rendering Engine
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — ADR-006: versioned published manifest + private restorable draft snapshot + publish-time React SSR (`react-dom/server`, existing Vite tooling) + stored HTML artifacts + client React hydration. No Node SSR on visitor requests.
 
 ### Decision Needed
 
@@ -1359,7 +1359,7 @@ Phase 5 publishing implementation.
 
 ## D-074 — Published Snapshot Representation
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — ADR-006: immutable Published Version with a sanitized public manifest and a private draft snapshot (JSON, public-ID relationships), per-Page HTML artifacts in the main database, explicit published asset references, versioned cache keys, atomic pointer activation.
 
 ### Decision Needed
 

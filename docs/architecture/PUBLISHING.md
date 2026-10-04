@@ -813,6 +813,8 @@ Operational live systems remain outside snapshot:
 
 # 51. Snapshot Strategy
 
+**Resolved by ADR-006 (D-073, D-074):** public manifest + private draft snapshot per Published Version, publish-time React SSR into stored HTML artifacts, client hydration, versioned cache keys, published asset references and atomic pointer activation. The text below is the historical analysis.
+
 Potential approaches:
 
 1. normalized version references;
@@ -863,6 +865,8 @@ This supports atomic publication and rollback.
 ---
 
 # 54. Public Rendering Strategy
+
+**Resolved by ADR-006:** publish-time React SSR with stored HTML; no Node process on visitor requests.
 
 Exact rendering may eventually use:
 

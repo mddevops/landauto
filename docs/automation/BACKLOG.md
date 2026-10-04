@@ -2644,8 +2644,10 @@ Known limits, carried forward:
 
 ## P5-001 — Publishing Runtime ADR
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-014
+
+Result: ADR-006 accepted (owner approval 2026-10-05), resolving D-073 and D-074: public manifest + private draft snapshot, publish-time React SSR with the existing Vite/`react-dom/server` stack into DB-stored HTML artifacts, client hydration, versioned cache keys, `published_asset_references` with version-scoped delivery, atomic pointer activation with per-Site serialization, Published-Version-bound public forms, restore-to-Draft. Feasibility verified: `vp build --ssr` builds the renderer entry and plain Node renders an official Block with `renderToString` (Inertia's own SSR handling disabled). D-076, D-077, D-094 stay open.
 
 ### Required decision
 
