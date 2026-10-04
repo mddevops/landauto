@@ -124,8 +124,25 @@ export function useBlockAutosave(siteId: string) {
 
         const warn = (event: BeforeUnloadEvent) => event.preventDefault();
         window.addEventListener('beforeunload', warn);
+        const removeBefore = router.on('before', (event) => {
+            const leavesDesigner =
+                event.detail.visit.method === 'get' &&
+                !event.detail.visit.url.pathname.endsWith('/designer');
 
-        return () => window.removeEventListener('beforeunload', warn);
+            if (
+                leavesDesigner &&
+                !window.confirm(
+                    'Есть несохранённые изменения. Покинуть дизайнер?',
+                )
+            ) {
+                event.preventDefault();
+            }
+        });
+
+        return () => {
+            window.removeEventListener('beforeunload', warn);
+            removeBefore();
+        };
     }, [hasUnsaved]);
 
     useEffect(() => {

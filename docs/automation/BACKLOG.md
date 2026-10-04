@@ -62,13 +62,15 @@ Phase 0 — Foundation / Automation: COMPLETED (gate `P0-027` DONE).
 
 Phase 1 — Core Platform: COMPLETED (gate `P1-017` DONE).
 
+Phase 2 — Designer Foundation: COMPLETED (gate `P2-018` DONE).
+
 Current phase:
 
-`P2 — Designer Foundation`
+`P3 — Automotive Foundation` — **BLOCKED_DECISION**.
 
-Current next task:
+The root `auto-catalog-schema.md` delivered as owner input is the earlier proposal. It contradicts the owner-approved V2 statements in the autonomous build prompt: extra tables, equipments tied to series, slug/is_active columns. Phase 3 must not start until the owner provides the agreed V2 schema.
 
-`P2-018 — Phase 2 Review`.
+Next tasks once unblocked: catalog schema adoption, then `X-009`, then `P3-001`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1895,8 +1897,20 @@ The run found a real race: saving the site style could be cancelled by the next 
 
 ## P2-018 — Phase 2 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-017
+
+### Result
+
+Phase 2 gate. Final gates passed on 2026-10-03: `composer quality` (357 PHPUnit tests, PHPStan, Pint, `npm run check`), `npm run test:e2e` (38 passed) and `git diff --check`.
+
+The risk-focused review covered tenancy (every designer, asset, style and preview route checks the Workspace scope with 404 before validation), permissions (`edit_design` / `edit_content` / `manage_assets` / `preview_site`), uploads (detected MIME type plus decoded type, no SVG, private storage, nosniff), URL actions (http/https only on the server and in renderers) and the draft-only rule (autosave and preview never touch Published state). One fix: an Inertia confirm now protects unsaved drafts when leaving the Designer.
+
+Non-blocking follow-ups:
+- (a) No per-Site/Workspace storage quota for assets yet; this needs an entitlement decision.
+- (b) A deleted page/block leaves stale action references, which surface as field errors on the next save.
+- (c) The Designer role has no `preview_site` in the current role matrix, so only the Owner sees «Предпросмотр». Revisit with the role/permission owner if Designers should preview.
+- (d) Site style uses an explicit save, not autosave.
 
 ---
 
