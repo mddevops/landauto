@@ -2031,10 +2031,26 @@ Checks: `CatalogOptionsTest`.
 
 ## P3-005 — Series Media Sets
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-002
 
 Supersedes "Automotive Colors / Swatches" (D-103). Platform-owned media sets in the main database referencing a catalog Series by `catalog_series_public_id`: `public_id`, name, nullable `swatch_hex` (display metadata), status, sort order. No `auto_colors` / `auto_paints`. Customer read-only.
+
+### Result
+
+Main-database table `series_media_sets`:
+- unique name per Series;
+- index on (series, status, order).
+
+`SeriesMediaSet` model:
+- the Series must exist in the catalog; this is checked through `App\Catalog\CatalogReferences` because there is no cross-database foreign key;
+- the Series cannot change after creation;
+- `swatch_hex` must be lowercase `#rrggbb`;
+- `active()` and `ordered()` scopes.
+
+Mutation is limited to the platform `manage_catalog_media` permission (P3-007 routes). Customers have no write path.
+
+Checks: `SeriesMediaSetTest`.
 
 ---
 

@@ -117,7 +117,8 @@ Current focus:
 - `P3-002` DONE: explicit platform roles (`super_admin`, `catalog_manager`) and permissions (`view_catalog`, `edit_catalog`, `manage_catalog_media`), gates + middleware, `php artisan platform:role grant|revoke <email> <role>`;
 - `P3-003` DONE: two-level characteristic dictionary and Equipment values (ADR-005) with server validation and canonical values;
 - `P3-004` DONE: two-level option dictionary and Equipment option values (`is_base` explicit, missing row = unknown);
-- next: `P3-005` (§42).
+- `P3-005` DONE: platform Series Media Sets in the main database (`catalog_series_public_id`, name, display swatch, status, order); no catalog color tables;
+- next: `P3-006` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
