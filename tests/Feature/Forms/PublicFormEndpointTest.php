@@ -45,6 +45,14 @@ class PublicFormEndpointTest extends TestCase
             ->assertJsonPath('message', 'Проверьте правильность заполнения формы.')
             ->assertJsonStructure(['errors' => ['phone']]);
 
+        $this->submit(['fields' => $this->fields(['phone' => '+7 999 ABC'])])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.phone', 'Телефон может содержать только цифры, пробелы, скобки, дефисы и «+» в начале.');
+
+        $this->submit(['fields' => $this->fields(['phone' => '+7 999'])])
+            ->assertUnprocessable()
+            ->assertJsonPath('errors.phone', 'Укажите телефон полностью, например +7 999 111-22-33.');
+
         $this->submit(['fields' => $this->fields(['consent' => false])])
             ->assertUnprocessable()
             ->assertJsonPath('errors.consent', 'Подтвердите согласие.');

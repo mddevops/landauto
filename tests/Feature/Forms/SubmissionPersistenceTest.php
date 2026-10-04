@@ -57,6 +57,7 @@ class SubmissionPersistenceTest extends TestCase
             ['key' => 'email', 'type' => 'email', 'label' => 'Почта', 'value' => 'Client@Example.RU'],
         ], $submission->payload);
         $this->assertSame('+7 (999) 111-22-33', $submission->phone_original);
+        $this->assertSame('79991112233', $submission->phone_normalized);
         $this->assertSame('client@example.ru', $submission->email_normalized);
         $this->assertSame('127.0.0.1', $submission->ip);
         $this->assertSame(255, mb_strlen((string) $submission->user_agent));

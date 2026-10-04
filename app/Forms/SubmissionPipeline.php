@@ -7,6 +7,7 @@ use App\Enums\SiteStatus;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\Submission;
+use App\Support\PhoneNormalizer;
 use Illuminate\Support\Str;
 
 /**
@@ -18,7 +19,10 @@ class SubmissionPipeline
     /** Top-level payload keys a visitor may send; anything else is rejected. */
     public const PAYLOAD_KEYS = ['fields'];
 
-    public function __construct(private SubmissionFieldValidator $validator) {}
+    public function __construct(
+        private SubmissionFieldValidator $validator,
+        private PhoneNormalizer $phones,
+    ) {}
 
     /**
      * @param  array<array-key, mixed>  $payload
@@ -67,6 +71,7 @@ class SubmissionPipeline
                 'value' => $values[$field->key] ?? null,
             ])->all()),
             'phone_original' => $phone,
+            'phone_normalized' => $this->phones->normalize($phone),
             'email_normalized' => $email !== null ? Str::lower($email) : null,
             'ip' => $ip,
             'user_agent' => $userAgent !== null ? mb_substr($userAgent, 0, 255) : null,

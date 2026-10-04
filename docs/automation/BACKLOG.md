@@ -2470,8 +2470,13 @@ Result:
 
 ## P4-006 — Phone Normalization
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-005
+
+Result:
+- The central `App\Support\PhoneNormalizer` turns `+7 (999) 111-22-33` into `79991112233`. Allowed characters are digits, spaces, parentheses, hyphens, dots and a leading `+`. A number must have 10 to 15 digits.
+- Phone fields are validated with Russian messages. Submissions store both the original and the normalized value.
+- A leading `8` is kept as dialled. No trunk rewriting is applied without an owner decision (open question: should `8XXXXXXXXXX` be treated as `7XXXXXXXXXX`?).
 
 ---
 

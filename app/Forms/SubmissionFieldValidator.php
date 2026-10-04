@@ -5,6 +5,8 @@ namespace App\Forms;
 use App\Enums\FormFieldType;
 use App\Models\Form;
 use App\Models\FormField;
+use App\Support\PhoneNormalizer;
+use Closure;
 use Illuminate\Support\Facades\Validator;
 use Illuminate\Support\Str;
 use Illuminate\Validation\Rule;
@@ -15,6 +17,8 @@ use Illuminate\Validation\Rule;
  */
 class SubmissionFieldValidator
 {
+    public function __construct(private PhoneNormalizer $phones) {}
+
     /**
      * @param  array<array-key, mixed>  $input  Visitor `fields` object.
      * @return array{values: array<string, string|bool|null>, errors: array<string, string>}
@@ -80,6 +84,11 @@ class SubmissionFieldValidator
         }
 
         return match ($field->type) {
+            FormFieldType::Phone => [...$rules, function (string $attribute, mixed $value, Closure $fail): void {
+                if (is_string($value) && ($error = $this->phones->error($value)) !== null) {
+                    $fail($error);
+                }
+            }],
             FormFieldType::Email => [...$rules, 'email:rfc'],
             FormFieldType::Select => [...$rules, Rule::in($field->options ?? [])],
             default => $rules,
