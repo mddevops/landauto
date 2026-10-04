@@ -141,6 +141,7 @@ Current focus:
 - `P4-002` DONE: `open_popup` action (same-Site active Popups only), preview runtime with per-trigger public-ID context (block/vehicle/offer/media set) and focus return.
 - `P4-003` DONE: Site-owned Forms with stable-key fields (8 types, consent text is customer-owned, hidden values untrusted), «Формы» UI under `edit_forms`, same-Site Popup→Form attach; preview Popups render the form (display-only until P4-004).
 - `P4-004` DONE: public `POST /forms/{form_public_id}/submissions` (guest, CSRF-exempt JSON, per-IP backstop), active Form + active Site only, strict payload keys and server-side field validation; published reachability deferred to Phase 5.
+- `P4-005` DONE: `SubmissionPipeline` persists valid Submissions (immutable field snapshot, no raw request) before responding; read-only «Заявки» list under `view_submissions`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

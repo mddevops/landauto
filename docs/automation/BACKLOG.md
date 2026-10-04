@@ -2456,8 +2456,15 @@ Result:
 
 ## P4-005 — Submission Persistence
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-004
+
+Result:
+- `submissions` stores public_id, site_id, form_id, status (`received`), a `payload` snapshot (key, type, label and value per field), `context`, phone original/normalized, lowercased email, IP, user agent truncated to 255 characters, and `submitted_at`.
+- No headers, cookies or the raw request are stored. The snapshot is immutable, and the Form must belong to the same Site.
+- A valid request is persisted before the success response. Invalid, inactive and spoofed requests are not persisted. History survives Form edits and field deletion.
+- A read-only «Заявки» list is gated by `view_submissions` (Owner and Admin). It never shows the IP or user agent.
+- All personal data is row-local, so future D-094 deletion or anonymization stays possible.
 
 ---
 

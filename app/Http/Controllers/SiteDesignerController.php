@@ -95,6 +95,7 @@ class SiteDesignerController extends Controller
                 'editContent' => Gate::allows('editContent', $site),
                 'manageAssets' => Gate::allows('manageAssets', $site),
                 'preview' => Gate::allows('preview', $site),
+                'viewSubmissions' => Gate::allows('viewSubmissions', $site),
             ],
         ]);
     }

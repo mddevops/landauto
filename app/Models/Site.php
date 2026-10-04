@@ -92,6 +92,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class);
+    }
+
+    /**
      * @return HasMany<Form, $this>
      */
     public function forms(): HasMany

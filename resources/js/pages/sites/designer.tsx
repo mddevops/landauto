@@ -38,6 +38,7 @@ import { designer, preview } from '@/routes/sites';
 import { update as updateDesign } from '@/routes/sites/design';
 import { index as formsIndex } from '@/routes/sites/forms';
 import { index as popupsIndex } from '@/routes/sites/popups';
+import { index as submissionsIndex } from '@/routes/sites/submissions';
 
 type DesignerProps = {
     site: DesignerSite;
@@ -55,6 +56,7 @@ type DesignerProps = {
         editContent: boolean;
         manageAssets: boolean;
         preview: boolean;
+        viewSubmissions: boolean;
     };
 };
 
@@ -181,7 +183,10 @@ export default function Designer({
                     </div>
                     <AutosaveIndicator status={autosave.status} />
                     <Badge variant="outline">Черновик</Badge>
-                    <SiteSectionsMenu siteId={site.public_id} />
+                    <SiteSectionsMenu
+                        siteId={site.public_id}
+                        canViewSubmissions={can.viewSubmissions}
+                    />
                     {can.preview &&
                         (autosave.status === 'pending' ||
                         autosave.status === 'saving' ? (
@@ -360,7 +365,13 @@ export default function Designer({
     );
 }
 
-function SiteSectionsMenu({ siteId }: { siteId: string }) {
+function SiteSectionsMenu({
+    siteId,
+    canViewSubmissions,
+}: {
+    siteId: string;
+    canViewSubmissions: boolean;
+}) {
     return (
         <DropdownMenu>
             <DropdownMenuTrigger asChild>
@@ -386,6 +397,16 @@ function SiteSectionsMenu({ siteId }: { siteId: string }) {
                         Попапы
                     </Link>
                 </DropdownMenuItem>
+                {canViewSubmissions && (
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full cursor-pointer"
+                            href={submissionsIndex(siteId)}
+                        >
+                            Заявки
+                        </Link>
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuContent>
         </DropdownMenu>
     );

@@ -7,6 +7,7 @@ use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormSubmissionController;
 use App\Http\Controllers\Forms\SiteFormController;
+use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
@@ -96,6 +97,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('popups', [SitePopupController::class, 'store'])->name('popups.store');
             Route::patch('popups/{popup}', [SitePopupController::class, 'update'])->whereUlid('popup')->name('popups.update');
             Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
+
+            Route::get('submissions', [SiteSubmissionController::class, 'index'])->name('submissions.index');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
