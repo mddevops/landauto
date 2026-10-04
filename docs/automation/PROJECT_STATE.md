@@ -110,7 +110,8 @@ Current focus:
 - `P2-017` DONE: Playwright designer flow (blocks, properties, repeater, action, upload, style, autosave, reorder, reload, preview);
 - `P2-018` DONE: Phase 2 gate (composer quality, 38 E2E passed); Phase 2 COMPLETED;
 - `X-008` DONE: D-084 APPROVED — ADR-004 integer minor-unit money (`BIGINT UNSIGNED *_minor`, `CHAR(3)` currency, basis points);
-- next: Phase 3 BLOCKED_DECISION — the delivered `auto-catalog-schema.md` is not the agreed V2 schema (§42).
+- Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md` (owner input, version 2); the catalog BLOCKED_DECISION is RESOLVED;
+- next: `X-016`, `X-009`, then `P3-001` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1107,7 +1108,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: Phase 3 — BLOCKED_DECISION.** The delivered root `auto-catalog-schema.md` is the earlier proposal and contradicts the owner-approved V2 catalog statements. The owner must provide the agreed V2 schema before catalog schema adoption, `X-009` and `P3-001`.
+**Next: Phase 3 — Automotive Foundation.** The agreed Catalog V2 schema is adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`; continue with `X-016`, `X-009`, then `P3-001` per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1395,8 +1396,8 @@ Current:
 ```text
 Phase 0 — Foundation / Architecture / Automation: COMPLETED
 Phase 1 — Core Platform: COMPLETED (gate P1-017)
-Phase 2 — Designer Foundation: IN_PROGRESS
-Phase 3 — Automotive Foundation: NOT_STARTED
+Phase 2 — Designer Foundation: COMPLETED (gate P2-018)
+Phase 3 — Automotive Foundation: IN_PROGRESS
 Phase 4 — Forms & Interactive Components: NOT_STARTED
 Phase 5 — Publishing: NOT_STARTED
 Phase 6 — Integrations & Analytics: NOT_STARTED
@@ -1665,7 +1666,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**Phase 3 — BLOCKED_DECISION** (see §42): waiting for the agreed V2 `auto-catalog-schema.md`. Phase 0, Phase 1 and Phase 2 are COMPLETED (P0-027, P1-017, P2-018 DONE).
+**Phase 3 — Automotive Foundation** (see §42): Catalog V2 adopted (`docs/architecture/AUTO_CATALOG_SCHEMA.md`). Phase 0, Phase 1 and Phase 2 are COMPLETED (P0-027, P1-017, P2-018 DONE).
 
 ---
 
@@ -1721,5 +1722,5 @@ Production deployment:        NOT_CONFIGURED
 Core Landflow implementation: NOT_STARTED
 ```
 
-**Current phase: Phase 3 — Automotive Foundation (BLOCKED_DECISION; Phase 0, Phase 1 and Phase 2 COMPLETED).
-Next: owner provides the agreed V2 catalog schema.**
+**Current phase: Phase 3 — Automotive Foundation (IN_PROGRESS; Phase 0, Phase 1 and Phase 2 COMPLETED).
+Next: per `BACKLOG.md`.**

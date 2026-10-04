@@ -66,11 +66,11 @@ Phase 2 — Designer Foundation: COMPLETED (gate `P2-018` DONE).
 
 Current phase:
 
-`P3 — Automotive Foundation` — **BLOCKED_DECISION**.
+`P3 — Automotive Foundation` — IN_PROGRESS.
 
-The root `auto-catalog-schema.md` delivered as owner input is the earlier proposal. It contradicts the owner-approved V2 statements in the autonomous build prompt: extra tables, equipments tied to series, slug/is_active columns. Phase 3 must not start until the owner provides the agreed V2 schema.
+The earlier catalog BLOCKED_DECISION is RESOLVED: the owner delivered the agreed Catalog V2 schema (version 2, 04.10.2026), adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`.
 
-Next tasks once unblocked: catalog schema adoption, then `X-009`, then `P3-001`.
+Next tasks: `X-016`, then `X-009`, then `P3-001`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
