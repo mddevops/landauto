@@ -95,6 +95,7 @@ Current focus:
 - `P2-004` DONE: Page-owned Block Instances pinned to an official Block Version with draft state validated against its schema;
 - `P2-005` DONE: six seeded official Blocks (Header, Hero, Benefits, CTA, Contacts, Footer) with version 1.0.0 schemas and frontend renderers;
 - `P2-006` DONE: current-Workspace Designer shell (top bar, block list, canvas with official Block renderers and selection, read-only Properties panel) linked from Dashboard Site cards;
+- `X-015` DONE: new personal Workspaces (registration and Yandex OAuth) get the idempotent system Free plan with `max_sites = 2` (D-100);
 - next ready task: `P2-007 — Pages Panel` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
@@ -1086,11 +1087,11 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 Last completed task: `P2-006 — Designer Shell` (DONE). Phase 1 gate `P1-017` is DONE. Phase 0 gate `P0-027` is DONE.
 
-Open owner decision (not blocking Phase 1 tasks): no default plan is assigned to newly created Workspaces, so their effective `max_sites` is 0 and a newly registered customer cannot create a Site. Which plan/limit a new Workspace receives is a plan/billing rule that must be decided by the owner, not inferred.
+Resolved owner decision: D-100 (X-015 DONE) — every new personal Workspace gets the active system Free plan (`max_sites = 2`); Workspaces created before X-015 are not backfilled.
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
 **Next ready task: `P2-007 — Pages Panel`.**
 

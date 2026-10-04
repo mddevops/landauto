@@ -27,6 +27,9 @@ class Plan extends Model
     /** @use HasFactory<PlanFactory> */
     use HasFactory;
 
+    /** Stable system key of the default plan for new personal Workspaces (D-100). */
+    public const FREE_KEY = 'free';
+
     /**
      * @return array<string, string>
      */

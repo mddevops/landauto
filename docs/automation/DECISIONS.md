@@ -1806,6 +1806,25 @@ Owner approval during P1-013 (2026-10-02).
 
 ---
 
+## D-100 — Default Free Plan for New Workspaces
+
+**Status:** APPROVED
+
+### Decision
+
+- Every new personal Workspace created by the shared account flow (email/password registration and Yandex OAuth) is automatically assigned the active system Free plan.
+- The Free plan is identified by its stable system key `free`, never by its display name; business logic must not branch on plan keys or names and keeps using typed entitlements.
+- Free entitlements: `max_sites = 2` only. No other Free entitlement values (`max_members`, `custom_domain`, `remove_branding`) are defined; unset entitlements keep resolving deny-by-default.
+- The plan is created idempotently on first use and existing plan/entitlement values are never overwritten by application code.
+- Existing Workspaces are not backfilled by this decision.
+- Billing, pricing and subscriptions remain out of scope.
+
+### Resolved By
+
+Owner approval for X-015 (2026-10-04).
+
+---
+
 # SUPERSEDED DECISIONS
 
 None currently.

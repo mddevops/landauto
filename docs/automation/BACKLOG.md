@@ -70,7 +70,7 @@ Current next task:
 
 `P2-007 — Pages Panel`.
 
-Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
+Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -2980,6 +2980,26 @@ Completed 2026-09-30 (docs only; owner decisions).
 - D-097 APPROVED: first-party adapter on Laravel HTTP client; server-only credentials, no persisted one-use access token; internal identity table with the approved unique constraints.
 - ADR-002 accepted. P1-005A must support Yandex-only Users through nullable passwords and adapted password flows/UI; it must not generate artificial passwords.
 - Tests: NOT_APPLICABLE (docs-only decision task).
+
+---
+
+## X-015 — Default Free Plan for New Workspaces
+
+**Status:** DONE
+**Resolves:** D-100
+
+Newly registered Workspaces had no plan, so their effective `max_sites` was 0 and a new customer could not create a Site.
+
+Acceptance Criteria:
+
+- new personal Workspaces (email/password and Yandex OAuth) get the active system Free plan through `CreateNewAccount`;
+- Free resolves `max_sites = 2`; no other Free entitlements are invented;
+- the third active Site is denied by existing enforcement; archived Sites do not count (D-099);
+- no plan-name business checks; no billing/pricing/subscriptions.
+
+### Result
+
+Added the stable system key `Plan::FREE_KEY` and `App\Support\DefaultWorkspacePlan`, which idempotently creates the active Free plan (`createOrFirst` on the unique key, `max_sites = 2` only on first creation) and never overwrites existing values. `CreateNewAccount` assigns it to the personal Workspace inside the account transaction, so registration and Yandex OAuth share the same default. Existing Workspaces are not backfilled. Checks: `DefaultFreePlanTest` (Free plan and limit on registration, shared idempotent plan, two active Sites allowed / third denied / archived Site frees a slot, no raw plan-name checks in `app/` and `resources/js`), extended Yandex new-user test, Registration/Workspaces/Sites/E2E seeder tests, PHPStan, Pint.
 
 ---
 
