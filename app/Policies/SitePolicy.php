@@ -39,6 +39,16 @@ final class SitePolicy
         );
     }
 
+    public function editDesign(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditDesign);
+    }
+
+    public function editContent(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditContent);
+    }
+
     public function delete(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace(

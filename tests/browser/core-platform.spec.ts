@@ -61,7 +61,7 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
         'На странице пока нет блоков.',
     );
     await expect(
-        page.getByRole('complementary', { name: 'Блоки страницы' }),
+        page.getByRole('complementary', { name: 'Левая панель' }),
     ).toBeVisible();
     await expect(
         page.getByRole('complementary', { name: 'Свойства' }),

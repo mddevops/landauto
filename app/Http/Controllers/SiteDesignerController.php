@@ -3,33 +3,47 @@
 namespace App\Http\Controllers;
 
 use App\Models\BlockInstance;
+use App\Models\Page;
 use App\Models\Site;
-use App\Support\WorkspaceContext;
+use App\Support\DesignerScope;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Site $site, WorkspaceContext $workspaceContext): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope): Response
     {
-        // Sites are addressed only within the current Workspace; others must not be confirmed.
-        abort_unless($site->workspace_id === $workspaceContext->current()?->id, 404);
-
+        $scope->site($site);
         Gate::authorize('view', $site);
 
-        $page = $site->homePage()->first();
-        $blocks = $page?->blocks()->with('version.definition')->get() ?? collect();
+        $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->get();
+        $page = $request->filled('page')
+            ? $pages->firstWhere('public_id', $request->string('page')->toString())
+            : $pages->firstWhere('is_home', true);
+        abort_if($page === null, 404);
+
+        $blocks = $page->blocks()->with('version.definition')->get();
 
         return Inertia::render('sites/designer', [
             'site' => [
                 'public_id' => $site->public_id,
                 'name' => $site->name,
             ],
-            'page' => $page === null ? null : [
+            'page' => [
                 'public_id' => $page->public_id,
                 'title' => $page->title,
             ],
+            'pages' => $pages
+                ->map(fn (Page $sitePage): array => [
+                    'public_id' => $sitePage->public_id,
+                    'title' => $sitePage->title,
+                    'slug' => $sitePage->slug,
+                    'is_home' => $sitePage->is_home,
+                ])
+                ->values()
+                ->all(),
             'blocks' => $blocks
                 ->map(fn (BlockInstance $block): array => [
                     'public_id' => $block->public_id,
@@ -40,6 +54,9 @@ class SiteDesignerController extends Controller
                 ])
                 ->values()
                 ->all(),
+            'can' => [
+                'editDesign' => Gate::allows('editDesign', $site),
+            ],
         ]);
     }
 }

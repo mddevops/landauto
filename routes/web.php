@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDesignerController;
+use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
@@ -34,10 +35,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(RequireWorkspaceContext::class)
         ->name('sites.store');
 
-    Route::get('sites/{site}/designer', SiteDesignerController::class)
-        ->middleware(RequireWorkspaceContext::class)
-        ->whereUlid('site')
-        ->name('sites.designer');
+    Route::middleware(RequireWorkspaceContext::class)
+        ->prefix('sites/{site}')
+        ->whereUlid(['site', 'page'])
+        ->name('sites.')
+        ->group(function () {
+            Route::get('designer', SiteDesignerController::class)->name('designer');
+
+            Route::post('pages', [SitePageController::class, 'store'])->name('pages.store');
+            Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');
+            Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
+        });
 });
 
 require __DIR__.'/settings.php';

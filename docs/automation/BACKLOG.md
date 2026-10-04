@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-007 — Pages Panel`.
+`P2-008 — Navigator`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1666,8 +1666,12 @@ Added `GET /sites/{site}/designer` (`sites.designer`, public ULID only, current-
 
 ## P2-007 — Pages Panel
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-001, P2-006
+
+### Result
+
+Designer left panel "Страницы": list (home first, then sort order), open a page (`?page=<public_id>`), create, rename and delete Pages through `sites.pages.store/update/destroy`. Slugs are validated (`a-z0-9` with hyphens, unique per Site) or generated from the Russian title with a numeric suffix; the home Page keeps its slug and cannot be deleted; deleting a Page removes its Block Instances in one transaction. All Designer resources resolve through `DesignerScope` (current Workspace only, foreign IDs → 404 before validation) and page management requires `edit_design`. Checks: `SitePagesTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 
