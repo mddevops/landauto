@@ -98,7 +98,7 @@ class BlockStateValidatorTest extends TestCase
             'image url' => [['photo' => 'https://example.com/a.jpg'], 'state.photo'],
             'image without asset resolver' => [['photo' => '01j9z3qk5v8w2x4y6z8a0b2c4d'], 'state.photo'],
             'action not object' => [['cta' => 'https://example.ru'], 'state.cta'],
-            'action unknown type' => [['cta' => ['type' => 'open_popup']], 'state.cta.type'],
+            'action unknown type' => [['cta' => ['type' => 'run_script']], 'state.cta.type'],
             'action foreign key' => [['cta' => ['type' => 'phone', 'url' => 'https://example.ru']], 'state.cta.url'],
             'javascript url' => [['cta' => ['type' => 'open_url', 'url' => 'javascript:alert(1)']], 'state.cta.url'],
             'data url' => [['cta' => ['type' => 'open_url', 'url' => 'data:text/html,<script>1</script>']], 'state.cta.url'],

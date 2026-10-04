@@ -48,6 +48,14 @@ export const users = {
         workspace: 'Автосалон Восток',
         template: 'Пустой шаблон',
     },
+    // Interactive flow: Forms, Popups and submissions on its own Site.
+    interactive: {
+        name: 'Инна Интерактивова',
+        email: 'interactive@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Запад',
+        template: 'Пустой шаблон',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

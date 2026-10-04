@@ -66,6 +66,10 @@ class E2eSeeder extends Seeder
         PlatformRoleAssignment::query()->create(['user_id' => $catalogAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);
         $dealer = $this->createUser('Денис Дилеров', 'dealer@landflow.test');
         $this->createWorkspace($dealer, 'Автосалон Восток', plan: $plan);
+
+        // Interactive flow: Forms, Popups and submissions on its own Site.
+        $interactive = $this->createUser('Инна Интерактивова', 'interactive@landflow.test');
+        $this->createWorkspace($interactive, 'Автосалон Запад', plan: $plan);
     }
 
     private function createUser(string $name, string $email, bool $verified = true): User
