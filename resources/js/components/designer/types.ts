@@ -23,6 +23,15 @@ export type DesignerBlock = {
     state: BlockState;
 };
 
+/** A saved reference whose target was deleted, hidden or disabled afterwards (X-018). */
+export type ReferenceIssue = {
+    kind: string;
+    path: string;
+    target: string;
+    severity: 'error' | 'warning';
+    message: string;
+};
+
 export type DesignerAsset = {
     public_id: string;
     name: string;

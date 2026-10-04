@@ -3601,10 +3601,16 @@ Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage lim
 
 ## X-018 — Designer Action Reference Integrity
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** before Phase 5 Publishing
 
 `open_page` / `scroll_to` action targets can become stale after the referenced Page or Block is deleted (saves are validated, existing states are not rewritten). Before publishing, detect or clear stale references (for example, validation at publish time and a visible warning in the Designer). Non-blocking for Phase 3.
+
+Result:
+- `BlockStateValidator::references()` exposes the referenced public IDs per kind and state path; the reusable read-only `App\Blocks\BlockReferenceInspector` checks them against the Site/Page (Pages, scroll targets on the same Page, active Popups, assets, vehicles) and reports Popups whose Form is disabled as a warning.
+- Publish mode (`visibleOnly`) skips hidden source Blocks and treats a hidden scroll target as broken; P5-004 reuses it.
+- The Designer receives `referenceIssues` per Block: a warning icon in the Navigator, a Russian summary above the properties, and the message inline at the affected field. Block state is never rewritten.
+- Tests: deleted Page / deleted Block / disabled Popup, state not rewritten, disabled Popup Form warning, hidden target only in publish mode, Designer props.
 
 ---
 

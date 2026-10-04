@@ -7,11 +7,13 @@ import {
     EyeOff,
     Plus,
     Trash2,
+    TriangleAlert,
 } from 'lucide-react';
 import { useState } from 'react';
 import type {
     DesignerBlock,
     DesignerLibraryBlock,
+    ReferenceIssue,
 } from '@/components/designer/types';
 import { Button } from '@/components/ui/button';
 import {
@@ -35,6 +37,7 @@ type NavigatorProps = {
     siteId: string;
     pageId: string;
     blocks: DesignerBlock[];
+    referenceIssues: Record<string, ReferenceIssue[]>;
     library: DesignerLibraryBlock[];
     selectedId: string | null;
     onSelect: (id: string) => void;
@@ -47,6 +50,7 @@ export function Navigator({
     siteId,
     pageId,
     blocks,
+    referenceIssues,
     library,
     selectedId,
     onSelect,
@@ -98,11 +102,25 @@ export function Navigator({
                                             'text-muted-foreground line-through',
                                     )}
                                 >
+                                    {(referenceIssues[block.public_id]
+                                        ?.length ?? 0) > 0 && (
+                                        <TriangleAlert
+                                            aria-hidden="true"
+                                            className="mr-1 inline size-3.5 align-[-2px] text-amber-600"
+                                        />
+                                    )}
                                     {block.name}
                                     {block.is_hidden && (
                                         <span className="sr-only">
                                             {' '}
                                             (скрыт)
+                                        </span>
+                                    )}
+                                    {(referenceIssues[block.public_id]
+                                        ?.length ?? 0) > 0 && (
+                                        <span className="sr-only">
+                                            {' '}
+                                            (есть устаревшие ссылки)
                                         </span>
                                     )}
                                 </button>

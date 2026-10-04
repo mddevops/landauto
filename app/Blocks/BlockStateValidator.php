@@ -53,6 +53,24 @@ final class BlockStateValidator
     }
 
     /**
+     * Public IDs the state references, by kind and state path, without checking that they exist.
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array{assets: array<string, string>, pages: array<string, string>, blocks: array<string, string>, vehicles: array<string, string>, popups: array<string, string>}
+     */
+    public function references(array $schema, mixed $state): array
+    {
+        $this->errors = [];
+        $this->references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => [], 'popups' => []];
+        /** @var list<array<string, mixed>> $fields */
+        $fields = $schema['fields'] ?? [];
+
+        $this->validateObject($fields, $state, 'state', false);
+
+        return $this->references;
+    }
+
+    /**
      * @param  array<string, mixed>  $schema
      *
      * @throws InvalidBlockStateException

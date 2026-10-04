@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Eye, LayoutList } from 'lucide-react';
+import { ArrowLeft, Eye, LayoutList, TriangleAlert } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
@@ -23,6 +23,7 @@ import type {
     DesignerLibraryBlock,
     DesignerPage,
     DesignerSite,
+    ReferenceIssue,
 } from '@/components/designer/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -50,6 +51,7 @@ type DesignerProps = {
     assets: DesignerAsset[];
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
+    referenceIssues: Record<string, ReferenceIssue[]>;
     selectedBlock: string | null;
     library: DesignerLibraryBlock[];
     can: {
@@ -73,6 +75,7 @@ export default function Designer({
     assets,
     vehicles,
     popups,
+    referenceIssues,
     selectedBlock,
     library,
     can,
@@ -141,6 +144,9 @@ export default function Designer({
     const tokens = designDraft ?? design;
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const selected = blocks.find((block) => block.public_id === selectedId);
+    const selectedIssues = selected
+        ? (referenceIssues[selected.public_id] ?? [])
+        : [];
     const stateOf = (block: DesignerBlock) =>
         autosave.drafts[block.public_id] ?? block.state;
 
@@ -242,6 +248,7 @@ export default function Designer({
                                     siteId={site.public_id}
                                     pageId={page.public_id}
                                     blocks={blocks}
+                                    referenceIssues={referenceIssues}
                                     library={library}
                                     selectedId={selectedId}
                                     onSelect={setSelectedId}
@@ -331,12 +338,23 @@ export default function Designer({
                                             {` · версия ${selected.version}`}
                                         </span>
                                     </p>
+                                    <ReferenceIssues issues={selectedIssues} />
                                     <DesignerContext value={designerContext}>
                                         <PropertiesPanel
                                             key={selected.public_id}
                                             block={selected}
                                             state={stateOf(selected)}
-                                            errors={errors}
+                                            errors={{
+                                                ...Object.fromEntries(
+                                                    selectedIssues.map(
+                                                        (issue) => [
+                                                            issue.path,
+                                                            issue.message,
+                                                        ],
+                                                    ),
+                                                ),
+                                                ...errors,
+                                            }}
                                             disabled={!can.editContent}
                                             onChange={(state) =>
                                                 autosave.update(
@@ -363,6 +381,41 @@ export default function Designer({
                 </div>
             </div>
         </>
+    );
+}
+
+function ReferenceIssues({ issues }: { issues: ReferenceIssue[] }) {
+    if (issues.length === 0) {
+        return null;
+    }
+
+    const blocking = issues.some((issue) => issue.severity === 'error');
+
+    return (
+        <div
+            role="status"
+            aria-label="Устаревшие ссылки"
+            className="flex gap-2 rounded-md border border-amber-300 bg-amber-50 p-3 text-sm text-amber-950"
+        >
+            <TriangleAlert
+                aria-hidden="true"
+                className="mt-0.5 size-4 shrink-0"
+            />
+            <div className="min-w-0 space-y-1">
+                <p className="font-medium">
+                    {blocking
+                        ? 'Блок ссылается на удалённые или выключенные элементы. Исправьте ссылки перед публикацией.'
+                        : 'Проверьте ссылки блока.'}
+                </p>
+                <ul className="list-disc space-y-0.5 pl-4">
+                    {issues.map((issue) => (
+                        <li key={`${issue.path}-${issue.kind}`}>
+                            {issue.message}
+                        </li>
+                    ))}
+                </ul>
+            </div>
+        </div>
     );
 }
 
