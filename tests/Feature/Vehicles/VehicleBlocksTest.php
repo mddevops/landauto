@@ -49,6 +49,10 @@ class VehicleBlocksTest extends TestCase
     {
         return [
             'card' => ['vehicle-card'],
+            'gallery' => ['vehicle-gallery'],
+            'offers' => ['vehicle-offers'],
+            'characteristics' => ['vehicle-characteristics'],
+            'equipment' => ['vehicle-equipment'],
         ];
     }
 

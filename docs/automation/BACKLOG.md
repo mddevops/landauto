@@ -2294,7 +2294,7 @@ Each card reuses the Vehicle Card renderer, so it shows the color-specific image
 
 ## P3-015 — Vehicle Detail Blocks
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-012
 
 ### Blocks
@@ -2303,6 +2303,23 @@ Each card reuses the Vehicle Card renderer, so it shows the color-specific image
 - Price/Offer (dealer Offers, expandable to modification data)
 - Characteristics
 - Equipment (factory options)
+
+### Result
+
+Four official Blocks. Each references one same-Site vehicle:
+- `vehicle-gallery` («Галерея автомобиля») shows:
+  - a large image with angle thumbnails;
+  - a color selector with the color name;
+  - title, «от» price and benefit, each of which can be turned off.
+- `vehicle-offers` («Цены и предложения») lists the dealer offers. Each offer shows:
+  - Equipment, Modification summary, availability and badge;
+  - price, with the RRP struck through, and benefits;
+  - a safe action button;
+  - an accessible «Подробнее» expansion with Modification specs, grouped characteristics and options.
+- `vehicle-characteristics` («Характеристики автомобиля») has an offer picker, Modification specs and grouped Equipment characteristics.
+- `vehicle-equipment` («Оснащение автомобиля») has an offer picker and grouped factory options (standard or optional, with an optional filter).
+
+Checks: `VehicleBlocksTest` (same-Site reference for every vehicle Block), `OfficialBlocksTest`.
 
 ---
 

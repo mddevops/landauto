@@ -135,6 +135,25 @@ final class OfficialBlockCatalog
                 ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать цвета', 'default' => true],
                 [...self::text('button_label', 'Текст кнопки карточки', 40, 'Подробнее'), 'help' => 'Кнопка видна у выбранных автомобилей с настроенным действием.'],
             ]),
+            self::block('vehicle-gallery', 'Галерея автомобиля', [
+                self::vehicle(),
+                ['key' => 'show_title', 'type' => 'boolean', 'label' => 'Показывать название и цену', 'default' => true],
+                ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать выбор цвета', 'default' => true],
+            ]),
+            self::block('vehicle-offers', 'Цены и предложения', [
+                self::vehicle(),
+                self::text('title', 'Заголовок', 120, 'Цены и комплектации'),
+                self::actionButton('button', 'Кнопка предложения', 'Оставить заявку'),
+            ]),
+            self::block('vehicle-characteristics', 'Характеристики автомобиля', [
+                self::vehicle(),
+                self::text('title', 'Заголовок', 120, 'Характеристики'),
+            ]),
+            self::block('vehicle-equipment', 'Оснащение автомобиля', [
+                self::vehicle(),
+                self::text('title', 'Заголовок', 120, 'Оснащение'),
+                ['key' => 'show_optional', 'type' => 'boolean', 'label' => 'Показывать опции за доплату', 'default' => true],
+            ]),
         ];
     }
 

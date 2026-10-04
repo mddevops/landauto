@@ -127,7 +127,8 @@ Current focus:
 - `P3-012` DONE: `VehicleBindings` display-ready vehicle/offer view models (visible + available only, formatted money, no numeric IDs) in designer/preview, same-Site `vehicle` Block field;
 - `P3-013` DONE: official `vehicle-card` Block (same-Site vehicle reference, color swatches, «от» price, benefit, action button);
 - `P3-014` DONE: official `vehicle-grid` Block (all visible Site vehicles or a validated selection with per-item actions, columns, price/benefit/colors);
-- next: `P3-015` (§42).
+- `P3-015` DONE: vehicle detail Blocks — gallery (colors + angles), offers (expandable to Modification/characteristics/options), characteristics, equipment;
+- next: `P3-016` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
