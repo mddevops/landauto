@@ -8,6 +8,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
  * Комплектация: the confirmed real Modification + trim combination (no AutoConfiguration).
@@ -43,6 +44,14 @@ class AutoEquipment extends CatalogModel
     public function modification(): BelongsTo
     {
         return $this->belongsTo(AutoModification::class, 'modification_id');
+    }
+
+    /**
+     * @return HasMany<AutoCharacteristicValue, $this>
+     */
+    public function characteristicValues(): HasMany
+    {
+        return $this->hasMany(AutoCharacteristicValue::class, 'equipment_id');
     }
 
     /**

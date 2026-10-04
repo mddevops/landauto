@@ -1984,10 +1984,30 @@ Checks: `PlatformAuthorizationTest`:
 
 ## P3-003 — Characteristics
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-001, X-009
 
 V2 `auto_characteristics` (two-level group → parameter, unit on the definition) and `auto_characteristic_values` (TEXT value per Equipment + parameter). Server validation; no fake empty rows; no editable duplicates of Modification filter fields (ADR-005).
+
+### Result
+
+Catalog migration for both tables, with an additive `public_id` on the dictionary.
+
+`TwoLevelDictionary` rules:
+- the parent must be a root group;
+- the code format is enforced;
+- the parent is fixed after creation, so no cycles.
+
+`AutoCharacteristic`:
+- reserved Modification/Mark/Model codes are rejected;
+- groups have no unit.
+
+`AutoCharacteristicValue` accepts parameter-only values and no empty values. `App\Catalog\EquipmentCharacteristics::sync()`:
+- blank input deletes the row;
+- numbers are stored canonically;
+- unknown keys and group keys are rejected.
+
+Checks: `CatalogCharacteristicsTest`.
 
 ---
 

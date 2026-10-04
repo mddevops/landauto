@@ -115,7 +115,8 @@ Current focus:
 - `X-009` DONE: D-086 APPROVED — ADR-005 Equipment-level characteristic values (two-level dictionary, TEXT value, unit on definition, no inheritance, no empty rows);
 - `P3-001` DONE: separate `catalog` connection + `catalog:migrate` guard, V2 core tables (marks … equipments) with `public_id`, `App\Models\Catalog` models, status-chain `available()` scopes, isolated test/E2E catalog databases;
 - `P3-002` DONE: explicit platform roles (`super_admin`, `catalog_manager`) and permissions (`view_catalog`, `edit_catalog`, `manage_catalog_media`), gates + middleware, `php artisan platform:role grant|revoke <email> <role>`;
-- next: `P3-003` (§42).
+- `P3-003` DONE: two-level characteristic dictionary and Equipment values (ADR-005) with server validation and canonical values;
+- next: `P3-004` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
