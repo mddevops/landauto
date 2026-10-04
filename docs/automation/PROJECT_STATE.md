@@ -139,6 +139,7 @@ Current focus:
 - Phase 4 IN_PROGRESS:
 - `P4-001` DONE: Site-owned reusable Popups (presentation only, D-035), «Попапы» section, accessible `PopupView` runtime in designer/preview props.
 - `P4-002` DONE: `open_popup` action (same-Site active Popups only), preview runtime with per-trigger public-ID context (block/vehicle/offer/media set) and focus return.
+- `P4-003` DONE: Site-owned Forms with stable-key fields (8 types, consent text is customer-owned, hidden values untrusted), «Формы» UI under `edit_forms`, same-Site Popup→Form attach; preview Popups render the form (display-only until P4-004).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

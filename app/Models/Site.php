@@ -92,6 +92,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<Form, $this>
+     */
+    public function forms(): HasMany
+    {
+        return $this->hasMany(Form::class);
+    }
+
+    /**
      * @return HasMany<Popup, $this>
      */
     public function popups(): HasMany

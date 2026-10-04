@@ -26,7 +26,10 @@ import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { destroy, store, update } from '@/routes/sites/popups';
 
-export type ManagedPopup = PopupRuntime & { status: boolean };
+export type ManagedPopup = PopupRuntime & {
+    status: boolean;
+    form_public_id: string | null;
+};
 
 export type PopupChoices = { sizes: Choice[]; animations: Choice[] };
 
@@ -46,11 +49,13 @@ const toggles: { key: Toggle; label: string }[] = [
 export function PopupSettingsDialog({
     sitePublicId,
     choices,
+    forms,
     popup,
     trigger,
 }: {
     sitePublicId: string;
     choices: PopupChoices;
+    forms: Choice[];
     popup?: ManagedPopup;
     trigger: ReactNode;
 }) {
@@ -68,6 +73,7 @@ export function PopupSettingsDialog({
         close_on_escape: popup?.close_on_escape ?? true,
         show_close_button: popup?.show_close_button ?? true,
         mobile_fullscreen: popup?.mobile_fullscreen ?? false,
+        form: popup?.form_public_id ?? '',
     });
 
     function submit(event: FormEvent) {
@@ -159,6 +165,17 @@ export function PopupSettingsDialog({
                             className="w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         />
                     </Field>
+                    <SelectField
+                        id={`${prefix}-form`}
+                        label="Форма заявки"
+                        choices={forms}
+                        emptyLabel="Без формы"
+                        value={form.data.form}
+                        onChange={(event) =>
+                            form.setData('form', event.target.value)
+                        }
+                        error={form.errors.form}
+                    />
                     <div className="grid gap-4 sm:grid-cols-3">
                         <SelectField
                             id={`${prefix}-status`}

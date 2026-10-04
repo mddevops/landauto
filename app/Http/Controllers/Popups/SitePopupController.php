@@ -6,6 +6,7 @@ use App\Enums\PopupAnimation;
 use App\Enums\PopupSize;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Popups\SavePopupRequest;
+use App\Models\Form;
 use App\Models\Popup;
 use App\Models\Site;
 use App\Popups\PopupRuntime;
@@ -32,10 +33,22 @@ class SitePopupController extends Controller
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
             'design' => SiteDesignTokens::resolve($site->design_tokens),
             'popups' => $site->popups()
+                ->with('form.fields')
                 ->orderBy('name')
                 ->orderBy('id')
                 ->get()
-                ->map(fn (Popup $popup): array => [...$runtime->present($popup), 'status' => $popup->status])
+                ->map(fn (Popup $popup): array => [
+                    ...$runtime->present($popup),
+                    'status' => $popup->status,
+                    'form_public_id' => $popup->form?->public_id,
+                ])
+                ->values()
+                ->all(),
+            'forms' => $site->forms()
+                ->orderBy('name')
+                ->orderBy('id')
+                ->get(['public_id', 'name', 'status'])
+                ->map(fn (Form $form): array => ['value' => $form->public_id, 'label' => $form->status ? $form->name : "{$form->name} (выключена)"])
                 ->values()
                 ->all(),
             'choices' => [
@@ -49,14 +62,18 @@ class SitePopupController extends Controller
     public function store(SavePopupRequest $request, Site $site): RedirectResponse
     {
         $popup = new Popup($request->popupAttributes());
-        $popup->site()->associate($site)->save();
+        $popup->site()->associate($site);
+        $popup->form()->associate($request->form());
+        $popup->save();
 
         return back();
     }
 
     public function update(SavePopupRequest $request, Site $site, Popup $popup): RedirectResponse
     {
-        $popup->update($request->popupAttributes());
+        $popup->fill($request->popupAttributes());
+        $popup->form()->associate($request->form());
+        $popup->save();
 
         return back();
     }

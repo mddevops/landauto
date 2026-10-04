@@ -4,6 +4,7 @@ namespace App\Http\Requests\Popups;
 
 use App\Enums\PopupAnimation;
 use App\Enums\PopupSize;
+use App\Models\Form;
 use App\Models\Popup;
 use App\Models\Site;
 use App\Support\DesignerScope;
@@ -40,7 +41,20 @@ class SavePopupRequest extends FormRequest
             'close_on_escape' => ['required', 'boolean'],
             'show_close_button' => ['required', 'boolean'],
             'mobile_fullscreen' => ['required', 'boolean'],
+            'form' => ['nullable', 'string', 'size:26'],
         ];
+    }
+
+    /**
+     * The attached Form, resolved only among this Site's Forms by public ID.
+     */
+    public function form(): ?Form
+    {
+        if (! $this->filled('form')) {
+            return null;
+        }
+
+        return $this->site()->forms()->where('public_id', $this->string('form')->toString())->first();
     }
 
     /**
@@ -49,8 +63,16 @@ class SavePopupRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            if ($validator->errors()->isEmpty() && ! $this->boolean('show_close_button') && ! $this->boolean('close_on_escape')) {
+            if ($validator->errors()->isNotEmpty()) {
+                return;
+            }
+
+            if (! $this->boolean('show_close_button') && ! $this->boolean('close_on_escape')) {
                 $validator->errors()->add('show_close_button', 'Оставьте кнопку закрытия или закрытие клавишей Escape, иначе посетитель не сможет закрыть окно.');
+            }
+
+            if ($this->filled('form') && $this->form() === null) {
+                $validator->errors()->add('form', 'Выберите форму этого сайта.');
             }
         }];
     }
@@ -67,6 +89,7 @@ class SavePopupRequest extends FormRequest
             'text' => 'Текст',
             'size' => 'Размер',
             'animation' => 'Анимация',
+            'form' => 'Форма',
         ];
     }
 

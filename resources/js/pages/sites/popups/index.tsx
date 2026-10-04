@@ -2,7 +2,9 @@ import { Head, Link } from '@inertiajs/react';
 import { Eye, PanelsTopLeft, Pencil, Plus } from 'lucide-react';
 import { useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
+import { FormView } from '@/blocks/form';
 import { PopupView } from '@/blocks/popup';
+import type { Choice } from '@/components/platform/form-fields';
 import type {
     ManagedPopup,
     PopupChoices,
@@ -18,6 +20,7 @@ type PopupsIndexProps = {
     site: { public_id: string; name: string };
     design: DesignTokens;
     popups: ManagedPopup[];
+    forms: Choice[];
     choices: PopupChoices;
     can: { editPopups: boolean };
 };
@@ -26,6 +29,7 @@ export default function PopupsIndex({
     site,
     design,
     popups,
+    forms,
     choices,
     can,
 }: PopupsIndexProps) {
@@ -61,6 +65,7 @@ export default function PopupsIndex({
                             <PopupSettingsDialog
                                 sitePublicId={site.public_id}
                                 choices={choices}
+                                forms={forms}
                                 trigger={
                                     <Button>
                                         <Plus aria-hidden="true" />
@@ -111,7 +116,13 @@ export default function PopupsIndex({
                                     )}
                                 </div>
                                 <p className="text-sm text-muted-foreground">
-                                    {`Размер: ${sizeLabel(popup.size)}`}
+                                    {`Размер: ${sizeLabel(popup.size)} · Форма: ${
+                                        forms.find(
+                                            (form) =>
+                                                form.value ===
+                                                popup.form_public_id,
+                                        )?.label ?? 'не выбрана'
+                                    }`}
                                 </p>
                                 <div className="mt-auto flex flex-wrap gap-2">
                                     <Button
@@ -129,6 +140,7 @@ export default function PopupsIndex({
                                         <PopupSettingsDialog
                                             sitePublicId={site.public_id}
                                             choices={choices}
+                                            forms={forms}
                                             popup={popup}
                                             trigger={
                                                 <Button
@@ -154,7 +166,9 @@ export default function PopupsIndex({
                     tokens={design}
                     open
                     onOpenChange={(open) => !open && setPreviewId(null)}
-                />
+                >
+                    {previewed.form && <FormView form={previewed.form} />}
+                </PopupView>
             )}
         </>
     );

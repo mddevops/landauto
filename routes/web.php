@@ -4,6 +4,8 @@ use App\Catalog\CatalogLevel;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Forms\FormFieldController;
+use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
@@ -72,6 +74,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [PageBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
+
+            Route::get('forms', [SiteFormController::class, 'index'])->name('forms.index');
+            Route::post('forms', [SiteFormController::class, 'store'])->name('forms.store');
+            Route::get('forms/{form}', [SiteFormController::class, 'show'])->whereUlid('form')->name('forms.show');
+            Route::patch('forms/{form}', [SiteFormController::class, 'update'])->whereUlid('form')->name('forms.update');
+            Route::post('forms/{form}/fields', [FormFieldController::class, 'store'])->whereUlid('form')->name('forms.fields.store');
+            Route::put('forms/{form}/fields/order', [FormFieldController::class, 'order'])->whereUlid('form')->name('forms.fields.order');
+            Route::patch('forms/{form}/fields/{field}', [FormFieldController::class, 'update'])->whereUlid('form')->where('field', '[a-z][a-z0-9_]{0,39}')->name('forms.fields.update');
+            Route::delete('forms/{form}/fields/{field}', [FormFieldController::class, 'destroy'])->whereUlid('form')->where('field', '[a-z][a-z0-9_]{0,39}')->name('forms.fields.destroy');
 
             Route::get('popups', [SitePopupController::class, 'index'])->name('popups.index');
             Route::post('popups', [SitePopupController::class, 'store'])->name('popups.store');

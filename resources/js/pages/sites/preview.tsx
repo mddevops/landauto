@@ -3,6 +3,7 @@ import { ArrowLeft } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { DesignTokens } from '@/blocks/design';
+import { FormView } from '@/blocks/form';
 import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
@@ -148,7 +149,9 @@ export default function Preview({
                     open
                     onOpenChange={(open) => !open && setOpened(null)}
                     returnFocusTo={opened.trigger}
-                />
+                >
+                    {opened.popup.form && <FormView form={opened.popup.form} />}
+                </PopupView>
             )}
         </>
     );

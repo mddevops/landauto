@@ -22,6 +22,7 @@ use LogicException;
  * @property int $id
  * @property string $public_id
  * @property int $site_id
+ * @property int|null $form_id
  * @property string $name
  * @property bool $status
  * @property string|null $title
@@ -36,7 +37,7 @@ use LogicException;
  * @property Carbon|null $updated_at
  */
 #[Fillable(['name', 'status', 'title', 'text', 'size', 'animation', 'close_on_overlay', 'close_on_escape', 'show_close_button', 'mobile_fullscreen'])]
-#[Hidden(['id', 'site_id'])]
+#[Hidden(['id', 'site_id', 'form_id'])]
 class Popup extends Model
 {
     /** @use HasFactory<PopupFactory> */
@@ -78,6 +79,12 @@ class Popup extends Model
                 throw new LogicException('Popup Site is immutable.');
             }
         });
+
+        static::saving(function (Popup $popup): void {
+            if ($popup->form_id !== null && ! Form::query()->whereKey($popup->form_id)->where('site_id', $popup->site_id)->exists()) {
+                throw new LogicException('A Popup may only present a Form of its own Site.');
+            }
+        });
     }
 
     /**
@@ -86,6 +93,16 @@ class Popup extends Model
     public function site(): BelongsTo
     {
         return $this->belongsTo(Site::class);
+    }
+
+    /**
+     * Optional attached Form of the same Site; the Popup only presents it.
+     *
+     * @return BelongsTo<Form, $this>
+     */
+    public function form(): BelongsTo
+    {
+        return $this->belongsTo(Form::class);
     }
 
     /**

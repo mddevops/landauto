@@ -2428,8 +2428,15 @@ Result:
 
 ## P4-003 — Form Schema / Fields
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-017
+
+Result:
+- Site-owned `forms` (ULID `public_id`, name, status, submit label, success message) and `form_fields` keyed by a stable lowercase key, unique per Form. The key and type are immutable after creation.
+- Field types: text, phone, email, textarea, select, checkbox, consent and hidden. Labels are plain text, never HTML.
+- Consent text is the customer's own; required consent must be ticked. Hidden values are marked untrusted.
+- «Формы» management UI: create and edit a Form, activate or deactivate it, and add, edit, delete or reorder fields. All of this is gated by `edit_forms`.
+- A Popup may reference one Form of the same Site (`popups.form_id`, enforced by validation and the model). The runtime exposes only active Forms. The Popup owns no routing or delivery.
 
 ---
 
