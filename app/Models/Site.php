@@ -21,10 +21,11 @@ use LogicException;
  * @property int $workspace_id
  * @property string $name
  * @property SiteStatus $status
+ * @property array<string, string>|null $design_tokens
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'status'])]
+#[Fillable(['name', 'status', 'design_tokens'])]
 #[Hidden(['id', 'workspace_id'])]
 class Site extends Model
 {
@@ -45,6 +46,7 @@ class Site extends Model
     {
         return [
             'status' => SiteStatus::class,
+            'design_tokens' => 'array',
         ];
     }
 

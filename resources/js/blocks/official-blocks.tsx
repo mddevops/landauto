@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useButtonStyle } from '@/blocks/design';
 import type { BlockRendererProps } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
 import { cn } from '@/lib/utils';
@@ -11,7 +12,12 @@ function Container({
     className?: string;
 }) {
     return (
-        <div className={cn('mx-auto w-full max-w-6xl px-6', className)}>
+        <div
+            className={cn(
+                'mx-auto w-full max-w-(--lf-container) px-6',
+                className,
+            )}
+        >
             {children}
         </div>
     );
@@ -24,6 +30,8 @@ function ButtonPreview({
     label: string | null;
     variant?: 'primary' | 'secondary' | 'inverted';
 }) {
+    const outline = useButtonStyle() === 'outline';
+
     if (label === null) {
         return null;
     }
@@ -31,11 +39,17 @@ function ButtonPreview({
     return (
         <span
             className={cn(
-                'inline-flex items-center rounded-md px-5 py-2.5 text-sm font-medium',
-                variant === 'primary' && 'bg-neutral-900 text-white',
+                'inline-flex items-center rounded-(--lf-radius) border-2 px-5 py-2 text-sm font-medium',
+                variant === 'primary' &&
+                    (outline
+                        ? 'border-(--lf-primary) text-(--lf-primary)'
+                        : 'border-(--lf-primary) bg-(--lf-primary) text-(--lf-on-primary)'),
                 variant === 'secondary' &&
-                    'border border-neutral-300 bg-white text-neutral-900',
-                variant === 'inverted' && 'bg-white text-neutral-900',
+                    'border-neutral-300 bg-white text-neutral-900',
+                variant === 'inverted' &&
+                    (outline
+                        ? 'border-(--lf-on-primary) text-(--lf-on-primary)'
+                        : 'border-(--lf-on-primary) bg-(--lf-on-primary) text-(--lf-primary)'),
             )}
         >
             {label}
@@ -87,7 +101,7 @@ export function HeroBlock({ state }: BlockRendererProps) {
                 )}
             >
                 {text(state, 'eyebrow') && (
-                    <p className="text-sm font-medium tracking-wide text-neutral-500 uppercase">
+                    <p className="text-sm font-medium tracking-wide text-(--lf-secondary) uppercase">
                         {text(state, 'eyebrow')}
                     </p>
                 )}
@@ -142,7 +156,7 @@ export function BenefitsBlock({ state }: BlockRendererProps) {
                     {items(state, 'items').map((item) => (
                         <li
                             key={item.id}
-                            className="rounded-lg border border-neutral-200 p-5"
+                            className="rounded-(--lf-radius) border border-t-4 border-neutral-200 border-t-(--lf-secondary) p-5"
                         >
                             <h3 className="font-semibold">
                                 {text(item, 'title')}
@@ -169,7 +183,7 @@ export function CtaBlock({ state }: BlockRendererProps) {
                 'py-16',
                 muted
                     ? 'bg-neutral-100 text-neutral-900'
-                    : 'bg-neutral-900 text-white',
+                    : 'bg-(--lf-primary) text-(--lf-on-primary)',
             )}
         >
             <Container className="flex flex-col items-start gap-4">
@@ -178,7 +192,7 @@ export function CtaBlock({ state }: BlockRendererProps) {
                     <p
                         className={cn(
                             'max-w-2xl whitespace-pre-line',
-                            muted ? 'text-neutral-600' : 'text-neutral-300',
+                            muted ? 'text-neutral-600' : 'opacity-85',
                         )}
                     >
                         {text(state, 'text')}

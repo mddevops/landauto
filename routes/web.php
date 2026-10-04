@@ -4,6 +4,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\SiteController;
+use App\Http\Controllers\SiteDesignController;
 use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\WorkspaceContextController;
@@ -42,6 +43,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('sites.')
         ->group(function () {
             Route::get('designer', SiteDesignerController::class)->name('designer');
+            Route::patch('design', SiteDesignController::class)->name('design.update');
 
             Route::post('pages', [SitePageController::class, 'store'])->name('pages.store');
             Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');

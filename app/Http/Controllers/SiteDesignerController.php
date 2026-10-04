@@ -7,6 +7,7 @@ use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
 use App\Support\DesignerScope;
+use App\Support\SiteDesignTokens;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
@@ -32,6 +33,7 @@ class SiteDesignerController extends Controller
                 'public_id' => $site->public_id,
                 'name' => $site->name,
             ],
+            'design' => SiteDesignTokens::resolve($site->design_tokens),
             'page' => [
                 'public_id' => $page->public_id,
                 'title' => $page->title,

@@ -3,8 +3,11 @@ import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
+import type { DesignTokens } from '@/blocks/design';
 import { blockRenderer } from '@/blocks/registry';
 import type { BlockState } from '@/blocks/state';
+import { SiteTheme } from '@/blocks/theme';
+import { DesignPanel } from '@/components/designer/design-panel';
 import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import { PropertiesPanel } from '@/components/designer/properties-panel';
@@ -19,9 +22,11 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { state as stateUrl } from '@/routes/sites/blocks';
+import { update as updateDesign } from '@/routes/sites/design';
 
 type DesignerProps = {
     site: DesignerSite;
+    design: DesignTokens;
     page: { public_id: string; title: string };
     pages: DesignerPage[];
     blocks: DesignerBlock[];
@@ -31,9 +36,11 @@ type DesignerProps = {
 };
 
 type LeftTab = 'pages' | 'blocks';
+type RightTab = 'block' | 'design';
 
 export default function Designer({
     site,
+    design,
     page,
     pages,
     blocks,
@@ -50,8 +57,11 @@ export default function Designer({
     }
 
     const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
+    const [rightTab, setRightTab] = useState<RightTab>('block');
     const [drafts, setDrafts] = useState<Record<string, BlockState>>({});
+    const [designDraft, setDesignDraft] = useState<DesignTokens | null>(null);
     const [saving, setSaving] = useState(false);
+    const tokens = designDraft ?? design;
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const selected = blocks.find((block) => block.public_id === selectedId);
     const stateOf = (block: DesignerBlock) =>
@@ -81,6 +91,25 @@ export default function Designer({
                     }),
             },
         );
+    };
+
+    const saveDesign = () => {
+        const draft = designDraft;
+
+        if (draft === null) {
+            return;
+        }
+
+        router.patch(updateDesign.url(site.public_id), draft, {
+            preserveScroll: true,
+            preserveState: true,
+            onStart: () => setSaving(true),
+            onFinish: () => setSaving(false),
+            onSuccess: () =>
+                setDesignDraft((current) =>
+                    current === draft ? null : current,
+                ),
+        });
     };
 
     return (
@@ -149,25 +178,27 @@ export default function Designer({
                         className="min-w-0 flex-1 p-3 sm:p-6 lg:overflow-y-auto"
                     >
                         <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-lg border bg-white shadow-sm">
-                            {blocks.length === 0 ? (
-                                <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm text-neutral-500">
-                                    На странице пока нет блоков.
-                                </div>
-                            ) : (
-                                blocks.map((block) => (
-                                    <CanvasBlock
-                                        key={block.public_id}
-                                        block={block}
-                                        state={stateOf(block)}
-                                        selected={
-                                            block.public_id === selectedId
-                                        }
-                                        onSelect={() =>
-                                            setSelectedId(block.public_id)
-                                        }
-                                    />
-                                ))
-                            )}
+                            <SiteTheme tokens={tokens}>
+                                {blocks.length === 0 ? (
+                                    <div className="flex min-h-64 items-center justify-center p-6 text-center text-sm text-neutral-500">
+                                        На странице пока нет блоков.
+                                    </div>
+                                ) : (
+                                    blocks.map((block) => (
+                                        <CanvasBlock
+                                            key={block.public_id}
+                                            block={block}
+                                            state={stateOf(block)}
+                                            selected={
+                                                block.public_id === selectedId
+                                            }
+                                            onSelect={() =>
+                                                setSelectedId(block.public_id)
+                                            }
+                                        />
+                                    ))
+                                )}
+                            </SiteTheme>
                         </div>
                     </main>
 
@@ -181,47 +212,74 @@ export default function Designer({
                         >
                             Свойства
                         </h2>
-                        {selected ? (
-                            <div className="mt-3 flex flex-col gap-4">
-                                <p className="text-sm">
-                                    <span className="font-medium">
-                                        {selected.name}
-                                    </span>
-                                    <span className="text-muted-foreground">
-                                        {` · версия ${selected.version}`}
-                                    </span>
-                                </p>
-                                <PropertiesPanel
-                                    key={selected.public_id}
-                                    block={selected}
-                                    state={stateOf(selected)}
+                        <div className="-mx-4 mt-2">
+                            <Tabs
+                                value={rightTab}
+                                onChange={setRightTab}
+                                tabs={[
+                                    { value: 'block', label: 'Блок' },
+                                    { value: 'design', label: 'Стиль сайта' },
+                                ]}
+                            />
+                        </div>
+                        <div
+                            role="tabpanel"
+                            id={`designer-panel-${rightTab}`}
+                            aria-labelledby={`designer-tab-${rightTab}`}
+                            className="pt-3"
+                        >
+                            {rightTab === 'design' ? (
+                                <DesignPanel
+                                    tokens={tokens}
                                     errors={errors}
-                                    disabled={!can.editContent}
-                                    onChange={(state) =>
-                                        setDrafts((current) => ({
-                                            ...current,
-                                            [selected.public_id]: state,
-                                        }))
-                                    }
+                                    canEdit={can.editDesign}
+                                    dirty={designDraft !== null}
+                                    saving={saving}
+                                    onChange={setDesignDraft}
+                                    onSave={saveDesign}
                                 />
-                                {can.editContent && (
-                                    <Button
-                                        type="button"
-                                        disabled={
-                                            saving ||
-                                            !(selected.public_id in drafts)
+                            ) : selected ? (
+                                <div className="mt-3 flex flex-col gap-4">
+                                    <p className="text-sm">
+                                        <span className="font-medium">
+                                            {selected.name}
+                                        </span>
+                                        <span className="text-muted-foreground">
+                                            {` · версия ${selected.version}`}
+                                        </span>
+                                    </p>
+                                    <PropertiesPanel
+                                        key={selected.public_id}
+                                        block={selected}
+                                        state={stateOf(selected)}
+                                        errors={errors}
+                                        disabled={!can.editContent}
+                                        onChange={(state) =>
+                                            setDrafts((current) => ({
+                                                ...current,
+                                                [selected.public_id]: state,
+                                            }))
                                         }
-                                        onClick={() => save(selected)}
-                                    >
-                                        Сохранить
-                                    </Button>
-                                )}
-                            </div>
-                        ) : (
-                            <p className="mt-2 text-sm text-muted-foreground">
-                                Выберите блок, чтобы увидеть его свойства.
-                            </p>
-                        )}
+                                    />
+                                    {can.editContent && (
+                                        <Button
+                                            type="button"
+                                            disabled={
+                                                saving ||
+                                                !(selected.public_id in drafts)
+                                            }
+                                            onClick={() => save(selected)}
+                                        >
+                                            Сохранить
+                                        </Button>
+                                    )}
+                                </div>
+                            ) : (
+                                <p className="mt-2 text-sm text-muted-foreground">
+                                    Выберите блок, чтобы увидеть его свойства.
+                                </p>
+                            )}
+                        </div>
                     </aside>
                 </div>
             </div>

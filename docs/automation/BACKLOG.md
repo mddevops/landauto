@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-012 — Site Design Tokens`.
+`X-010 — ADR: Media Ownership and Asset Versioning` (before `P2-013`).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1741,7 +1741,7 @@ Any schema field may declare `visible_if: {"field": key, "equals": value}`. The 
 
 ## P2-012 — Site Design Tokens
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-006
 
 ### Initial tokens
@@ -1751,6 +1751,10 @@ Any schema field may declare `visible_if: {"field": key, "equals": value}`. The 
 - radius;
 - container;
 - buttons.
+
+### Result
+
+`sites.design_tokens` (nullable JSON) stores a fixed token set: `primary_color` and `secondary_color` as lower-case `#rrggbb`, `font_family` sans/serif, `radius` none/small/medium/large, `container` narrow/default/wide, `button_style` solid/outline. There is no custom CSS. `App\Support\SiteDesignTokens` owns the defaults and rules, and its `resolve()` falls back to defaults for missing or invalid stored values. `PATCH sites/{site}/design` (`UpdateSiteDesignRequest`: Workspace scope 404 before validation, then `editDesign`) persists only the known keys. The Designer receives resolved `design` props and adds a «Стиль сайта» tab with live canvas preview and «Сохранить стиль». Official renderers consume the tokens as CSS variables (`--lf-primary`, `--lf-on-primary` from WCAG luminance, `--lf-secondary`, `--lf-radius`, `--lf-container`, font family), and the button style comes from React context. Checks: `SiteDesignTokensTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 
