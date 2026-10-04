@@ -70,7 +70,7 @@ Current phase:
 
 The earlier catalog BLOCKED_DECISION is RESOLVED: the owner delivered the agreed Catalog V2 schema (version 2, 04.10.2026), adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`.
 
-Next tasks: `X-009`, then `P3-001` … `P3-017` (X-019 before the P3-017 gate). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
+Next tasks: `P3-001` … `P3-017` (X-019 before the P3-017 gate). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2953,11 +2953,19 @@ This is a docs-only decision; no code or columns were added.
 
 ## X-009 — ADR: Characteristic Value Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P3-001  
 **Resolves:** D-086
 
 Decision must cover: storage of characteristic values across Generation / Modification / Trim and override/inheritance resolution.
+
+### Result
+
+ADR-005 (`docs/architecture/decisions/ADR-005-equipment-characteristic-model.md`), D-086 APPROVED:
+- No inheritance engine; values belong to Equipment.
+- `auto_characteristics` is a two-level tree (group → parameter); the unit lives on the definition.
+- The value is TEXT with no unit. Missing data means no row.
+- Codes for the Modification filter fields (`engine_volume`, `engine_power`, `consumption_100_km`, `acceleration_0_100`) are reserved and never duplicated as characteristics.
 
 ---
 

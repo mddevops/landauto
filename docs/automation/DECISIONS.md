@@ -1611,7 +1611,7 @@ Resolved 2026-09-30: the owner chose Option B (bigint + ULID `public_id`) over t
 
 ## D-086 — Characteristic Value Schema Strategy
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — ADR-005: values belong to Equipment (`auto_characteristic_values`, TEXT, unit from the two-level `auto_characteristics` definition), no Generation/Modification/Trim inheritance, no empty rows, Modification filter fields are not duplicated. The "Current Product Rule" below is superseded.
 
 ### Decision Needed
 
