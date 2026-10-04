@@ -23,7 +23,7 @@ return new class extends Migration
             $table->timestamps();
 
             $table->unique(['catalog_series_public_id', 'name']);
-            $table->index(['catalog_series_public_id', 'status', 'sort_order']);
+            $table->index(['catalog_series_public_id', 'status', 'sort_order'], 'series_media_sets_series_status_order_index');
         });
     }
 

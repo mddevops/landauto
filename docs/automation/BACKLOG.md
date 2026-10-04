@@ -2381,6 +2381,11 @@ Risk-focused review:
 - **Uploads:** Series media rejects SVG, is limited to 10 MB, uses server-generated keys and private storage, and is served with nosniff.
 - **Draft only:** autosave and preview never publish.
 
+Post-gate fix from the first real MySQL migration:
+- Two generated index names exceeded MySQL's 64-character limit, which SQLite does not enforce. They now have explicit short names.
+- `MigrationIdentifierLengthTest` guards every table and index name in both databases.
+- Re-run gates: 441 tests, 39 E2E.
+
 Known limits, carried forward:
 - Series media URLs require sign-in. Public delivery belongs to Publishing.
 - Designers and ContentEditors see offer prices in the designer and preview canvas. Prices are site-facing content.

@@ -28,7 +28,7 @@ return new class extends Migration
             $table->unsignedInteger('sort_order')->default(0);
             $table->timestamps();
 
-            $table->unique(['site_vehicle_id', 'series_media_set_id']);
+            $table->unique(['site_vehicle_id', 'series_media_set_id'], 'site_vehicle_media_sets_vehicle_set_unique');
         });
     }
 
