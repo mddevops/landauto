@@ -4,12 +4,13 @@ namespace App\Blocks;
 
 use App\Models\BlockInstance;
 use App\Models\Page;
+use App\Models\Popup;
 use App\Models\SiteAsset;
 use App\Models\SiteVehicle;
 
 /**
- * References allowed from a Block on a given Page: assets, pages and vehicles of the same Site,
- * and scroll targets on the same Page.
+ * References allowed from a Block on a given Page: assets, pages, vehicles and active Popups of
+ * the same Site, and scroll targets on the same Page.
  */
 final readonly class PageBlockReferences implements BlockReferenceResolver
 {
@@ -33,5 +34,10 @@ final readonly class PageBlockReferences implements BlockReferenceResolver
     public function existingVehicles(array $ids): array
     {
         return SiteVehicle::query()->where('site_id', $this->page->site_id)->whereIn('public_id', $ids)->pluck('public_id')->all();
+    }
+
+    public function existingPopups(array $ids): array
+    {
+        return Popup::query()->where('site_id', $this->page->site_id)->active()->whereIn('public_id', $ids)->pluck('public_id')->all();
     }
 }

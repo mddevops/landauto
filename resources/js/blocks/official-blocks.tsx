@@ -1,7 +1,8 @@
 import type { ReactNode } from 'react';
-import { actionHref } from '@/blocks/actions';
+import { actionHref, actionPopupId } from '@/blocks/actions';
 import { useButtonStyle } from '@/blocks/design';
 import { useBlockRenderContext } from '@/blocks/render-context';
+import { useTriggerContext } from '@/blocks/trigger-context';
 import type { BlockRendererProps, BlockState } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
 import { cn } from '@/lib/utils';
@@ -34,7 +35,24 @@ function ActionLink({
     className?: string;
     children: ReactNode;
 }) {
-    const href = actionHref(action, useBlockRenderContext());
+    const context = useBlockRenderContext();
+    const trigger = useTriggerContext();
+    const href = actionHref(action, context);
+    const popupId = actionPopupId(action);
+    const open = context.openPopup;
+
+    if (popupId !== null && open !== null && context.hasPopup(popupId)) {
+        return (
+            <button
+                type="button"
+                aria-haspopup="dialog"
+                className={className}
+                onClick={(event) => open(popupId, trigger, event.currentTarget)}
+            >
+                {children}
+            </button>
+        );
+    }
 
     return href ? (
         <a

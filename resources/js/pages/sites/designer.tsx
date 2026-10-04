@@ -3,6 +3,7 @@ import { ArrowLeft, Eye, LayoutList } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
+import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
@@ -45,6 +46,7 @@ type DesignerProps = {
     blocks: DesignerBlock[];
     assets: DesignerAsset[];
     vehicles: VehicleBinding[];
+    popups: PopupRuntime[];
     selectedBlock: string | null;
     library: DesignerLibraryBlock[];
     can: {
@@ -66,6 +68,7 @@ export default function Designer({
     blocks,
     assets,
     vehicles,
+    popups,
     selectedBlock,
     library,
     can,
@@ -87,8 +90,11 @@ export default function Designer({
                     : null,
             vehicle: (id: string) => vehicleMap.get(id) ?? null,
             vehicles,
+            hasPopup: (id: string) =>
+                popups.some((popup) => popup.public_id === id),
+            openPopup: null,
         };
-    }, [assets, pages, vehicles, site.public_id]);
+    }, [assets, pages, vehicles, popups, site.public_id]);
     const designerContext = useMemo(
         () => ({
             siteId: site.public_id,
@@ -100,8 +106,20 @@ export default function Designer({
                 public_id: vehicle.public_id,
                 title: vehicleFullTitle(vehicle),
             })),
+            popups: popups.map((popup) => ({
+                public_id: popup.public_id,
+                name: popup.name,
+            })),
         }),
-        [site.public_id, assets, can.manageAssets, pages, blocks, vehicles],
+        [
+            site.public_id,
+            assets,
+            can.manageAssets,
+            pages,
+            blocks,
+            vehicles,
+            popups,
+        ],
     );
     const [selectedId, setSelectedId] = useState<string | null>(selectedBlock);
     const [serverSelection, setServerSelection] = useState(selectedBlock);

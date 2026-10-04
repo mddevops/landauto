@@ -4,6 +4,7 @@ import { useId, useState } from 'react';
 import { ButtonPreview, Container } from '@/blocks/official-blocks';
 import type { BlockRendererProps } from '@/blocks/state';
 import { flag, group, text } from '@/blocks/state';
+import { TriggerScope } from '@/blocks/trigger-context';
 import {
     ColorSwatches,
     VehiclePlaceholder,
@@ -317,9 +318,11 @@ export function VehicleGalleryBlock({ state }: BlockRendererProps) {
 }
 
 function OfferRow({
+    vehicleId,
     offer,
     button,
 }: {
+    vehicleId: string;
     offer: VehicleOffer;
     button: BlockRendererProps['state'];
 }) {
@@ -374,7 +377,11 @@ function OfferRow({
                             aria-hidden
                         />
                     </button>
-                    <ButtonPreview button={button} />
+                    <TriggerScope
+                        value={{ vehicle: vehicleId, offer: offer.public_id }}
+                    >
+                        <ButtonPreview button={button} />
+                    </TriggerScope>
                 </div>
             </div>
             {offer.benefits.length > 0 && (
@@ -416,6 +423,7 @@ export function VehicleOffersBlock({ state }: BlockRendererProps) {
                         {vehicle.offers.map((offer) => (
                             <OfferRow
                                 key={offer.public_id}
+                                vehicleId={vehicle.public_id}
                                 offer={offer}
                                 button={group(state, 'button')}
                             />

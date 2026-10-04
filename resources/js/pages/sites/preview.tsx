@@ -1,12 +1,16 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { DesignTokens } from '@/blocks/design';
+import { PopupView } from '@/blocks/popup';
+import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
+import { TriggerScope } from '@/blocks/trigger-context';
+import type { TriggerContextValue } from '@/blocks/trigger-context';
 import type { VehicleBinding } from '@/blocks/vehicles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -25,6 +29,13 @@ type PreviewProps = {
     }[];
     assets: { public_id: string; url: string }[];
     vehicles: VehicleBinding[];
+    popups: PopupRuntime[];
+};
+
+type OpenedPopup = {
+    popup: PopupRuntime;
+    context: TriggerContextValue;
+    trigger: HTMLElement;
 };
 
 export default function Preview({
@@ -35,7 +46,9 @@ export default function Preview({
     blocks,
     assets,
     vehicles,
+    popups,
 }: PreviewProps) {
+    const [opened, setOpened] = useState<OpenedPopup | null>(null);
     const renderContext = useMemo(() => {
         const urls = new Map(
             assets.map((asset) => [asset.public_id, asset.url]),
@@ -43,6 +56,9 @@ export default function Preview({
         const pageIds = new Set(pages.map((sitePage) => sitePage.public_id));
         const vehicleMap = new Map(
             vehicles.map((vehicle) => [vehicle.public_id, vehicle]),
+        );
+        const popupMap = new Map(
+            popups.map((popup) => [popup.public_id, popup]),
         );
 
         return {
@@ -53,8 +69,20 @@ export default function Preview({
                     : null,
             vehicle: (id: string) => vehicleMap.get(id) ?? null,
             vehicles,
+            hasPopup: (id: string) => popupMap.has(id),
+            openPopup: (
+                id: string,
+                context: TriggerContextValue,
+                trigger: HTMLElement,
+            ) => {
+                const popup = popupMap.get(id);
+
+                if (popup) {
+                    setOpened({ popup, context, trigger });
+                }
+            },
         };
-    }, [assets, pages, vehicles, site.public_id]);
+    }, [assets, pages, vehicles, popups, site.public_id]);
 
     return (
         <>
@@ -94,9 +122,17 @@ export default function Preview({
                                             key={block.public_id}
                                             id={blockAnchor(block.public_id)}
                                         >
-                                            {Renderer ? (
-                                                <Renderer state={block.state} />
-                                            ) : null}
+                                            <TriggerScope
+                                                value={{
+                                                    block: block.public_id,
+                                                }}
+                                            >
+                                                {Renderer ? (
+                                                    <Renderer
+                                                        state={block.state}
+                                                    />
+                                                ) : null}
+                                            </TriggerScope>
                                         </div>
                                     );
                                 })
@@ -105,6 +141,15 @@ export default function Preview({
                     </BlockRenderContext>
                 </main>
             </div>
+            {opened && (
+                <PopupView
+                    popup={opened.popup}
+                    tokens={design}
+                    open
+                    onOpenChange={(open) => !open && setOpened(null)}
+                    returnFocusTo={opened.trigger}
+                />
+            )}
         </>
     );
 }

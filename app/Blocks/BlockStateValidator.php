@@ -26,8 +26,8 @@ final class BlockStateValidator
 
     private const PHONE_PATTERN = '/^\+?[0-9 ()\-]{3,32}$/';
 
-    /** @var array{assets: array<string, string>, pages: array<string, string>, blocks: array<string, string>, vehicles: array<string, string>} State path => referenced public ID. */
-    private array $references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => []];
+    /** @var array{assets: array<string, string>, pages: array<string, string>, blocks: array<string, string>, vehicles: array<string, string>, popups: array<string, string>} State path => referenced public ID. */
+    private array $references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => [], 'popups' => []];
 
     /**
      * @param  array<string, mixed>  $schema
@@ -37,7 +37,7 @@ final class BlockStateValidator
     public function errors(array $schema, mixed $state, ?BlockReferenceResolver $resolver = null): array
     {
         $this->errors = [];
-        $this->references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => []];
+        $this->references = ['assets' => [], 'pages' => [], 'blocks' => [], 'vehicles' => [], 'popups' => []];
         /** @var list<array<string, mixed>> $fields */
         $fields = $schema['fields'] ?? [];
 
@@ -47,6 +47,7 @@ final class BlockStateValidator
         $this->checkReferences($this->references['pages'], fn (array $ids): array => $resolver?->existingPages($ids) ?? [], 'Страница не найдена на этом сайте.');
         $this->checkReferences($this->references['blocks'], fn (array $ids): array => $resolver?->existingBlocks($ids) ?? [], 'Блок не найден на этой странице.');
         $this->checkReferences($this->references['vehicles'], fn (array $ids): array => $resolver?->existingVehicles($ids) ?? [], 'Автомобиль не найден на этом сайте.');
+        $this->checkReferences($this->references['popups'], fn (array $ids): array => $resolver?->existingPopups($ids) ?? [], 'Попап не найден или выключен на этом сайте.');
 
         return $this->errors;
     }
@@ -196,6 +197,7 @@ final class BlockStateValidator
             BlockActionType::Email => mb_strlen($target) <= self::EMAIL_MAX_LENGTH && filter_var($target, FILTER_VALIDATE_EMAIL) !== false
                 ? null
                 : $this->errors[$targetPath] = 'Укажите корректный email.',
+            BlockActionType::OpenPopup => $this->reference('popups', $target, $targetPath, 'Выберите попап этого сайта.'),
         };
     }
 
@@ -215,7 +217,7 @@ final class BlockStateValidator
     }
 
     /**
-     * @param  'pages'|'blocks'|'vehicles'  $kind
+     * @param  'pages'|'blocks'|'vehicles'|'popups'  $kind
      */
     private function reference(string $kind, string $id, string $path, string $message): void
     {

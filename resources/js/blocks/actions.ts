@@ -7,6 +7,7 @@ export const actionTypes = {
     scroll_to: { label: 'Прокрутить к блоку', target: 'block' },
     phone: { label: 'Позвонить', target: 'phone' },
     email: { label: 'Написать на email', target: 'email' },
+    open_popup: { label: 'Открыть попап', target: 'popup' },
 } as const;
 
 export type ActionType = keyof typeof actionTypes;
@@ -55,5 +56,22 @@ export function actionHref(
             return `tel:${target.replace(/[^\d+]/g, '')}`;
         case 'email':
             return `mailto:${target}`;
+        case 'open_popup':
+            return null;
     }
+}
+
+/** Popup public ID of an `open_popup` action, if any; opening is done by the runtime. */
+export function actionPopupId(action: unknown): string | null {
+    if (typeof action !== 'object' || action === null) {
+        return null;
+    }
+
+    const state = action as BlockState;
+
+    return state.type === 'open_popup' &&
+        typeof state.popup === 'string' &&
+        state.popup !== ''
+        ? state.popup
+        : null;
 }

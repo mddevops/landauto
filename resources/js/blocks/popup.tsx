@@ -41,12 +41,14 @@ export function PopupView({
     tokens,
     open,
     onOpenChange,
+    returnFocusTo,
     children,
 }: {
     popup: PopupRuntime;
     tokens: DesignTokens;
     open: boolean;
     onOpenChange: (open: boolean) => void;
+    returnFocusTo?: HTMLElement | null;
     children?: ReactNode;
 }) {
     return (
@@ -74,6 +76,12 @@ export function PopupView({
                         onInteractOutside={(event) => {
                             if (!popup.close_on_overlay) {
                                 event.preventDefault();
+                            }
+                        }}
+                        onCloseAutoFocus={(event) => {
+                            if (returnFocusTo?.isConnected) {
+                                event.preventDefault();
+                                returnFocusTo.focus();
                             }
                         }}
                         className={cn(

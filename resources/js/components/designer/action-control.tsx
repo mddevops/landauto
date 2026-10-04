@@ -29,7 +29,7 @@ export function ActionControl({
     errors: Record<string, string>;
     onChange: (value: Record<string, string | null> | null) => void;
 }) {
-    const { pages, blocks } = useDesignerContext();
+    const { pages, blocks, popups } = useDesignerContext();
     const action =
         typeof value === 'object' && value !== null
             ? (value as Record<string, unknown>)
@@ -134,6 +134,34 @@ export function ActionControl({
                             </option>
                         ))}
                     </select>
+                </div>
+            )}
+            {targetKey === 'popup' && (
+                <div className="grid gap-1.5">
+                    <Label htmlFor={targetId}>Попап</Label>
+                    <select
+                        id={targetId}
+                        value={target}
+                        aria-invalid={Boolean(targetError)}
+                        onChange={(event) => setTarget(event.target.value)}
+                        className={selectClass}
+                    >
+                        <option value="">Выберите попап</option>
+                        {popups.map((popup) => (
+                            <option
+                                key={popup.public_id}
+                                value={popup.public_id}
+                            >
+                                {popup.name}
+                            </option>
+                        ))}
+                    </select>
+                    {popups.length === 0 && (
+                        <p className="text-xs text-muted-foreground">
+                            Активных попапов нет. Создайте попап в разделе
+                            «Попапы».
+                        </p>
+                    )}
                 </div>
             )}
             <InputError id={`${targetId}-error`} message={targetError} />

@@ -4,6 +4,7 @@ import { ButtonPreview, Container } from '@/blocks/official-blocks';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import type { BlockRendererProps, BlockState } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
+import { TriggerScope } from '@/blocks/trigger-context';
 import type { VehicleBinding, VehicleMediaSet } from '@/blocks/vehicles';
 import { cn } from '@/lib/utils';
 
@@ -144,7 +145,14 @@ export function VehicleCard({
                     </p>
                 )}
                 <div className="mt-auto pt-2">
-                    <ButtonPreview button={button} />
+                    <TriggerScope
+                        value={{
+                            vehicle: vehicle.public_id,
+                            media_set: set?.public_id,
+                        }}
+                    >
+                        <ButtonPreview button={button} />
+                    </TriggerScope>
                 </div>
             </div>
         </article>

@@ -2414,8 +2414,15 @@ Result:
 
 ## P4-002 — Open Popup Action
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-001, P2-014
+
+Result:
+- `open_popup` action stores a Popup `public_id`. On save, only active Popups of the same Site are accepted. Inactive, other-Site, foreign and numeric references, and extra keys, are rejected.
+- In the preview, the action renders as a `<button aria-haspopup="dialog">` that opens the reusable `PopupView`. There is no eval, injected selector or URL.
+- Each block passes a trigger context made of public IDs (block, plus vehicle, offer or media set from vehicle cards and offer rows), so one Popup opens with different context per trigger.
+- Focus returns to the trigger, and Escape and overlay closing follow the Popup settings.
+- The designer action control lists the active Popups.
 
 ---
 

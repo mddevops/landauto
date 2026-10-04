@@ -138,6 +138,7 @@ Current focus:
 - `X-020` DONE: Admin gets `view_site`, `view_vehicles` and `edit_benefits` (D-107). Offer saves now authorize by what changes: `edit_prices` for offer fields, `edit_benefits` for benefits, both when both change. Designer and ContentEditor are unchanged.
 - Phase 4 IN_PROGRESS:
 - `P4-001` DONE: Site-owned reusable Popups (presentation only, D-035), «Попапы» section, accessible `PopupView` runtime in designer/preview props.
+- `P4-002` DONE: `open_popup` action (same-Site active Popups only), preview runtime with per-trigger public-ID context (block/vehicle/offer/media set) and focus return.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

@@ -3,7 +3,7 @@
 namespace App\Enums;
 
 /**
- * Safe navigation actions of an `action` Block field. Popup/Form actions arrive with Phase 4.
+ * Platform-defined actions of an `action` Block field (D-034). Targets are data, never script.
  */
 enum BlockActionType: string
 {
@@ -12,6 +12,7 @@ enum BlockActionType: string
     case ScrollTo = 'scroll_to';
     case Phone = 'phone';
     case Email = 'email';
+    case OpenPopup = 'open_popup';
 
     /** State key holding the action target next to `type`. */
     public function targetKey(): string
@@ -22,6 +23,7 @@ enum BlockActionType: string
             self::ScrollTo => 'block',
             self::Phone => 'phone',
             self::Email => 'email',
+            self::OpenPopup => 'popup',
         };
     }
 }

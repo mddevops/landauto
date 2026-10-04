@@ -31,4 +31,12 @@ interface BlockReferenceResolver
      * @return array<mixed>
      */
     public function existingVehicles(array $ids): array;
+
+    /**
+     * Only active Popups of the Block's Site are usable action targets.
+     *
+     * @param  list<string>  $ids
+     * @return array<mixed>
+     */
+    public function existingPopups(array $ids): array;
 }
