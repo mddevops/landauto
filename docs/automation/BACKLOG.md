@@ -2202,7 +2202,7 @@ Checks: `SiteVehicleFlowTest`, PHPStan, `npm run check`.
 
 ## P3-011 — Automotive Fallback Resolver
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-006, P3-008
 
 ### Priority
@@ -2210,6 +2210,20 @@ Checks: `SiteVehicleFlowTest`, PHPStan, `npm run check`.
 Site selection
 → Workspace when available (not implemented in Phase 3)
 → Global (active Series media sets).
+
+### Result
+
+`App\Automotive\VehicleMediaResolver` decides which prepared media a vehicle shows:
+- If the vehicle's own selection contains active sets with images, those are used in the selected order; the source is `site`.
+- Otherwise all active sets with images for the vehicle's Series are used in platform order; the source is `global`.
+- If neither exists, the result is empty.
+- The Workspace level is skipped because there is no Workspace media library in Phase 3.
+
+Each image is returned with its angle (in angle order), its URL and its size. `resolveMany()` resolves any number of vehicles with a fixed number of queries. Files are referenced, never copied.
+
+The image URLs point to the signed-in route `media/series/{image}`. Serving these images in published output belongs to Publishing.
+
+Checks: `VehicleMediaResolverTest`.
 
 ---
 

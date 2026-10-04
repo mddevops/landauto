@@ -123,7 +123,8 @@ Current focus:
 - `P3-008` DONE: Site-owned `site_vehicles` (Series reference, one per Series per Site) and media-set selection by reference; vehicle policy abilities;
 - `P3-009` DONE: `site_offers` (Equipment of the vehicle Series, ADR-004 `*_minor` money, availability, badge) and amount-based `site_offer_benefits`; shared `App\Support\Money`;
 - `P3-010` DONE: customer «Автомобили» flow (cascading Series picker, media-set selection by reference, offers with server-parsed prices and benefits, tenant-scoped 404s);
-- next: `P3-011` (§42).
+- `P3-011` DONE: `VehicleMediaResolver` (Site selection → Global active Series media sets; Workspace level not in Phase 3), bulk resolution;
+- next: `P3-012` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
