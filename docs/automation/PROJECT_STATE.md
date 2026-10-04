@@ -109,6 +109,7 @@ Current focus:
 - `P2-016` DONE: authenticated draft preview (`preview_site`), visible blocks with tokens/assets, anchors for scroll actions;
 - `P2-017` DONE: Playwright designer flow (blocks, properties, repeater, action, upload, style, autosave, reorder, reload, preview);
 - `P2-018` DONE: Phase 2 gate (composer quality, 38 E2E passed); Phase 2 COMPLETED;
+- `X-008` DONE: D-084 APPROVED — ADR-004 integer minor-unit money (`BIGINT UNSIGNED *_minor`, `CHAR(3)` currency, basis points);
 - next: Phase 3 BLOCKED_DECISION — the delivered `auto-catalog-schema.md` is not the agreed V2 schema (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.

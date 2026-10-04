@@ -2922,11 +2922,21 @@ Lifecycle: agents draft the ADR in `docs/architecture/decisions/`; only the owne
 
 ## X-008 — ADR: Money Storage Representation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P3-009  
 **Resolves:** D-084
 
 Decision must cover: integer minor units vs fixed decimal, currency representation, rounding, Block price field presentation. Until accepted, no money columns anywhere (including P1-009 Plans).
+
+### Result
+
+ADR-004 (`docs/architecture/decisions/ADR-004-money-storage-representation.md`) records the owner-approved D-084:
+- Money is stored in integer minor units in `BIGINT UNSIGNED` `price_minor` / `rrp_minor` / `amount_minor` columns, with currency in `CHAR(3)` (uppercase ISO 4217).
+- Arithmetic is integer-only; formatting happens at the UI boundary.
+- Decimal input is converted by the currency's minor-unit rules on the backend before persistence.
+- Any percentage is stored in basis points.
+
+This is a docs-only decision; no code or columns were added.
 
 ---
 

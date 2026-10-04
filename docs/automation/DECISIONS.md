@@ -1548,7 +1548,7 @@ Must be clarified before advanced Workspace Vehicle synchronization behavior.
 
 ## D-084 — Money Storage Representation
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — ADR-004: integer minor units in `BIGINT UNSIGNED` `*_minor` columns, `CHAR(3)` uppercase ISO 4217 currency, conversion by currency minor-unit rules before persistence, integer basis points for any percentage.
 
 ### Decision Needed
 
