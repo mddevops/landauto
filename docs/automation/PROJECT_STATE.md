@@ -125,7 +125,8 @@ Current focus:
 - `P3-010` DONE: customer «Автомобили» flow (cascading Series picker, media-set selection by reference, offers with server-parsed prices and benefits, tenant-scoped 404s);
 - `P3-011` DONE: `VehicleMediaResolver` (Site selection → Global active Series media sets; Workspace level not in Phase 3), bulk resolution;
 - `P3-012` DONE: `VehicleBindings` display-ready vehicle/offer view models (visible + available only, formatted money, no numeric IDs) in designer/preview, same-Site `vehicle` Block field;
-- next: `P3-013` (§42).
+- `P3-013` DONE: official `vehicle-card` Block (same-Site vehicle reference, color swatches, «от» price, benefit, action button);
+- next: `P3-014` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

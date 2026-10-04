@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sites;
 
+use App\Blocks\OfficialBlockCatalog;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -61,7 +62,7 @@ class PageBlocksTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('selectedBlock', $hero->public_id)
                 ->where('blocks.1.is_hidden', false)
-                ->has('library', 6)
+                ->has('library', count(array_unique(array_column(OfficialBlockCatalog::blocks(), 'slug'))))
                 ->where('library.1', ['slug' => 'hero', 'name' => 'Первый экран']));
     }
 

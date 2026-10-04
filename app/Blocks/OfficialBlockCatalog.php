@@ -114,7 +114,22 @@ final class OfficialBlockCatalog
                 self::text('copyright', 'Копирайт', 120, '© Все права защищены'),
                 self::textarea('legal_notice', 'Юридическая информация', 1000),
             ], '1.1.0'),
+            self::block('vehicle-card', 'Карточка автомобиля', [
+                self::vehicle(),
+                ['key' => 'show_price', 'type' => 'boolean', 'label' => 'Показывать цену', 'default' => true],
+                ['key' => 'show_benefit', 'type' => 'boolean', 'label' => 'Показывать выгоду', 'default' => true],
+                ['key' => 'show_colors', 'type' => 'boolean', 'label' => 'Показывать цвета', 'default' => true],
+                self::actionButton('button', 'Кнопка', 'Подробнее'),
+            ]),
         ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function vehicle(): array
+    {
+        return ['key' => 'vehicle', 'type' => 'vehicle', 'label' => 'Автомобиль', 'required' => true];
     }
 
     /**

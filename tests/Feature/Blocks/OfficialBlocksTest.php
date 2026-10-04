@@ -16,7 +16,7 @@ class OfficialBlocksTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SLUGS = ['header', 'hero', 'benefits', 'cta', 'contacts', 'footer'];
+    private const SLUGS = ['header', 'hero', 'benefits', 'cta', 'contacts', 'footer', 'vehicle-card'];
 
     public function test_catalog_contains_initial_blocks_with_valid_schemas(): void
     {
@@ -39,8 +39,8 @@ class OfficialBlocksTest extends TestCase
 
         $this->seed(OfficialBlockSeeder::class);
 
-        $this->assertSame(6, BlockDefinition::query()->where('is_official', true)->count());
-        $this->assertSame(6, BlockVersion::query()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->count());
+        $this->assertSame(count(self::SLUGS), BlockDefinition::query()->where('is_official', true)->count());
+        $this->assertSame(count(self::SLUGS), BlockVersion::query()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->count());
         $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
         $this->assertSame(['1.0.0', '1.1.0', '1.2.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'header')->orderBy('id')->pluck('version')->all());
         $this->assertSame($publicId, BlockDefinition::query()->where('slug', 'hero')->value('public_id'));

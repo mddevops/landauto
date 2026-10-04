@@ -2251,8 +2251,25 @@ Checks: `VehicleBindingsTest`.
 
 ## P3-013 — Vehicle Card Block
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-012
+
+### Result
+
+New official Block `vehicle-card` («Карточка автомобиля»).
+
+Fields:
+- **Vehicle:** a required `vehicle` reference.
+- **Display flags:** show price, show benefit and show colors.
+- **Button:** a safe action button.
+
+The renderer shows:
+- the image for the chosen color, preferring the front three-quarter angle;
+- clickable color swatches;
+- «от» price, benefit and offer count;
+- the button.
+
+Missing or hidden vehicles render as a Russian placeholder. Checks: `VehicleBlocksTest`, `OfficialBlocksTest`.
 
 ---
 

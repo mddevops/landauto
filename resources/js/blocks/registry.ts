@@ -8,6 +8,7 @@ import {
     HeroBlock,
 } from '@/blocks/official-blocks';
 import type { BlockRendererProps } from '@/blocks/state';
+import { VehicleCardBlock } from '@/blocks/vehicle-blocks';
 
 /** Renderers of official Blocks, keyed by Block Definition slug. */
 const officialBlockRenderers: Record<
@@ -20,6 +21,7 @@ const officialBlockRenderers: Record<
     cta: CtaBlock,
     contacts: ContactsBlock,
     footer: FooterBlock,
+    'vehicle-card': VehicleCardBlock,
 };
 
 export function blockRenderer(

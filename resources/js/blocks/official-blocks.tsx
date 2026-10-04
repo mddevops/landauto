@@ -6,7 +6,7 @@ import type { BlockRendererProps, BlockState } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
 import { cn } from '@/lib/utils';
 
-function Container({
+export function Container({
     children,
     className,
 }: {
@@ -51,7 +51,7 @@ function ActionLink({
     );
 }
 
-function ButtonPreview({
+export function ButtonPreview({
     button,
     variant = 'primary',
 }: {
