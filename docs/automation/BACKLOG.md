@@ -60,15 +60,21 @@ Use `DEFINITION_OF_DONE.md`.
 
 Phase 0 — Foundation / Automation: COMPLETED (gate `P0-027` DONE).
 
+Phase 1 — Core Platform: COMPLETED (gate `P1-017` DONE).
+
+Phase 2 — Designer Foundation: COMPLETED (gate `P2-018` DONE).
+
+Phase 3 — Automotive Foundation: COMPLETED (gate `P3-017` DONE; Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`).
+
+Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
+
 Current phase:
 
-`P1 — Core Platform`
+`P5 — Publishing` — NOT_STARTED; starts only on explicit owner go-ahead.
 
-Current next task:
+Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
 
-`P1-006 — Workspace Context / Switcher Backend` (X-011 and P1-005A DONE).
-
-Resolved stops: `X-014`, P1-005A, `X-011` and `X-012` are DONE. Before the first production deployment: `X-013` and D-094.
+Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
 ---
 
@@ -1490,7 +1496,7 @@ Replaced the starter Dashboard placeholders with a responsive current-Workspace 
 
 ## P1-015 — Create Site Wizard UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-013, P1-014
 
 ### Flow
@@ -1501,11 +1507,15 @@ Replaced the starter Dashboard placeholders with a responsive current-Workspace 
 - create;
 - open Site.
 
+### Result
+
+Added the verified, Workspace-context `sites.create` page authorized by the Site `create` policy. It lists only official Templates (public ULID and name), shows the backend-derived active-Site limit and posts to the P1-013 endpoint with Russian, input-linked validation errors. The Dashboard CTA now links to the wizard unless the limit is reached. Until a Site workspace exists (Designer, P2-006), "open Site" returns to the Dashboard, which confirms creation and highlights the new Site card only when it belongs to the current Workspace list. Checks: focused PHPUnit (Sites + Dashboard), Pint, PHPStan, `npm run check`, focused desktop Playwright dashboard spec.
+
 ---
 
 ## P1-016 — Core Platform E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-015
 
 ### Required flow
@@ -1522,16 +1532,24 @@ Register/Login
 
 Another Workspace cannot access created Site.
 
+### Result
+
+Added `tests/browser/core-platform.spec.ts`: a seeded Owner logs in, opens the wizard from the Dashboard, chooses the official Blank Template, names and creates a Site, and sees it confirmed in the Dashboard with a ULID-only Site reference. After switching to the user's second Workspace the Site is absent, and replaying its public ID in the Dashboard URL neither reveals nor confirms it. `E2eSeeder` adds an isolated creator with two Workspaces on a test-only plan and seeds the official Templates. The flow starts from Login, not Registration: newly registered Workspaces have no plan and therefore `max_sites = 0` until the owner defines a default plan (see open decision in PROJECT_STATE §42). Checks: focused desktop Playwright (core platform + dashboard), `E2eSeederTest`, Pint, PHPStan, `npm run check`.
+
 ---
 
 ## P1-017 — Phase 1 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-001 through P1-016
 
 ### Acceptance Criteria
 
 All Phase 1 DoD gates pass.
+
+### Result
+
+2026-10-03 (autonomous night batch). P1-001 … P1-016 and the Phase 1 X-tasks (X-007, X-011, X-012, X-014) are DONE. Full gates on the final Phase 1 state: `composer quality` PASS (PHPUnit 232/232, PHPStan, Pint, `npm run check`, build) and `npm run test:e2e` PASS (37/37). Review was a single primary-agent risk review per the owner's batch instruction (no reviewer subagents): tenancy (Workspace-derived Site ownership, policy-guarded create page and endpoint, cross-Workspace isolation covered in PHPUnit and E2E), identifiers (ULID-only Site/Template references in props and URLs), Russian UI and safe Inertia props verified. Known limitations, not blocking the gate: a newly created Workspace has no plan, so `max_sites = 0` until the owner defines the default plan (open owner decision, PROJECT_STATE §42); `X-013` and D-094 remain launch blockers. Phase 2 has no open ADR/decision that directly blocks P2-001 … P2-006 (D-087 media → before P2-013).
 
 ---
 
@@ -1541,7 +1559,7 @@ All Phase 1 DoD gates pass.
 
 ## P2-001 — Page Schema and Models
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-017
 
 ### Scope
@@ -1552,11 +1570,15 @@ All Phase 1 DoD gates pass.
 - order;
 - Site ownership.
 
+### Result
+
+Added the Site-owned `pages` table and `Page` model: bigint key, immutable ULID `public_id`, immutable Site ownership, `title`, Site-unique `slug`, `sort_order` and `is_home`. `is_home` is stored as TRUE/NULL so the `(site_id, is_home)` unique index guarantees at most one home Page per Site on MySQL and SQLite. Site creation now creates the home Page (`Главная`, slug `home`) in the same transaction, and the migration backfills a home Page for existing Sites (insert-only). Site deletion is restricted while Pages exist (deletion workflow not decided). `parent_id`, Page `status` and `deleted_at` from DATABASE.md §12 are deferred to the tasks that define their behavior. Checks: focused PHPUnit (Pages, Sites, Database), PHPStan, Pint. Development MySQL needs `php artisan migrate`.
+
 ---
 
 ## P2-002 — Block Definition / Version Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-001
 
 ### References
@@ -1564,11 +1586,15 @@ All Phase 1 DoD gates pass.
 - `BLOCK_SYSTEM.md`
 - `DATABASE.md`
 
+### Result
+
+Added global `block_definitions` (bigint key, immutable ULID `public_id`, name, unique slug, explicit `is_official` scope) and `block_versions` (definition FK with restricted delete, per-definition unique version string, JSON `schema_json`, `created_at` only). `BlockVersion` is immutable at the model level; a change requires a new version. Developer ownership (D-093 open), Workspace-private scope, renderer reference, lifecycle statuses and `current_version_id` are deferred to the tasks that define them; schema validation is P2-003. Checks: `BlockFoundationTest`, PHPStan, Pint.
+
 ---
 
 ## P2-003 — Block Schema Validator
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-002
 
 ### Initial field types
@@ -1581,11 +1607,15 @@ All Phase 1 DoD gates pass.
 - group
 - repeater
 
+### Result
+
+Added `App\Blocks\BlockSchemaValidator` and the `BlockFieldType` enum for the seven initial types. Schema syntax: `{"fields": [...]}`; each field has a snake_case `key` unique on its level, a supported `type`, a `label`, optional `help`, and only the options its type allows (unknown keys are rejected). Per type: text/textarea `max_length` (≤255 / ≤5000) and string `default`; boolean default; select non-empty unique `options` with a default from them; image declaration without default (asset reference format waits for X-010); group/repeater require nested fields, repeater requires `max_items` (1–50) with `min_items` ≤ max. Limits: container depth 3, repeater nesting 2; `id` is reserved inside Repeater items for stable item identity. Errors are Russian and keyed by schema path; Block Versions validate their schema on creation. Conditional fields stay out of the initial scope. Checks: validator unit tests, `BlockFoundationTest`, PHPStan, Pint.
+
 ---
 
 ## P2-004 — Block Instance Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-002, P2-003
 
 ### Acceptance Criteria
@@ -1594,11 +1624,15 @@ All Phase 1 DoD gates pass.
 - validated JSON state;
 - Site/Page ownership.
 
+### Result
+
+Added `page_blocks` (`App\Models\BlockInstance`): bigint `id`, immutable public ULID, `page_id` and `block_version_id` (both restrict on delete, both immutable after creation), `sort_order` and draft `state_json`; internal IDs are hidden from serialization. Ownership is Site → Page → Block Instance; `Page::blocks()` returns instances in order. Only official Block Definitions can be placed. `App\Blocks\BlockStateValidator` validates state against the pinned Block Version schema on every save: unknown keys are rejected, values must match their field type (text/textarea `max_length`, select option, group object, repeater list ≤ `max_items` with unique ULID item `id`), missing keys and `null` are allowed for incomplete drafts; `required`/`min_items` are left for publish-time validation, and non-null image values are rejected until the asset reference format (X-010) exists. Errors are Russian and keyed by state path. Checks: validator unit tests, `BlockInstanceTest`, Pages/Blocks feature tests, PHPStan, Pint.
+
 ---
 
 ## P2-005 — Initial Official Blocks
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004
 
 ### Blocks
@@ -1610,11 +1644,15 @@ All Phase 1 DoD gates pass.
 - Contacts
 - Footer
 
+### Result
+
+`App\Blocks\OfficialBlockCatalog` defines the six official Blocks (slugs `header`, `hero`, `benefits`, `cta`, `contacts`, `footer`; Russian names) with version `1.0.0` schemas built only from the P2-003 field types (texts with limits and Russian defaults, button groups, menu/benefit/link repeaters, select options for alignment, columns and style). The idempotent `OfficialBlockSeeder` (called by `DatabaseSeeder` and `E2eSeeder`) validates each schema, upserts the official Definition by slug and only creates missing versions — existing versions are never changed. Frontend renderers live in `resources/js/blocks` and are resolved by Definition slug for the Designer canvas; they render text only (button links wait for the Action System P2-014, images for Assets P2-013) and use neutral styling until Site Design Tokens (P2-012). Checks: `OfficialBlocksTest`, Blocks/Templates/E2E seeder tests, PHPStan, Pint, `npm run check`.
+
 ---
 
 ## P2-006 — Designer Shell
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004
 
 ### UI
@@ -1624,18 +1662,26 @@ All Phase 1 DoD gates pass.
 - canvas;
 - right Properties Panel.
 
+### Result
+
+Added `GET /sites/{site}/designer` (`sites.designer`, public ULID only, current-Workspace context required). A Site outside the current Workspace returns 404 even for a member of its Workspace; access is authorized by the Site `view` policy. Props are explicit and safe: Site public ID/name, the home Page public ID/title and its ordered Block Instances (public ID, Definition slug/name, pinned version, draft state). The full-screen Russian shell has a top bar (back to Dashboard, Site name, page title, "Черновик"), a left panel with the page's block list, a canvas rendering official Blocks through the P2-005 renderers with click/keyboard selection, and a read-only right "Свойства" panel showing the selected Block and version. Dashboard Site cards link to the Designer. Pages Panel, Navigator actions, schema-driven property editing, adding Blocks, autosave and preview remain in P2-007+. Checks: `SiteDesignerTest`, Sites/Dashboard feature tests, PHPStan, Pint, `npm run check`, focused desktop Playwright (core platform flow now opens the Designer).
+
 ---
 
 ## P2-007 — Pages Panel
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-001, P2-006
+
+### Result
+
+Designer left panel "Страницы": list (home first, then sort order), open a page (`?page=<public_id>`), create, rename and delete Pages through `sites.pages.store/update/destroy`. Slugs are validated (`a-z0-9` with hyphens, unique per Site) or generated from the Russian title with a numeric suffix; the home Page keeps its slug and cannot be deleted; deleting a Page removes its Block Instances in one transaction. All Designer resources resolve through `DesignerScope` (current Workspace only, foreign IDs → 404 before validation) and page management requires `edit_design`. Checks: `SitePagesTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 
 ## P2-008 — Navigator
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004, P2-006
 
 ### Actions
@@ -1646,22 +1692,30 @@ All Phase 1 DoD gates pass.
 - hide/show;
 - delete.
 
+### Result
+
+Designer "Блоки" tab: Navigator over the page's Block Instances (select, move up/down, duplicate after the source, hide/show via new `page_blocks.is_hidden`, delete with confirmation) plus an "Добавить блок" list of official Blocks. A new instance pins the latest version of an official Definition and starts from its schema defaults; order stays dense (0..n-1) through `ArrangePageBlocks`. Structure changes require `edit_design`; foreign Blocks/Pages return 404. Hidden Blocks stay visible but dimmed on the canvas. Checks: `PageBlocksTest`, Sites/Blocks feature tests, PHPStan, Pint, `npm run check`.
+
 ---
 
 ## P2-009 — Properties Panel from Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-003, P2-006
 
 ### Acceptance Criteria
 
 No one-off settings UI per official Block.
 
+### Result
+
+The right "Свойства" panel renders controls generically from the pinned Block Version schema (text, textarea, boolean, select, nested group) with labels, help, length limits and Russian errors linked to inputs. Edits update a local draft that the canvas renders immediately; "Сохранить" sends the draft to `sites.blocks.state` (`edit_content`), where `BlockStateValidator` errors are returned per state path. Repeater, image and conditional controls follow in P2-010/P2-013/P2-011; autosave replaces the button in P2-015. Checks: `PageBlocksTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
+
 ---
 
 ## P2-010 — Repeater Editing
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-009
 
 ### Acceptance Criteria
@@ -1672,18 +1726,26 @@ No one-off settings UI per official Block.
 - reorder;
 - stable item IDs.
 
+### Result
+
+Repeater fields in the Properties panel support add (with item field defaults), delete, duplicate (new ID) and move up/down, limited by the schema `max_items`, with nested item fields and per-item errors. Each item gets a client-generated ULID `id` that survives edits and reordering; the backend validator still enforces ULID format, uniqueness and limits. Checks: `PageBlocksTest` (order and IDs persist, duplicate IDs rejected), `npm run check`.
+
 ---
 
 ## P2-011 — Conditional Schema Fields
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-009
+
+### Result
+
+Any schema field may declare `visible_if: {"field": key, "equals": value}`. The rule may reference only an earlier boolean/select sibling on the same level; `equals` must be a boolean or one of that select's option values. `BlockSchemaValidator` enforces this with Russian path errors. The Properties panel hides fields whose condition is not met; their stored values stay in state (draft data is never silently dropped). The official catalog now supports several versions per slug; `header` 1.1.0 shows «Телефон» only when «Показывать телефон» is on. Existing 1.0.0 instances stay pinned, and new placements use the latest version. Checks: schema validator unit tests, `OfficialBlocksTest`, designer/block feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 
 ## P2-012 — Site Design Tokens
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-006
 
 ### Initial tokens
@@ -1694,22 +1756,39 @@ No one-off settings UI per official Block.
 - container;
 - buttons.
 
+### Result
+
+`sites.design_tokens` (nullable JSON) stores a fixed token set: `primary_color` and `secondary_color` as lower-case `#rrggbb`, `font_family` sans/serif, `radius` none/small/medium/large, `container` narrow/default/wide, `button_style` solid/outline. There is no custom CSS. `App\Support\SiteDesignTokens` owns the defaults and rules, and its `resolve()` falls back to defaults for missing or invalid stored values. `PATCH sites/{site}/design` (`UpdateSiteDesignRequest`: Workspace scope 404 before validation, then `editDesign`) persists only the known keys. The Designer receives resolved `design` props and adds a «Стиль сайта» tab with live canvas preview and «Сохранить стиль». Official renderers consume the tokens as CSS variables (`--lf-primary`, `--lf-on-primary` from WCAG luminance, `--lf-secondary`, `--lf-radius`, `--lf-container`, font family), and the button style comes from React context. Checks: `SiteDesignTokensTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
+
 ---
 
 ## P2-013 — Asset Upload / Image Picker
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-006
 
 ### Security
 
 Upload validation required.
 
+### Result
+
+Implements ADR-003.
+
+- **Storage.** `site_assets` holds Site-owned immutable images (ULID `public_id`, server-generated private-disk path `site-assets/{site}/{asset}.{ext}`, MIME type, size, dimensions). The model forbids changes to the file fields.
+- **Upload.** `POST sites/{site}/assets` (`UploadSiteAssetRequest`) runs the Workspace scope check (404 before validation), requires `manage_assets` and is throttled to 60 per minute. It accepts only JPEG/PNG/WebP by detected MIME type up to 10 MB. Decoded `getimagesize` type must match, and each side is limited to 10 000 px. SVG and disguised files are rejected with Russian messages.
+- **Serving.** `GET sites/{site}/assets/{asset}` checks scope and `view_site`, and serves with `nosniff` and `private, immutable` caching. Another Site's asset returns 404.
+- **Block state.** An image value is a Site Asset ULID; `BlockStateValidator` checks the format, and the `BlockInstance` saving hook verifies the asset belongs to the Block's own Site.
+- **Designer.** It receives `assets` (public ID, name, relative URL, size) and `can.manageAssets`. The Properties panel image picker offers the library dialog, upload and remove.
+- **Renderers.** They resolve URLs through a render context: the `header` logo and the `hero` background with an overlay.
+
+Checks: `SiteAssetsTest`, `BlockStateValidatorTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
+
 ---
 
 ## P2-014 — Action System Foundation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004
 
 ### Actions
@@ -1722,11 +1801,30 @@ Upload validation required.
 
 Popup/Form actions may be placeholders until Phase 4.
 
+### Result
+
+New schema field type `action`. Its state is `{type, <target>}`, where the type is one of `BlockActionType`:
+- `open_url` takes an `url` with an http/https scheme and a host. It must have no credentials, no whitespace or control characters, and be at most 2048 characters.
+- `open_page` takes a `page` ULID of the same Site.
+- `scroll_to` takes a `block` ULID on the same Page.
+- `phone` takes a `phone` of digits, spaces, `()-` and an optional leading `+`.
+- `email` takes an `email` of at most 254 characters.
+
+Unknown types and foreign keys are rejected; a null target is allowed while drafting. Popup/Form actions are deliberately absent (no fake controls) until Phase 4.
+
+Reference checks go through `BlockReferenceResolver` (`PageBlockReferences` in the `BlockInstance` saving hook), which also covers image assets.
+
+New official versions add actions: `header` 1.2.0 (menu items and button), `hero` 1.1.0, `cta` 1.1.0 and `footer` 1.1.0 (links). Existing instances stay pinned.
+
+The Properties panel action control offers a type select plus a URL, phone or email input or a page/block select. Renderers emit links through `actionHref()`, which repeats the http/https check; external URLs open in a new tab with `noopener noreferrer`.
+
+Checks: `BlockStateValidatorTest` (safe and unsafe actions, `javascript:`/`data:`/protocol-relative URLs), `PageBlocksTest` (same-Site page and same-Page block only), full PHPUnit suite, PHPStan, Pint, `npm run check`.
+
 ---
 
 ## P2-015 — Draft Autosave
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004, P2-009
 
 ### Acceptance Criteria
@@ -1737,18 +1835,39 @@ Popup/Form actions may be placeholders until Phase 4.
 - state preserved;
 - no production concept changed.
 
+### Result
+
+`useBlockAutosave` replaces the manual «Сохранить» button for Block content:
+- Edits are debounced (700 ms per Block) and saved through the existing draft-state endpoint as async Inertia requests, one at a time.
+- Edits made during a request are saved afterwards, and a cancelled request is retried.
+- The top bar shows a live status: «Есть несохранённые изменения» / «Сохранение…» / «Сохранено» / «Не удалось сохранить».
+- Validation errors stay on the fields and keep the draft.
+- `beforeunload` warns while unsaved drafts exist.
+
+Only draft `state_json` is written; nothing is published. Site style keeps its explicit «Сохранить стиль». Browser coverage: P2-017. Checks: `npm run check`; the backend endpoint is covered by `PageBlocksTest`.
+
 ---
 
 ## P2-016 — Draft Preview
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-015
+
+### Result
+
+`GET sites/{site}/preview?page=` (`SitePreviewController`) runs the Workspace scope check (404), requires `preview_site` (Owner in the current role matrix) and resolves the page (404 if foreign). It renders the current draft's visible Blocks only, with resolved design tokens and Site Asset URLs, inside a chrome-less page with «Вернуться в дизайнер» and a `noindex` meta tag.
+
+- Block wrappers carry `block-{ULID}` anchors for `scroll_to`; `open_page` links stay inside the preview.
+- No Published state is read or written.
+- The Designer shows «Предпросмотр» (new tab) only when `can.preview`, and disables it while autosave is pending.
+
+Checks: `SitePreviewTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 
 ## P2-017 — Designer Browser QA
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-005 through P2-016
 
 ### Flow
@@ -1763,183 +1882,517 @@ Open Site
 → Preview
 ```
 
+### Result
+
+`tests/browser/designer.spec.ts` runs with a dedicated E2E Owner (`designer@landflow.test`, own Workspace with the E2E site limit). The flow:
+1. Log in and create a Site from the Blank Template.
+2. Add Hero, edit the title, set a phone action on the primary button and upload an in-memory PNG through the image library.
+3. Switch the site style to outline buttons.
+4. Add Benefits with two repeater items.
+5. Wait for autosave «Сохранено» and move Benefits up.
+6. Reload: order, title and action come back from the server.
+7. Open Preview in a new tab: draft heading, items, a `tel:` link, the loaded asset image and no designer chrome.
+
+The run found a real race: saving the site style could be cancelled by the next designer action, so the style save is now an async Inertia request. The fixture's console-error and failed-request guards stay strict. Checks: the Playwright spec (desktop), `E2eSeederTest`.
+
 ---
 
 ## P2-018 — Phase 2 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-017
+
+### Result
+
+Phase 2 gate. Final gates passed on 2026-10-03: `composer quality` (357 PHPUnit tests, PHPStan, Pint, `npm run check`), `npm run test:e2e` (38 passed) and `git diff --check`.
+
+The risk-focused review covered tenancy (every designer, asset, style and preview route checks the Workspace scope with 404 before validation), permissions (`edit_design` / `edit_content` / `manage_assets` / `preview_site`), uploads (detected MIME type plus decoded type, no SVG, private storage, nosniff), URL actions (http/https only on the server and in renderers) and the draft-only rule (autosave and preview never touch Published state). One fix: an Inertia confirm now protects unsaved drafts when leaving the Designer.
+
+Non-blocking follow-ups:
+- (a) No per-Site/Workspace storage quota for assets yet; this needs an entitlement decision.
+- (b) A deleted page/block leaves stale action references, which surface as field errors on the next save.
+- (c) The Designer role has no `preview_site` in the current role matrix, so only the Owner sees «Предпросмотр». Revisit with the role/permission owner if Designers should preview.
+- (d) Site style uses an explicit save, not autosave.
 
 ---
 
 # PHASE 3 — AUTOMOTIVE FOUNDATION
 
----
-
-## P3-001 — Global Catalog Core Schema
-
-**Status:** NOT_STARTED  
-**Dependencies:** P2-018
-
-### Entities
-
-- Make
-- Model
-- Series
-- Generation
-- Modification
-- Trim
+Reconciled with Catalog V2 by `X-016` (D-101 … D-104). Source of truth for the catalog schema: `docs/architecture/AUTO_CATALOG_SCHEMA.md`. Technical catalog = separate physical database (connection `catalog`). Terms: Mark (not Make), Equipment = «Комплектация», Option = factory option.
 
 ---
 
-## P3-002 — Catalog Policies / Platform Permissions
+## P3-001 — Catalog Core Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
+**Dependencies:** P2-018, X-016, X-009
+
+### Scope
+
+- Laravel connection `catalog` (separate database, local suggestion `landflow_catalog`), dedicated migration directory, explicit catalog migration command that refuses to target the main database.
+- Core tables exactly per V2: `auto_marks`, `auto_models`, `auto_generations`, `auto_series`, `auto_modifications`, `auto_equipments`; additive immutable ULID `public_id`.
+- Catalog models in the `App\Models\Catalog` namespace, explicitly on the `catalog` connection.
+- Status-chain availability (a disabled parent hides the branch), RESTRICT deletes, application rules (model parent: same Mark, no self/cycles; `year_to >= year_from`; modification codes).
+- Isolated test catalog connection; CI never depends on developer MySQL.
+
+### Result
+
+Connection and migrations:
+- Connection `catalog` (`CATALOG_DB_*`). It defaults to `database/catalog.sqlite` and never falls back to `DB_*`.
+- Migrations live in `database/migrations/catalog`. `php artisan catalog:migrate` runs `migrate --database=catalog` and refuses when the catalog connection targets the main database (`App\Catalog\CatalogDatabase`).
+
+Models (`App\Models\Catalog\Auto*`, on the `catalog` connection):
+- Six core V2 tables plus an additive ULID `public_id`; numeric IDs are hidden.
+- RESTRICT foreign keys. The hierarchy parent is fixed after creation. `year_to >= year_from`.
+- Model grouping parent: same Mark, no self-reference or cycles.
+- `available()` scopes check status along the whole chain.
+
+Modification codes are typed by `App\Enums\Catalog\{EngineType, TransmissionType, DriveType}`; decimals stay strings.
+
+Environments: tests use in-memory SQLite (`RefreshCatalogDatabase`, TestCase guard); E2E uses `database/e2e-catalog.sqlite`, verified by `prepare-e2e.mjs`.
+
+Checks: `CatalogCoreSchemaTest`.
+
+---
+
+## P3-002 — Platform Catalog Authorization
+
+**Status:** DONE
 **Dependencies:** P3-001
 
 ### Acceptance Criteria
 
-Customers cannot mutate catalog.
+- Platform roles `super_admin`, `catalog_manager` are persistent explicit assignments, separate from Workspace roles.
+- Platform permissions at minimum `view_catalog`, `edit_catalog`, `manage_catalog_media`.
+- Never identified by email or user ID; no automatic super admin.
+- Safe local Artisan command grants an existing User a platform role.
+- Workspace Owner/Admin cannot mutate the catalog.
+
+### Result
+
+- Table `platform_role_assignments` (`user_id`, `role`, unique pair) and enums `PlatformRole` (`super_admin`, `catalog_manager`) and `PlatformPermission` (`view_catalog`, `edit_catalog`, `manage_catalog_media`).
+- `App\Support\PlatformAuthorization` resolves permissions from persisted roles only. Gates are defined per platform permission, and the `EnsurePlatformPermission` middleware enforces them.
+- Shared Inertia prop `platform.permissions`.
+- Operator command: `php artisan platform:role grant|revoke <email> <role>`. It works only for existing users, rejects unknown actions and roles, and asks for confirmation in production unless `--force` is passed.
+
+Checks: `PlatformAuthorizationTest`:
+- Workspace Owner/Admin and user #1 get no platform permissions;
+- role grants;
+- middleware 403/200;
+- shared prop;
+- command grant/idempotency/revoke/failures.
 
 ---
 
 ## P3-003 — Characteristics
 
-**Status:** NOT_STARTED  
-**Dependencies:** P3-001
+**Status:** DONE
+**Dependencies:** P3-001, X-009
+
+V2 `auto_characteristics` (two-level group → parameter, unit on the definition) and `auto_characteristic_values` (TEXT value per Equipment + parameter). Server validation; no fake empty rows; no editable duplicates of Modification filter fields (ADR-005).
+
+### Result
+
+Catalog migration for both tables, with an additive `public_id` on the dictionary.
+
+`TwoLevelDictionary` rules:
+- the parent must be a root group;
+- the code format is enforced;
+- the parent is fixed after creation, so no cycles.
+
+`AutoCharacteristic`:
+- reserved Modification/Mark/Model codes are rejected;
+- groups have no unit.
+
+`AutoCharacteristicValue` accepts parameter-only values and no empty values. `App\Catalog\EquipmentCharacteristics::sync()`:
+- blank input deletes the row;
+- numbers are stored canonically;
+- unknown keys and group keys are rejected.
+
+Checks: `CatalogCharacteristicsTest`.
 
 ---
 
-## P3-004 — Equipment / Options
+## P3-004 — Options
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-001
+
+V2 `auto_options` (two-level group → option) and `auto_option_values` (per Equipment, `is_base` explicit, no default). Missing row = unknown.
+
+### Result
+
+- Catalog migration: `is_base` is NOT NULL with no default.
+- `AutoOption` is a two-level dictionary. `AutoOptionValue` requires an explicit `is_base` and refers to options only, never groups.
+- `OptionAvailability` (unknown / standard / optional) is a view: unknown is never stored.
+- `App\Catalog\EquipmentOptions::sync()`: unknown deletes the row.
+
+Checks: `CatalogOptionsTest`.
 
 ---
 
-## P3-005 — Automotive Colors / Swatches
+## P3-005 — Series Media Sets
 
-**Status:** NOT_STARTED  
-**Dependencies:** P3-001
+**Status:** DONE
+**Dependencies:** P3-002
 
-### Acceptance Criteria
+Supersedes "Automotive Colors / Swatches" (D-103). Platform-owned media sets in the main database referencing a catalog Series by `catalog_series_public_id`: `public_id`, name, nullable `swatch_hex` (display metadata), status, sort order. No `auto_colors` / `auto_paints`. Customer read-only.
 
-Two-tone color supported.
+### Result
+
+Main-database table `series_media_sets`:
+- unique name per Series;
+- index on (series, status, order).
+
+`SeriesMediaSet` model:
+- the Series must exist in the catalog; this is checked through `App\Catalog\CatalogReferences` because there is no cross-database foreign key;
+- the Series cannot change after creation;
+- `swatch_hex` must be lowercase `#rrggbb`;
+- `active()` and `ordered()` scopes.
+
+Mutation is limited to the platform `manage_catalog_media` permission (P3-007 routes). Customers have no write path.
+
+Checks: `SeriesMediaSetTest`.
 
 ---
 
-## P3-006 — Automotive Images
+## P3-006 — Series Media Images
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-005
 
-### Metadata
+Prepared images per media set and angle (front, front_3_4, side, rear_3_4, rear, interior). JPEG/PNG/WebP (transparency allowed), no SVG, 10 MB max, immutable objects with server-generated storage keys, no URL fetch. Controlled by `manage_catalog_media`; never stored as Site Assets.
 
-- Trim;
-- Color;
-- angle;
-- transparency;
-- order.
+### Result
+
+Table and model:
+- Table `series_media_images`, one image per (set, angle).
+- `SeriesMediaImage` is immutable, stored on the private disk at `series-media/{set}/{image}.{ext}`.
+- `MediaAngle` enum with Russian labels.
+
+Upload validation, shared with Site Assets through `App\Support\ImageUpload`:
+- JPEG/PNG/WebP only, ≤10 MB, side ≤10000 px;
+- the decoded type must match the MIME type;
+- SVG and polyglot files are rejected.
+
+Routes:
+- `POST platform/catalog/media-sets/{set}/images` and `DELETE platform/catalog/media-images/{image}` require `view_catalog` plus `manage_catalog_media`; deleting also removes the file.
+- `GET media/series/{image}` serves with nosniff; any signed-in user can read images of active sets, and inactive sets are visible to catalog staff only.
+
+Checks: `SeriesMediaImagesTest`, `SiteAssetsTest`.
 
 ---
 
 ## P3-007 — Super Admin Catalog UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-002 through P3-006
+
+Separate platform surface on the existing Laravel/React/Inertia/shadcn stack (no Filament): «Каталог автомобилей» with marks, models, generations, series, modifications, equipments (cascading; changing an upper selection clears lower levels; backend verifies hierarchy), characteristic and option dictionaries, Equipment characteristics/options page and Series media page. Create, edit, activate/deactivate (status instead of hard delete), sort.
+
+### Result
+
+The surface lives at `/platform/catalog`. All of it requires `view_catalog`. Changes to the hierarchy and the dictionaries also require `edit_catalog`, and media changes require `manage_catalog_media`. The sidebar link «Каталог автомобилей» appears only to users with `view_catalog`.
+
+Catalog browser (`CatalogBrowserController`, `App\Catalog\CatalogLevel`):
+- Six cascading columns addressed by ULID query parameters.
+- A lower selection is accepted only when it belongs to the selected parent; otherwise it is dropped together with everything below it.
+- Create, edit, a quick activate/deactivate toggle and sort order. There is no hard delete.
+- `entries/{level}` checks the parent `public_id` against the expected level, URL segments are unique within their parent, decimal commas are accepted, and a model group must be a model of the same Mark.
+
+Other pages:
+- Equipment page: characteristic values and option availability by dictionary group.
+- Dictionaries: create a group or an element inside a root group; the code cannot be changed after creation.
+- Series media page: create and edit media sets (name, swatch, status, order), and upload or delete an image for each of the six angles.
+
+Checks: `PlatformCatalogUiTest`, existing catalog tests, PHPStan, `npm run check`.
 
 ---
 
 ## P3-008 — Site Vehicle Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-001
+
+SiteVehicle in the main database: belongs to a Site, references `catalog_series_public_id` (vehicle family/body page), selected Series media sets, status and order. Tenant isolation mandatory.
+
+### Result
+
+Tables in the main database:
+- `site_vehicles`: public_id, site_id (restrict on delete), catalog_series_public_id, status, sort_order. Each Series appears at most once per Site.
+- `site_vehicle_media_sets`: references platform media sets with an order. No files are copied.
+
+`SiteVehicle` rules:
+- The Series must exist in the catalog when the vehicle is created.
+- The Site and the Series cannot be changed afterwards.
+- `selectMediaSets()` accepts only active sets of the vehicle's own Series.
+- Numeric IDs are hidden.
+
+`SitePolicy` gains:
+- `viewVehicles`: any of `view_vehicles`, `edit_vehicles` or `edit_prices`;
+- `editVehicles`;
+- `editPrices`.
+
+These are checked against the Site's Workspace in the current backend context.
+
+Checks: `SiteVehicleSchemaTest`. The policy is covered over HTTP in P3-010.
 
 ---
 
 ## P3-009 — Site Offer / Benefits Schema
 
-**Status:** NOT_STARTED  
-**Dependencies:** P3-008
+**Status:** DONE
+**Dependencies:** P3-008, X-008
+
+SiteOffer belongs to a SiteVehicle and references `catalog_equipment_public_id`; the Equipment chain must reach the SiteVehicle's Series. Money per ADR-004 (integer minor units, `CHAR(3)` currency), availability, badge, benefits (amount-based). Factory data stays catalog-side.
+
+### Result
+
+Tables in the main database:
+- `site_offers`: public_id, site_vehicle_id, catalog_equipment_public_id, `price_minor`, nullable `rrp_minor`, `currency CHAR(3)` (default RUB), availability, badge (up to 40 characters), status, sort_order.
+- `site_offer_benefits`: type, `amount_minor`, optional label, order.
+
+Availability values are «В наличии», «В пути» and «Под заказ». Benefit types are «Скидка», «Выгода по трейд-ин», «Выгода в кредит» and «Выгода в лизинг».
+
+`SiteOffer` rules:
+- The Equipment must exist, and its chain must reach the vehicle's Series. This is checked again whenever the Equipment changes.
+- The vehicle cannot be changed after creation.
+- Only supported currencies are allowed, and amounts must be in range.
+- `replaceBenefits()` replaces all benefits in one transaction; each benefit amount must be at least 1.
+
+`App\Support\Money` is the shared ADR-004 helper:
+- parses decimal strings into integer minor units, with no floats and at most two decimal places for RUB;
+- `toInput()` returns a decimal string for form fields;
+- `format()` returns the Russian display form, for example `1 850 000 ₽`.
+
+Checks: `SiteOfferSchemaTest`, `MoneyTest`.
 
 ---
 
-## P3-010 — Customer Vehicle Import
+## P3-010 — Customer Vehicle Flow
 
-**Status:** NOT_STARTED  
-**Dependencies:** P3-007, P3-008
+**Status:** DONE
+**Dependencies:** P3-007, P3-008, P3-009
+
+Supersedes "Customer Vehicle Import". Site → «Автомобили» → «Добавить автомобиль»: Mark → Model → Generation → Series creates a SiteVehicle; then one or more Offers (Modification → Equipment → price). Dealer selects which active Series media sets are shown (stored as references, never copied).
+
+### Result
+
+Pages:
+- **Dashboard:** each site card has an «Автомобили» button, shown to users with any vehicle permission.
+- **List** (`sites/{site}/vehicles`): vehicles with their offer and media-set counts, and a warning when the Series has been switched off in the catalog.
+- **«Добавить автомобиль»:** four cascading columns (Mark, Model, Generation, Series) showing only available catalog rows, with the selection carried in ULID query parameters. A Series that is already on the site is marked «Уже на сайте». The server accepts only an available Series and rejects duplicates.
+- **Vehicle page:**
+  - show or hide on the site, and delete the vehicle together with its offers;
+  - «Цвета и ракурсы»: tick active media sets of this Series; they are stored as references;
+  - «Предложения»: the offer dialog picks a Modification, then an Equipment (available ones only), and takes price, price without discount, availability, badge, display, order and up to 10 benefits.
+
+Offer saving (`SaveSiteOfferRequest`):
+- Prices and benefit amounts arrive as decimal strings and are parsed on the server with `Money`; a numeric JSON value is rejected.
+- A newly chosen Equipment must be available and belong to the vehicle's Series. An offer can keep its current Equipment after the catalog switches it off.
+
+Authorization:
+- The Site must be in the current Workspace, and the vehicle or offer must belong to that Site; otherwise the response is 404.
+- Viewing requires `viewVehicles`, vehicle changes require `editVehicles`, and offer changes require `editPrices`.
+- Designer and ContentEditor get 403.
+
+`App\Automotive\VehicleCatalog` provides read-only bulk catalog lookups and the Russian modification summary.
+
+Checks: `SiteVehicleFlowTest`, PHPStan, `npm run check`.
 
 ---
 
 ## P3-011 — Automotive Fallback Resolver
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-006, P3-008
 
 ### Priority
 
-Site
-→ Workspace when available
-→ Global.
+Site selection
+→ Workspace when available (not implemented in Phase 3)
+→ Global (active Series media sets).
+
+### Result
+
+`App\Automotive\VehicleMediaResolver` decides which prepared media a vehicle shows:
+- If the vehicle's own selection contains active sets with images, those are used in the selected order; the source is `site`.
+- Otherwise all active sets with images for the vehicle's Series are used in platform order; the source is `global`.
+- If neither exists, the result is empty.
+- The Workspace level is skipped because there is no Workspace media library in Phase 3.
+
+Each image is returned with its angle (in angle order), its URL and its size. `resolveMany()` resolves any number of vehicles with a fixed number of queries. Files are referenced, never copied.
+
+The image URLs point to the signed-in route `media/series/{image}`. Serving these images in published output belongs to Publishing.
+
+Checks: `VehicleMediaResolverTest`.
 
 ---
 
 ## P3-012 — Automotive Binding Registry
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-008, P3-009, P2-003
+
+Approved automotive view model / binding: SiteVehicle identity, Mark, Model, Generation, Series, selected media variants and angles, Offers (Modification, Equipment, price, benefits, characteristics, factory options). Blocks never query the raw catalog database.
+
+### Result
+
+`App\Automotive\VehicleBindings::forSite()` builds display-ready view models for the designer and the preview (prop `vehicles`):
+- **Included:** only visible vehicles whose Series is available, and only visible offers whose Equipment is available.
+- **Vehicle fields:** identity, Mark/Model/Generation/Series, resolved media sets with angle labels, a «from» price and the largest benefit total.
+- **Offer fields:** Modification summary and specs, Equipment name, price, RRP, availability, badge, benefits, grouped characteristics and known factory options (standard or optional).
+- **Money:** passed only as formatted labels.
+- **Never included:** numeric IDs and raw `*_minor` values.
+
+The new Block field type `vehicle` references a vehicle of the same Site by `public_id`. References are validated on the server, and the designer offers a picker for it. Renderers read bindings through `BlockRenderContext.vehicle()` / `vehicles`.
+
+Checks: `VehicleBindingsTest`.
 
 ---
 
 ## P3-013 — Vehicle Card Block
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-012
+
+### Result
+
+New official Block `vehicle-card` («Карточка автомобиля»).
+
+Fields:
+- **Vehicle:** a required `vehicle` reference.
+- **Display flags:** show price, show benefit and show colors.
+- **Button:** a safe action button.
+
+The renderer shows:
+- the image for the chosen color, preferring the front three-quarter angle;
+- clickable color swatches;
+- «от» price, benefit and offer count;
+- the button.
+
+Missing or hidden vehicles render as a Russian placeholder. Checks: `VehicleBlocksTest`, `OfficialBlocksTest`.
 
 ---
 
 ## P3-014 — Vehicle Grid Block
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-013
+
+### Result
+
+New official Block `vehicle-grid` («Каталог автомобилей»):
+- **Header:** title and subtitle.
+- **Source** («Все автомобили сайта» or «Выбранные»):
+  - «Все автомобили сайта» (the default) shows every visible vehicle in Site order.
+  - «Выбранные» shows a repeater (up to 24) of same-Site vehicle references, each with an optional safe action.
+- **Layout and flags:** columns, plus flags for price, benefit and colors.
+- **Card button label:** used with each item's action.
+
+Each card reuses the Vehicle Card renderer, so it shows the color-specific image, swatches, «от» price and benefit. The empty state is shown in Russian. Checks: `VehicleBlocksTest`.
 
 ---
 
 ## P3-015 — Vehicle Detail Blocks
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-012
 
 ### Blocks
 
-- Price/Offer
+- Gallery (media variant/color selector + angles)
+- Price/Offer (dealer Offers, expandable to modification data)
 - Characteristics
-- Equipment
-- Gallery
+- Equipment (factory options)
+
+### Result
+
+Four official Blocks. Each references one same-Site vehicle:
+- `vehicle-gallery` («Галерея автомобиля») shows:
+  - a large image with angle thumbnails;
+  - a color selector with the color name;
+  - title, «от» price and benefit, each of which can be turned off.
+- `vehicle-offers` («Цены и предложения») lists the dealer offers. Each offer shows:
+  - Equipment, Modification summary, availability and badge;
+  - price, with the RRP struck through, and benefits;
+  - a safe action button;
+  - an accessible «Подробнее» expansion with Modification specs, grouped characteristics and options.
+- `vehicle-characteristics` («Характеристики автомобиля») has an offer picker, Modification specs and grouped Equipment characteristics.
+- `vehicle-equipment` («Оснащение автомобиля») has an offer picker and grouped factory options (standard or optional, with an optional filter).
+
+Checks: `VehicleBlocksTest` (same-Site reference for every vehicle Block), `OfficialBlocksTest`.
 
 ---
 
 ## P3-016 — Automotive E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-010 through P3-015
 
 ### Flow
 
 ```text
-Admin creates vehicle
-→ customer imports
-→ sets price
+Platform admin manages catalog
+→ customer adds vehicle (Series)
+→ adds offer with price
 → adds Vehicle Grid
 → sees price/image/colors
 ```
+
+### Result
+
+`tests/browser/automotive.spec.ts` runs the whole flow in one test:
+1. The platform super admin:
+   - opens `/platform/catalog`;
+   - creates two Series media sets with swatches and uploads a front three-quarter image to each;
+   - saves an Equipment characteristic through the bracket-named form, and the value survives a reload.
+2. The dealer:
+   - creates a Site and adds Kia Rio IV Рестайлинг Седан by Series;
+   - adds an offer with a price and a benefit;
+   - adds the Vehicle Grid, which shows the price and benefit;
+   - adds an Offers block bound to the vehicle.
+3. The preview shows:
+   - the price and a loaded image;
+   - color switching by swatch;
+   - the expanded offer with the platform characteristic and option data.
+
+Supporting data:
+- `Database\Seeders\CatalogDemoSeeder` is an idempotent demo catalog branch that refuses to run in production (`CatalogDemoSeederTest`).
+- `E2eSeeder` adds the test-only users `catalog@landflow.test` (`super_admin`) and `dealer@landflow.test`.
 
 ---
 
 ## P3-017 — Phase 3 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-016
+
+### Result
+
+Phase 3 COMPLETED. Gate checks:
+- `composer quality` PASS: 440 PHPUnit tests, PHPStan, Pint, `vp check` and the production build.
+- `npm run test:e2e` PASS: 39 tests, including the automotive flow.
+- `git diff --check main..HEAD` PASS.
+
+Risk-focused review:
+- **Tenancy:** every vehicle, offer, designer and preview route checks the Workspace scope with a 404. Vehicle Block references resolve only to vehicles of the same Site.
+- **Catalog immutability:** only explicit platform roles mutate the catalog. Customer Workspace permissions never reach the catalog routes.
+- **Identifiers:** catalog and Site entities are addressed by `public_id`. Bindings carry no numeric IDs and no raw `*_minor` values.
+- **Database boundary:** no cross-database foreign keys. Catalog references are validated in the application, and only available rows are bound.
+- **Uploads:** Series media rejects SVG, is limited to 10 MB, uses server-generated keys and private storage, and is served with nosniff.
+- **Draft only:** autosave and preview never publish.
+
+Post-gate fix from the first real MySQL migration:
+- Two generated index names exceeded MySQL's 64-character limit, which SQLite does not enforce. They now have explicit short names.
+- `MigrationIdentifierLengthTest` guards every table and index name in both databases.
+- Re-run gates: 441 tests, 39 E2E.
+
+Known limits, carried forward:
+- Series media URLs require sign-in. Public delivery belongs to Publishing.
+- Designers and ContentEditors see offer prices in the designer and preview canvas. Prices are site-facing content.
+- The Admin role matrix lacks `view_site`, `view_vehicles` and `edit_benefits`. This needs an owner decision.
+- `edit_benefits` is not enforced separately; benefits are saved under `edit_prices`.
 
 ---
 
@@ -1949,50 +2402,104 @@ Admin creates vehicle
 
 ## P4-001 — Popup Schema / Runtime
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-017
+
+Result:
+- Site-owned `popups` table: ULID `public_id`, name, status, title, text, size, animation, overlay/Escape/close-button behaviour and mobile fullscreen. A Popup holds no fields, routing or credentials (D-035).
+- «Попапы» section (`sites/{site}/popups`) requires `view_site` to open and `edit_popups` to change anything. It is reachable from the designer's «Разделы» menu and has a live «Просмотр».
+- `PopupRuntime` gives the designer and the preview a payload of active popups only, with no internal IDs.
+- `PopupView` is a Radix dialog: `aria-modal`, a title (an `sr-only` name when no title is set), focus trap and focus return.
+- Tests cover CRUD, the closability rule, 404 for foreign, other-site and numeric references, the `edit_popups` matrix, and the runtime props.
 
 ---
 
 ## P4-002 — Open Popup Action
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-001, P2-014
+
+Result:
+- `open_popup` action stores a Popup `public_id`. On save, only active Popups of the same Site are accepted. Inactive, other-Site, foreign and numeric references, and extra keys, are rejected.
+- In the preview, the action renders as a `<button aria-haspopup="dialog">` that opens the reusable `PopupView`. There is no eval, injected selector or URL.
+- Each block passes a trigger context made of public IDs (block, plus vehicle, offer or media set from vehicle cards and offer rows), so one Popup opens with different context per trigger.
+- Focus returns to the trigger, and Escape and overlay closing follow the Popup settings.
+- The designer action control lists the active Popups.
 
 ---
 
 ## P4-003 — Form Schema / Fields
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-017
+
+Result:
+- Site-owned `forms` (ULID `public_id`, name, status, submit label, success message) and `form_fields` keyed by a stable lowercase key, unique per Form. The key and type are immutable after creation.
+- Field types: text, phone, email, textarea, select, checkbox, consent and hidden. Labels are plain text, never HTML.
+- Consent text is the customer's own; required consent must be ticked. Hidden values are marked untrusted.
+- «Формы» management UI: create and edit a Form, activate or deactivate it, and add, edit, delete or reorder fields. All of this is gated by `edit_forms`.
+- A Popup may reference one Form of the same Site (`popups.form_id`, enforced by validation and the model). The runtime exposes only active Forms. The Popup owns no routing or delivery.
 
 ---
 
 ## P4-004 — Public Form Identifier / Endpoint
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-003
+
+Result:
+- `POST /forms/{form_public_id}/submissions` is unauthenticated, JSON-only and CSRF-exempt, behind a coarse per-IP backstop of 30 per minute. Numeric IDs return 404.
+- Reachability: an active Form of an active Site. Inactive or missing Forms and archived Sites get a generic Russian 404. Which published hosts may call the endpoint is decided in Phase 5.
+- Only `fields` is accepted at the top level for now. Keys such as `workspace_id`, `site_id`, `destination` and `price`, and any other unknown key, are rejected. Unknown field keys are rejected as well.
+- Values are validated on the server against the current Form definition (required, consent accepted, length, email, select options). Errors come back as Russian messages keyed by field.
+- The preview popup form submits to this endpoint.
 
 ---
 
 ## P4-005 — Submission Persistence
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-004
+
+Result:
+- `submissions` stores public_id, site_id, form_id, status (`received`), a `payload` snapshot (key, type, label and value per field), `context`, phone original/normalized, lowercased email, IP, user agent truncated to 255 characters, and `submitted_at`.
+- No headers, cookies or the raw request are stored. The snapshot is immutable, and the Form must belong to the same Site.
+- A valid request is persisted before the success response. Invalid, inactive and spoofed requests are not persisted. History survives Form edits and field deletion.
+- A read-only «Заявки» list is gated by `view_submissions` (Owner and Admin). It never shows the IP or user agent.
+- All personal data is row-local, so future D-094 deletion or anonymization stays possible.
 
 ---
 
 ## P4-006 — Phone Normalization
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-005
+
+Result:
+- The central `App\Support\PhoneNormalizer` turns `+7 (999) 111-22-33` into `79991112233`. Allowed characters are digits, spaces, parentheses, hyphens, dots and a leading `+`. A number must have 10 to 15 digits.
+- Phone fields are validated with Russian messages. Submissions store both the original and the normalized value.
+- A leading `8` is kept as dialled. No trunk rewriting is applied without an owner decision (open question: should `8XXXXXXXXXX` be treated as `7XXXXXXXXXX`?).
 
 ---
 
 ## P4-007 — Context Passing
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-002, P4-003, P3-012
+
+Result:
+- Visitors send only public-ID hints: page, block, popup, vehicle, offer and media set. `SubmissionContextResolver` resolves each one inside the Form's Site.
+  - The page must belong to the Site, and the block to that page.
+  - The popup must be active and attached to this Form.
+  - The vehicle and offer must be active, and the offer must belong to the vehicle; an offer on its own resolves its vehicle.
+  - The media set must be selected and active on that vehicle.
+  - Catalog titles, equipment, modification and the offer price are read on the server.
+- A malformed, foreign or mismatched hint rejects the submission with a Russian message. Visitor price keys are ignored: the price always comes from the Site Offer.
+- `context.trusted` holds the snapshot. `context.visitor` separately holds the page URL, referrer and UTMs, kept only when well-formed.
+- The same Popup opened from Vehicle A or B records different context.
+- The «Заявки» list shows the context.
+
+### Context
 
 ### Context
 
@@ -2008,8 +2515,18 @@ Admin creates vehicle
 
 ## P4-008 — Anti-Spam Base
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-005
+
+Result:
+- `SubmissionGuard` runs inside the single public pipeline, so every Form uses it.
+  - A filled honeypot (`lf_hp`) is rejected.
+  - IP limit: 5 per 10 minutes per Site. Phone limit: 2 per 30 minutes per Site, counted across Forms.
+  - Same Form + normalized phone is a duplicate within 15 minutes.
+  - Phone checks are skipped for Forms without a phone field.
+- Counters use the cache through RateLimiter, with hashed keys, and only persisted Submissions consume them. Duplicate detection reads existing Submissions through an index.
+- Spam is never persisted. Visitors get one generic Russian message (422 for the honeypot, 429 for limits).
+- Defaults live in `config/forms.php`. Each Site can override them in `sites.form_security` from the «Защита форм» page, gated by `edit_site_settings`. Missing or invalid stored values fall back to the defaults.
 
 ### Features
 
@@ -2021,8 +2538,14 @@ Admin creates vehicle
 
 ## P4-009 — Blacklist
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-008
+
+Result:
+- `blacklist_entries` has explicit scope columns: `global` has no owner, `workspace` sets `workspace_id`, `site` sets `site_id`. It stores type (`ip`/`phone`), the normalized value (canonical IP or normalized phone), reason, `expires_at` and `created_by_user_id`. The model enforces scope consistency and immutability.
+- Resolution: an active Global, Workspace or Site entry rejects the submission with the generic message before any rate limiting. Expired entries are ignored, and there is no leak across Workspaces or Sites.
+- Global entries are platform-only, through the `blacklist:global add|remove|list` operator command. Each change requires a platform super admin and a reason, and is logged for audit. Removal expires the entry instead of deleting it. Global entries are never exposed to tenants.
+- «Защита форм» manages Site entries under `edit_site_settings` and Workspace entries under `edit_workspace`. Each list is sent only to members who may edit it.
 
 ### Scopes
 
@@ -2034,40 +2557,84 @@ Admin creates vehicle
 
 ## P4-010 — Yandex SmartCaptcha Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-008
 
 ### Requirement
 
 Verify current official documentation during implementation.
 
+Result:
+- The contract was checked against the official «Валидация пользователя» docs: form-urlencoded POST of `secret`, `token` and `ip` to `/validate`. Only `status` is evaluated: `ok` passes, `failed` fails closed. Network errors, non-200 responses and malformed bodies fail open with a safe warning log (D-043).
+- `CaptchaVerifier` interface with a `YandexSmartCaptchaVerifier` implementation using the Laravel HTTP client with a 3 s timeout. Credentials come from `YANDEX_SMARTCAPTCHA_CLIENT_KEY` / `YANDEX_SMARTCAPTCHA_SERVER_KEY`. A `FakeCaptchaVerifier` is honoured only in `testing`/`e2e` (`FORMS_CAPTCHA_DRIVER=fake`).
+- The pipeline runs CAPTCHA after rate limits and before context. It applies only when the Site policy `captcha_required` is on and the platform is configured. A missing or failed token is rejected; the token is never persisted or logged.
+- «Защита форм» has a toggle that cannot be enabled without platform credentials. The preview receives the provider and client key only, and the widget renders in Russian with reserved height and a fresh token after each failed attempt.
+
 ---
 
 ## P4-011 — Carousel Capability
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-003
+
+Result:
+- Vendor-neutral `carousel` schema group (D-032) with bounded choices: enabled, cards per view (1–4), gap, arrows, dots, loop, autoplay and delay (3/5/8 s). Each field is stored as a plain Block state value; there is no library-specific config.
+- The reusable `Carousel` component uses dependency-free CSS scroll-snap. It shows one card on phones and at most two on tablets; the arrow and dot buttons are labelled in Russian, and Left/Right keys work on the region. Slides stay in the normal tab order, so there is no keyboard trap. Autoplay pauses on hover or focus, has a pause/play button, and is disabled for `prefers-reduced-motion`.
+- Adopted in the new `vehicle-grid` 1.1.0 as a carousel mode. Existing 1.0.0 instances are unchanged.
 
 ---
 
 ## P4-012 — Gallery / Lightbox
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-011
+
+Result:
+- The reusable `Lightbox` is a media viewer separate from the business Popup (D-033). It shows only already authorized image URLs with their alt text, and is responsive up to full screen.
+- Navigation: previous/next buttons with Russian labels, Left/Right keys and a live «N из M» counter. Escape and the close button close it; focus is trapped while open and returns to the opening element.
+- Adopted in the Vehicle Gallery: the main image is a labelled button that opens the current color's angles, and navigating in the viewer keeps the selected angle in sync. There is no schema change, and the designer canvas stays inert.
 
 ---
 
 ## P4-013 — Interactive E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-001 through P4-012
+
+Result:
+- `tests/browser/interactive.spec.ts`, end-to-end flow: owner → Site → Form (name, phone, consent) → Popup → CTA `open_popup` → Preview → keyboard-usable popup → submit → success → lead with context in «Заявки».
+- Seeded «Витрина Запад» (E2eSeeder, dedicated Lada Vesta catalog branch, priced Offer, two-angle media). The vehicle Offer button opens a popup and the lead stores the server-side vehicle, offer and price while a spoofed `price` in the request is ignored. Also covered: duplicate rejected (429), honeypot rejected (422), fake CAPTCHA (required, then passes), carousel buttons, dots and arrow keys, and Lightbox open, next, arrow key, Escape and focus return. At 375 px there is no horizontal overflow; this check found and fixed preview toolbar overflow on phones.
+- The blacklist is covered by backend tests (`BlacklistTest`).
+- The browser fixture now watches every page of the context (preview tabs included), and intentionally provoked 4xx responses must be declared with `expectFailedResponse`.
 
 ---
 
 ## P4-014 — Phase 4 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P4-013
+
+### Result
+
+Phase 4 COMPLETED. Gate checks:
+- `composer quality` PASS: 509 PHPUnit tests, PHPStan, Pint, `vp check` and the production build.
+- `npm run test:e2e` PASS: 41 tests, including both interactive flows.
+- `git diff --check` PASS.
+
+Risk-focused review:
+- **Ownership:** Popup, Form, Submission and Blacklist entries are Site- or Workspace-scoped. The public endpoint derives Site and Workspace from the Form `public_id`, and never trusts browser workspace, site, form, popup or price data. Form and Popup stay separate, and the Popup owns no delivery.
+- **Pipeline:** the order is Form → validation → honeypot → blacklist → rate limits and duplicates → CAPTCHA → trusted context → persist. Nothing is delivered; there are no integrations or CRM.
+- **Secrets and PII:** the SmartCaptcha server key exists only in env/config, and the browser gets the client key only. Logs contain no token, key, IP, phone or blacklisted value, and rate-limit keys are hashed.
+- **Permissions:** popups need `edit_popups`, forms `edit_forms`, leads `view_submissions`, the security policy and Site blacklist `edit_site_settings`, and the Workspace blacklist `edit_workspace`. Global blacklist changes go only through the audited platform command.
+- **Accessibility:** popup, carousel and lightbox are keyboard-usable with focus return. Reduced motion is respected, and there is no horizontal overflow at 375 px.
+
+Known limits, carried forward:
+- The public endpoint accepts any active Form of an active Site, because there is no Published state yet. Phase 5 must bind submissions to published reachability.
+- Preview submissions are real persisted Submissions.
+- Phone normalization does not rewrite a Russian trunk-8 prefix; this needs an owner decision (P4-006).
+- Admin lacks `edit_popups` and `edit_site_settings`, and Designer lacks `edit_forms`, per the approved role matrix.
+- Retention and deletion of Submissions (D-094) remain a production blocker; the schema allows row deletion.
+- Blacklist UI shows normalized values only to editors. A management screen for global entries is not built; the command is used instead.
 
 ---
 
@@ -2780,31 +3347,61 @@ Lifecycle: agents draft the ADR in `docs/architecture/decisions/`; only the owne
 
 ## X-008 — ADR: Money Storage Representation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P3-009  
 **Resolves:** D-084
 
 Decision must cover: integer minor units vs fixed decimal, currency representation, rounding, Block price field presentation. Until accepted, no money columns anywhere (including P1-009 Plans).
 
+### Result
+
+ADR-004 (`docs/architecture/decisions/ADR-004-money-storage-representation.md`) records the owner-approved D-084:
+- Money is stored in integer minor units in `BIGINT UNSIGNED` `price_minor` / `rrp_minor` / `amount_minor` columns, with currency in `CHAR(3)` (uppercase ISO 4217).
+- Arithmetic is integer-only; formatting happens at the UI boundary.
+- Decimal input is converted by the currency's minor-unit rules on the backend before persistence.
+- Any percentage is stored in basis points.
+
+This is a docs-only decision; no code or columns were added.
+
 ---
 
 ## X-009 — ADR: Characteristic Value Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P3-001  
 **Resolves:** D-086
 
 Decision must cover: storage of characteristic values across Generation / Modification / Trim and override/inheritance resolution.
 
+### Result
+
+ADR-005 (`docs/architecture/decisions/ADR-005-equipment-characteristic-model.md`), D-086 APPROVED:
+- No inheritance engine; values belong to Equipment.
+- `auto_characteristics` is a two-level tree (group → parameter); the unit lives on the definition.
+- The value is TEXT with no unit. Missing data means no row.
+- Codes for the Modification filter fields (`engine_volume`, `engine_power`, `consumption_100_km`, `acceleration_0_100`) are reserved and never duplicated as characteristics.
+
 ---
 
 ## X-010 — ADR: Media Ownership and Asset Versioning
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before P2-013  
 **Resolves:** D-087, D-075
 
 Decision must cover: Site asset vs Workspace asset ownership/reference model, immutable/versioned public asset strategy compatible with Published Version stability.
+
+### Result
+
+ADR-003 (`docs/architecture/decisions/ADR-003-site-asset-ownership-and-versioning.md`) is based on the owner instruction "P2 Site assets are customer Site assets":
+- Assets are Site-owned and referenced from Block state by ULID, with same-Site validation.
+- Files are immutable; replacement means a new asset; deletion must respect references.
+- Storage is private, served through an authenticated policy-checked controller.
+- Accepted formats are JPEG, PNG and WebP up to 10 MB; SVG is rejected.
+- Uploading requires `manage_assets`.
+- The Workspace Media Library is deferred, and the Series Media Library stays separate.
+
+D-087 is APPROVED for the Phase 2 scope; D-075 is APPROVED (direction).
 
 ---
 
@@ -2942,6 +3539,112 @@ Completed 2026-09-30 (docs only; owner decisions).
 - D-097 APPROVED: first-party adapter on Laravel HTTP client; server-only credentials, no persisted one-use access token; internal identity table with the approved unique constraints.
 - ADR-002 accepted. P1-005A must support Yandex-only Users through nullable passwords and adapted password flows/UI; it must not generate artificial passwords.
 - Tests: NOT_APPLICABLE (docs-only decision task).
+
+---
+
+## X-015 — Default Free Plan for New Workspaces
+
+**Status:** DONE
+**Resolves:** D-100
+
+Newly registered Workspaces had no plan, so their effective `max_sites` was 0 and a new customer could not create a Site.
+
+Acceptance Criteria:
+
+- new personal Workspaces (email/password and Yandex OAuth) get the active system Free plan through `CreateNewAccount`;
+- Free resolves `max_sites = 2`; no other Free entitlements are invented;
+- the third active Site is denied by existing enforcement; archived Sites do not count (D-099);
+- no plan-name business checks; no billing/pricing/subscriptions.
+
+### Result
+
+Added the stable system key `Plan::FREE_KEY` and `App\Support\DefaultWorkspacePlan`, which idempotently creates the active Free plan (`createOrFirst` on the unique key, `max_sites = 2` only on first creation) and never overwrites existing values. `CreateNewAccount` assigns it to the personal Workspace inside the account transaction, so registration and Yandex OAuth share the same default. Existing Workspaces are not backfilled. Checks: `DefaultFreePlanTest` (Free plan and limit on registration, shared idempotent plan, two active Sites allowed / third denied / archived Site frees a slot, no raw plan-name checks in `app/` and `resources/js`), extended Yandex new-user test, Registration/Workspaces/Sites/E2E seeder tests, PHPStan, Pint.
+
+---
+
+## X-016 — Automotive Catalog Architecture V2
+
+**Status:** DONE
+**Trigger:** before P3-001
+
+Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/architecture/AUTO_CATALOG_SCHEMA.md`).
+
+### Result
+
+- `AUTOMOTIVE_DATA.md` §0 is the authoritative V2 summary; incompatible sections are marked SUPERSEDED, not deleted.
+- `DATABASE.md` §19, `TENANCY.md` and `PERMISSIONS.md` record:
+  - the separate physical catalog database (connection `catalog`, no cross-database foreign keys, `public_id` references);
+  - the platform permissions `view_catalog` / `edit_catalog` / `manage_catalog_media`.
+- New decisions:
+  - D-101 — V2 hierarchy and ten tables; supersedes D-018;
+  - D-102 — separate catalog database;
+  - D-103 — platform Series Media Library; supersedes D-023/D-024;
+  - D-104 — SiteVehicle → Series, SiteOffer → Equipment;
+  - D-105 — preview permission;
+  - D-106 — storage quota direction.
+- Phase 3 tasks were rewritten to the V2 scope:
+  - P3-005 → Series Media Sets;
+  - P3-006 → Series Media Images;
+  - P3-010 → Customer Vehicle Flow.
+
+---
+
+## X-017 — Workspace Asset Storage Quota
+
+**Status:** NOT_STARTED
+**Trigger:** before the first public production deployment
+**Decision:** D-106
+
+Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage limit) aggregating Site Assets owned by the Workspace's Sites, enforced on upload. No plan-name checks; numeric plan values require owner approval. Not a Phase 3 blocker.
+
+---
+
+## X-018 — Designer Action Reference Integrity
+
+**Status:** NOT_STARTED
+**Trigger:** before Phase 5 Publishing
+
+`open_page` / `scroll_to` action targets can become stale after the referenced Page or Block is deleted (saves are validated, existing states are not rewritten). Before publishing, detect or clear stale references (for example, validation at publish time and a visible warning in the Designer). Non-blocking for Phase 3.
+
+---
+
+## X-019 — Preview Permission for Admin and Designer
+
+**Status:** DONE
+**Trigger:** before the Phase 3 gate (P3-017)
+**Decision:** D-105
+
+Add `preview_site` to the Admin and Designer roles; Designer must not receive `publish_site`; ContentEditor unchanged. Focused permission tests.
+
+Result: `WorkspacePermissionResolver` grants `preview_site` to Admin and Designer. The tests cover:
+- designer preview is allowed and `can.preview` is true;
+- admin preview is allowed;
+- designer `publish_site` is denied;
+- ContentEditor is still forbidden.
+
+Found while testing: the Admin role has no `view_site`, so Admins cannot open the dashboard Site list or the designer. This is the same stale Admin matrix as the missing `view_vehicles` / `edit_benefits`, and it is left for the owner.
+
+---
+
+## X-020 — Admin Permission Matrix Reconciliation
+
+**Status:** DONE
+**Trigger:** before P4-001
+**Decision:** D-107
+
+Grant Admin `view_site`, `view_vehicles` and `edit_benefits`; keep Designer without `publish_site`, `edit_prices` and `edit_benefits`; keep ContentEditor unchanged; enforce `edit_benefits` separately from `edit_prices`.
+
+Result:
+- `WorkspacePermissionResolver` grants Admin `view_site`, `view_vehicles` and `edit_benefits`.
+- `SitePolicy::editBenefits` is added, and `viewVehicles` also accepts `edit_benefits`.
+- `SaveSiteOfferRequest` authorizes by what changes. Offer fields (price, RRP, availability, badge, Equipment, status, order) need `edit_prices`. A changed benefit list needs `edit_benefits`. A request that changes both needs both.
+- The vehicle page exposes `can.editBenefits`, and the offer dialog disables the sections the member cannot change.
+- Tests cover:
+  - Admin access to the dashboard Site list, the designer and vehicles;
+  - Admin editing benefits;
+  - a role with `edit_prices` but without `edit_benefits`, which can change the price but gets 403 for benefit changes and for combined changes;
+  - Designer preview allowed and publish denied;
+  - ContentEditor unchanged.
 
 ---
 

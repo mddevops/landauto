@@ -64,6 +64,33 @@ return [
             ]) : [],
         ],
 
+        // Global Automotive Catalog: a separate physical database (D-102). It never falls back
+        // to the main DB_* database, so catalog tables cannot land in the application database.
+        'catalog' => [
+            'driver' => env('CATALOG_DB_DRIVER', 'sqlite'),
+            'url' => env('CATALOG_DB_URL'),
+            'host' => env('CATALOG_DB_HOST', '127.0.0.1'),
+            'port' => env('CATALOG_DB_PORT', '3306'),
+            'database' => env('CATALOG_DB_DATABASE', database_path('catalog.sqlite')),
+            'username' => env('CATALOG_DB_USERNAME', 'root'),
+            'password' => env('CATALOG_DB_PASSWORD', ''),
+            'unix_socket' => env('CATALOG_DB_SOCKET', ''),
+            'charset' => 'utf8mb4',
+            'collation' => 'utf8mb4_unicode_ci',
+            'prefix' => '',
+            'prefix_indexes' => true,
+            'strict' => true,
+            'engine' => null,
+            'foreign_key_constraints' => true,
+            'busy_timeout' => null,
+            'journal_mode' => null,
+            'synchronous' => null,
+            'transaction_mode' => 'DEFERRED',
+            'options' => extension_loaded('pdo_mysql') ? array_filter([
+                Mysql::ATTR_SSL_CA => env('CATALOG_MYSQL_ATTR_SSL_CA'),
+            ]) : [],
+        ],
+
         'mariadb' => [
             'driver' => 'mariadb',
             'url' => env('DB_URL'),

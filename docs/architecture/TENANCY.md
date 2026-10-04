@@ -248,7 +248,7 @@ Site Offer
 Integration Profile
 → Workspace
 
-Automotive Trim
+Automotive Equipment (Catalog V2; formerly "Trim")
 → Global
 
 This ownership chain is required for authorization.
@@ -464,6 +464,8 @@ Only authorized platform roles may:
 - manage colors.
 
 This is a Super Admin/catalog manager capability.
+
+> **Catalog V2 (X-016):** the Global Catalog is a separate physical database (connection `catalog`); "edit trim" and "manage colors" above are superseded by Equipment (under Modification) and by the platform Series Media Library (media sets/images per catalog Series, stored in the main database). Customer Site rows (SiteVehicle → Series, SiteOffer → Equipment) reference catalog rows by immutable `public_id`; there are no cross-database foreign keys, so the application validates every catalog reference and the tenant boundary stays on the main-database Site/Workspace chain.
 
 ---
 

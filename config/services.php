@@ -44,4 +44,10 @@ return [
         'profile_url' => 'https://login.yandex.ru/info',
     ],
 
+    'yandex_smartcaptcha' => [
+        'client_key' => env('YANDEX_SMARTCAPTCHA_CLIENT_KEY'),
+        'server_key' => env('YANDEX_SMARTCAPTCHA_SERVER_KEY'),
+        'timeout' => (int) env('YANDEX_SMARTCAPTCHA_TIMEOUT', 3),
+    ],
+
 ];

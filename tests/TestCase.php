@@ -25,6 +25,12 @@ abstract class TestCase extends BaseTestCase
             throw new RuntimeException("Tests must use in-memory SQLite, got [{$connection}:{$database}]. Run \"php artisan config:clear\" and use \"composer test\".");
         }
 
+        $catalog = $app['config']->get('database.connections.catalog');
+
+        if (($catalog['driver'] ?? null) !== 'sqlite' || ($catalog['database'] ?? null) !== ':memory:') {
+            throw new RuntimeException('Tests must use an in-memory SQLite catalog connection. Run "php artisan config:clear" and use "composer test".');
+        }
+
         return $app;
     }
 

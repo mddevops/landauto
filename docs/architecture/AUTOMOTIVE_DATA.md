@@ -6,6 +6,70 @@
 
 ---
 
+# 0. Catalog V2 Reconciliation (X-016) — authoritative
+
+The owner-approved Catalog V2 (`docs/architecture/AUTO_CATALOG_SCHEMA.md`, version 2, 04.10.2026) is the source of truth for the technical catalog schema. Where any later section of this document disagrees with this section, this section wins. Superseded sections are kept for history and marked **SUPERSEDED (see §0)**.
+
+## 0.1 Technical catalog
+
+Selection chain:
+
+```text
+Mark → Model → Generation → Series → Modification → Equipment
+```
+
+- The term is **Mark**, not Make. Russian UI: «Марка».
+- **Equipment** = «Комплектация»: the confirmed real combination of one Modification and one trim level. It belongs directly to a Modification (`auto_equipments.modification_id`).
+- **Option** = a separate factory option («Опция»).
+- There is no `AutoConfiguration`, no Trim/Configuration level, no optional Series level placed above Generation. Series is the concrete body inside a Generation.
+
+V1 contains exactly ten tables: `auto_marks`, `auto_models`, `auto_generations`, `auto_series`, `auto_modifications`, `auto_equipments`, `auto_characteristics`, `auto_characteristic_values`, `auto_options`, `auto_option_values`.
+
+Not created: `auto_configurations`, `auto_body_types`, `auto_colors`, `auto_paints`, `auto_markets`, `auto_configuration_prices` (unless the owner V2 document changes).
+
+- Characteristic values and option values belong to Equipment.
+- A missing option row means **unknown**, not unavailable.
+- Core filter numbers (`engine_volume`, `engine_power`, `consumption_100_km`, `acceleration_0_100`) live on Modification and are not duplicated as characteristic values (ADR-005).
+- Additive Landflow column: externally addressable catalog rows get an immutable ULID `public_id` (ADR-001). Numeric catalog IDs never appear in browser URLs or form contracts.
+
+## 0.2 Separate physical catalog database
+
+- The technical catalog lives in its own database, Laravel connection `catalog` (suggested local database `landflow_catalog`), separate from the main application database (`landauto`).
+- Catalog migrations live in a dedicated directory and run only against the `catalog` connection.
+- There are no SQL foreign keys across connections. Main-database rows reference catalog rows by immutable `public_id` and the application validates them.
+- Customers never mutate the Global Catalog. Only explicit platform permissions (Super Admin / Catalog Manager) can.
+
+## 0.3 Customer layer
+
+- **SiteVehicle** belongs to a Site and represents a vehicle family/page at **Series** level (for example KIA Rio / IV Рестайлинг / Седан). It stores `catalog_series_public_id`, not one Equipment.
+- **SiteOffer** belongs to a SiteVehicle and stores `catalog_equipment_public_id`. The backend verifies that the Equipment chain reaches the SiteVehicle's Series. One SiteVehicle can carry several Offers (Classic / Comfort / Prestige) with different prices.
+- Commercial data (price, RRP, benefits, availability, badge) stays on SiteOffer, in integer minor units (ADR-004).
+- Factory characteristics and options are resolved automatically from the selected Equipment; the customer never re-enters factory specifications.
+- Individual changes to a concrete vehicle belong to the offer layer and never change the catalog.
+
+## 0.4 Colors and vehicle pictures
+
+- The technical catalog has **no color tables** (`auto_colors` / `auto_paints` are not created). Catalog-owned colors, multi-tone color domain and color availability matrices are superseded.
+- Prepared vehicle pictures by visual variant (usually a customer-visible color) and angle form a separate **platform Series Media Library**. It is attached to a catalog Series semantically (by `catalog_series_public_id`), curated by the Landflow team (Catalog Manager), is not part of the ten-table catalog and is not a Site Asset.
+- A media set (for example «Белый») has an optional display swatch (`swatch_hex`); the swatch is display metadata, not an automotive color domain.
+- A customer only selects which available media sets are shown on their SiteVehicle. Files are not duplicated into the Site.
+- Site Assets (ADR-003) remain Site-owned private customer assets. Future dealer photo overrides use the Site Asset layer; the global Series Media Library stays unchanged.
+
+## 0.5 Superseded concepts
+
+| Older concept | Status |
+|---|---|
+| Make terminology | Superseded by Mark |
+| Make → Model → Series (optional) → Generation → Modification → Trim / Configuration | Superseded by §0.1 chain |
+| Trim / Configuration, AutoConfiguration, configuration-level values | Superseded by Equipment under Modification |
+| Characteristic values on Generation / Modification / Trim with inheritance and overrides | Superseded by Equipment-level values (ADR-005) |
+| Catalog-owned colors, swatch layers, color availability, color-specific catalog images | Superseded by the platform Series Media Library (§0.4) |
+| Site Vehicle referencing a Trim directly | Superseded by SiteVehicle → Series, SiteOffer → Equipment |
+
+Still valid: platform ownership of the catalog, Site-owned commercial data, copy-not-sync between Sites, draft/published separation, binding through approved view models (blocks never query the catalog database). The Workspace Vehicle Library remains an approved future reuse layer (D-020); it is not implemented in Phase 3.
+
+---
+
 # 1. Automotive Domain Goals
 
 Landflow must provide a structured automotive data layer comparable in depth to professional automotive marketplaces, while remaining optimized for website building.
@@ -87,7 +151,7 @@ May contain:
 
 ---
 
-# 3. Global Catalog Hierarchy
+# 3. Global Catalog Hierarchy — SUPERSEDED (see §0)
 
 Canonical hierarchy:
 
@@ -117,7 +181,7 @@ Therefore:
 
 ---
 
-# 4. Make
+# 4. Make — SUPERSEDED (see §0)
 
 A Make represents a vehicle manufacturer/brand.
 
@@ -164,7 +228,7 @@ Model does not contain Site pricing.
 
 ---
 
-# 6. Series
+# 6. Series — SUPERSEDED (see §0)
 
 Series is an optional hierarchy level.
 
@@ -176,7 +240,7 @@ Series belongs to Model.
 
 ---
 
-# 7. Generation
+# 7. Generation — SUPERSEDED (see §0)
 
 Generation represents a model generation.
 
@@ -243,7 +307,7 @@ Modification should not be confused with Trim.
 
 ---
 
-# 10. Trim / Configuration
+# 10. Trim / Configuration — SUPERSEDED (see §0)
 
 Trim represents an equipment/commercial configuration.
 
@@ -352,7 +416,7 @@ They should not determine technical ownership.
 
 ---
 
-# 14. Characteristic Value Scope
+# 14. Characteristic Value Scope — SUPERSEDED (see §0)
 
 A characteristic value may belong to the level where it is genuinely defined.
 
@@ -375,7 +439,7 @@ Rendering should resolve inherited automotive data from the correct source level
 
 ---
 
-# 15. Characteristic Inheritance
+# 15. Characteristic Inheritance — SUPERSEDED (see §0)
 
 Conceptually:
 
@@ -396,7 +460,7 @@ Do not physically copy every Generation characteristic to every Trim unless requ
 
 ---
 
-# 16. Characteristic Override
+# 16. Characteristic Override — SUPERSEDED (see §0)
 
 Global Catalog managers may define a more specific value when necessary.
 
@@ -454,7 +518,7 @@ This allows templates to render grouped equipment lists automatically.
 
 ---
 
-# 19. Trim Equipment
+# 19. Trim Equipment — SUPERSEDED (see §0)
 
 Trim is associated with Options.
 
@@ -470,7 +534,7 @@ Do not encode all equipment as arbitrary HTML.
 
 ---
 
-# 20. Vehicle Color
+# 20. Vehicle Color — SUPERSEDED (see §0)
 
 Vehicle color is a structured automotive entity.
 
@@ -493,7 +557,7 @@ Examples:
 
 ---
 
-# 21. Multi-Tone Colors
+# 21. Multi-Tone Colors — SUPERSEDED (see §0)
 
 Landflow must support multi-tone colors.
 
@@ -521,7 +585,7 @@ The data model must remain extensible.
 
 ---
 
-# 22. Color Swatches
+# 22. Color Swatches — SUPERSEDED (see §0)
 
 A color may have one or multiple swatch entries.
 
@@ -542,7 +606,7 @@ Do not require exact physical body-area modeling in MVP.
 
 ---
 
-# 23. Color Availability
+# 23. Color Availability — SUPERSEDED (see §0)
 
 A color may be available only for:
 
@@ -599,7 +663,7 @@ Examples of view type:
 
 ---
 
-# 26. Color-Specific Images
+# 26. Color-Specific Images — SUPERSEDED (see §0)
 
 Images may depend on selected color.
 
@@ -830,7 +894,7 @@ commercial price
 
 ---
 
-# 39. Site Vehicle
+# 39. Site Vehicle — SUPERSEDED (see §0)
 
 Site Vehicle represents one vehicle/configuration used on one Site.
 
@@ -1163,7 +1227,7 @@ Price should change only if Site Offer logic explicitly varies by color.
 
 ---
 
-# 58. Color-Specific Pricing
+# 58. Color-Specific Pricing — SUPERSEDED (see §0)
 
 Some automotive markets may price certain colors differently.
 
@@ -1177,7 +1241,7 @@ Site Offer Option / Color Adjustment.
 
 ---
 
-# 59. Trim Selector
+# 59. Trim Selector — SUPERSEDED (see §0)
 
 Vehicle-related Block may expose Trim Selector.
 

@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { LayoutGrid } from 'lucide-react';
+import { Car, LayoutGrid } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -14,8 +14,10 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
+import { index as catalogIndex } from '@/routes/platform/catalog';
 import { edit as editProfile } from '@/routes/profile';
 import type { Auth, NavItem } from '@/types';
+import type { PlatformContext } from '@/types/platform';
 
 const mainNavItems: NavItem[] = [
     {
@@ -25,9 +27,21 @@ const mainNavItems: NavItem[] = [
     },
 ];
 
+const catalogNavItem: NavItem = {
+    title: 'Каталог автомобилей',
+    href: catalogIndex(),
+    icon: Car,
+};
+
 export function AppSidebar() {
-    const { auth } = usePage<{ auth: Auth }>().props;
+    const { auth, platform } = usePage<{
+        auth: Auth;
+        platform?: PlatformContext;
+    }>().props;
     const isVerified = auth.user.email_verified_at !== null;
+    const navItems = platform?.permissions.includes('view_catalog')
+        ? [...mainNavItems, catalogNavItem]
+        : mainNavItems;
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -48,7 +62,7 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {isVerified && <NavMain items={mainNavItems} />}
+                {isVerified && <NavMain items={navItems} />}
             </SidebarContent>
 
             <SidebarFooter>

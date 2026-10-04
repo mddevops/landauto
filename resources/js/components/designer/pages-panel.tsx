@@ -1,0 +1,267 @@
+import { Form, Link } from '@inertiajs/react';
+import { FileText, House, Pencil, Plus, Trash2 } from 'lucide-react';
+import { useState } from 'react';
+import type { DesignerPage, DesignerSite } from '@/components/designer/types';
+import InputError from '@/components/input-error';
+import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { cn } from '@/lib/utils';
+import { designer } from '@/routes/sites';
+import { destroy, store, update } from '@/routes/sites/pages';
+
+type PagesPanelProps = {
+    site: DesignerSite;
+    pages: DesignerPage[];
+    currentPageId: string;
+    canEdit: boolean;
+};
+
+type DialogState =
+    | { mode: 'create' }
+    | { mode: 'edit'; page: DesignerPage }
+    | { mode: 'delete'; page: DesignerPage }
+    | null;
+
+export function PagesPanel({
+    site,
+    pages,
+    currentPageId,
+    canEdit,
+}: PagesPanelProps) {
+    const [dialog, setDialog] = useState<DialogState>(null);
+    const close = () => setDialog(null);
+
+    return (
+        <div className="flex flex-col gap-3">
+            <ul className="flex flex-col gap-1">
+                {pages.map((page) => (
+                    <li
+                        key={page.public_id}
+                        className="flex items-center gap-1"
+                    >
+                        <Link
+                            href={designer(site.public_id, {
+                                query: { page: page.public_id },
+                            })}
+                            aria-current={
+                                page.public_id === currentPageId
+                                    ? 'page'
+                                    : undefined
+                            }
+                            className={cn(
+                                'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                page.public_id === currentPageId &&
+                                    'bg-muted font-medium',
+                            )}
+                        >
+                            {page.is_home ? (
+                                <House
+                                    className="size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
+                            ) : (
+                                <FileText
+                                    className="size-4 shrink-0"
+                                    aria-hidden="true"
+                                />
+                            )}
+                            <span className="truncate">{page.title}</span>
+                        </Link>
+                        {canEdit && (
+                            <>
+                                <Button
+                                    type="button"
+                                    variant="ghost"
+                                    size="icon"
+                                    className="size-8"
+                                    aria-label={`Изменить страницу «${page.title}»`}
+                                    onClick={() =>
+                                        setDialog({ mode: 'edit', page })
+                                    }
+                                >
+                                    <Pencil aria-hidden="true" />
+                                </Button>
+                                {!page.is_home && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-8"
+                                        aria-label={`Удалить страницу «${page.title}»`}
+                                        onClick={() =>
+                                            setDialog({ mode: 'delete', page })
+                                        }
+                                    >
+                                        <Trash2 aria-hidden="true" />
+                                    </Button>
+                                )}
+                            </>
+                        )}
+                    </li>
+                ))}
+            </ul>
+
+            {canEdit && (
+                <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    onClick={() => setDialog({ mode: 'create' })}
+                >
+                    <Plus aria-hidden="true" />
+                    Добавить страницу
+                </Button>
+            )}
+
+            <Dialog
+                open={dialog !== null}
+                onOpenChange={(open) => !open && close()}
+            >
+                <DialogContent>
+                    {dialog?.mode === 'delete' ? (
+                        <Form
+                            {...destroy.form({
+                                site: site.public_id,
+                                page: dialog.page.public_id,
+                            })}
+                            onSuccess={close}
+                            className="flex flex-col gap-4"
+                        >
+                            {({ processing, errors }) => (
+                                <>
+                                    <DialogHeader>
+                                        <DialogTitle>
+                                            Удалить страницу?
+                                        </DialogTitle>
+                                        <DialogDescription>
+                                            {`Страница «${dialog.page.title}» и все её блоки будут удалены из черновика.`}
+                                        </DialogDescription>
+                                    </DialogHeader>
+                                    <InputError message={errors.page} />
+                                    <DialogFooter>
+                                        <Button
+                                            type="button"
+                                            variant="outline"
+                                            onClick={close}
+                                        >
+                                            Отмена
+                                        </Button>
+                                        <Button
+                                            type="submit"
+                                            variant="destructive"
+                                            disabled={processing}
+                                        >
+                                            Удалить
+                                        </Button>
+                                    </DialogFooter>
+                                </>
+                            )}
+                        </Form>
+                    ) : dialog ? (
+                        <PageForm
+                            key={
+                                dialog.mode === 'edit'
+                                    ? dialog.page.public_id
+                                    : 'new'
+                            }
+                            site={site}
+                            page={dialog.mode === 'edit' ? dialog.page : null}
+                            onDone={close}
+                        />
+                    ) : null}
+                </DialogContent>
+            </Dialog>
+        </div>
+    );
+}
+
+function PageForm({
+    site,
+    page,
+    onDone,
+}: {
+    site: DesignerSite;
+    page: DesignerPage | null;
+    onDone: () => void;
+}) {
+    const action = page
+        ? update.form({ site: site.public_id, page: page.public_id })
+        : store.form(site.public_id);
+
+    return (
+        <Form {...action} onSuccess={onDone} className="flex flex-col gap-4">
+            {({ processing, errors }) => (
+                <>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {page ? 'Изменить страницу' : 'Новая страница'}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Изменения сохраняются в черновике сайта.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <div className="grid gap-2">
+                        <Label htmlFor="page-title">Название страницы</Label>
+                        <Input
+                            id="page-title"
+                            name="title"
+                            required
+                            maxLength={120}
+                            defaultValue={page?.title}
+                            aria-invalid={Boolean(errors.title)}
+                            aria-describedby={
+                                errors.title ? 'page-title-error' : undefined
+                            }
+                        />
+                        <InputError
+                            id="page-title-error"
+                            message={errors.title}
+                        />
+                    </div>
+                    {!page?.is_home && (
+                        <div className="grid gap-2">
+                            <Label htmlFor="page-slug">Адрес страницы</Label>
+                            <Input
+                                id="page-slug"
+                                name="slug"
+                                maxLength={100}
+                                defaultValue={page?.slug}
+                                aria-invalid={Boolean(errors.slug)}
+                                aria-describedby="page-slug-help"
+                            />
+                            <p
+                                id="page-slug-help"
+                                className="text-xs text-muted-foreground"
+                            >
+                                Латинские буквы, цифры и дефисы. Оставьте
+                                пустым, чтобы адрес создался из названия.
+                            </p>
+                            <InputError message={errors.slug} />
+                        </div>
+                    )}
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={onDone}
+                        >
+                            Отмена
+                        </Button>
+                        <Button type="submit" disabled={processing}>
+                            {page ? 'Сохранить' : 'Создать страницу'}
+                        </Button>
+                    </DialogFooter>
+                </>
+            )}
+        </Form>
+    );
+}

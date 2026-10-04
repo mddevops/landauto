@@ -60,6 +60,14 @@ class User extends Authenticatable implements MustVerifyEmail
         return $this->hasMany(UserAuthIdentity::class);
     }
 
+    /**
+     * @return HasMany<PlatformRoleAssignment, $this>
+     */
+    public function platformRoleAssignments(): HasMany
+    {
+        return $this->hasMany(PlatformRoleAssignment::class);
+    }
+
     public function hasPassword(): bool
     {
         return is_string($this->password) && $this->password !== '';

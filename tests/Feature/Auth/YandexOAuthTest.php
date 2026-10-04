@@ -3,9 +3,12 @@
 namespace Tests\Feature\Auth;
 
 use App\Enums\AuthProvider;
+use App\Enums\Entitlement;
 use App\Enums\WorkspaceRole;
+use App\Models\Plan;
 use App\Models\User;
 use App\Models\UserAuthIdentity;
+use App\Support\WorkspaceEntitlements;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Http;
@@ -125,6 +128,8 @@ class YandexOAuthTest extends TestCase
         $this->assertSame(WorkspaceRole::Owner, $membership->role);
         $this->assertSame('Иван Петров', $membership->workspace->name);
         $this->assertSame(1, $user->workspaces()->count());
+        $this->assertSame(Plan::FREE_KEY, $membership->workspace->plan?->key);
+        $this->assertSame(2, app(WorkspaceEntitlements::class)->limit($membership->workspace, Entitlement::MaxSites));
     }
 
     public function test_existing_landflow_email_is_not_logged_in_or_auto_linked(): void

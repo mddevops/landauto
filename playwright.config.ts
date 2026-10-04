@@ -90,7 +90,7 @@ export default defineConfig({
         // Isolated E2E environment: fresh .env.e2e + SQLite file, production build,
         // migrations + deterministic test users, then a dedicated Laravel server.
         // Never the developer's server or database.
-        command: `node tests/browser/support/prepare-e2e.mjs && ${buildStep}php artisan migrate --force --no-interaction && php artisan db:seed --class=E2eSeeder --force --no-interaction && php artisan serve --host=127.0.0.1 --port=${port}`,
+        command: `node tests/browser/support/prepare-e2e.mjs && ${buildStep}php artisan migrate --force --no-interaction && php artisan catalog:migrate --force --no-interaction && php artisan db:seed --class=E2eSeeder --force --no-interaction && php artisan serve --host=127.0.0.1 --port=${port}`,
         url: `${baseURL}/up`,
         env: {
             APP_ENV: 'e2e',

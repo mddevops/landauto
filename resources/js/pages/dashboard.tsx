@@ -1,5 +1,6 @@
-import { Head } from '@inertiajs/react';
-import { Archive, CircleCheck, Plus } from 'lucide-react';
+import { Head, Link, usePage } from '@inertiajs/react';
+import { Archive, Car, CircleCheck, PencilRuler, Plus } from 'lucide-react';
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,7 +9,10 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
+import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { create as createSite, designer } from '@/routes/sites';
+import { index as vehicles } from '@/routes/sites/vehicles';
 
 type SiteSummary = {
     public_id: string;
@@ -23,6 +27,7 @@ type DashboardProps = {
     };
     sites: SiteSummary[];
     canViewSites: boolean;
+    canViewVehicles: boolean;
     canCreateSites: boolean;
     siteLimit: {
         active: number;
@@ -40,10 +45,18 @@ export default function Dashboard({
     currentWorkspace,
     sites,
     canViewSites,
+    canViewVehicles,
     canCreateSites,
     siteLimit,
 }: DashboardProps) {
     const createDescriptionId = 'create-site-description';
+    const { url } = usePage();
+    const createdSitePublicId = new URLSearchParams(
+        url.split('?')[1] ?? '',
+    ).get('site');
+    const createdSite = sites.find(
+        (site) => site.public_id === createdSitePublicId,
+    );
 
     return (
         <>
@@ -64,25 +77,44 @@ export default function Dashboard({
 
                     {canCreateSites && (
                         <div className="flex flex-col items-start gap-1 sm:items-end">
-                            <Button
-                                type="button"
-                                disabled
-                                aria-describedby={createDescriptionId}
-                            >
-                                <Plus aria-hidden="true" />
-                                Создать сайт
-                            </Button>
-                            <p
-                                id={createDescriptionId}
-                                className="max-w-xs text-xs text-muted-foreground sm:text-right"
-                            >
-                                {siteLimit.reached
-                                    ? `Достигнут лимит активных сайтов: ${siteLimit.active} из ${siteLimit.max}.`
-                                    : 'Выбор шаблона появится на следующем шаге.'}
-                            </p>
+                            {siteLimit.reached ? (
+                                <>
+                                    <Button
+                                        type="button"
+                                        disabled
+                                        aria-describedby={createDescriptionId}
+                                    >
+                                        <Plus aria-hidden="true" />
+                                        Создать сайт
+                                    </Button>
+                                    <p
+                                        id={createDescriptionId}
+                                        className="max-w-xs text-xs text-muted-foreground sm:text-right"
+                                    >
+                                        {`Достигнут лимит активных сайтов: ${siteLimit.active} из ${siteLimit.max}.`}
+                                    </p>
+                                </>
+                            ) : (
+                                <Button asChild>
+                                    <Link href={createSite()}>
+                                        <Plus aria-hidden="true" />
+                                        Создать сайт
+                                    </Link>
+                                </Button>
+                            )}
                         </div>
                     )}
                 </header>
+
+                {createdSite && (
+                    <Alert>
+                        <CircleCheck aria-hidden="true" />
+                        <AlertTitle>Сайт создан</AlertTitle>
+                        <AlertDescription>
+                            {`«${createdSite.name}» добавлен в рабочее пространство.`}
+                        </AlertDescription>
+                    </Alert>
+                )}
 
                 {!canViewSites ? (
                     <Card>
@@ -130,7 +162,15 @@ export default function Dashboard({
 
                         <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
                             {sites.map((site) => (
-                                <Card key={site.public_id} className="min-w-0">
+                                <Card
+                                    key={site.public_id}
+                                    className={cn(
+                                        'min-w-0',
+                                        site.public_id ===
+                                            createdSite?.public_id &&
+                                            'border-primary ring-2 ring-primary/20',
+                                    )}
+                                >
                                     <CardHeader>
                                         <div className="flex items-start justify-between gap-3">
                                             <h3 className="min-w-0 text-lg leading-snug font-semibold break-words">
@@ -152,11 +192,37 @@ export default function Dashboard({
                                             </Badge>
                                         </div>
                                     </CardHeader>
-                                    <CardContent>
-                                        <p className="text-sm text-muted-foreground">
-                                            Управление сайтом станет доступно в
-                                            следующих этапах.
-                                        </p>
+                                    <CardContent className="flex flex-wrap gap-2">
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={designer(site.public_id)}
+                                                aria-label={`Открыть дизайнер сайта «${site.name}»`}
+                                            >
+                                                <PencilRuler aria-hidden="true" />
+                                                Открыть дизайнер
+                                            </Link>
+                                        </Button>
+                                        {canViewVehicles && (
+                                            <Button
+                                                asChild
+                                                variant="outline"
+                                                size="sm"
+                                            >
+                                                <Link
+                                                    href={vehicles(
+                                                        site.public_id,
+                                                    )}
+                                                    aria-label={`Автомобили сайта «${site.name}»`}
+                                                >
+                                                    <Car aria-hidden="true" />
+                                                    Автомобили
+                                                </Link>
+                                            </Button>
+                                        )}
                                     </CardContent>
                                 </Card>
                             ))}

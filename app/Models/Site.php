@@ -10,6 +10,8 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -19,10 +21,12 @@ use LogicException;
  * @property int $workspace_id
  * @property string $name
  * @property SiteStatus $status
+ * @property array<string, string>|null $design_tokens
+ * @property array<string, int|bool>|null $form_security
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'status'])]
+#[Fillable(['name', 'status', 'design_tokens'])]
 #[Hidden(['id', 'workspace_id'])]
 class Site extends Model
 {
@@ -43,6 +47,8 @@ class Site extends Model
     {
         return [
             'status' => SiteStatus::class,
+            'design_tokens' => 'array',
+            'form_security' => 'array',
         ];
     }
 
@@ -61,5 +67,61 @@ class Site extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
+    }
+
+    /**
+     * @return HasMany<Page, $this>
+     */
+    public function pages(): HasMany
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    /**
+     * @return HasMany<SiteAsset, $this>
+     */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(SiteAsset::class);
+    }
+
+    /**
+     * @return HasMany<SiteVehicle, $this>
+     */
+    public function vehicles(): HasMany
+    {
+        return $this->hasMany(SiteVehicle::class);
+    }
+
+    /**
+     * @return HasMany<Submission, $this>
+     */
+    public function submissions(): HasMany
+    {
+        return $this->hasMany(Submission::class);
+    }
+
+    /**
+     * @return HasMany<Form, $this>
+     */
+    public function forms(): HasMany
+    {
+        return $this->hasMany(Form::class);
+    }
+
+    /**
+     * @return HasMany<Popup, $this>
+     */
+    public function popups(): HasMany
+    {
+        return $this->hasMany(Popup::class);
+    }
+
+    /**
+     * @return HasOne<Page, $this>
+     */
+    public function homePage(): HasOne
+    {
+        return $this->hasOne(Page::class)->where('is_home', true);
     }
 }

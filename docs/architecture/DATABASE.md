@@ -593,6 +593,8 @@ Fields:
 
 # 19. Global Automotive Catalog Overview
 
+> **Catalog V2 (X-016) — authoritative.** The exact catalog schema is `docs/architecture/AUTO_CATALOG_SCHEMA.md` (ten `auto_*` tables: marks, models, generations, series, modifications, equipments, characteristics, characteristic_values, options, option_values). The catalog is a **separate physical database** on the Laravel connection `catalog` (local suggestion `landflow_catalog`), with its own migration directory. There are no SQL foreign keys between the main database and the catalog database: main rows store immutable catalog `public_id` values (`site_vehicles.catalog_series_public_id`, `site_offers.catalog_equipment_public_id`, `series_media_sets.catalog_series_public_id`) and the application validates them. The platform Series Media Library (media sets and images by angle) lives in the main database and is not part of the catalog. The `automotive_*` naming, Trim/Configuration, catalog colors/swatches/color availability and site vehicle colors below (§19–§33, §41) are **SUPERSEDED** and kept only for history. See `AUTOMOTIVE_DATA.md` §0.
+
 The Global Catalog should be normalized.
 
 Core hierarchy:
@@ -608,7 +610,7 @@ Naming can be shortened later, but explicit domain naming is recommended until c
 
 ---
 
-# 20. Automotive Makes
+# 20. Automotive Makes — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_makes
 
@@ -643,7 +645,7 @@ Unique constraints should prevent accidental duplicates within a Make.
 
 ---
 
-# 22. Automotive Series
+# 22. Automotive Series — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_series
 
@@ -710,7 +712,7 @@ Avoid duplicating the same technical fact both as a dedicated column and a chara
 
 ---
 
-# 25. Automotive Trims / Configurations
+# 25. Automotive Trims / Configurations — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_trims
 
@@ -759,7 +761,7 @@ Examples:
 
 ---
 
-# 27. Characteristic Categories
+# 27. Characteristic Categories — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_characteristic_categories
 
@@ -781,7 +783,7 @@ Fields:
 
 ---
 
-# 28. Characteristic Values
+# 28. Characteristic Values — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 Characteristic values may be attached at the most appropriate level.
 
@@ -851,7 +853,7 @@ Join table:
 
 ---
 
-# 30. Automotive Colors
+# 30. Automotive Colors — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_colors
 
@@ -871,7 +873,7 @@ Do not assume one HEX value per color.
 
 ---
 
-# 31. Automotive Color Swatches
+# 31. Automotive Color Swatches — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_color_swatches
 
@@ -899,7 +901,7 @@ This allows two-tone and future multi-tone colors.
 
 ---
 
-# 32. Trim/Vehicle Color Availability
+# 32. Trim/Vehicle Color Availability — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_trim_colors
 
@@ -915,7 +917,7 @@ If availability is actually defined higher/lower in the hierarchy for some brand
 
 ---
 
-# 33. Automotive Images
+# 33. Automotive Images — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## automotive_images
 
@@ -1091,7 +1093,7 @@ Exact implementation requires `AUTOMOTIVE_DATA.md`.
 
 ---
 
-# 40. Site Vehicles
+# 40. Site Vehicles — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## site_vehicles
 
@@ -1118,7 +1120,7 @@ A Site Vehicle may originate from:
 
 ---
 
-# 41. Site Vehicle Colors
+# 41. Site Vehicle Colors — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 A Site may limit available colors or override them.
 
@@ -1141,7 +1143,7 @@ Do not alter Global Catalog color rows.
 
 ---
 
-# 42. Site Vehicle Images
+# 42. Site Vehicle Images — SUPERSEDED (see §19 / AUTOMOTIVE_DATA §0)
 
 ## site_vehicle_images
 

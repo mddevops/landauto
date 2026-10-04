@@ -60,9 +60,17 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 1 — Core Platform** (status: §54)
+**Phase 5 — Publishing: NOT_STARTED** (status: §54). Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002).
+
+Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
 Phase 0 — Foundation / Automation is COMPLETED: gate `P0-027 — Phase 0 Validation` DONE (phase report in BACKLOG P0-027 `### Result`).
+
+Phase 1 — Core Platform is COMPLETED: gate `P1-017 — Phase 1 Review` DONE (phase report in BACKLOG P1-017 `### Result`).
+
+Phase 2 — Designer Foundation is COMPLETED: gate `P2-018 — Phase 2 Review` DONE.
+
+Phase 3 — Automotive Foundation is COMPLETED: gate `P3-017 — Phase 3 Review` DONE.
 
 Current focus:
 
@@ -84,7 +92,67 @@ Current focus:
 - `P1-013` DONE: permission- and entitlement-guarded Site creation in the current Workspace from an official Template public ID;
 - `X-012` DONE: foundation UI/accessibility follow-ups for navigation, tab order, validation semantics and responsive browser coverage;
 - `P1-014` DONE: responsive current-Workspace Dashboard with tenant-scoped safe Site cards, localized states and permission-aware create CTA;
-- next ready task: `P1-015 — Create Site Wizard UI` (§42).
+- `P1-015` DONE: permission-guarded Create Site wizard (official Template choice, name, create) linked from the Dashboard; after creation the Dashboard confirms and highlights the new Site;
+- `P1-016` DONE: browser E2E for Login → Workspace → Create Site → Template → Dashboard, plus cross-Workspace Site isolation;
+- `P1-017` DONE: Phase 1 gate — full `composer quality` and full Playwright PASS;
+- `P2-001` DONE: Site-owned Pages with Site-unique slug, ordering and a DB-enforced single home Page created with every new Site;
+- `P2-002` DONE: global official Block Definitions with immutable versioned JSON Block Schema;
+- `P2-003` DONE: deterministic Block Schema validator for the initial field types, enforced on Block Version creation;
+- `P2-004` DONE: Page-owned Block Instances pinned to an official Block Version with draft state validated against its schema;
+- `P2-005` DONE: six seeded official Blocks (Header, Hero, Benefits, CTA, Contacts, Footer) with version 1.0.0 schemas and frontend renderers;
+- `P2-006` DONE: current-Workspace Designer shell (top bar, block list, canvas with official Block renderers and selection, read-only Properties panel) linked from Dashboard Site cards;
+- `X-015` DONE: new personal Workspaces (registration and Yandex OAuth) get the idempotent system Free plan with `max_sites = 2` (D-100);
+- `P2-007` DONE: Designer Pages panel (list, open, create, rename, delete non-home) scoped to the current Workspace;
+- `P2-008` DONE: Designer Navigator (select, reorder, duplicate, hide/show, delete) and adding official Blocks with schema defaults;
+- `P2-009` DONE: schema-driven Properties panel with live canvas draft and validated state saving;
+- `P2-010` DONE: Repeater editing (add, delete, duplicate, reorder) with stable ULID item IDs;
+- `P2-011` DONE: conditional schema fields (`visible_if` on earlier boolean/select sibling), multi-version official catalog, `header` 1.1.0;
+- `P2-012` DONE: Site design tokens (fixed validated token set, «Стиль сайта» tab, CSS variables in renderers);
+- `X-010` DONE: ADR-003 Site-owned immutable assets (D-087 Phase 2 scope, D-075 direction APPROVED);
+- `P2-013` DONE: Site Asset upload (JPEG/PNG/WebP ≤10 MB, private storage, nosniff serving), same-Site image references, image picker;
+- `P2-014` DONE: safe `action` field (open_url http/https, open_page same Site, scroll_to same Page, phone, email), action-enabled official block versions;
+- `P2-015` DONE: debounced draft autosave of Block content with status indicator (never publishes);
+- `P2-016` DONE: authenticated draft preview (`preview_site`), visible blocks with tokens/assets, anchors for scroll actions;
+- `P2-017` DONE: Playwright designer flow (blocks, properties, repeater, action, upload, style, autosave, reorder, reload, preview);
+- `P2-018` DONE: Phase 2 gate (composer quality, 38 E2E passed); Phase 2 COMPLETED;
+- `X-008` DONE: D-084 APPROVED — ADR-004 integer minor-unit money (`BIGINT UNSIGNED *_minor`, `CHAR(3)` currency, basis points);
+- Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md` (owner input, version 2); the catalog BLOCKED_DECISION is RESOLVED;
+- `X-016` DONE: automotive architecture reconciled with Catalog V2 (D-101 … D-106; Mark, Equipment under Modification, separate `catalog` database, Series Media Library, SiteVehicle → Series / SiteOffer → Equipment); follow-ups `X-017` (storage quota), `X-018` (action reference integrity), `X-019` (preview permission) recorded;
+- `X-009` DONE: D-086 APPROVED — ADR-005 Equipment-level characteristic values (two-level dictionary, TEXT value, unit on definition, no inheritance, no empty rows);
+- `P3-001` DONE: separate `catalog` connection + `catalog:migrate` guard, V2 core tables (marks … equipments) with `public_id`, `App\Models\Catalog` models, status-chain `available()` scopes, isolated test/E2E catalog databases;
+- `P3-002` DONE: explicit platform roles (`super_admin`, `catalog_manager`) and permissions (`view_catalog`, `edit_catalog`, `manage_catalog_media`), gates + middleware, `php artisan platform:role grant|revoke <email> <role>`;
+- `P3-003` DONE: two-level characteristic dictionary and Equipment values (ADR-005) with server validation and canonical values;
+- `P3-004` DONE: two-level option dictionary and Equipment option values (`is_base` explicit, missing row = unknown);
+- `P3-005` DONE: platform Series Media Sets in the main database (`catalog_series_public_id`, name, display swatch, status, order); no catalog color tables;
+- `P3-006` DONE: immutable Series media images per angle (private storage, server keys, JPEG/PNG/WebP ≤10 MB, no SVG), platform-only upload/delete, nosniff serving; shared `ImageUpload` rules;
+- `P3-007` DONE: platform catalog UI at `/platform/catalog` (cascading hierarchy, dictionaries, Equipment characteristics/options, Series media); no Filament;
+- `P3-008` DONE: Site-owned `site_vehicles` (Series reference, one per Series per Site) and media-set selection by reference; vehicle policy abilities;
+- `P3-009` DONE: `site_offers` (Equipment of the vehicle Series, ADR-004 `*_minor` money, availability, badge) and amount-based `site_offer_benefits`; shared `App\Support\Money`;
+- `P3-010` DONE: customer «Автомобили» flow (cascading Series picker, media-set selection by reference, offers with server-parsed prices and benefits, tenant-scoped 404s);
+- `P3-011` DONE: `VehicleMediaResolver` (Site selection → Global active Series media sets; Workspace level not in Phase 3), bulk resolution;
+- `P3-012` DONE: `VehicleBindings` display-ready vehicle/offer view models (visible + available only, formatted money, no numeric IDs) in designer/preview, same-Site `vehicle` Block field;
+- `P3-013` DONE: official `vehicle-card` Block (same-Site vehicle reference, color swatches, «от» price, benefit, action button);
+- `P3-014` DONE: official `vehicle-grid` Block (all visible Site vehicles or a validated selection with per-item actions, columns, price/benefit/colors);
+- `P3-015` DONE: vehicle detail Blocks — gallery (colors + angles), offers (expandable to Modification/characteristics/options), characteristics, equipment;
+- `P3-016` DONE: automotive Playwright flow (platform media sets + characteristics → dealer vehicle/offer → Vehicle Grid/Offers → preview price, image, color switch, expanded offer); idempotent `CatalogDemoSeeder`;
+- `X-019` DONE: `preview_site` for Admin and Designer (D-105); Designer still without `publish_site`; ContentEditor unchanged;
+- `P3-017` DONE: Phase 3 gate (composer quality 440 tests, 39 E2E passed, diff check); Phase 3 COMPLETED;
+- `X-020` DONE: Admin gets `view_site`, `view_vehicles` and `edit_benefits` (D-107). Offer saves now authorize by what changes: `edit_prices` for offer fields, `edit_benefits` for benefits, both when both change. Designer and ContentEditor are unchanged.
+- Phase 4 COMPLETED:
+- `P4-001` DONE: Site-owned reusable Popups (presentation only, D-035), «Попапы» section, accessible `PopupView` runtime in designer/preview props.
+- `P4-002` DONE: `open_popup` action (same-Site active Popups only), preview runtime with per-trigger public-ID context (block/vehicle/offer/media set) and focus return.
+- `P4-003` DONE: Site-owned Forms with stable-key fields (8 types, consent text is customer-owned, hidden values untrusted), «Формы» UI under `edit_forms`, same-Site Popup→Form attach; preview Popups render the form (display-only until P4-004).
+- `P4-004` DONE: public `POST /forms/{form_public_id}/submissions` (guest, CSRF-exempt JSON, per-IP backstop), active Form + active Site only, strict payload keys and server-side field validation; published reachability deferred to Phase 5.
+- `P4-005` DONE: `SubmissionPipeline` persists valid Submissions (immutable field snapshot, no raw request) before responding; read-only «Заявки» list under `view_submissions`.
+- `P4-006` DONE: central `PhoneNormalizer` (digits only, 10–15 digits, no trunk-8 rewrite pending owner decision); original + normalized stored.
+- `P4-007` DONE: `SubmissionContextResolver` turns public-ID hints into a trusted same-Site snapshot (vehicle/offer/equipment/server price/media set/page/block/popup); visitor URL/referrer/UTMs stored separately.
+- `P4-008` DONE: centralized `SubmissionGuard` (honeypot, IP 5/10m and phone 2/30m per Site via RateLimiter, Form+phone duplicate 15m); per-Site overrides on «Защита форм» (`edit_site_settings`); spam never persisted.
+- `P4-009` DONE: scoped `blacklist_entries` (global/workspace/site × ip/phone, expiry); Global only via audited `blacklist:global` command (super admin + reason); tenant lists on «Защита форм».
+- `P4-010` DONE: `CaptchaVerifier` + `YandexSmartCaptchaVerifier` (ok passes, failed fails closed, outage fails open with safe log), fake verifier for testing/e2e; Site toggle `captcha_required`; client key only in browser.
+- `P4-011` DONE: reusable vendor-neutral `Carousel` (scroll-snap, accessible, pausable autoplay, reduced motion); `vehicle-grid` 1.1.0 carousel mode.
+- `P4-012` DONE: reusable `Lightbox` (D-033; keyboard, focus trap/return, alt text) adopted in the Vehicle Gallery.
+- `P4-013` DONE: interactive Playwright flows (form/popup/submission, vehicle offer trusted context + spoofed price, duplicate, honeypot, fake CAPTCHA, carousel, lightbox, 375 px); fixture monitors all tabs.
+- `P4-014` DONE: Phase 4 gate (composer quality 509 tests, 41 E2E passed, diff check); Phase 4 COMPLETED.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1073,13 +1141,15 @@ All planned Phase 0 automation documents exist: `MASTER_PLAN.md`, `BACKLOG.md`, 
 
 # 42. Current Next Approved Task
 
-Last completed task: `X-012 — Foundation UI Follow-ups` (DONE; uncommitted, commit not authorized). `P1-014 — Dashboard UI` remains DONE. Phase 0 gate `P0-027` is DONE.
+Last completed task: `X-020 — Admin Permission Matrix Reconciliation` (DONE). Phase 3 gate `P3-017` is DONE. Phase 2 gate `P2-018` is DONE. Phase 1 gate `P1-017` is DONE. Phase 0 gate `P0-027` is DONE.
+
+Resolved owner decision: D-100 (X-015 DONE) — every new personal Workspace gets the active system Free plan (`max_sites = 2`); Workspaces created before X-015 are not backfilled.
 
 Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001 Option B).
 
-Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`.
+Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next ready task: `P1-015 — Create Site Wizard UI`.**
+**Next: `P5-001 — Publishing Runtime ADR`** (Phase 5 — Publishing, NOT_STARTED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1366,10 +1436,10 @@ Current:
 
 ```text
 Phase 0 — Foundation / Architecture / Automation: COMPLETED
-Phase 1 — Core Platform: IN_PROGRESS
-Phase 2 — Designer Foundation: NOT_STARTED
-Phase 3 — Automotive Foundation: NOT_STARTED
-Phase 4 — Forms & Interactive Components: NOT_STARTED
+Phase 1 — Core Platform: COMPLETED (gate P1-017)
+Phase 2 — Designer Foundation: COMPLETED (gate P2-018)
+Phase 3 — Automotive Foundation: COMPLETED (gate P3-017)
+Phase 4 — Forms & Interactive Components: COMPLETED
 Phase 5 — Publishing: NOT_STARTED
 Phase 6 — Integrations & Analytics: NOT_STARTED
 Phase 7 — Paid Features: NOT_STARTED
@@ -1637,7 +1707,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P1-015 — Create Site Wizard UI`** (see §42). Phase 0 is COMPLETED (P0-027 DONE); P1-001 … P1-014, X-007, X-011, X-012 and X-014 DONE.
+**`P5-001 — Publishing Runtime ADR`** (see §42). Phases 0–4 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014 DONE); Phase 5 is NOT_STARTED.
 
 ---
 
@@ -1690,8 +1760,8 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: NOT_STARTED
+Core Landflow implementation: IN_PROGRESS (Phases 0–4 COMPLETED)
 ```
 
-**Current phase: Phase 1 — Core Platform (IN_PROGRESS; Phase 0 COMPLETED).  
-Next ready task: P1-015 — Create Site Wizard UI.**
+**Current phase: Phase 5 — Publishing (NOT_STARTED; Phases 0–4 COMPLETED).
+Next: `P5-001 — Publishing Runtime ADR` per `BACKLOG.md`.**

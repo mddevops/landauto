@@ -19,6 +19,43 @@ export const users = {
         email: 'unverified@landflow.test',
         password: 'e2e-password',
     },
+    // Core platform flow: two Workspaces with a Site limit and the official Blank Template.
+    creator: {
+        name: 'Олег Создатель',
+        email: 'creator@landflow.test',
+        password: 'e2e-password',
+        workspaces: ['Автосалон Юг', 'Сервисный центр Юг'],
+        template: 'Пустой шаблон',
+    },
+    // Designer flow on its own Site (Workspace Owner, so preview is allowed).
+    designer: {
+        name: 'Дина Дизайнерова',
+        email: 'designer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Студия Дины',
+        template: 'Пустой шаблон',
+    },
+    // Automotive flow: platform super admin (catalog + Series media) and a dealer Owner.
+    catalogAdmin: {
+        name: 'Пётр Каталогов',
+        email: 'catalog@landflow.test',
+        password: 'e2e-password',
+    },
+    dealer: {
+        name: 'Денис Дилеров',
+        email: 'dealer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Восток',
+        template: 'Пустой шаблон',
+    },
+    // Interactive flow: Forms, Popups and submissions on its own Site.
+    interactive: {
+        name: 'Инна Интерактивова',
+        email: 'interactive@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Запад',
+        template: 'Пустой шаблон',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

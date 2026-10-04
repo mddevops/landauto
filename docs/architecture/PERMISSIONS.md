@@ -660,6 +660,8 @@ Global permissions may include:
 
 These belong to platform roles.
 
+> **Catalog V2 (X-016) — authoritative platform permission keys:** `view_catalog`, `edit_catalog`, `manage_catalog_media`. They replace the `manage_catalog_*` (Make/Trim) keys above, which are SUPERSEDED. Platform roles are persistent explicit assignments on the User (`super_admin`, `catalog_manager`), never derived from a user ID, an email or Workspace membership. Workspace Owner/Admin permissions never include catalog mutation. `edit_catalog` covers the ten technical catalog tables; `manage_catalog_media` covers the platform Series Media Library.
+
 ---
 
 # 35. Form Editing

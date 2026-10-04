@@ -53,6 +53,10 @@ class DashboardController extends Controller
                     ->all()
                 : [],
             'canViewSites' => $canViewSites,
+            'canViewVehicles' => array_intersect(
+                [WorkspacePermission::ViewVehicles->value, WorkspacePermission::EditVehicles->value, WorkspacePermission::EditPrices->value, WorkspacePermission::EditBenefits->value],
+                $authorization->permissionKeys($user),
+            ) !== [],
             'canCreateSites' => $canCreateSites,
             'siteLimit' => [
                 'active' => $activeSiteCount,

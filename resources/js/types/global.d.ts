@@ -1,4 +1,5 @@
 import type { Auth } from '@/types/auth';
+import type { PlatformContext } from '@/types/platform';
 import type { WorkspaceContext } from '@/types/workspace';
 
 declare module 'react' {
@@ -13,6 +14,7 @@ declare module '@inertiajs/core' {
             name: string;
             auth: Auth;
             workspace: WorkspaceContext;
+            platform: PlatformContext;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };
