@@ -113,7 +113,8 @@ Current focus:
 - Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md` (owner input, version 2); the catalog BLOCKED_DECISION is RESOLVED;
 - `X-016` DONE: automotive architecture reconciled with Catalog V2 (D-101 … D-106; Mark, Equipment under Modification, separate `catalog` database, Series Media Library, SiteVehicle → Series / SiteOffer → Equipment); follow-ups `X-017` (storage quota), `X-018` (action reference integrity), `X-019` (preview permission) recorded;
 - `X-009` DONE: D-086 APPROVED — ADR-005 Equipment-level characteristic values (two-level dictionary, TEXT value, unit on definition, no inheritance, no empty rows);
-- next: `P3-001` (§42).
+- `P3-001` DONE: separate `catalog` connection + `catalog:migrate` guard, V2 core tables (marks … equipments) with `public_id`, `App\Models\Catalog` models, status-chain `available()` scopes, isolated test/E2E catalog databases;
+- next: `P3-002` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

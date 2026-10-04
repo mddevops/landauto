@@ -1922,7 +1922,7 @@ Reconciled with Catalog V2 by `X-016` (D-101 … D-104). Source of truth for the
 
 ## P3-001 — Catalog Core Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P2-018, X-016, X-009
 
 ### Scope
@@ -1932,6 +1932,24 @@ Reconciled with Catalog V2 by `X-016` (D-101 … D-104). Source of truth for the
 - Catalog models in the `App\Models\Catalog` namespace, explicitly on the `catalog` connection.
 - Status-chain availability (a disabled parent hides the branch), RESTRICT deletes, application rules (model parent: same Mark, no self/cycles; `year_to >= year_from`; modification codes).
 - Isolated test catalog connection; CI never depends on developer MySQL.
+
+### Result
+
+Connection and migrations:
+- Connection `catalog` (`CATALOG_DB_*`). It defaults to `database/catalog.sqlite` and never falls back to `DB_*`.
+- Migrations live in `database/migrations/catalog`. `php artisan catalog:migrate` runs `migrate --database=catalog` and refuses when the catalog connection targets the main database (`App\Catalog\CatalogDatabase`).
+
+Models (`App\Models\Catalog\Auto*`, on the `catalog` connection):
+- Six core V2 tables plus an additive ULID `public_id`; numeric IDs are hidden.
+- RESTRICT foreign keys. The hierarchy parent is fixed after creation. `year_to >= year_from`.
+- Model grouping parent: same Mark, no self-reference or cycles.
+- `available()` scopes check status along the whole chain.
+
+Modification codes are typed by `App\Enums\Catalog\{EngineType, TransmissionType, DriveType}`; decimals stay strings.
+
+Environments: tests use in-memory SQLite (`RefreshCatalogDatabase`, TestCase guard); E2E uses `database/e2e-catalog.sqlite`, verified by `prepare-e2e.mjs`.
+
+Checks: `CatalogCoreSchemaTest`.
 
 ---
 

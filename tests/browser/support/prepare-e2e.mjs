@@ -37,9 +37,12 @@ if (
 }
 
 const database = fromRoot('database/e2e.sqlite');
+const catalogDatabase = fromRoot('database/e2e-catalog.sqlite');
 
-rmSync(database, { force: true });
-writeFileSync(database, '');
+for (const file of [database, catalogDatabase]) {
+    rmSync(file, { force: true });
+    writeFileSync(file, '');
+}
 
 const key = `base64:${randomBytes(32).toString('base64')}`;
 
@@ -48,29 +51,49 @@ const environment = readFileSync(fromRoot('.env.e2e.example'), 'utf8')
     .replace(
         /^DB_DATABASE=.*$/m,
         `DB_DATABASE="${database.replaceAll('\\', '/')}"`,
+    )
+    .replace(
+        /^CATALOG_DB_DATABASE=.*$/m,
+        `CATALOG_DB_DATABASE="${catalogDatabase.replaceAll('\\', '/')}"`,
     );
 
 writeFileSync(fromRoot('.env.e2e'), environment);
 
 // The developer database (e.g. MySQL `landauto`) must never be migrated or written by E2E:
 // ask Laravel which connection it actually resolves in the e2e environment.
-const resolved = JSON.parse(
-    execFileSync('php', ['artisan', 'db:show', '--json'], {
-        cwd: root,
-        env: { ...process.env, APP_ENV: 'e2e' },
-        encoding: 'utf8',
-    }),
-).platform.config;
+// The same applies to the separate catalog database.
+function resolveConnection(connection) {
+    const target = connection === null ? [] : [`--database=${connection}`];
 
-if (
-    resolved.driver !== 'sqlite' ||
-    resolve(String(resolved.database)) !== resolve(database)
-) {
-    fail(
-        `E2E environment resolves database "${resolved.driver}:${resolved.database}" instead of database/e2e.sqlite. Check for DB_* variables set in the shell.`,
-    );
+    return JSON.parse(
+        execFileSync(
+            'php',
+            ['artisan', 'db:show', '--json', ...target],
+            {
+                cwd: root,
+                env: { ...process.env, APP_ENV: 'e2e' },
+                encoding: 'utf8',
+            },
+        ),
+    ).platform.config;
+}
+
+for (const [connection, expected, label] of [
+    [null, database, 'database/e2e.sqlite'],
+    ['catalog', catalogDatabase, 'database/e2e-catalog.sqlite'],
+]) {
+    const resolved = resolveConnection(connection);
+
+    if (
+        resolved.driver !== 'sqlite' ||
+        resolve(String(resolved.database)) !== resolve(expected)
+    ) {
+        fail(
+            `E2E environment resolves ${connection ?? 'main'} database "${resolved.driver}:${resolved.database}" instead of ${label}. Check for DB_* / CATALOG_DB_* variables set in the shell.`,
+        );
+    }
 }
 
 console.log(
-    '[e2e] .env.e2e generated, database/e2e.sqlite recreated and verified.',
+    '[e2e] .env.e2e generated, database/e2e.sqlite and database/e2e-catalog.sqlite recreated and verified.',
 );
