@@ -1922,7 +1922,7 @@ Reconciled with Catalog V2 by `X-016` (D-101 … D-104). Source of truth for the
 
 ## P3-001 — Catalog Core Schema
 
-**Status:** DONE  
+**Status:** DONE
 **Dependencies:** P2-018, X-016, X-009
 
 ### Scope
@@ -1955,7 +1955,7 @@ Checks: `CatalogCoreSchemaTest`.
 
 ## P3-002 — Platform Catalog Authorization
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-001
 
 ### Acceptance Criteria
@@ -1966,11 +1966,25 @@ Checks: `CatalogCoreSchemaTest`.
 - Safe local Artisan command grants an existing User a platform role.
 - Workspace Owner/Admin cannot mutate the catalog.
 
+### Result
+
+- Table `platform_role_assignments` (`user_id`, `role`, unique pair) and enums `PlatformRole` (`super_admin`, `catalog_manager`) and `PlatformPermission` (`view_catalog`, `edit_catalog`, `manage_catalog_media`).
+- `App\Support\PlatformAuthorization` resolves permissions from persisted roles only. Gates are defined per platform permission, and the `EnsurePlatformPermission` middleware enforces them.
+- Shared Inertia prop `platform.permissions`.
+- Operator command: `php artisan platform:role grant|revoke <email> <role>`. It works only for existing users, rejects unknown actions and roles, and asks for confirmation in production unless `--force` is passed.
+
+Checks: `PlatformAuthorizationTest`:
+- Workspace Owner/Admin and user #1 get no platform permissions;
+- role grants;
+- middleware 403/200;
+- shared prop;
+- command grant/idempotency/revoke/failures.
+
 ---
 
 ## P3-003 — Characteristics
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-001, X-009
 
 V2 `auto_characteristics` (two-level group → parameter, unit on the definition) and `auto_characteristic_values` (TEXT value per Equipment + parameter). Server validation; no fake empty rows; no editable duplicates of Modification filter fields (ADR-005).
@@ -1979,7 +1993,7 @@ V2 `auto_characteristics` (two-level group → parameter, unit on the definition
 
 ## P3-004 — Options
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-001
 
 V2 `auto_options` (two-level group → option) and `auto_option_values` (per Equipment, `is_base` explicit, no default). Missing row = unknown.
@@ -1988,7 +2002,7 @@ V2 `auto_options` (two-level group → option) and `auto_option_values` (per Equ
 
 ## P3-005 — Series Media Sets
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-002
 
 Supersedes "Automotive Colors / Swatches" (D-103). Platform-owned media sets in the main database referencing a catalog Series by `catalog_series_public_id`: `public_id`, name, nullable `swatch_hex` (display metadata), status, sort order. No `auto_colors` / `auto_paints`. Customer read-only.
@@ -1997,7 +2011,7 @@ Supersedes "Automotive Colors / Swatches" (D-103). Platform-owned media sets in 
 
 ## P3-006 — Series Media Images
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-005
 
 Prepared images per media set and angle (front, front_3_4, side, rear_3_4, rear, interior). JPEG/PNG/WebP (transparency allowed), no SVG, 10 MB max, immutable objects with server-generated storage keys, no URL fetch. Controlled by `manage_catalog_media`; never stored as Site Assets.
@@ -2006,7 +2020,7 @@ Prepared images per media set and angle (front, front_3_4, side, rear_3_4, rear,
 
 ## P3-007 — Super Admin Catalog UI
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-002 through P3-006
 
 Separate platform surface on the existing Laravel/React/Inertia/shadcn stack (no Filament): «Каталог автомобилей» with marks, models, generations, series, modifications, equipments (cascading; changing an upper selection clears lower levels; backend verifies hierarchy), characteristic and option dictionaries, Equipment characteristics/options page and Series media page. Create, edit, activate/deactivate (status instead of hard delete), sort.
@@ -2015,7 +2029,7 @@ Separate platform surface on the existing Laravel/React/Inertia/shadcn stack (no
 
 ## P3-008 — Site Vehicle Schema
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-001
 
 SiteVehicle in the main database: belongs to a Site, references `catalog_series_public_id` (vehicle family/body page), selected Series media sets, status and order. Tenant isolation mandatory.
@@ -2024,7 +2038,7 @@ SiteVehicle in the main database: belongs to a Site, references `catalog_series_
 
 ## P3-009 — Site Offer / Benefits Schema
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-008, X-008
 
 SiteOffer belongs to a SiteVehicle and references `catalog_equipment_public_id`; the Equipment chain must reach the SiteVehicle's Series. Money per ADR-004 (integer minor units, `CHAR(3)` currency), availability, badge, benefits (amount-based). Factory data stays catalog-side.
@@ -2033,7 +2047,7 @@ SiteOffer belongs to a SiteVehicle and references `catalog_equipment_public_id`;
 
 ## P3-010 — Customer Vehicle Flow
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-007, P3-008, P3-009
 
 Supersedes "Customer Vehicle Import". Site → «Автомобили» → «Добавить автомобиль»: Mark → Model → Generation → Series creates a SiteVehicle; then one or more Offers (Modification → Equipment → price). Dealer selects which active Series media sets are shown (stored as references, never copied).
@@ -2042,7 +2056,7 @@ Supersedes "Customer Vehicle Import". Site → «Автомобили» → «Д
 
 ## P3-011 — Automotive Fallback Resolver
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-006, P3-008
 
 ### Priority
@@ -2055,7 +2069,7 @@ Site selection
 
 ## P3-012 — Automotive Binding Registry
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-008, P3-009, P2-003
 
 Approved automotive view model / binding: SiteVehicle identity, Mark, Model, Generation, Series, selected media variants and angles, Offers (Modification, Equipment, price, benefits, characteristics, factory options). Blocks never query the raw catalog database.
@@ -2064,21 +2078,21 @@ Approved automotive view model / binding: SiteVehicle identity, Mark, Model, Gen
 
 ## P3-013 — Vehicle Card Block
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-012
 
 ---
 
 ## P3-014 — Vehicle Grid Block
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-013
 
 ---
 
 ## P3-015 — Vehicle Detail Blocks
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-012
 
 ### Blocks
@@ -2092,7 +2106,7 @@ Approved automotive view model / binding: SiteVehicle identity, Mark, Model, Gen
 
 ## P3-016 — Automotive E2E
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-010 through P3-015
 
 ### Flow
@@ -2109,7 +2123,7 @@ Platform admin manages catalog
 
 ## P3-017 — Phase 3 Review
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P3-016
 
 ---

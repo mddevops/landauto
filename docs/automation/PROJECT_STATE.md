@@ -114,7 +114,8 @@ Current focus:
 - `X-016` DONE: automotive architecture reconciled with Catalog V2 (D-101 … D-106; Mark, Equipment under Modification, separate `catalog` database, Series Media Library, SiteVehicle → Series / SiteOffer → Equipment); follow-ups `X-017` (storage quota), `X-018` (action reference integrity), `X-019` (preview permission) recorded;
 - `X-009` DONE: D-086 APPROVED — ADR-005 Equipment-level characteristic values (two-level dictionary, TEXT value, unit on definition, no inheritance, no empty rows);
 - `P3-001` DONE: separate `catalog` connection + `catalog:migrate` guard, V2 core tables (marks … equipments) with `public_id`, `App\Models\Catalog` models, status-chain `available()` scopes, isolated test/E2E catalog databases;
-- next: `P3-002` (§42).
+- `P3-002` DONE: explicit platform roles (`super_admin`, `catalog_manager`) and permissions (`view_catalog`, `edit_catalog`, `manage_catalog_media`), gates + middleware, `php artisan platform:role grant|revoke <email> <role>`;
+- next: `P3-003` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

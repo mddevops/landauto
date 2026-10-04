@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Enums\PlatformPermission;
 use App\Enums\WorkspacePermission;
 use App\Models\Site;
 use App\Models\User;
 use App\Policies\SitePolicy;
+use App\Support\PlatformAuthorization;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use Carbon\CarbonImmutable;
@@ -38,6 +40,13 @@ class AppServiceProvider extends ServiceProvider
             Gate::define(
                 $permission->value,
                 fn (User $user): bool => app(WorkspaceAuthorization::class)->allows($user, $permission),
+            );
+        }
+
+        foreach (PlatformPermission::cases() as $permission) {
+            Gate::define(
+                $permission->value,
+                fn (User $user): bool => app(PlatformAuthorization::class)->allows($user, $permission),
             );
         }
     }

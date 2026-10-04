@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Models\Workspace;
+use App\Support\PlatformAuthorization;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\Request;
@@ -13,6 +14,7 @@ class HandleInertiaRequests extends Middleware
     public function __construct(
         private WorkspaceContext $workspaceContext,
         private WorkspaceAuthorization $workspaceAuthorization,
+        private PlatformAuthorization $platformAuthorization,
     ) {}
 
     /**
@@ -62,6 +64,11 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $request->user() === null
                     ? []
                     : $this->workspaceAuthorization->permissionKeys($request->user()),
+            ],
+            'platform' => fn () => [
+                'permissions' => $request->user() === null
+                    ? []
+                    : $this->platformAuthorization->permissionKeys($request->user()),
             ],
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
