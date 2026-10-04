@@ -23,11 +23,12 @@ use LogicException;
  * @property SiteStatus $status
  * @property array<string, string>|null $design_tokens
  * @property array<string, int|bool>|null $form_security
+ * @property int|null $active_published_version_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable(['name', 'status', 'design_tokens'])]
-#[Hidden(['id', 'workspace_id'])]
+#[Hidden(['id', 'workspace_id', 'active_published_version_id'])]
 class Site extends Model
 {
     /** @use HasFactory<SiteFactory> */
@@ -57,6 +58,14 @@ class Site extends Model
         static::updating(function (Site $site): void {
             if ($site->isDirty('workspace_id')) {
                 throw new LogicException('Site workspace is immutable outside a dedicated transfer workflow.');
+            }
+
+            if ($site->isDirty('active_published_version_id') && $site->active_published_version_id !== null) {
+                $version = PublishedVersion::query()->whereKey($site->active_published_version_id)->first();
+
+                if ($version === null || $version->site_id !== $site->id || ! $version->isReady()) {
+                    throw new LogicException('The production pointer must reference a ready version of this Site.');
+                }
             }
         });
     }
@@ -123,5 +132,23 @@ class Site extends Model
     public function homePage(): HasOne
     {
         return $this->hasOne(Page::class)->where('is_home', true);
+    }
+
+    /**
+     * @return HasMany<PublishedVersion, $this>
+     */
+    public function publishedVersions(): HasMany
+    {
+        return $this->hasMany(PublishedVersion::class);
+    }
+
+    /**
+     * The production pointer; changed only by the atomic Publish activation (ADR-006 §5).
+     *
+     * @return BelongsTo<PublishedVersion, $this>
+     */
+    public function activePublishedVersion(): BelongsTo
+    {
+        return $this->belongsTo(PublishedVersion::class, 'active_published_version_id');
     }
 }

@@ -157,6 +157,7 @@ Current focus:
 - `X-021` DONE (D-108): trunk-8 phone rewrite, typed Submission `mode` (`public` | `preview`) with an authenticated preview endpoint and separate per-mode duplicates/counters, real leads listed apart from preview test entries, Admin `edit_popups`, form security and Site blacklist under `edit_forms`.
 - `X-018` DONE: reusable `BlockReferenceInspector` (stale Page / scroll target / Popup / asset / vehicle references, disabled Popup Form warning, publish mode for hidden Blocks); Designer warnings in the Navigator, properties summary and inline fields; state never rewritten.
 - `P5-001` DONE: ADR-006 accepted — D-073 and D-074 APPROVED (publish-time React SSR, public manifest + private draft snapshot, DB HTML artifacts, versioned cache, published asset references, atomic activation, Published-Version-bound public forms, restore to Draft).
+- `P5-002` DONE: Published Version schema — `published_versions`, `published_pages`, `published_asset_references`, `sites.active_published_version_id`; immutability guards and pointer validation in the models.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

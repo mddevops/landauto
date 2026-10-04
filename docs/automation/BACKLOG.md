@@ -2665,8 +2665,10 @@ ADR approved before P5-002.
 
 ## P5-002 — Published Version Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-001
+
+Result: `published_versions` (ULID `public_id`, per-Site unique `version_number`, `status` building/ready/failed, `public_manifest_json`, private `draft_snapshot_json`, `manifest_hash`, `created_by`, `ready_at`), `published_pages` (per-version unique page/slug, `rendered_html` LONGTEXT, `hydration_json`, `seo_json`, `content_hash`), `published_asset_references` (kinds `site_asset` / `series_media_image` only), nullable `sites.active_published_version_id` FK (separate migration). Model guards: snapshot columns immutable, only building versions change state, ready versions/artifacts/references frozen, versions never deleted, the Site pointer accepts only its own ready version; snapshots hidden from serialization.
 
 ---
 
