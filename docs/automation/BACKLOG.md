@@ -2109,10 +2109,31 @@ Checks: `PlatformCatalogUiTest`, existing catalog tests, PHPStan, `npm run check
 
 ## P3-008 — Site Vehicle Schema
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-001
 
 SiteVehicle in the main database: belongs to a Site, references `catalog_series_public_id` (vehicle family/body page), selected Series media sets, status and order. Tenant isolation mandatory.
+
+### Result
+
+Tables in the main database:
+- `site_vehicles`: public_id, site_id (restrict on delete), catalog_series_public_id, status, sort_order. Each Series appears at most once per Site.
+- `site_vehicle_media_sets`: references platform media sets with an order. No files are copied.
+
+`SiteVehicle` rules:
+- The Series must exist in the catalog when the vehicle is created.
+- The Site and the Series cannot be changed afterwards.
+- `selectMediaSets()` accepts only active sets of the vehicle's own Series.
+- Numeric IDs are hidden.
+
+`SitePolicy` gains:
+- `viewVehicles`: any of `view_vehicles`, `edit_vehicles` or `edit_prices`;
+- `editVehicles`;
+- `editPrices`.
+
+These are checked against the Site's Workspace in the current backend context.
+
+Checks: `SiteVehicleSchemaTest`. The policy is covered over HTTP in P3-010.
 
 ---
 

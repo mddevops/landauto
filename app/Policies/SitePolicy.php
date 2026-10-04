@@ -59,6 +59,27 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageAssets);
     }
 
+    public function viewVehicles(User $user, Site $site): bool
+    {
+        foreach ([WorkspacePermission::ViewVehicles, WorkspacePermission::EditVehicles, WorkspacePermission::EditPrices] as $permission) {
+            if ($this->authorization->allowsForWorkspace($user, $site->workspace, $permission)) {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    public function editVehicles(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditVehicles);
+    }
+
+    public function editPrices(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditPrices);
+    }
+
     public function delete(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace(

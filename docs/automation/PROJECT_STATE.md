@@ -120,7 +120,8 @@ Current focus:
 - `P3-005` DONE: platform Series Media Sets in the main database (`catalog_series_public_id`, name, display swatch, status, order); no catalog color tables;
 - `P3-006` DONE: immutable Series media images per angle (private storage, server keys, JPEG/PNG/WebP ≤10 MB, no SVG), platform-only upload/delete, nosniff serving; shared `ImageUpload` rules;
 - `P3-007` DONE: platform catalog UI at `/platform/catalog` (cascading hierarchy, dictionaries, Equipment characteristics/options, Series media); no Filament;
-- next: `P3-008` (§42).
+- `P3-008` DONE: Site-owned `site_vehicles` (Series reference, one per Series per Site) and media-set selection by reference; vehicle policy abilities;
+- next: `P3-009` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

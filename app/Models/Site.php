@@ -84,6 +84,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteVehicle, $this>
+     */
+    public function vehicles(): HasMany
+    {
+        return $this->hasMany(SiteVehicle::class);
+    }
+
+    /**
      * @return HasOne<Page, $this>
      */
     public function homePage(): HasOne
