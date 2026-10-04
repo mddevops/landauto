@@ -1,6 +1,7 @@
 import { isFieldVisible } from '@/blocks/schema';
 import type { SchemaField } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
+import { ActionControl } from '@/components/designer/action-control';
 import { ImageControl } from '@/components/designer/image-control';
 import { RepeaterControl } from '@/components/designer/repeater-control';
 import type { DesignerBlock } from '@/components/designer/types';
@@ -201,6 +202,17 @@ function FieldControl({
                     value={value}
                     id={id}
                     error={error}
+                    onChange={onChange}
+                />
+            );
+        case 'action':
+            return (
+                <ActionControl
+                    field={field}
+                    value={value}
+                    path={path}
+                    id={id}
+                    errors={errors}
                     onChange={onChange}
                 />
             );

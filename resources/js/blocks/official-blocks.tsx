@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { actionHref } from '@/blocks/actions';
 import { useButtonStyle } from '@/blocks/design';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import type { BlockRendererProps, BlockState } from '@/blocks/state';
@@ -24,21 +25,49 @@ function Container({
     );
 }
 
+function ActionLink({
+    action,
+    className,
+    children,
+}: {
+    action: unknown;
+    className?: string;
+    children: ReactNode;
+}) {
+    const href = actionHref(action, useBlockRenderContext());
+
+    return href ? (
+        <a
+            href={href}
+            className={className}
+            {...(href.startsWith('http')
+                ? { target: '_blank', rel: 'noopener noreferrer' }
+                : {})}
+        >
+            {children}
+        </a>
+    ) : (
+        <span className={className}>{children}</span>
+    );
+}
+
 function ButtonPreview({
-    label,
+    button,
     variant = 'primary',
 }: {
-    label: string | null;
+    button: BlockState;
     variant?: 'primary' | 'secondary' | 'inverted';
 }) {
     const outline = useButtonStyle() === 'outline';
+    const label = text(button, 'label');
 
     if (label === null) {
         return null;
     }
 
     return (
-        <span
+        <ActionLink
+            action={button.action}
             className={cn(
                 'inline-flex items-center rounded-(--lf-radius) border-2 px-5 py-2 text-sm font-medium',
                 variant === 'primary' &&
@@ -54,7 +83,7 @@ function ButtonPreview({
             )}
         >
             {label}
-        </span>
+        </ActionLink>
     );
 }
 
@@ -87,7 +116,14 @@ export function HeaderBlock({ state }: BlockRendererProps) {
                     <nav aria-label="Меню сайта">
                         <ul className="flex flex-wrap gap-x-6 gap-y-2 text-sm">
                             {menu.map((item) => (
-                                <li key={item.id}>{text(item, 'label')}</li>
+                                <li key={item.id}>
+                                    <ActionLink
+                                        action={item.action}
+                                        className="hover:underline"
+                                    >
+                                        {text(item, 'label')}
+                                    </ActionLink>
+                                </li>
                             ))}
                         </ul>
                     </nav>
@@ -96,9 +132,7 @@ export function HeaderBlock({ state }: BlockRendererProps) {
                     {phone && (
                         <span className="text-sm font-medium">{phone}</span>
                     )}
-                    <ButtonPreview
-                        label={text(group(state, 'button'), 'label')}
-                    />
+                    <ButtonPreview button={group(state, 'button')} />
                 </div>
             </Container>
         </header>
@@ -158,11 +192,9 @@ export function HeroBlock({ state }: BlockRendererProps) {
                     </p>
                 )}
                 <div className="flex flex-wrap gap-3">
+                    <ButtonPreview button={group(state, 'primary_button')} />
                     <ButtonPreview
-                        label={text(group(state, 'primary_button'), 'label')}
-                    />
-                    <ButtonPreview
-                        label={text(group(state, 'secondary_button'), 'label')}
+                        button={group(state, 'secondary_button')}
                         variant="secondary"
                     />
                 </div>
@@ -243,7 +275,7 @@ export function CtaBlock({ state }: BlockRendererProps) {
                     </p>
                 )}
                 <ButtonPreview
-                    label={text(group(state, 'button'), 'label')}
+                    button={group(state, 'button')}
                     variant={muted ? 'primary' : 'inverted'}
                 />
             </Container>
@@ -299,7 +331,14 @@ export function FooterBlock({ state }: BlockRendererProps) {
                 {links.length > 0 && (
                     <ul className="flex flex-wrap gap-x-6 gap-y-2">
                         {links.map((link) => (
-                            <li key={link.id}>{text(link, 'label')}</li>
+                            <li key={link.id}>
+                                <ActionLink
+                                    action={link.action}
+                                    className="hover:text-white hover:underline"
+                                >
+                                    {text(link, 'label')}
+                                </ActionLink>
+                            </li>
                         ))}
                     </ul>
                 )}

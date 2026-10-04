@@ -109,7 +109,7 @@ class SiteAssetsTest extends TestCase
     {
         [$user, $workspace, $site] = $this->siteFor(WorkspaceRole::ContentEditor);
         $this->seed(OfficialBlockSeeder::class);
-        $hero = BlockVersion::query()->whereRelation('definition', 'slug', 'hero')->sole();
+        $hero = BlockVersion::query()->whereRelation('definition', 'slug', 'hero')->latest('id')->firstOrFail();
         $block = BlockInstance::factory()->for($site->homePage()->sole())->for($hero, 'version')->create(['state_json' => []]);
         $own = SiteAsset::factory()->for($site)->create();
         $other = SiteAsset::factory()->for(Site::factory()->for($workspace))->create();

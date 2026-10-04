@@ -2,7 +2,7 @@ import { router, usePage } from '@inertiajs/react';
 import { ImageIcon } from 'lucide-react';
 import { useState } from 'react';
 import type { SchemaField } from '@/blocks/schema';
-import { useDesignerAssets } from '@/components/designer/assets-context';
+import { useDesignerContext } from '@/components/designer/designer-context';
 import type { DesignerAsset } from '@/components/designer/types';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ export function ImageControl({
     error?: string;
     onChange: (value: string | null) => void;
 }) {
-    const { siteId, assets, canUpload } = useDesignerAssets();
+    const { siteId, assets, canUpload } = useDesignerContext();
     const uploadError = usePage<{ errors: Record<string, string> }>().props
         .errors.file;
     const [open, setOpen] = useState(false);

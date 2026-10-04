@@ -27,6 +27,7 @@ class BlockStateValidatorTest extends TestCase
                 ['value' => 'center', 'label' => 'По центру'],
             ]],
             ['key' => 'photo', 'type' => 'image', 'label' => 'Фото'],
+            ['key' => 'cta', 'type' => 'action', 'label' => 'Действие'],
             ['key' => 'button', 'type' => 'group', 'label' => 'Кнопка', 'fields' => [
                 ['key' => 'label', 'type' => 'text', 'label' => 'Текст кнопки'],
             ]],
@@ -58,6 +59,30 @@ class BlockStateValidatorTest extends TestCase
     }
 
     /**
+     * @return array<string, array{array<string, mixed>}>
+     */
+    public static function safeActions(): array
+    {
+        return [
+            'https url' => [['type' => 'open_url', 'url' => 'https://example.ru/cars?id=1#top']],
+            'http url' => [['type' => 'open_url', 'url' => 'http://example.ru']],
+            'phone' => [['type' => 'phone', 'phone' => '+7 (495) 123-45-67']],
+            'email' => [['type' => 'email', 'email' => 'sales@example.ru']],
+            'draft without target' => [['type' => 'open_page']],
+            'null target' => [['type' => 'open_url', 'url' => null]],
+        ];
+    }
+
+    /**
+     * @param  array<string, mixed>  $action
+     */
+    #[DataProvider('safeActions')]
+    public function test_safe_actions_are_valid(array $action): void
+    {
+        $this->assertSame([], (new BlockStateValidator)->errors(self::schema(), ['cta' => $action]));
+    }
+
+    /**
      * @return array<string, array{mixed, string}>
      */
     public static function invalidStates(): array
@@ -72,6 +97,19 @@ class BlockStateValidatorTest extends TestCase
             'select option' => [['align' => 'right'], 'state.align'],
             'image url' => [['photo' => 'https://example.com/a.jpg'], 'state.photo'],
             'image without asset resolver' => [['photo' => '01j9z3qk5v8w2x4y6z8a0b2c4d'], 'state.photo'],
+            'action not object' => [['cta' => 'https://example.ru'], 'state.cta'],
+            'action unknown type' => [['cta' => ['type' => 'open_popup']], 'state.cta.type'],
+            'action foreign key' => [['cta' => ['type' => 'phone', 'url' => 'https://example.ru']], 'state.cta.url'],
+            'javascript url' => [['cta' => ['type' => 'open_url', 'url' => 'javascript:alert(1)']], 'state.cta.url'],
+            'data url' => [['cta' => ['type' => 'open_url', 'url' => 'data:text/html,<script>1</script>']], 'state.cta.url'],
+            'relative url' => [['cta' => ['type' => 'open_url', 'url' => '//evil.example']], 'state.cta.url'],
+            'url credentials' => [['cta' => ['type' => 'open_url', 'url' => 'https://user:pass@example.ru']], 'state.cta.url'],
+            'url whitespace' => [['cta' => ['type' => 'open_url', 'url' => "https://example.ru/\njavascript:1"]], 'state.cta.url'],
+            'page id' => [['cta' => ['type' => 'open_page', 'page' => 'about']], 'state.cta.page'],
+            'page without resolver' => [['cta' => ['type' => 'open_page', 'page' => self::ITEM_A]], 'state.cta.page'],
+            'block without resolver' => [['cta' => ['type' => 'scroll_to', 'block' => self::ITEM_A]], 'state.cta.block'],
+            'phone letters' => [['cta' => ['type' => 'phone', 'phone' => 'call me']], 'state.cta.phone'],
+            'email invalid' => [['cta' => ['type' => 'email', 'email' => 'not-an-email']], 'state.cta.email'],
             'group type' => [['button' => 'Подробнее'], 'state.button'],
             'group unknown key' => [['button' => ['url' => 'javascript:alert(1)']], 'state.button.url'],
             'repeater type' => [['items' => ['id' => self::ITEM_A]], 'state.items'],

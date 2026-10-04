@@ -169,6 +169,32 @@ class PageBlocksTest extends TestCase
         return $this->as()->post(route('sites.blocks.store', [$this->site, $this->page]), ['block' => $slug]);
     }
 
+    public function test_actions_reference_only_pages_of_this_site_and_blocks_of_this_page(): void
+    {
+        $this->add('benefits');
+        $this->add('cta');
+        [$benefits, $cta] = $this->page->blocks()->get()->all();
+        $this->assertSame('1.1.0', $cta->version->version);
+        $about = Page::factory()->for($this->site)->create();
+        $foreignPage = Page::factory()->create();
+        $otherPageBlock = BlockInstance::factory()->for($about)->create();
+        $save = fn (array $action): TestResponse => $this->as()->patch(
+            route('sites.blocks.state', [$this->site, $cta]),
+            ['state' => ['button' => ['label' => 'Подробнее', 'action' => $action]]],
+        );
+
+        $save(['type' => 'open_page', 'page' => $about->public_id])->assertSessionHasNoErrors();
+        $save(['type' => 'scroll_to', 'block' => $benefits->public_id])->assertSessionHasNoErrors();
+        $this->assertSame(['type' => 'scroll_to', 'block' => $benefits->public_id], $cta->fresh()?->state_json['button']['action']);
+
+        $save(['type' => 'open_page', 'page' => $foreignPage->public_id])
+            ->assertSessionHasErrors(['state.button.action.page' => 'Страница не найдена на этом сайте.']);
+        $save(['type' => 'scroll_to', 'block' => $otherPageBlock->public_id])
+            ->assertSessionHasErrors(['state.button.action.block' => 'Блок не найден на этой странице.']);
+        $save(['type' => 'open_url', 'url' => 'javascript:alert(document.cookie)'])
+            ->assertSessionHasErrors('state.button.action.url');
+    }
+
     /**
      * @param  list<int>  $ids
      */

@@ -8,7 +8,7 @@ import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
-import { DesignerAssetsContext } from '@/components/designer/assets-context';
+import { DesignerContext } from '@/components/designer/designer-context';
 import { DesignPanel } from '@/components/designer/design-panel';
 import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
@@ -24,6 +24,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { designer } from '@/routes/sites';
 import { state as stateUrl } from '@/routes/sites/blocks';
 import { update as updateDesign } from '@/routes/sites/design';
 
@@ -57,16 +58,25 @@ export default function Designer({
         const urls = new Map(
             assets.map((asset) => [asset.public_id, asset.url]),
         );
+        const pageIds = new Set(pages.map((sitePage) => sitePage.public_id));
 
-        return { assetUrl: (id: string) => urls.get(id) ?? null };
-    }, [assets]);
-    const assetsContext = useMemo(
+        return {
+            assetUrl: (id: string) => urls.get(id) ?? null,
+            pageHref: (id: string) =>
+                pageIds.has(id)
+                    ? designer.url(site.public_id, { query: { page: id } })
+                    : null,
+        };
+    }, [assets, pages, site.public_id]);
+    const designerContext = useMemo(
         () => ({
             siteId: site.public_id,
             assets,
             canUpload: can.manageAssets,
+            pages,
+            blocks,
         }),
-        [site.public_id, assets, can.manageAssets],
+        [site.public_id, assets, can.manageAssets, pages, blocks],
     );
     const [selectedId, setSelectedId] = useState<string | null>(selectedBlock);
     const [serverSelection, setServerSelection] = useState(selectedBlock);
@@ -273,9 +283,7 @@ export default function Designer({
                                             {` · версия ${selected.version}`}
                                         </span>
                                     </p>
-                                    <DesignerAssetsContext
-                                        value={assetsContext}
-                                    >
+                                    <DesignerContext value={designerContext}>
                                         <PropertiesPanel
                                             key={selected.public_id}
                                             block={selected}
@@ -289,7 +297,7 @@ export default function Designer({
                                                 }))
                                             }
                                         />
-                                    </DesignerAssetsContext>
+                                    </DesignerContext>
                                     {can.editContent && (
                                         <Button
                                             type="button"

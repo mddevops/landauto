@@ -38,6 +38,17 @@ final class OfficialBlockCatalog
                 [...self::text('phone', 'Телефон', 32), 'visible_if' => ['field' => 'show_phone', 'equals' => true]],
                 self::button('button', 'Кнопка', 'Оставить заявку'),
             ], '1.1.0'),
+            self::block('header', 'Шапка', [
+                self::text('logo_text', 'Название', 80, 'Автосалон'),
+                ['key' => 'logo', 'type' => 'image', 'label' => 'Логотип'],
+                self::repeater('menu', 'Пункты меню', 8, [
+                    self::text('label', 'Текст пункта', 40, required: true),
+                    self::action(),
+                ]),
+                ['key' => 'show_phone', 'type' => 'boolean', 'label' => 'Показывать телефон', 'default' => true],
+                [...self::text('phone', 'Телефон', 32), 'visible_if' => ['field' => 'show_phone', 'equals' => true]],
+                self::actionButton('button', 'Кнопка', 'Оставить заявку'),
+            ], '1.2.0'),
             self::block('hero', 'Первый экран', [
                 self::text('eyebrow', 'Надзаголовок', 80),
                 self::text('title', 'Заголовок', 120, 'Новые автомобили в наличии', required: true),
@@ -47,6 +58,15 @@ final class OfficialBlockCatalog
                 self::button('primary_button', 'Основная кнопка', 'Подобрать автомобиль'),
                 self::button('secondary_button', 'Дополнительная кнопка'),
             ]),
+            self::block('hero', 'Первый экран', [
+                self::text('eyebrow', 'Надзаголовок', 80),
+                self::text('title', 'Заголовок', 120, 'Новые автомобили в наличии', required: true),
+                self::textarea('subtitle', 'Подзаголовок', 500),
+                ['key' => 'image', 'type' => 'image', 'label' => 'Фоновое изображение'],
+                self::select('align', 'Выравнивание', ['left' => 'По левому краю', 'center' => 'По центру'], 'left'),
+                self::actionButton('primary_button', 'Основная кнопка', 'Подобрать автомобиль'),
+                self::actionButton('secondary_button', 'Дополнительная кнопка'),
+            ], '1.1.0'),
             self::block('benefits', 'Преимущества', [
                 self::text('title', 'Заголовок', 120, 'Почему выбирают нас'),
                 self::textarea('subtitle', 'Подзаголовок', 500),
@@ -62,6 +82,12 @@ final class OfficialBlockCatalog
                 self::button('button', 'Кнопка', 'Записаться'),
                 self::select('style', 'Оформление', ['accent' => 'Акцентное', 'muted' => 'Спокойное'], 'accent'),
             ]),
+            self::block('cta', 'Призыв к действию', [
+                self::text('title', 'Заголовок', 120, 'Запишитесь на тест-драйв', required: true),
+                self::textarea('text', 'Текст', 500),
+                self::actionButton('button', 'Кнопка', 'Записаться'),
+                self::select('style', 'Оформление', ['accent' => 'Акцентное', 'muted' => 'Спокойное'], 'accent'),
+            ], '1.1.0'),
             self::block('contacts', 'Контакты', [
                 self::text('title', 'Заголовок', 120, 'Контакты'),
                 self::textarea('address', 'Адрес', 300),
@@ -78,6 +104,16 @@ final class OfficialBlockCatalog
                 self::text('copyright', 'Копирайт', 120, '© Все права защищены'),
                 self::textarea('legal_notice', 'Юридическая информация', 1000),
             ]),
+            self::block('footer', 'Подвал', [
+                self::text('company_name', 'Название компании', 120),
+                self::textarea('text', 'Текст', 500),
+                self::repeater('links', 'Ссылки', 12, [
+                    self::text('label', 'Текст ссылки', 40, required: true),
+                    self::action(),
+                ]),
+                self::text('copyright', 'Копирайт', 120, '© Все права защищены'),
+                self::textarea('legal_notice', 'Юридическая информация', 1000),
+            ], '1.1.0'),
         ];
     }
 
@@ -140,6 +176,25 @@ final class OfficialBlockCatalog
         return ['key' => $key, 'type' => 'group', 'label' => $label, 'fields' => [
             self::text('label', 'Текст кнопки', 40, $default),
         ]];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function actionButton(string $key, string $label, ?string $default = null): array
+    {
+        return ['key' => $key, 'type' => 'group', 'label' => $label, 'fields' => [
+            self::text('label', 'Текст кнопки', 40, $default),
+            self::action(),
+        ]];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function action(): array
+    {
+        return ['key' => 'action', 'type' => 'action', 'label' => 'Действие'];
     }
 
     /**

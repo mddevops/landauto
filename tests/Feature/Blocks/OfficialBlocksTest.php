@@ -34,7 +34,7 @@ class OfficialBlocksTest extends TestCase
     {
         $this->seed(OfficialBlockSeeder::class);
 
-        $hero = BlockVersion::query()->whereRelation('definition', 'slug', 'hero')->sole();
+        $hero = BlockVersion::query()->whereRelation('definition', 'slug', 'hero')->where('version', '1.0.0')->sole();
         $publicId = $hero->definition->public_id;
 
         $this->seed(OfficialBlockSeeder::class);
@@ -42,7 +42,7 @@ class OfficialBlocksTest extends TestCase
         $this->assertSame(6, BlockDefinition::query()->where('is_official', true)->count());
         $this->assertSame(6, BlockVersion::query()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->count());
         $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
-        $this->assertSame(['1.0.0', '1.1.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'header')->orderBy('id')->pluck('version')->all());
+        $this->assertSame(['1.0.0', '1.1.0', '1.2.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'header')->orderBy('id')->pluck('version')->all());
         $this->assertSame($publicId, BlockDefinition::query()->where('slug', 'hero')->value('public_id'));
         $this->assertTrue(Str::isUlid($publicId));
         $this->assertSame('Первый экран', $hero->definition->name);

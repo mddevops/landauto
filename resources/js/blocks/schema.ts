@@ -4,6 +4,7 @@ export type SchemaFieldType =
     | 'boolean'
     | 'select'
     | 'image'
+    | 'action'
     | 'group'
     | 'repeater';
 

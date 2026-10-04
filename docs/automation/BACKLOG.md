@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-014 — Action System Foundation`.
+`P2-015 — Draft Autosave`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1784,7 +1784,7 @@ Checks: `SiteAssetsTest`, `BlockStateValidatorTest`, Sites feature tests, PHPSta
 
 ## P2-014 — Action System Foundation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004
 
 ### Actions
@@ -1796,6 +1796,25 @@ Checks: `SiteAssetsTest`, `BlockStateValidatorTest`, Sites feature tests, PHPSta
 - email.
 
 Popup/Form actions may be placeholders until Phase 4.
+
+### Result
+
+New schema field type `action`. Its state is `{type, <target>}`, where the type is one of `BlockActionType`:
+- `open_url` takes an `url` with an http/https scheme and a host. It must have no credentials, no whitespace or control characters, and be at most 2048 characters.
+- `open_page` takes a `page` ULID of the same Site.
+- `scroll_to` takes a `block` ULID on the same Page.
+- `phone` takes a `phone` of digits, spaces, `()-` and an optional leading `+`.
+- `email` takes an `email` of at most 254 characters.
+
+Unknown types and foreign keys are rejected; a null target is allowed while drafting. Popup/Form actions are deliberately absent (no fake controls) until Phase 4.
+
+Reference checks go through `BlockReferenceResolver` (`PageBlockReferences` in the `BlockInstance` saving hook), which also covers image assets.
+
+New official versions add actions: `header` 1.2.0 (menu items and button), `hero` 1.1.0, `cta` 1.1.0 and `footer` 1.1.0 (links). Existing instances stay pinned.
+
+The Properties panel action control offers a type select plus a URL, phone or email input or a page/block select. Renderers emit links through `actionHref()`, which repeats the http/https check; external URLs open in a new tab with `noopener noreferrer`.
+
+Checks: `BlockStateValidatorTest` (safe and unsafe actions, `javascript:`/`data:`/protocol-relative URLs), `PageBlocksTest` (same-Site page and same-Page block only), full PHPUnit suite, PHPStan, Pint, `npm run check`.
 
 ---
 
