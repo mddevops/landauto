@@ -1,5 +1,5 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Eye } from 'lucide-react';
+import { ArrowLeft, Eye, LayoutList } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
@@ -25,10 +25,17 @@ import type {
 } from '@/components/designer/types';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    DropdownMenu,
+    DropdownMenuContent,
+    DropdownMenuItem,
+    DropdownMenuTrigger,
+} from '@/components/ui/dropdown-menu';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { designer, preview } from '@/routes/sites';
 import { update as updateDesign } from '@/routes/sites/design';
+import { index as popupsIndex } from '@/routes/sites/popups';
 
 type DesignerProps = {
     site: DesignerSite;
@@ -155,6 +162,7 @@ export default function Designer({
                     </div>
                     <AutosaveIndicator status={autosave.status} />
                     <Badge variant="outline">Черновик</Badge>
+                    <SiteSectionsMenu siteId={site.public_id} />
                     {can.preview &&
                         (autosave.status === 'pending' ||
                         autosave.status === 'saving' ? (
@@ -330,6 +338,29 @@ export default function Designer({
                 </div>
             </div>
         </>
+    );
+}
+
+function SiteSectionsMenu({ siteId }: { siteId: string }) {
+    return (
+        <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+                <Button variant="outline" size="sm" aria-label="Разделы сайта">
+                    <LayoutList aria-hidden="true" />
+                    <span className="hidden sm:inline">Разделы</span>
+                </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+                <DropdownMenuItem asChild>
+                    <Link
+                        className="block w-full cursor-pointer"
+                        href={popupsIndex(siteId)}
+                    >
+                        Попапы
+                    </Link>
+                </DropdownMenuItem>
+            </DropdownMenuContent>
+        </DropdownMenu>
     );
 }
 

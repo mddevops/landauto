@@ -7,6 +7,7 @@ use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Popups\PopupRuntime;
 use App\Support\DesignerScope;
 use App\Support\SiteDesignTokens;
 use Illuminate\Http\Request;
@@ -20,7 +21,7 @@ use Inertia\Response;
  */
 class SitePreviewController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups): Response
     {
         $scope->site($site);
         Gate::authorize('preview', $site);
@@ -60,6 +61,7 @@ class SitePreviewController extends Controller
                 ->values()
                 ->all(),
             'vehicles' => $vehicleBindings->forSite($site),
+            'popups' => $popups->forSite($site),
         ]);
     }
 }

@@ -92,6 +92,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<Popup, $this>
+     */
+    public function popups(): HasMany
+    {
+        return $this->hasMany(Popup::class);
+    }
+
+    /**
      * @return HasOne<Page, $this>
      */
     public function homePage(): HasOne

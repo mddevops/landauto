@@ -8,6 +8,7 @@ use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Popups\PopupRuntime;
 use App\Support\DesignerScope;
 use App\Support\SiteDesignTokens;
 use Illuminate\Http\Request;
@@ -17,7 +18,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -76,6 +77,7 @@ class SiteDesignerController extends Controller
                 ->values()
                 ->all(),
             'vehicles' => $vehicles,
+            'popups' => $popups->forSite($site),
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
             'library' => BlockDefinition::query()
                 ->where('is_official', true)

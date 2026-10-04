@@ -4,6 +4,7 @@ namespace App\Support;
 
 use App\Models\BlockInstance;
 use App\Models\Page;
+use App\Models\Popup;
 use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\SiteOffer;
@@ -54,6 +55,14 @@ final class DesignerScope
         abort_unless($vehicle->site_id === $site->id, 404);
 
         return $vehicle;
+    }
+
+    public function popup(Site $site, Popup $popup): Popup
+    {
+        $this->site($site);
+        abort_unless($popup->site_id === $site->id, 404);
+
+        return $popup;
     }
 
     public function offer(Site $site, SiteOffer $offer): SiteOffer

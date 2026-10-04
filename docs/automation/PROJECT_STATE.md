@@ -136,7 +136,8 @@ Current focus:
 - `X-019` DONE: `preview_site` for Admin and Designer (D-105); Designer still without `publish_site`; ContentEditor unchanged;
 - `P3-017` DONE: Phase 3 gate (composer quality 440 tests, 39 E2E passed, diff check); Phase 3 COMPLETED;
 - `X-020` DONE: Admin gets `view_site`, `view_vehicles` and `edit_benefits` (D-107). Offer saves now authorize by what changes: `edit_prices` for offer fields, `edit_benefits` for benefits, both when both change. Designer and ContentEditor are unchanged.
-- next: `P4-001 — Popup Schema / Runtime` (Phase 4 NOT_STARTED).
+- Phase 4 IN_PROGRESS:
+- `P4-001` DONE: Site-owned reusable Popups (presentation only, D-035), «Попапы» section, accessible `PopupView` runtime in designer/preview props.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

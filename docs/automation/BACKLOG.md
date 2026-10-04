@@ -2400,8 +2400,15 @@ Known limits, carried forward:
 
 ## P4-001 — Popup Schema / Runtime
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-017
+
+Result:
+- Site-owned `popups` table: ULID `public_id`, name, status, title, text, size, animation, overlay/Escape/close-button behaviour and mobile fullscreen. A Popup holds no fields, routing or credentials (D-035).
+- «Попапы» section (`sites/{site}/popups`) requires `view_site` to open and `edit_popups` to change anything. It is reachable from the designer's «Разделы» menu and has a live «Просмотр».
+- `PopupRuntime` gives the designer and the preview a payload of active popups only, with no internal IDs.
+- `PopupView` is a Radix dialog: `aria-modal`, a title (an `sr-only` name when no title is set), focus trap and focus return.
+- Tests cover CRUD, the closability rule, 404 for foreign, other-site and numeric references, the `edit_popups` matrix, and the runtime props.
 
 ---
 

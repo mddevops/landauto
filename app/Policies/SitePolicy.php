@@ -59,6 +59,11 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageAssets);
     }
 
+    public function editPopups(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditPopups);
+    }
+
     public function viewVehicles(User $user, Site $site): bool
     {
         foreach ([WorkspacePermission::ViewVehicles, WorkspacePermission::EditVehicles, WorkspacePermission::EditPrices, WorkspacePermission::EditBenefits] as $permission) {

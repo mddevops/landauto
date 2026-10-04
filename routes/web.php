@@ -11,6 +11,7 @@ use App\Http\Controllers\Platform\CatalogEntryController;
 use App\Http\Controllers\Platform\CatalogEquipmentController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
+use App\Http\Controllers\Popups\SitePopupController;
 use App\Http\Controllers\SiteAssetController;
 use App\Http\Controllers\SiteController;
 use App\Http\Controllers\SiteDesignController;
@@ -71,6 +72,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [PageBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
+
+            Route::get('popups', [SitePopupController::class, 'index'])->name('popups.index');
+            Route::post('popups', [SitePopupController::class, 'store'])->name('popups.store');
+            Route::patch('popups/{popup}', [SitePopupController::class, 'update'])->whereUlid('popup')->name('popups.update');
+            Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
