@@ -1,4 +1,3 @@
-import type { FormDataConvertible } from '@inertiajs/core';
 import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
@@ -10,6 +9,8 @@ import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { DesignerContext } from '@/components/designer/designer-context';
 import { DesignPanel } from '@/components/designer/design-panel';
+import { useBlockAutosave } from '@/components/designer/use-block-autosave';
+import type { AutosaveStatus } from '@/components/designer/use-block-autosave';
 import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import { PropertiesPanel } from '@/components/designer/properties-panel';
@@ -25,7 +26,6 @@ import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { designer } from '@/routes/sites';
-import { state as stateUrl } from '@/routes/sites/blocks';
 import { update as updateDesign } from '@/routes/sites/design';
 
 type DesignerProps = {
@@ -88,40 +88,14 @@ export default function Designer({
 
     const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
     const [rightTab, setRightTab] = useState<RightTab>('block');
-    const [drafts, setDrafts] = useState<Record<string, BlockState>>({});
+    const autosave = useBlockAutosave(site.public_id);
     const [designDraft, setDesignDraft] = useState<DesignTokens | null>(null);
     const [saving, setSaving] = useState(false);
     const tokens = designDraft ?? design;
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const selected = blocks.find((block) => block.public_id === selectedId);
     const stateOf = (block: DesignerBlock) =>
-        drafts[block.public_id] ?? block.state;
-
-    const save = (block: DesignerBlock) => {
-        const draft = drafts[block.public_id];
-
-        router.patch(
-            stateUrl.url({ site: site.public_id, block: block.public_id }),
-            { state: draft as FormDataConvertible },
-            {
-                preserveScroll: true,
-                preserveState: true,
-                onStart: () => setSaving(true),
-                onFinish: () => setSaving(false),
-                onSuccess: () =>
-                    setDrafts((current) => {
-                        if (current[block.public_id] !== draft) {
-                            return current;
-                        }
-
-                        const rest = { ...current };
-                        delete rest[block.public_id];
-
-                        return rest;
-                    }),
-            },
-        );
-    };
+        autosave.drafts[block.public_id] ?? block.state;
 
     const saveDesign = () => {
         const draft = designDraft;
@@ -160,6 +134,7 @@ export default function Designer({
                             {page.title}
                         </p>
                     </div>
+                    <AutosaveIndicator status={autosave.status} />
                     <Badge variant="outline">Черновик</Badge>
                 </header>
 
@@ -291,24 +266,18 @@ export default function Designer({
                                             errors={errors}
                                             disabled={!can.editContent}
                                             onChange={(state) =>
-                                                setDrafts((current) => ({
-                                                    ...current,
-                                                    [selected.public_id]: state,
-                                                }))
+                                                autosave.update(
+                                                    selected.public_id,
+                                                    state,
+                                                )
                                             }
                                         />
                                     </DesignerContext>
                                     {can.editContent && (
-                                        <Button
-                                            type="button"
-                                            disabled={
-                                                saving ||
-                                                !(selected.public_id in drafts)
-                                            }
-                                            onClick={() => save(selected)}
-                                        >
-                                            Сохранить
-                                        </Button>
+                                        <p className="text-xs text-muted-foreground">
+                                            Изменения сохраняются в черновик
+                                            автоматически.
+                                        </p>
                                     )}
                                 </div>
                             ) : (
@@ -321,6 +290,31 @@ export default function Designer({
                 </div>
             </div>
         </>
+    );
+}
+
+const autosaveLabels: Record<AutosaveStatus, string | null> = {
+    idle: null,
+    pending: 'Есть несохранённые изменения',
+    saving: 'Сохранение…',
+    saved: 'Сохранено',
+    error: 'Не удалось сохранить',
+};
+
+function AutosaveIndicator({ status }: { status: AutosaveStatus }) {
+    return (
+        <p
+            role="status"
+            aria-live="polite"
+            className={cn(
+                'hidden text-xs sm:block',
+                status === 'error'
+                    ? 'font-medium text-destructive'
+                    : 'text-muted-foreground',
+            )}
+        >
+            {autosaveLabels[status]}
+        </p>
     );
 }
 

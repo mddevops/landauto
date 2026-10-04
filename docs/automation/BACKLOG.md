@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-015 — Draft Autosave`.
+`P2-016 — Draft Preview`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1820,7 +1820,7 @@ Checks: `BlockStateValidatorTest` (safe and unsafe actions, `javascript:`/`data:
 
 ## P2-015 — Draft Autosave
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-004, P2-009
 
 ### Acceptance Criteria
@@ -1830,6 +1830,17 @@ Checks: `BlockStateValidatorTest` (safe and unsafe actions, `javascript:`/`data:
 - reload;
 - state preserved;
 - no production concept changed.
+
+### Result
+
+`useBlockAutosave` replaces the manual «Сохранить» button for Block content:
+- Edits are debounced (700 ms per Block) and saved through the existing draft-state endpoint as async Inertia requests, one at a time.
+- Edits made during a request are saved afterwards, and a cancelled request is retried.
+- The top bar shows a live status: «Есть несохранённые изменения» / «Сохранение…» / «Сохранено» / «Не удалось сохранить».
+- Validation errors stay on the fields and keep the draft.
+- `beforeunload` warns while unsaved drafts exist.
+
+Only draft `state_json` is written; nothing is published. Site style keeps its explicit «Сохранить стиль». Browser coverage: P2-017. Checks: `npm run check`; the backend endpoint is covered by `PageBlocksTest`.
 
 ---
 
