@@ -37,14 +37,13 @@ class SiteDesignerTest extends TestCase
                 ->where('site', ['public_id' => $site->public_id, 'name' => 'Автосалон Север'])
                 ->where('page', ['public_id' => $home->public_id, 'title' => 'Главная'])
                 ->has('blocks', 2)
-                ->where('blocks.0', [
-                    'public_id' => $header->public_id,
-                    'slug' => 'header',
-                    'name' => 'Шапка',
-                    'version' => '1.0.0',
-                    'is_hidden' => false,
-                    'state' => [],
-                ])
+                ->where('blocks.0.public_id', $header->public_id)
+                ->where('blocks.0.slug', 'header')
+                ->where('blocks.0.name', 'Шапка')
+                ->where('blocks.0.version', '1.0.0')
+                ->where('blocks.0.is_hidden', false)
+                ->where('blocks.0.state', [])
+                ->missing('blocks.0.id')
                 ->where('blocks.1.public_id', $hero->public_id)
                 ->where('blocks.1.state', ['title' => 'Новые автомобили'])
                 ->missing('site.id')

@@ -99,6 +99,34 @@ class PageBlocksTest extends TestCase
         $this->assertSame([$header->id, $copy->id, $hero->id], $this->page->blocks()->pluck('id')->all());
     }
 
+    public function test_content_editor_saves_schema_valid_state_and_gets_field_errors(): void
+    {
+        $this->add('hero');
+        $block = $this->page->blocks()->sole();
+        $editor = User::factory()->create();
+        $this->workspace->addMember($editor, WorkspaceRole::ContentEditor);
+        $asEditor = fn () => $this->actingAs($editor)->withSession([WorkspaceContext::SESSION_KEY => $this->workspace->public_id]);
+
+        $asEditor()->get(route('sites.designer', $this->site))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('can', ['editDesign' => false, 'editContent' => true])
+                ->where('blocks.0.schema.fields.1.key', 'title'));
+
+        $asEditor()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => [
+            'title' => 'Весеннее предложение',
+            'align' => 'center',
+            'primary_button' => ['label' => 'Записаться'],
+        ]])->assertSessionHasNoErrors();
+        $this->assertSame('Весеннее предложение', $block->fresh()?->state_json['title']);
+
+        $asEditor()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => [
+            'title' => str_repeat('я', 121),
+            'align' => 'right',
+            'secret' => 'x',
+        ]])->assertSessionHasErrors(['state.title', 'state.align', 'state.secret']);
+        $this->assertSame('Весеннее предложение', $block->fresh()?->state_json['title']);
+    }
+
     public function test_content_editor_cannot_change_structure_and_foreign_blocks_are_not_found(): void
     {
         $this->add('hero');
@@ -111,6 +139,7 @@ class PageBlocksTest extends TestCase
 
         $foreign = BlockInstance::factory()->create();
         $this->as()->delete(route('sites.blocks.destroy', [$this->site, $foreign]))->assertNotFound();
+        $this->as()->patch(route('sites.blocks.state', [$this->site, $foreign]), ['state' => []])->assertNotFound();
         $this->as()->post(route('sites.blocks.store', [$this->site, $foreign->page]), ['block' => 'hero'])->assertNotFound();
         $this->assertModelExists($foreign);
     }

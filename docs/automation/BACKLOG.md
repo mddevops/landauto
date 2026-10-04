@@ -68,7 +68,7 @@ Current phase:
 
 Current next task:
 
-`P2-009 — Properties Panel from Schema`.
+`P2-010 — Repeater Editing`.
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1696,12 +1696,16 @@ Designer "Блоки" tab: Navigator over the page's Block Instances (select, mo
 
 ## P2-009 — Properties Panel from Schema
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-003, P2-006
 
 ### Acceptance Criteria
 
 No one-off settings UI per official Block.
+
+### Result
+
+The right "Свойства" panel renders controls generically from the pinned Block Version schema (text, textarea, boolean, select, nested group) with labels, help, length limits and Russian errors linked to inputs. Edits update a local draft that the canvas renders immediately; "Сохранить" sends the draft to `sites.blocks.state` (`edit_content`), where `BlockStateValidator` errors are returned per state path. Repeater, image and conditional controls follow in P2-010/P2-013/P2-011; autosave replaces the button in P2-015. Checks: `PageBlocksTest`, Sites feature tests, PHPStan, Pint, `npm run check`.
 
 ---
 

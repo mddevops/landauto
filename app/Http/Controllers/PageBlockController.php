@@ -4,6 +4,7 @@ namespace App\Http\Controllers;
 
 use App\Actions\Designer\ArrangePageBlocks;
 use App\Blocks\BlockStateDefaults;
+use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
@@ -14,6 +15,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
+use Illuminate\Validation\ValidationException;
 
 class PageBlockController extends Controller
 {
@@ -46,6 +48,21 @@ class PageBlockController extends Controller
         });
 
         return $this->backTo($site, $page, $block);
+    }
+
+    public function state(Request $request, Site $site, BlockInstance $block): RedirectResponse
+    {
+        $this->scope->block($site, $block);
+        Gate::authorize('editContent', $site);
+        $validated = $request->validate(['state' => ['present', 'array']]);
+
+        try {
+            $block->update(['state_json' => $validated['state']]);
+        } catch (InvalidBlockStateException $exception) {
+            throw ValidationException::withMessages($exception->errors);
+        }
+
+        return $this->backTo($site, $block->page, $block);
     }
 
     public function move(Request $request, Site $site, BlockInstance $block): RedirectResponse

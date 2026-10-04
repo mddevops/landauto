@@ -1,3 +1,4 @@
+import type { BlockSchema } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
 
 export type DesignerSite = {
@@ -18,6 +19,7 @@ export type DesignerBlock = {
     name: string;
     version: string;
     is_hidden: boolean;
+    schema: BlockSchema;
     state: BlockState;
 };
 

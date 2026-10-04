@@ -48,6 +48,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
 
             Route::post('pages/{page}/blocks', [PageBlockController::class, 'store'])->name('blocks.store');
+            Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');
             Route::post('blocks/{block}/move', [PageBlockController::class, 'move'])->whereUlid('block')->name('blocks.move');
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');

@@ -1,10 +1,13 @@
-import { Head, Link } from '@inertiajs/react';
+import type { FormDataConvertible } from '@inertiajs/core';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useState } from 'react';
 import { blockRenderer } from '@/blocks/registry';
+import type { BlockState } from '@/blocks/state';
 import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
+import { PropertiesPanel } from '@/components/designer/properties-panel';
 import type {
     DesignerBlock,
     DesignerLibraryBlock,
@@ -15,6 +18,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
+import { state as stateUrl } from '@/routes/sites/blocks';
 
 type DesignerProps = {
     site: DesignerSite;
@@ -23,7 +27,7 @@ type DesignerProps = {
     blocks: DesignerBlock[];
     selectedBlock: string | null;
     library: DesignerLibraryBlock[];
-    can: { editDesign: boolean };
+    can: { editDesign: boolean; editContent: boolean };
 };
 
 type LeftTab = 'pages' | 'blocks';
@@ -46,7 +50,38 @@ export default function Designer({
     }
 
     const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
+    const [drafts, setDrafts] = useState<Record<string, BlockState>>({});
+    const [saving, setSaving] = useState(false);
+    const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const selected = blocks.find((block) => block.public_id === selectedId);
+    const stateOf = (block: DesignerBlock) =>
+        drafts[block.public_id] ?? block.state;
+
+    const save = (block: DesignerBlock) => {
+        const draft = drafts[block.public_id];
+
+        router.patch(
+            stateUrl.url({ site: site.public_id, block: block.public_id }),
+            { state: draft as FormDataConvertible },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onStart: () => setSaving(true),
+                onFinish: () => setSaving(false),
+                onSuccess: () =>
+                    setDrafts((current) => {
+                        if (current[block.public_id] !== draft) {
+                            return current;
+                        }
+
+                        const rest = { ...current };
+                        delete rest[block.public_id];
+
+                        return rest;
+                    }),
+            },
+        );
+    };
 
     return (
         <>
@@ -123,6 +158,7 @@ export default function Designer({
                                     <CanvasBlock
                                         key={block.public_id}
                                         block={block}
+                                        state={stateOf(block)}
                                         selected={
                                             block.public_id === selectedId
                                         }
@@ -146,22 +182,41 @@ export default function Designer({
                             Свойства
                         </h2>
                         {selected ? (
-                            <dl className="mt-3 flex flex-col gap-3 text-sm">
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Блок
-                                    </dt>
-                                    <dd className="font-medium">
+                            <div className="mt-3 flex flex-col gap-4">
+                                <p className="text-sm">
+                                    <span className="font-medium">
                                         {selected.name}
-                                    </dd>
-                                </div>
-                                <div>
-                                    <dt className="text-muted-foreground">
-                                        Версия
-                                    </dt>
-                                    <dd>{selected.version}</dd>
-                                </div>
-                            </dl>
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                        {` · версия ${selected.version}`}
+                                    </span>
+                                </p>
+                                <PropertiesPanel
+                                    key={selected.public_id}
+                                    block={selected}
+                                    state={stateOf(selected)}
+                                    errors={errors}
+                                    disabled={!can.editContent}
+                                    onChange={(state) =>
+                                        setDrafts((current) => ({
+                                            ...current,
+                                            [selected.public_id]: state,
+                                        }))
+                                    }
+                                />
+                                {can.editContent && (
+                                    <Button
+                                        type="button"
+                                        disabled={
+                                            saving ||
+                                            !(selected.public_id in drafts)
+                                        }
+                                        onClick={() => save(selected)}
+                                    >
+                                        Сохранить
+                                    </Button>
+                                )}
+                            </div>
                         ) : (
                             <p className="mt-2 text-sm text-muted-foreground">
                                 Выберите блок, чтобы увидеть его свойства.
@@ -209,10 +264,12 @@ function Tabs<T extends string>({
 
 function CanvasBlock({
     block,
+    state,
     selected,
     onSelect,
 }: {
     block: DesignerBlock;
+    state: BlockState;
     selected: boolean;
     onSelect: () => void;
 }) {
@@ -227,7 +284,7 @@ function CanvasBlock({
             )}
             <div inert className={cn(block.is_hidden && 'opacity-40')}>
                 {Renderer ? (
-                    <Renderer state={block.state} />
+                    <Renderer state={state} />
                 ) : (
                     <div className="p-6 text-sm text-neutral-500">
                         {`Блок «${block.name}» не удаётся отобразить.`}

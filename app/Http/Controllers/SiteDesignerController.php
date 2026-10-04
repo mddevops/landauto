@@ -52,6 +52,7 @@ class SiteDesignerController extends Controller
                     'name' => $block->version->definition->name,
                     'version' => $block->version->version,
                     'is_hidden' => $block->is_hidden,
+                    'schema' => $block->version->schema_json,
                     'state' => (object) $block->state_json,
                 ])
                 ->values()
@@ -70,6 +71,7 @@ class SiteDesignerController extends Controller
                 ->all(),
             'can' => [
                 'editDesign' => Gate::allows('editDesign', $site),
+                'editContent' => Gate::allows('editContent', $site),
             ],
         ]);
     }
