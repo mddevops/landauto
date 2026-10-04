@@ -3,17 +3,21 @@
 namespace Tests\Feature;
 
 use App\Enums\Entitlement;
+use App\Enums\PlatformPermission;
+use App\Models\Catalog\AutoSeries;
 use App\Models\Template;
 use App\Models\User;
 use App\Support\WorkspaceEntitlements;
 use Database\Seeders\E2eSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Gate;
 use RuntimeException;
+use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
 
 class E2eSeederTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshCatalogDatabase, RefreshDatabase;
 
     public function test_e2e_seeder_refuses_to_run_outside_the_e2e_environment(): void
     {
@@ -33,7 +37,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['creator@landflow.test', 'designer@landflow.test', 'login@landflow.test', 'member@landflow.test'],
+            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'login@landflow.test', 'member@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -46,5 +50,11 @@ class E2eSeederTest extends TestCase
             $this->assertSame(100, $entitlements->limit($workspace, Entitlement::MaxSites));
         }
         $this->assertTrue(Template::query()->where('slug', 'blank')->where('is_official', true)->exists());
+
+        $catalogAdmin = User::query()->where('email', 'catalog@landflow.test')->sole();
+        $dealer = User::query()->where('email', 'dealer@landflow.test')->sole();
+        $this->assertTrue(Gate::forUser($catalogAdmin)->allows(PlatformPermission::EditCatalog->value));
+        $this->assertFalse(Gate::forUser($dealer)->allows(PlatformPermission::EditCatalog->value));
+        $this->assertTrue(AutoSeries::query()->available()->where('url', 'sedan')->exists());
     }
 }

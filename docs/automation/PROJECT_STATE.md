@@ -130,7 +130,8 @@ Current focus:
 - `P3-015` DONE: vehicle detail Blocks — gallery (colors + angles), offers (expandable to Modification/characteristics/options), characteristics, equipment;
 - `P3-016` DONE: automotive Playwright flow (platform media sets + characteristics → dealer vehicle/offer → Vehicle Grid/Offers → preview price, image, color switch, expanded offer); idempotent `CatalogDemoSeeder`;
 - `X-019` DONE: `preview_site` for Admin and Designer (D-105); Designer still without `publish_site`; ContentEditor unchanged;
-- next: `P3-017` (§42).
+- `P3-017` DONE: Phase 3 gate (composer quality 440 tests, 39 E2E passed, diff check); Phase 3 COMPLETED;
+- next: Phase 4 — not started; requires explicit owner go-ahead. Open: Admin role matrix (`view_site`, `view_vehicles`, `edit_benefits`).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

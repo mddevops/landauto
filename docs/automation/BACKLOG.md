@@ -64,13 +64,13 @@ Phase 1 — Core Platform: COMPLETED (gate `P1-017` DONE).
 
 Phase 2 — Designer Foundation: COMPLETED (gate `P2-018` DONE).
 
+Phase 3 — Automotive Foundation: COMPLETED (gate `P3-017` DONE; Catalog V2 schema adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`).
+
 Current phase:
 
-`P3 — Automotive Foundation` — IN_PROGRESS.
+`P4 — Forms & Interactive Components` — NOT_STARTED; starts only on explicit owner go-ahead.
 
-The earlier catalog BLOCKED_DECISION is RESOLVED: the owner delivered the agreed Catalog V2 schema (version 2, 04.10.2026), adopted as `docs/architecture/AUTO_CATALOG_SCHEMA.md`.
-
-Next tasks: `P3-001` … `P3-017` (X-019 before the P3-017 gate). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
+Open owner decision: Admin role matrix (`view_site`, `view_vehicles`, `edit_benefits` missing; see P3-017). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2363,8 +2363,29 @@ Supporting data:
 
 ## P3-017 — Phase 3 Review
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-016
+
+### Result
+
+Phase 3 COMPLETED. Gate checks:
+- `composer quality` PASS: 440 PHPUnit tests, PHPStan, Pint, `vp check` and the production build.
+- `npm run test:e2e` PASS: 39 tests, including the automotive flow.
+- `git diff --check main..HEAD` PASS.
+
+Risk-focused review:
+- **Tenancy:** every vehicle, offer, designer and preview route checks the Workspace scope with a 404. Vehicle Block references resolve only to vehicles of the same Site.
+- **Catalog immutability:** only explicit platform roles mutate the catalog. Customer Workspace permissions never reach the catalog routes.
+- **Identifiers:** catalog and Site entities are addressed by `public_id`. Bindings carry no numeric IDs and no raw `*_minor` values.
+- **Database boundary:** no cross-database foreign keys. Catalog references are validated in the application, and only available rows are bound.
+- **Uploads:** Series media rejects SVG, is limited to 10 MB, uses server-generated keys and private storage, and is served with nosniff.
+- **Draft only:** autosave and preview never publish.
+
+Known limits, carried forward:
+- Series media URLs require sign-in. Public delivery belongs to Publishing.
+- Designers and ContentEditors see offer prices in the designer and preview canvas. Prices are site-facing content.
+- The Admin role matrix lacks `view_site`, `view_vehicles` and `edit_benefits`. This needs an owner decision.
+- `edit_benefits` is not enforced separately; benefits are saved under `edit_prices`.
 
 ---
 
