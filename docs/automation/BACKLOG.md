@@ -2083,10 +2083,27 @@ Checks: `SeriesMediaImagesTest`, `SiteAssetsTest`.
 
 ## P3-007 — Super Admin Catalog UI
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P3-002 through P3-006
 
 Separate platform surface on the existing Laravel/React/Inertia/shadcn stack (no Filament): «Каталог автомобилей» with marks, models, generations, series, modifications, equipments (cascading; changing an upper selection clears lower levels; backend verifies hierarchy), characteristic and option dictionaries, Equipment characteristics/options page and Series media page. Create, edit, activate/deactivate (status instead of hard delete), sort.
+
+### Result
+
+The surface lives at `/platform/catalog`. All of it requires `view_catalog`. Changes to the hierarchy and the dictionaries also require `edit_catalog`, and media changes require `manage_catalog_media`. The sidebar link «Каталог автомобилей» appears only to users with `view_catalog`.
+
+Catalog browser (`CatalogBrowserController`, `App\Catalog\CatalogLevel`):
+- Six cascading columns addressed by ULID query parameters.
+- A lower selection is accepted only when it belongs to the selected parent; otherwise it is dropped together with everything below it.
+- Create, edit, a quick activate/deactivate toggle and sort order. There is no hard delete.
+- `entries/{level}` checks the parent `public_id` against the expected level, URL segments are unique within their parent, decimal commas are accepted, and a model group must be a model of the same Mark.
+
+Other pages:
+- Equipment page: characteristic values and option availability by dictionary group.
+- Dictionaries: create a group or an element inside a root group; the code cannot be changed after creation.
+- Series media page: create and edit media sets (name, swatch, status, order), and upload or delete an image for each of the six angles.
+
+Checks: `PlatformCatalogUiTest`, existing catalog tests, PHPStan, `npm run check`.
 
 ---
 

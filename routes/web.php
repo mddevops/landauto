@@ -1,9 +1,15 @@
 <?php
 
+use App\Catalog\CatalogLevel;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\PageBlockController;
+use App\Http\Controllers\Platform\CatalogBrowserController;
+use App\Http\Controllers\Platform\CatalogDictionaryController;
+use App\Http\Controllers\Platform\CatalogEntryController;
+use App\Http\Controllers\Platform\CatalogEquipmentController;
+use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
 use App\Http\Controllers\SiteAssetController;
 use App\Http\Controllers\SiteController;
@@ -74,13 +80,34 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('platform.catalog.')
         ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ViewCatalog->value)
         ->group(function () {
-            Route::post('media-sets/{set}/images', [SeriesMediaImageController::class, 'store'])
-                ->whereUlid('set')
-                ->middleware('throttle:60,1')
-                ->name('media.images.store');
-            Route::delete('media-images/{image}', [SeriesMediaImageController::class, 'destroy'])
-                ->whereUlid('image')
-                ->name('media.images.destroy');
+            $levels = array_column(CatalogLevel::cases(), 'value');
+            $dictionaries = ['characteristics', 'options'];
+
+            Route::get('/', CatalogBrowserController::class)->name('index');
+            Route::get('equipments/{equipment}', [CatalogEquipmentController::class, 'show'])->whereUlid('equipment')->name('equipments.show');
+            Route::get('dictionaries/{dictionary}', [CatalogDictionaryController::class, 'show'])->whereIn('dictionary', $dictionaries)->name('dictionaries.show');
+            Route::get('series/{series}/media', [SeriesMediaController::class, 'show'])->whereUlid('series')->name('media.show');
+
+            Route::middleware(EnsurePlatformPermission::class.':'.PlatformPermission::EditCatalog->value)->group(function () use ($levels, $dictionaries) {
+                Route::post('entries/{level}', [CatalogEntryController::class, 'store'])->whereIn('level', $levels)->name('entries.store');
+                Route::patch('entries/{level}/{entry}', [CatalogEntryController::class, 'update'])->whereIn('level', $levels)->whereUlid('entry')->name('entries.update');
+                Route::put('equipments/{equipment}/characteristics', [CatalogEquipmentController::class, 'characteristics'])->whereUlid('equipment')->name('equipments.characteristics');
+                Route::put('equipments/{equipment}/options', [CatalogEquipmentController::class, 'options'])->whereUlid('equipment')->name('equipments.options');
+                Route::post('dictionaries/{dictionary}', [CatalogDictionaryController::class, 'store'])->whereIn('dictionary', $dictionaries)->name('dictionaries.store');
+                Route::patch('dictionaries/{dictionary}/{entry}', [CatalogDictionaryController::class, 'update'])->whereIn('dictionary', $dictionaries)->whereUlid('entry')->name('dictionaries.update');
+            });
+
+            Route::middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageCatalogMedia->value)->group(function () {
+                Route::post('series/{series}/media-sets', [SeriesMediaController::class, 'store'])->whereUlid('series')->name('media.sets.store');
+                Route::patch('media-sets/{set}', [SeriesMediaController::class, 'update'])->whereUlid('set')->name('media.sets.update');
+                Route::post('media-sets/{set}/images', [SeriesMediaImageController::class, 'store'])
+                    ->whereUlid('set')
+                    ->middleware('throttle:60,1')
+                    ->name('media.images.store');
+                Route::delete('media-images/{image}', [SeriesMediaImageController::class, 'destroy'])
+                    ->whereUlid('image')
+                    ->name('media.images.destroy');
+            });
         });
 });
 
