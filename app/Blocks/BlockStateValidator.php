@@ -71,6 +71,80 @@ final class BlockStateValidator
     }
 
     /**
+     * Publish-time completeness: required values are filled and Repeaters reach `min_items`.
+     * Fields hidden by `visible_if` are skipped, matching what the renderer shows.
+     *
+     * @param  array<string, mixed>  $schema
+     * @return array<string, string> State path => Russian message; empty when complete.
+     */
+    public function missing(array $schema, mixed $state): array
+    {
+        /** @var list<array<string, mixed>> $fields */
+        $fields = $schema['fields'] ?? [];
+        $missing = [];
+        $this->collectMissing($fields, is_array($state) ? $state : [], 'state', $missing);
+
+        return $missing;
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $fields
+     * @param  array<mixed>  $state
+     * @param  array<string, string>  $missing
+     */
+    private function collectMissing(array $fields, array $state, string $path, array &$missing): void
+    {
+        $defaults = [];
+
+        foreach ($fields as $field) {
+            $defaults[(string) $field['key']] = $field['default'] ?? null;
+        }
+
+        foreach ($fields as $field) {
+            $key = (string) $field['key'];
+            $condition = $field['visible_if'] ?? null;
+
+            if (is_array($condition) && ($state[$condition['field']] ?? $defaults[$condition['field']] ?? null) !== $condition['equals']) {
+                continue;
+            }
+
+            $value = $state[$key] ?? null;
+            $fieldPath = "{$path}.{$key}";
+            $type = BlockFieldType::from((string) $field['type']);
+
+            if ($type === BlockFieldType::Group) {
+                $this->collectMissing($this->nestedFields($field), is_array($value) ? $value : [], $fieldPath, $missing);
+            } elseif ($type === BlockFieldType::Repeater) {
+                $items = is_array($value) && array_is_list($value) ? $value : [];
+                $minItems = (int) ($field['min_items'] ?? 0);
+
+                if (count($items) < $minItems) {
+                    $missing[$fieldPath] = "Добавьте не меньше {$minItems} элементов.";
+                }
+
+                foreach ($items as $index => $item) {
+                    $this->collectMissing($this->nestedFields($field), is_array($item) ? $item : [], "{$fieldPath}.{$index}", $missing);
+                }
+            } elseif (($field['required'] ?? false) === true && $this->isEmptyValue($type, $value)) {
+                $missing[$fieldPath] = 'Заполните обязательное поле.';
+            }
+        }
+    }
+
+    private function isEmptyValue(BlockFieldType $type, mixed $value): bool
+    {
+        if ($type === BlockFieldType::Action) {
+            $target = is_array($value) && is_string($value['type'] ?? null)
+                ? ($value[BlockActionType::tryFrom($value['type'])?->targetKey() ?? ''] ?? null)
+                : null;
+
+            return ! is_string($target) || trim($target) === '';
+        }
+
+        return $value === null || (is_string($value) && trim($value) === '');
+    }
+
+    /**
      * @param  array<string, mixed>  $schema
      *
      * @throws InvalidBlockStateException

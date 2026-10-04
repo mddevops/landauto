@@ -159,6 +159,7 @@ Current focus:
 - `P5-001` DONE: ADR-006 accepted — D-073 and D-074 APPROVED (publish-time React SSR, public manifest + private draft snapshot, DB HTML artifacts, versioned cache, published asset references, atomic activation, Published-Version-bound public forms, restore to Draft).
 - `P5-002` DONE: Published Version schema — `published_versions`, `published_pages`, `published_asset_references`, `sites.active_published_version_id`; immutability guards and pointer validation in the models.
 - `P5-003` DONE: Publication attempt records (actor, enforced status machine, safe failure code/summary/metadata) and `publish` / `restoreVersion` Site policy abilities.
+- `P5-004` DONE: `PublishValidator` (errors block, warnings inform) reusing the X-018 inspector, pinned-schema validation and new publish-time completeness checks.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

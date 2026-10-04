@@ -2683,8 +2683,10 @@ Result: `publications` table and `Publication` model — one row per Publish att
 
 ## P5-004 — Publish Validator
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-002
+
+Result: `App\Publishing\PublishValidator` returns `errors[]` / `warnings[]` of `PublishIssue` (stable code, Russian message, Page/Block/target public IDs, state path). Checks: `publish_site` for the actor, active Site, exactly one home Page, valid/unique slugs, pinned-schema state of visible Blocks, publish-time completeness (`BlockStateValidator::missing`: required values, Repeater `min_items`, `visible_if` honoured), X-018 inspector in publish mode (stale page/scroll/popup actions, hidden scroll targets, missing assets/vehicles; disabled Popup Form = warning), asset and Series Media files present, referenced vehicles visible and catalog-available (no offers / no media / unavailable offers = warnings), active Popup Forms belong to the Site and have fields. All lookups are Site-scoped. Subdomain and SEO checks are added with P5-008 / P5-009.
 
 ---
 
