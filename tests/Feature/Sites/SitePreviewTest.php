@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Sites;
 
+use App\Enums\WorkspacePermission;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
@@ -11,6 +12,7 @@ use App\Models\SiteAsset;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\SiteDesignTokens;
+use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use Database\Seeders\OfficialBlockSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -55,16 +57,29 @@ class SitePreviewTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('can.preview', true));
     }
 
+    public function test_designer_and_admin_preview_but_designer_cannot_publish(): void
+    {
+        [$admin, $adminWorkspace, $adminSite] = $this->siteFor(WorkspaceRole::Admin);
+        $this->as($admin, $adminWorkspace)->get(route('sites.preview', $adminSite))->assertOk();
+
+        [$designer, $designerWorkspace, $designerSite] = $this->siteFor(WorkspaceRole::Designer);
+        $this->as($designer, $designerWorkspace)->get(route('sites.preview', $designerSite))->assertOk();
+        $this->as($designer, $designerWorkspace)->get(route('sites.designer', $designerSite))
+            ->assertInertia(fn (Assert $page) => $page->where('can.preview', true));
+        $this->assertFalse(app(WorkspaceAuthorization::class)->allowsForWorkspace($designer, $designerWorkspace, WorkspacePermission::PublishSite));
+    }
+
     public function test_preview_requires_preview_permission_and_own_workspace(): void
     {
-        [$user, $workspace, $site] = $this->siteFor(WorkspaceRole::Designer);
+        [$user, $workspace, $site] = $this->siteFor(WorkspaceRole::ContentEditor);
         $foreignSite = Site::factory()->create();
         $foreignPage = Page::factory()->create();
 
         $this->as($user, $workspace)->get(route('sites.preview', $site))->assertForbidden();
         $this->as($user, $workspace)->get(route('sites.designer', $site))
             ->assertInertia(fn (Assert $page) => $page->where('can.preview', false));
-        $this->as($user, $workspace)->get(route('sites.preview', $foreignSite))->assertNotFound();
+        [$designer, $designerWorkspace] = $this->siteFor(WorkspaceRole::Designer);
+        $this->as($designer, $designerWorkspace)->get(route('sites.preview', $foreignSite))->assertNotFound();
 
         [$owner, $ownerWorkspace, $ownSite] = $this->siteFor(WorkspaceRole::Owner);
         $this->as($owner, $ownerWorkspace)->get(route('sites.preview', ['site' => $ownSite, 'page' => $foreignPage->public_id]))->assertNotFound();

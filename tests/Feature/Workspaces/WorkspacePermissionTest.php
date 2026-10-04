@@ -44,6 +44,7 @@ class WorkspacePermissionTest extends TestCase
             WorkspacePermission::ViewSubmissions,
             WorkspacePermission::EditSeo,
             WorkspacePermission::ManageDomains,
+            WorkspacePermission::PreviewSite,
             WorkspacePermission::PublishSite,
         ], $permissions);
         $this->assertContains(WorkspacePermission::ManageMembers, $permissions);
@@ -59,6 +60,7 @@ class WorkspacePermissionTest extends TestCase
 
         $this->assertContains(WorkspacePermission::EditDesign, $permissions);
         $this->assertContains(WorkspacePermission::EditContent, $permissions);
+        $this->assertContains(WorkspacePermission::PreviewSite, $permissions);
         $this->assertNotContains(WorkspacePermission::PublishSite, $permissions);
         $this->assertNotContains(WorkspacePermission::EditPrices, $permissions);
     }
@@ -138,6 +140,7 @@ class WorkspacePermissionTest extends TestCase
                 WorkspacePermission::EditContent->value,
                 WorkspacePermission::ManageAssets->value,
                 WorkspacePermission::EditPopups->value,
+                WorkspacePermission::PreviewSite->value,
             ])
             ->missing('workspace.role')
             ->missing('workspace.current.id')

@@ -3468,11 +3468,19 @@ Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage lim
 
 ## X-019 — Preview Permission for Admin and Designer
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** before the Phase 3 gate (P3-017)
 **Decision:** D-105
 
 Add `preview_site` to the Admin and Designer roles; Designer must not receive `publish_site`; ContentEditor unchanged. Focused permission tests.
+
+Result: `WorkspacePermissionResolver` grants `preview_site` to Admin and Designer. The tests cover:
+- designer preview is allowed and `can.preview` is true;
+- admin preview is allowed;
+- designer `publish_site` is denied;
+- ContentEditor is still forbidden.
+
+Found while testing: the Admin role has no `view_site`, so Admins cannot open the dashboard Site list or the designer. This is the same stale Admin matrix as the missing `view_vehicles` / `edit_benefits`, and it is left for the owner.
 
 ---
 

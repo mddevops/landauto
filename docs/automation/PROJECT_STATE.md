@@ -129,7 +129,8 @@ Current focus:
 - `P3-014` DONE: official `vehicle-grid` Block (all visible Site vehicles or a validated selection with per-item actions, columns, price/benefit/colors);
 - `P3-015` DONE: vehicle detail Blocks — gallery (colors + angles), offers (expandable to Modification/characteristics/options), characteristics, equipment;
 - `P3-016` DONE: automotive Playwright flow (platform media sets + characteristics → dealer vehicle/offer → Vehicle Grid/Offers → preview price, image, color switch, expanded offer); idempotent `CatalogDemoSeeder`;
-- next: `X-019` (preview permission), then `P3-017` (§42).
+- `X-019` DONE: `preview_site` for Admin and Designer (D-105); Designer still without `publish_site`; ContentEditor unchanged;
+- next: `P3-017` (§42).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

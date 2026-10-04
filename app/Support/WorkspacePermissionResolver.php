@@ -27,6 +27,7 @@ final class WorkspacePermissionResolver
                 WorkspacePermission::ViewSubmissions,
                 WorkspacePermission::EditSeo,
                 WorkspacePermission::ManageDomains,
+                WorkspacePermission::PreviewSite,
                 WorkspacePermission::PublishSite,
             ],
             WorkspaceRole::Designer => [
@@ -35,6 +36,7 @@ final class WorkspacePermissionResolver
                 WorkspacePermission::EditContent,
                 WorkspacePermission::ManageAssets,
                 WorkspacePermission::EditPopups,
+                WorkspacePermission::PreviewSite,
             ],
             WorkspaceRole::ContentEditor => [
                 WorkspacePermission::ViewSite,
