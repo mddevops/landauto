@@ -3648,6 +3648,24 @@ Result:
 
 ---
 
+## X-021 — Phase 4 Operational Reconciliation
+
+**Status:** DONE
+**Trigger:** before P5-001
+**Decision:** D-108
+
+Apply the owner-approved Phase 4 follow-ups: Russian trunk-8 phone normalization, typed preview/public Submission mode, Admin `edit_popups`, and `edit_forms` for Site form security and the Site blacklist.
+
+Result:
+- `PhoneNormalizer` rewrites exactly 11 digits starting with 8 (written without «+») to 7XXXXXXXXXX; «+»-prefixed and other numbers are untouched.
+- `submissions.mode` (`SubmissionMode`: `public` | `preview`, immutable). The draft preview posts to the authenticated `POST /sites/{site}/preview/forms/{form}/submissions` (`preview_site`, Form of that Site, CSRF via the session token) and stores `preview`. Preview submissions pass the same protection, but duplicates and rate-limit counters are separate per mode.
+- «Заявки» lists real leads by default; «Тестовые из предпросмотра» lists preview entries with a visible badge.
+- Admin has `edit_popups`; «Защита форм» and the Site blacklist require `edit_forms`; the Workspace blacklist keeps `edit_workspace`.
+- Tests: phone cases (trunk 8, «+8», foreign 13 digits, 10 digits), preview permission/foreign Form/mode marking/list separation, preview not counted as a public duplicate, updated permission matrices; interactive E2E reads preview leads from the test tab.
+- D-094 stays open; no Submission export.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---

@@ -110,23 +110,29 @@ class AntiSpamTest extends TestCase
         $this->submit($this->form, '79991112233', ip: '10.0.0.3')->assertTooManyRequests();
     }
 
-    public function test_security_page_is_editable_only_with_edit_site_settings(): void
+    public function test_security_page_is_editable_only_with_edit_forms(): void
     {
         $workspace = $this->site->workspace;
         $owner = User::factory()->create();
         $admin = User::factory()->create();
+        $designer = User::factory()->create();
         $workspace->addMember($owner, WorkspaceRole::Owner);
         $workspace->addMember($admin, WorkspaceRole::Admin);
+        $workspace->addMember($designer, WorkspaceRole::Designer);
         $payload = ['ip_limit' => 3, 'ip_window_minutes' => 5, 'phone_limit' => 1, 'phone_window_minutes' => 60, 'duplicate_window_minutes' => 0];
 
-        $this->as($admin, $workspace)->get(route('sites.form-security.show', $this->site))
+        $this->as($designer, $workspace)->get(route('sites.form-security.show', $this->site))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('sites/form-security')
                 ->where('policy.ip_limit', 5)
                 ->where('policy.phone_window_minutes', 30)
                 ->where('can.edit', false));
-        $this->as($admin, $workspace)->put(route('sites.form-security.update', $this->site), $payload)->assertForbidden();
+        $this->as($designer, $workspace)->put(route('sites.form-security.update', $this->site), $payload)->assertForbidden();
+
+        $this->as($admin, $workspace)->get(route('sites.form-security.show', $this->site))
+            ->assertInertia(fn (Assert $page) => $page->where('can.edit', true));
+        $this->as($admin, $workspace)->put(route('sites.form-security.update', $this->site), $payload)->assertSessionHasNoErrors();
 
         $this->as($owner, $workspace)->put(route('sites.form-security.update', $this->site), [...$payload, 'ip_limit' => 0])->assertSessionHasErrors('ip_limit');
         $this->as($owner, $workspace)->put(route('sites.form-security.update', $this->site), $payload)->assertSessionHasNoErrors();

@@ -101,15 +101,17 @@ class SitePopupTest extends TestCase
         }
 
         $this->as($members['designer'])->post(route('sites.popups.store', $this->site), $this->payload())->assertSessionHasNoErrors();
+        $this->as($members['admin'])->get(route('sites.popups.index', $this->site))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('can.editPopups', true));
+        $this->as($members['admin'])->post(route('sites.popups.store', $this->site), $this->payload())->assertSessionHasNoErrors();
 
-        foreach (['admin', 'content_editor'] as $role) {
-            $this->as($members[$role])->get(route('sites.popups.index', $this->site))
-                ->assertOk()
-                ->assertInertia(fn (Assert $page) => $page->where('can.editPopups', false));
-            $this->as($members[$role])->post(route('sites.popups.store', $this->site), $this->payload())->assertForbidden();
-        }
+        $this->as($members['content_editor'])->get(route('sites.popups.index', $this->site))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('can.editPopups', false));
+        $this->as($members['content_editor'])->post(route('sites.popups.store', $this->site), $this->payload())->assertForbidden();
 
-        $this->assertSame(1, Popup::query()->count());
+        $this->assertSame(2, Popup::query()->count());
     }
 
     public function test_designer_and_preview_receive_only_active_popups_without_internal_ids(): void

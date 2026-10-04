@@ -44,6 +44,22 @@ async function openSection(
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
 }
 
+/** Preview submissions are test entries, listed apart from real leads. */
+async function showPreviewLeads(page: Page) {
+    await page
+        .getByRole('navigation', { name: 'Тип заявок' })
+        .getByRole('link', { name: /Тестовые из предпросмотра/ })
+        .click();
+    await expect(
+        page.getByRole('heading', { level: 1, name: 'Тестовые заявки' }),
+    ).toBeVisible();
+}
+
+async function openPreviewLeads(page: Page) {
+    await openSection(page, 'Заявки');
+    await showPreviewLeads(page);
+}
+
 async function backToDesigner(page: Page) {
     await page.getByRole('link', { name: 'Открыть дизайнер' }).click();
     await expect(
@@ -245,9 +261,12 @@ test('owner builds a form, attaches it to a popup and opens it from a button', a
         'Спасибо! Мы свяжемся с вами.',
     );
 
-    // The lead is visible in «Заявки» with its trusted context.
+    // The preview lead is a marked test entry with its trusted context, not a real lead.
     await openSection(page, 'Заявки');
+    await expect(page.getByText('Заявок пока нет')).toBeVisible();
+    await showPreviewLeads(page);
     const lead = page.getByRole('article').first();
+    await expect(lead).toContainText('Тестовая (предпросмотр)');
     await expect(lead).toContainText('Заявка на звонок');
     await expect(lead).toContainText('Иван Покупатель');
     await expect(lead).toContainText('+7 (999) 111-22-33');
@@ -458,8 +477,8 @@ test('vehicle offer reuses a popup with trusted context; anti-spam, captcha, car
     await expect(popup.getByRole('status')).toBeVisible();
     await setCaptchaRequired(page, false);
 
-    // «Заявки»: only accepted leads, with the server-side vehicle, offer and price.
-    await openSection(page, 'Заявки');
+    // Preview test entries: only accepted ones, with the server-side vehicle, offer and price.
+    await openPreviewLeads(page);
     const leads = page.getByRole('article').filter({ hasText: formName });
     await expect(leads).toHaveCount(2);
     const lead = leads.filter({ hasText: leadPhone });

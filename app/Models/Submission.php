@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SubmissionMode;
 use App\Enums\SubmissionStatus;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\SubmissionFactory;
@@ -22,6 +23,7 @@ use LogicException;
  * @property int $site_id
  * @property int $form_id
  * @property SubmissionStatus $status
+ * @property SubmissionMode $mode
  * @property list<array{key: string, type: string, label: string, value: string|bool|null}> $payload
  * @property array<string, mixed>|null $context
  * @property string|null $phone_original
@@ -40,13 +42,14 @@ class Submission extends Model
     use HasFactory, HasImmutablePublicId;
 
     /** Snapshot columns that never change after the lead is stored. */
-    private const IMMUTABLE = ['site_id', 'form_id', 'payload', 'context', 'phone_original', 'phone_normalized', 'email_normalized', 'ip', 'user_agent', 'submitted_at'];
+    private const IMMUTABLE = ['site_id', 'form_id', 'mode', 'payload', 'context', 'phone_original', 'phone_normalized', 'email_normalized', 'ip', 'user_agent', 'submitted_at'];
 
     /**
      * @var array<string, mixed>
      */
     protected $attributes = [
         'status' => 'received',
+        'mode' => 'public',
     ];
 
     /**
@@ -56,6 +59,7 @@ class Submission extends Model
     {
         return [
             'status' => SubmissionStatus::class,
+            'mode' => SubmissionMode::class,
             'payload' => 'array',
             'context' => 'array',
             'submitted_at' => 'datetime',

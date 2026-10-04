@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { designer } from '@/routes/sites';
+import { index as submissionsIndex } from '@/routes/sites/submissions';
 
 type SubmittedValue = {
     key: string;
@@ -22,10 +23,14 @@ type TrustedContext = {
     media_set?: { name: string };
 };
 
+type SubmissionMode = 'public' | 'preview';
+
 type SubmissionRow = {
     public_id: string;
     form: { public_id: string; name: string };
     status: string;
+    mode: SubmissionMode;
+    mode_label: string;
     submitted_at: string;
     phone_normalized: string | null;
     values: SubmittedValue[];
@@ -85,6 +90,8 @@ function contextRows({ trusted, visitor }: SubmissionRow['context']) {
 
 type SubmissionsIndexProps = {
     site: { public_id: string; name: string };
+    mode: SubmissionMode;
+    previewCount: number;
     submissions: SubmissionRow[];
     pagination: {
         current: number;
@@ -110,9 +117,13 @@ function displayValue(item: SubmittedValue): string {
 
 export default function SubmissionsIndex({
     site,
+    mode,
+    previewCount,
     submissions,
     pagination,
 }: SubmissionsIndexProps) {
+    const isPreview = mode === 'preview';
+
     return (
         <>
             <Head title={`Заявки — ${site.name}`} />
@@ -123,7 +134,7 @@ export default function SubmissionsIndex({
                             {site.name}
                         </p>
                         <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                            Заявки
+                            {isPreview ? 'Тестовые заявки' : 'Заявки'}
                         </h1>
                         <p className="text-sm text-muted-foreground">
                             {`Всего: ${pagination.total}`}
@@ -136,15 +147,55 @@ export default function SubmissionsIndex({
                     </Button>
                 </header>
 
+                <nav aria-label="Тип заявок" className="flex flex-wrap gap-2">
+                    <Button
+                        asChild
+                        size="sm"
+                        variant={isPreview ? 'outline' : 'default'}
+                    >
+                        <Link
+                            href={submissionsIndex(site.public_id)}
+                            aria-current={isPreview ? undefined : 'page'}
+                        >
+                            С сайта
+                        </Link>
+                    </Button>
+                    <Button
+                        asChild
+                        size="sm"
+                        variant={isPreview ? 'default' : 'outline'}
+                    >
+                        <Link
+                            href={submissionsIndex(site.public_id, {
+                                query: { mode: 'preview' },
+                            })}
+                            aria-current={isPreview ? 'page' : undefined}
+                        >
+                            {`Тестовые из предпросмотра (${previewCount})`}
+                        </Link>
+                    </Button>
+                </nav>
+
+                {isPreview && (
+                    <p className="text-sm text-muted-foreground">
+                        Тестовые заявки отправлены из предпросмотра черновика.
+                        Они не считаются заявками клиентов и никуда не
+                        передаются.
+                    </p>
+                )}
+
                 {submissions.length === 0 ? (
                     <Card className="border-dashed">
                         <CardHeader>
                             <h2 className="leading-none font-semibold">
-                                Заявок пока нет
+                                {isPreview
+                                    ? 'Тестовых заявок нет'
+                                    : 'Заявок пока нет'}
                             </h2>
                             <CardDescription>
-                                Здесь появятся заявки, отправленные через формы
-                                сайта.
+                                {isPreview
+                                    ? 'Здесь появятся заявки, отправленные из предпросмотра.'
+                                    : 'Здесь появятся заявки, отправленные через формы опубликованного сайта.'}
                             </CardDescription>
                         </CardHeader>
                     </Card>
@@ -170,6 +221,11 @@ export default function SubmissionsIndex({
                                         <Badge variant="secondary">
                                             {submission.status}
                                         </Badge>
+                                        {submission.mode === 'preview' && (
+                                            <Badge variant="outline">
+                                                {submission.mode_label}
+                                            </Badge>
+                                        )}
                                         <time
                                             dateTime={submission.submitted_at}
                                             className="text-sm text-muted-foreground"

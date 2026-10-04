@@ -18,6 +18,7 @@ import type { VehicleBinding } from '@/blocks/vehicles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { designer, preview } from '@/routes/sites';
+import { store as previewSubmission } from '@/routes/sites/preview/submissions';
 
 type PreviewProps = {
     site: { public_id: string; name: string };
@@ -162,19 +163,26 @@ export default function Preview({
                             form={openedForm}
                             captcha={captcha}
                             onSubmit={(values, meta) =>
-                                submitForm(openedForm.public_id, {
-                                    fields: values,
-                                    lf_hp: meta.honeypot,
-                                    ...(meta.captchaToken !== null && {
-                                        captcha_token: meta.captchaToken,
+                                submitForm(
+                                    previewSubmission.url({
+                                        site: site.public_id,
+                                        form: openedForm.public_id,
                                     }),
-                                    context: {
-                                        ...opened.context,
-                                        page: page.public_id,
-                                        popup: opened.popup.public_id,
+                                    {
+                                        fields: values,
+                                        lf_hp: meta.honeypot,
+                                        ...(meta.captchaToken !== null && {
+                                            captcha_token: meta.captchaToken,
+                                        }),
+                                        context: {
+                                            ...opened.context,
+                                            page: page.public_id,
+                                            popup: opened.popup.public_id,
+                                        },
+                                        tracking: currentTracking(),
                                     },
-                                    tracking: currentTracking(),
-                                })
+                                    { authenticated: true },
+                                )
                             }
                         />
                     )}

@@ -98,10 +98,12 @@ class BlacklistTest extends TestCase
     {
         $owner = $this->member(WorkspaceRole::Owner);
         $admin = $this->member(WorkspaceRole::Admin);
+        $designer = $this->member(WorkspaceRole::Designer);
         $global = $this->entry(BlacklistScope::Global, BlacklistType::Ip, '10.0.0.66');
         $store = fn (User $user, array $payload) => $this->as($user)->post(route('sites.blacklist.store', $this->site), $payload);
 
-        $store($admin, ['scope' => 'site', 'type' => 'phone', 'value' => '79990000001'])->assertForbidden();
+        $store($designer, ['scope' => 'site', 'type' => 'phone', 'value' => '79990000001'])->assertForbidden();
+        $store($admin, ['scope' => 'workspace', 'type' => 'phone', 'value' => '79990000001'])->assertForbidden();
         $store($owner, ['scope' => 'global', 'type' => 'ip', 'value' => '10.0.0.1'])->assertSessionHasErrors('scope');
         $store($owner, ['scope' => 'site', 'type' => 'ip', 'value' => '999.1.1.1'])->assertSessionHasErrors('value');
         $store($owner, ['scope' => 'site', 'type' => 'phone', 'value' => '+7 (999) 000-00-01', 'reason' => 'Спам', 'expires_in_days' => 7])->assertSessionHasNoErrors();
@@ -119,9 +121,12 @@ class BlacklistTest extends TestCase
                 ->where('blacklist.site.0.value', '79990000001')
                 ->missing('blacklist.global'));
         $this->as($admin)->get(route('sites.form-security.show', $this->site))
+            ->assertInertia(fn (Assert $page) => $page->has('blacklist.site', 1)->has('blacklist.workspace', 0));
+        $this->as($designer)->get(route('sites.form-security.show', $this->site))
             ->assertInertia(fn (Assert $page) => $page->has('blacklist.site', 0)->has('blacklist.workspace', 0));
 
-        $this->as($admin)->delete(route('sites.blacklist.destroy', [$this->site, $siteEntry->public_id]))->assertForbidden();
+        $this->as($designer)->delete(route('sites.blacklist.destroy', [$this->site, $siteEntry->public_id]))->assertForbidden();
+        $this->as($admin)->delete(route('sites.blacklist.destroy', [$this->site, $workspaceEntry->public_id]))->assertForbidden();
         $this->as($owner)->delete(route('sites.blacklist.destroy', [$this->site, $global->public_id]))->assertNotFound();
         $this->as($owner)->delete(route('sites.blacklist.destroy', [Site::factory()->for($this->workspace)->create(), $siteEntry->public_id]))->assertNotFound();
         $this->as($owner)->delete(route('sites.blacklist.destroy', [$this->site, $siteEntry->public_id]))->assertRedirect();

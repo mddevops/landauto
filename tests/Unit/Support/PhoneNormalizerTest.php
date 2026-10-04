@@ -27,7 +27,11 @@ class PhoneNormalizerTest extends TestCase
             'spaces only' => ['7 999 111 22 33', '79991112233'],
             'parentheses and hyphens' => ['(999)111-22-33', '9991112233'],
             'dots' => ['+7.999.111.22.33', '79991112233'],
-            'trunk eight kept as dialled' => ['8 (999) 111-22-33', '89991112233'],
+            'russian trunk eight rewritten' => ['8 (999) 111-22-33', '79991112233'],
+            'russian trunk eight digits only' => ['89991112233', '79991112233'],
+            'plus eight is international and kept' => ['+8 999 111 22 33', '89991112233'],
+            'foreign thirteen digits starting with eight kept' => ['86 1380 013 8000', '8613800138000'],
+            'ten digits starting with eight kept' => ['800 111 22 33', '8001112233'],
             'surrounding whitespace' => ['  +79991112233  ', '79991112233'],
             'international max length' => ['+123 456 789 012 345', '123456789012345'],
         ];

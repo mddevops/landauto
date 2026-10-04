@@ -153,6 +153,8 @@ Current focus:
 - `P4-012` DONE: reusable `Lightbox` (D-033; keyboard, focus trap/return, alt text) adopted in the Vehicle Gallery.
 - `P4-013` DONE: interactive Playwright flows (form/popup/submission, vehicle offer trusted context + spoofed price, duplicate, honeypot, fake CAPTCHA, carousel, lightbox, 375 px); fixture monitors all tabs.
 - `P4-014` DONE: Phase 4 gate (composer quality 509 tests, 41 E2E passed, diff check); Phase 4 COMPLETED.
+- Phase 5 (in progress on `autopilot/phase5-2026-10-05`):
+- `X-021` DONE (D-108): trunk-8 phone rewrite, typed Submission `mode` (`public` | `preview`) with an authenticated preview endpoint and separate per-mode duplicates/counters, real leads listed apart from preview test entries, Admin `edit_popups`, form security and Site blacklist under `edit_forms`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

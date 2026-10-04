@@ -1940,6 +1940,23 @@ Owner approval in the pre-Phase-4 reconciliation instruction (2026-10-04); X-020
 
 ---
 
+## D-108 — Phase 4 Operational Reconciliation
+
+**Status:** APPROVED
+
+### Decision
+
+- **Phone normalization:** a Russian number written without «+» with exactly 11 digits starting with 8 is normalized to 7XXXXXXXXXX (`8 (999) 111-22-33` → `79991112233`). Numbers written with «+» and all other lengths are never rewritten.
+- **Preview submissions:** a Submission has a typed `mode` (`public` | `preview`). Submissions from the authenticated draft preview are stored with `preview`, clearly marked, excluded from the normal lead list by default, never eligible for CRM/email delivery and never counted as conversions. Duplicates and rate-limit counters are kept per mode. There is no second Submission model.
+- **Permissions:** Admin receives `edit_popups`. Designer keeps `edit_popups` and does not receive `edit_forms`. ContentEditor is unchanged. The Site form-security policy and the Site-scoped blacklist require `edit_forms`; the Workspace blacklist keeps `edit_workspace`; the Global blacklist stays platform-only.
+- D-094 (personal data retention) stays OPEN and remains a production-launch blocker; no Submission export.
+
+### Resolved By
+
+Owner approval in the Phase 5 autopilot instruction (2026-10-05); X-021.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

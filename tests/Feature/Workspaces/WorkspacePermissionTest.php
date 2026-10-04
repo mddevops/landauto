@@ -38,6 +38,7 @@ class WorkspacePermissionTest extends TestCase
             WorkspacePermission::DeleteSite,
             WorkspacePermission::EditDesign,
             WorkspacePermission::EditContent,
+            WorkspacePermission::EditPopups,
             WorkspacePermission::EditForms,
             WorkspacePermission::ViewVehicles,
             WorkspacePermission::EditVehicles,
@@ -50,6 +51,7 @@ class WorkspacePermissionTest extends TestCase
             WorkspacePermission::PreviewSite,
             WorkspacePermission::PublishSite,
         ], $permissions);
+        $this->assertNotContains(WorkspacePermission::RestoreVersion, $permissions);
         $this->assertContains(WorkspacePermission::ManageMembers, $permissions);
         $this->assertContains(WorkspacePermission::PublishSite, $permissions);
         $this->assertNotContains(WorkspacePermission::ManageBilling, $permissions);

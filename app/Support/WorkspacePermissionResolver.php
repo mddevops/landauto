@@ -21,6 +21,7 @@ class WorkspacePermissionResolver
                 WorkspacePermission::DeleteSite,
                 WorkspacePermission::EditDesign,
                 WorkspacePermission::EditContent,
+                WorkspacePermission::EditPopups,
                 WorkspacePermission::EditForms,
                 WorkspacePermission::ViewVehicles,
                 WorkspacePermission::EditVehicles,

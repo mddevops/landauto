@@ -1,4 +1,3 @@
-import { store } from '@/actions/App/Http/Controllers/Forms/FormSubmissionController';
 import type { FormSubmitResult, FormValues } from './form';
 
 const fallbackMessage = 'Не удалось отправить заявку. Попробуйте ещё раз.';
@@ -50,22 +49,36 @@ export function currentTracking(): Record<string, string> {
     return tracking;
 }
 
+function xsrfToken(): string | null {
+    const cookie = document.cookie
+        .split('; ')
+        .find((part) => part.startsWith('XSRF-TOKEN='));
+
+    return cookie
+        ? decodeURIComponent(cookie.slice('XSRF-TOKEN='.length))
+        : null;
+}
+
 /**
- * Posts a visitor submission to the public Form endpoint. The payload carries only
- * field values and public-ID hints; the backend resolves everything authoritative.
+ * Posts a submission. The payload carries only field values and public-ID hints; the backend
+ * resolves everything authoritative. Authenticated endpoints (draft preview) also send the
+ * session CSRF token.
  */
 export async function submitForm(
-    formPublicId: string,
+    url: string,
     payload: SubmissionPayload,
+    { authenticated = false }: { authenticated?: boolean } = {},
 ): Promise<FormSubmitResult> {
     let response: Response;
+    const token = authenticated ? xsrfToken() : null;
 
     try {
-        response = await fetch(store.url(formPublicId), {
+        response = await fetch(url, {
             method: 'POST',
             headers: {
                 Accept: 'application/json',
                 'Content-Type': 'application/json',
+                ...(token !== null && { 'X-XSRF-TOKEN': token }),
             },
             body: JSON.stringify(payload),
         });

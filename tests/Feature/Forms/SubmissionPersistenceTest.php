@@ -3,6 +3,7 @@
 namespace Tests\Feature\Forms;
 
 use App\Enums\FormFieldType;
+use App\Enums\SubmissionMode;
 use App\Enums\SubmissionStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Form;
@@ -138,6 +139,54 @@ class SubmissionPersistenceTest extends TestCase
         }
 
         $this->as($members['owner'])->get(route('sites.submissions.index', Site::factory()->create()))->assertNotFound();
+    }
+
+    public function test_preview_submission_requires_preview_permission_and_is_marked_preview(): void
+    {
+        $designer = User::factory()->create();
+        $editor = User::factory()->create();
+        $owner = User::factory()->create();
+        $this->workspace->addMember($designer, WorkspaceRole::Designer);
+        $this->workspace->addMember($editor, WorkspaceRole::ContentEditor);
+        $this->workspace->addMember($owner, WorkspaceRole::Owner);
+        $url = route('sites.preview.submissions.store', [$this->site, $this->form->public_id]);
+
+        $this->postJson($url, ['fields' => $this->fields()])->assertUnauthorized();
+        $this->as($editor)->postJson($url, ['fields' => $this->fields()])->assertForbidden();
+        $foreignForm = Form::factory()->withLeadFields()->create();
+        $this->as($designer)->postJson(route('sites.preview.submissions.store', [$this->site, $foreignForm->public_id]), ['fields' => $this->fields()])->assertNotFound();
+        $this->assertSame(0, Submission::query()->count());
+
+        $this->as($designer)->postJson($url, ['fields' => $this->fields()])->assertCreated();
+        $this->as($designer)->postJson($url, ['fields' => $this->fields()])->assertTooManyRequests();
+        $this->as($designer)->postJson($url, ['fields' => $this->fields(['phone' => '+7 999 222-33-44'])])->assertCreated();
+        $this->assertSame([SubmissionMode::Preview, SubmissionMode::Preview], Submission::query()->pluck('mode')->all());
+
+        $this->submit(['fields' => $this->fields()])->assertCreated();
+        $public = Submission::query()->where('mode', SubmissionMode::Public->value)->sole();
+
+        $this->as($owner)->get(route('sites.submissions.index', $this->site))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mode', 'public')
+                ->where('previewCount', 2)
+                ->has('submissions', 1)
+                ->where('submissions.0.public_id', $public->public_id));
+        $this->as($owner)->get(route('sites.submissions.index', [$this->site, 'mode' => 'preview']))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('mode', 'preview')
+                ->has('submissions', 2)
+                ->where('submissions.0.mode', 'preview')
+                ->where('submissions.0.mode_label', 'Тестовая (предпросмотр)'));
+    }
+
+    public function test_preview_submissions_do_not_count_as_public_duplicates(): void
+    {
+        $owner = User::factory()->create();
+        $this->workspace->addMember($owner, WorkspaceRole::Owner);
+        $this->as($owner)->postJson(route('sites.preview.submissions.store', [$this->site, $this->form->public_id]), ['fields' => $this->fields()])->assertCreated();
+
+        $this->submit(['fields' => $this->fields()])->assertCreated();
+        $this->submit(['fields' => $this->fields()])->assertTooManyRequests();
     }
 
     /**

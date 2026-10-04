@@ -23,7 +23,7 @@ use Inertia\Response;
 /**
  * «Защита форм»: the Site security policy behind the centralized anti-spam layer
  * (FORMS_AND_INTEGRATIONS.md §12–§13). Editing the policy and Site blacklist requires
- * `edit_site_settings`; the Workspace blacklist requires `edit_workspace`. Blacklisted values
+ * `edit_forms` (X-021); the Workspace blacklist requires `edit_workspace`. Blacklisted values
  * are personal data, so each list is sent only to members who may edit it.
  */
 class SiteFormSecurityController extends Controller
@@ -39,7 +39,7 @@ class SiteFormSecurityController extends Controller
         Gate::authorize('view', $site);
 
         $user = $request->user();
-        $canEdit = Gate::allows('update', $site);
+        $canEdit = Gate::allows('editForms', $site);
         $canEditWorkspace = $user !== null && $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditWorkspace);
 
         return Inertia::render('sites/form-security', [
@@ -62,7 +62,7 @@ class SiteFormSecurityController extends Controller
     public function update(Request $request, Site $site, CaptchaVerifier $captcha): RedirectResponse
     {
         $this->scope->site($site);
-        Gate::authorize('update', $site);
+        Gate::authorize('editForms', $site);
 
         $rules = [];
 

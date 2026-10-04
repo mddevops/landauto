@@ -150,9 +150,10 @@ Typical permissions:
 - delete_site
 - edit_design
 - edit_content
+- edit_popups (D-108)
 - edit_vehicles
 - edit_prices
-- edit_forms
+- edit_forms (also Site form security and Site blacklist, D-108)
 - manage_integrations
 - view_submissions
 - edit_seo

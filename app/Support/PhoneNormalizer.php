@@ -5,7 +5,9 @@ namespace App\Support;
 /**
  * Central phone normalization: `+7 (999) 111-22-33` → `79991112233`. The normalized form
  * (digits only, E.164 length) powers duplicate detection, blacklists and rate limits.
- * No national trunk-prefix rewriting (e.g. leading 8) is applied without a product decision.
+ * The Russian trunk prefix is the only national rewrite (owner-approved, X-021): exactly
+ * 11 digits starting with 8 and written without «+» become 7XXXXXXXXXX. Numbers written
+ * with «+» are already international and are never rewritten.
  */
 final class PhoneNormalizer
 {
@@ -17,9 +19,17 @@ final class PhoneNormalizer
 
     public function normalize(?string $value): ?string
     {
-        return $value !== null && $this->error($value) === null
-            ? (string) preg_replace('/\D/', '', $value)
-            : null;
+        if ($value === null || $this->error($value) !== null) {
+            return null;
+        }
+
+        $digits = (string) preg_replace('/\D/', '', $value);
+
+        if (! str_starts_with(trim($value), '+') && strlen($digits) === 11 && $digits[0] === '8') {
+            return '7'.substr($digits, 1);
+        }
+
+        return $digits;
     }
 
     /**

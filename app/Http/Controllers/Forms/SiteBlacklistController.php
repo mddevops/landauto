@@ -19,7 +19,7 @@ use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
 /**
- * Tenant blacklist entries managed from «Защита форм». Site entries need `edit_site_settings`;
+ * Tenant blacklist entries managed from «Защита форм». Site entries need `edit_forms` (X-021);
  * Workspace entries need `edit_workspace` for the Site's own Workspace. The owner is always
  * derived from the Site; Global entries are never reachable here.
  */
@@ -95,7 +95,7 @@ class SiteBlacklistController extends Controller
     {
         $allowed = $scope === BlacklistScope::Workspace
             ? ($user = request()->user()) !== null && $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditWorkspace)
-            : Gate::allows('update', $site);
+            : Gate::allows('editForms', $site);
 
         abort_unless($allowed, 403);
     }

@@ -4,6 +4,7 @@ namespace App\Forms;
 
 use App\Enums\FormFieldType;
 use App\Enums\SiteStatus;
+use App\Enums\SubmissionMode;
 use App\Forms\Captcha\CaptchaVerdict;
 use App\Forms\Captcha\CaptchaVerifier;
 use App\Models\Form;
@@ -53,9 +54,13 @@ class SubmissionPipeline
     }
 
     /**
+     * Preview submissions come from an authenticated editor testing the draft. They pass the
+     * same protection as visitors, but duplicates and rate-limit counters are kept per mode,
+     * so testing can never block or shadow real visitor leads.
+     *
      * @param  array<array-key, mixed>  $payload
      */
-    public function handle(string $formPublicId, array $payload, ?string $ip, ?string $userAgent): SubmissionResult
+    public function handle(string $formPublicId, array $payload, ?string $ip, ?string $userAgent, SubmissionMode $mode = SubmissionMode::Public): SubmissionResult
     {
         $form = Form::query()->with(['fields', 'site'])->where('public_id', $formPublicId)->first();
 
@@ -88,7 +93,7 @@ class SubmissionPipeline
             return SubmissionResult::rejected(SubmissionGuard::REJECTION_MESSAGE);
         }
 
-        if ($this->guard->blocks($form, $policy, $ip, $normalizedPhone)) {
+        if ($this->guard->blocks($form, $policy, $ip, $normalizedPhone, $mode)) {
             return SubmissionResult::throttled(SubmissionGuard::REJECTION_MESSAGE);
         }
 
@@ -107,6 +112,7 @@ class SubmissionPipeline
         $submission->forceFill([
             'site_id' => $form->site_id,
             'form_id' => $form->id,
+            'mode' => $mode,
             'payload' => array_values($form->fields->map(fn (FormField $field): array => [
                 'key' => $field->key,
                 'type' => $field->type->value,
@@ -122,7 +128,7 @@ class SubmissionPipeline
             'submitted_at' => now(),
         ])->save();
 
-        $this->guard->record($form, $policy, $ip, $normalizedPhone);
+        $this->guard->record($form, $policy, $ip, $normalizedPhone, $mode);
 
         return SubmissionResult::accepted($submission, $form->success_message);
     }

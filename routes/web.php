@@ -6,6 +6,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormSubmissionController;
+use App\Http\Controllers\Forms\PreviewSubmissionController;
 use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
@@ -71,6 +72,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('designer', SiteDesignerController::class)->name('designer');
             Route::get('preview', SitePreviewController::class)->name('preview');
+            Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
+                ->whereUlid('form')
+                ->middleware('throttle:form-submissions')
+                ->name('preview.submissions.store');
             Route::patch('design', SiteDesignController::class)->name('design.update');
             Route::post('assets', [SiteAssetController::class, 'store'])->middleware('throttle:60,1')->name('assets.store');
             Route::get('assets/{asset}', [SiteAssetController::class, 'show'])->whereUlid('asset')->name('assets.show');
