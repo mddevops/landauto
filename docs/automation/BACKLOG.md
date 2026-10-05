@@ -70,9 +70,9 @@ Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
 
 Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`).
 
-Phase 6 — Integrations & Analytics: NOT_STARTED (needs owner go-ahead).
+Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-001 — Workspace Integration Profiles`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-002 — Secret Encryption / Masking`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2780,8 +2780,15 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-001 — Workspace Integration Profiles
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P5-012
+
+### Result
+
+- Table `integration_profiles` (ULID `public_id`, Workspace-owned, provider `webhook` | `custom_api`, auth `none` | `bearer` | `basic` | `api_key_header`, `encrypted_credentials`, `settings_json`, status `active` | `disabled` | `archived`). Owner and provider type are immutable.
+- Russian «Интеграции» page at `/integrations`, shown in the sidebar to members with `view_integrations`. Members with `manage_integrations` can create, edit non-secret fields, disable and delete profiles. A profile that is still referenced is archived instead of deleted.
+- Profiles are always resolved inside the current Workspace; a foreign public ID returns 404. No named CRM adapters.
+- Permission reconciliation D-109: Admin gains `view_integrations`, `edit_form_routes`, `view_delivery_logs` and `retry_deliveries`; Designer and ContentEditor get no integration permissions.
 
 ---
 

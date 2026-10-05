@@ -44,7 +44,11 @@ class WorkspacePermissionTest extends TestCase
             WorkspacePermission::EditVehicles,
             WorkspacePermission::EditPrices,
             WorkspacePermission::EditBenefits,
+            WorkspacePermission::ViewIntegrations,
             WorkspacePermission::ManageIntegrations,
+            WorkspacePermission::EditFormRoutes,
+            WorkspacePermission::ViewDeliveryLogs,
+            WorkspacePermission::RetryDeliveries,
             WorkspacePermission::ViewSubmissions,
             WorkspacePermission::EditSeo,
             WorkspacePermission::ManageDomains,
@@ -69,6 +73,10 @@ class WorkspacePermissionTest extends TestCase
         $this->assertNotContains(WorkspacePermission::PublishSite, $permissions);
         $this->assertNotContains(WorkspacePermission::EditPrices, $permissions);
         $this->assertNotContains(WorkspacePermission::EditBenefits, $permissions);
+
+        foreach ([WorkspacePermission::ViewIntegrations, WorkspacePermission::ManageIntegrations, WorkspacePermission::EditFormRoutes, WorkspacePermission::ViewDeliveryLogs, WorkspacePermission::RetryDeliveries, WorkspacePermission::ViewSubmissions] as $integrationPermission) {
+            $this->assertNotContains($integrationPermission, $permissions);
+        }
     }
 
     public function test_content_editor_receives_only_content_permissions(): void

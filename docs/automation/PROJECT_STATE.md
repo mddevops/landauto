@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: NOT_STARTED** (needs owner go-ahead). Next ready task per `BACKLOG.md`: `P6-001 — Workspace Integration Profiles`.
+**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: IN_PROGRESS** (branch `autopilot/phase6-2026-10-05`). Next ready task per `BACKLOG.md`: `P6-002 — Secret Encryption / Masking`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -168,6 +168,8 @@ Current focus:
 - `P5-010` DONE: version history on «Публикация» (number, date, publisher, status, production badge) and Owner-only `restore_version` restore of the private Draft snapshot into the Draft in one transaction (Pages, Blocks, SEO, design, Forms/Fields, Popups, Vehicles, Offers, benefits; public IDs reused, cross-Site IDs rejected, missing Forms switched off not deleted); production unchanged until the next Publish creates a new version; operational data (Submissions, blacklists, form security, subdomain) untouched.
 - `P5-011` DONE: Playwright `publishing-lifecycle.spec.ts` covers the full lifecycle (404 before publish, preview, publish v1–v4, no-JS HTML with price, Draft isolation incl. Form label and price, public vs preview leads, historical media URL, blocked Publish on a broken action, history, restore, permissions, protected platform image, 375 px).
 - `P5-012` DONE: Phase 5 gate. Fixed static `public/robots.txt` shadowing per-Site robots on public hosts (route on the application host instead); added catalog/Block-catalog isolation test and extended lifecycle E2E (image A → B, interactivity after hydration, Admin/Designer/foreign permissions, robots/canonical). Phase 5 COMPLETED.
+- Phase 6 (IN_PROGRESS on `autopilot/phase6-2026-10-05`):
+- `P6-001` DONE: Workspace `integration_profiles` (webhook / custom API, auth none / bearer / basic / API-key header, encrypted credentials, archive when referenced) with the «Интеграции» page; D-109 permission reconciliation (Admin gains `view_integrations`, `edit_form_routes`, `view_delivery_logs`, `retry_deliveries`).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1164,7 +1166,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P6-001 — Workspace Integration Profiles`** (Phase 6 — Integrations & Analytics, NOT_STARTED; Phase 5 COMPLETED) per `BACKLOG.md`.
+**Next: `P6-002 — Secret Encryption / Masking`** (Phase 6 — Integrations & Analytics, IN_PROGRESS; Phase 5 COMPLETED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1456,7 +1458,7 @@ Phase 2 — Designer Foundation: COMPLETED (gate P2-018)
 Phase 3 — Automotive Foundation: COMPLETED (gate P3-017)
 Phase 4 — Forms & Interactive Components: COMPLETED
 Phase 5 — Publishing: COMPLETED (gate P5-012)
-Phase 6 — Integrations & Analytics: NOT_STARTED
+Phase 6 — Integrations & Analytics: IN_PROGRESS
 Phase 7 — Paid Features: NOT_STARTED
 Phase 8 — Team: NOT_STARTED
 Phase 9 — Developer Platform: NOT_STARTED
@@ -1722,7 +1724,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P6-001 — Workspace Integration Profiles`** (needs owner go-ahead). Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is NOT_STARTED.
+**`P6-002 — Secret Encryption / Masking`**. Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is IN_PROGRESS.
 
 ---
 
@@ -1778,5 +1780,5 @@ Production deployment:        NOT_CONFIGURED
 Core Landflow implementation: IN_PROGRESS (Phases 0–5 COMPLETED)
 ```
 
-**Current phase: Phase 6 — Integrations & Analytics (NOT_STARTED; Phases 0–5 COMPLETED).
-Next: `P6-001 — Workspace Integration Profiles` per `BACKLOG.md`.**
+**Current phase: Phase 6 — Integrations & Analytics (IN_PROGRESS; Phases 0–5 COMPLETED).
+Next: `P6-002 — Secret Encryption / Masking` per `BACKLOG.md`.**

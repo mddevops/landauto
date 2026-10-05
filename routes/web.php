@@ -10,6 +10,7 @@ use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
+use App\Http\Controllers\Integrations\IntegrationProfileController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
@@ -65,6 +66,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::post('sites', [SiteController::class, 'store'])
         ->middleware(RequireWorkspaceContext::class)
         ->name('sites.store');
+
+    Route::middleware(RequireWorkspaceContext::class)
+        ->prefix('integrations')
+        ->name('integrations.')
+        ->group(function () {
+            Route::get('/', [IntegrationProfileController::class, 'index'])->name('index');
+            Route::post('/', [IntegrationProfileController::class, 'store'])->name('store');
+            Route::patch('{profile}', [IntegrationProfileController::class, 'update'])->whereUlid('profile')->name('update');
+            Route::delete('{profile}', [IntegrationProfileController::class, 'destroy'])->whereUlid('profile')->name('destroy');
+        });
 
     Route::middleware(RequireWorkspaceContext::class)
         ->prefix('sites/{site}')
