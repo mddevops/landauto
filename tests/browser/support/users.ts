@@ -65,7 +65,7 @@ export const users = {
         site: 'Сайт для публикации',
         publicUrl: 'http://publish-e2e.localhost:8200',
     },
-    // Full publishing lifecycle on `lifecycle-e2e`: Owner plus a Designer without publish rights.
+    // Full publishing lifecycle on `lifecycle-e2e`: Owner, Admin (publish) and Designer (preview).
     lifecycle: {
         name: 'Лев Циклов',
         email: 'lifecycle@landflow.test',
@@ -77,6 +77,11 @@ export const users = {
     lifecycleDesigner: {
         name: 'Дарья Оформителева',
         email: 'lifecycle-designer@landflow.test',
+        password: 'e2e-password',
+    },
+    lifecycleAdmin: {
+        name: 'Антон Админов',
+        email: 'lifecycle-admin@landflow.test',
         password: 'e2e-password',
     },
 } as const;

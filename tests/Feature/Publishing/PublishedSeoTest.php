@@ -98,6 +98,18 @@ class PublishedSeoTest extends TestCase
         $this->visit('/robots.txt')->assertNotFound();
     }
 
+    public function test_static_files_never_shadow_published_robots_or_sitemap(): void
+    {
+        $this->assertFileDoesNotExist(public_path('robots.txt'));
+        $this->assertFileDoesNotExist(public_path('sitemap.xml'));
+
+        $this->get('/robots.txt')
+            ->assertOk()
+            ->assertHeader('Content-Type', 'text/plain; charset=UTF-8')
+            ->assertSee("User-agent: *\nDisallow:", false)
+            ->assertDontSee('Sitemap:');
+    }
+
     public function test_draft_seo_changes_wait_for_the_next_publish(): void
     {
         $this->publish();

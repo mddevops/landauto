@@ -68,11 +68,11 @@ Phase 3 — Automotive Foundation: COMPLETED (gate `P3-017` DONE; Catalog V2 sch
 
 Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
 
-Current phase:
+Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`).
 
-`P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
+Phase 6 — Integrations & Analytics: NOT_STARTED (needs owner go-ahead).
 
-Next ready task: `P5-012 — Phase 5 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-001 — Workspace Integration Profiles`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2765,8 +2765,10 @@ Also test failed Publish.
 
 ## P5-012 — Phase 5 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-011
+
+Result: Phase 5 audit against ADR-006 and the publishing acceptance list. Fixed: the default static `public/robots.txt` shadowed the per-Site `/robots.txt` on public hosts (web servers serve existing files before routing); it was removed and the application host now serves the same body from a route (`PublishedSeoTest` guards against static `robots.txt` / `sitemap.xml`). Added coverage: catalog and Block catalog changes leave production HTML byte-identical (`PublishedRuntimeTest`); the lifecycle E2E now also covers hero image A → B stability, public v2 kept during a blocked Publish, robots/canonical/sitemap, carousel, lightbox, color switch, offer details and offer Popup after hydration, Designer preview, Admin publish without restore, foreign Workspace 404. Template independence is structural: a Site keeps no Template reference. Follow-ups (not Phase 5 criteria): «unpublished changes» indicator (PUBLISHING.md §23), publication notes, rollback, audit log of restores.
 
 ---
 

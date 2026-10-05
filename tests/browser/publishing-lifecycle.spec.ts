@@ -7,6 +7,44 @@ test.use({ storageState: guestStorageState });
 const owner = users.lifecycle;
 const v1Price = /1\s990\s000\s₽/;
 const v2Price = /2\s090\s000\s₽/;
+// 1×1 PNG generated in memory; uploads never read files from the developer machine.
+const png = Buffer.from(
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==',
+    'base64',
+);
+
+/** Uploads an image into the Site library and selects it as the hero background. */
+async function setHeroImage(page: Page, name: string) {
+    await page
+        .getByRole('button', { name: 'Выбрать блок «Первый экран»' })
+        .click();
+    const properties = page.getByRole('complementary', { name: 'Свойства' });
+    await properties
+        .getByRole('button', { name: 'Выбрать: Фоновое изображение' })
+        .click();
+    const library = page.getByRole('dialog', {
+        name: 'Библиотека изображений',
+    });
+    await library.getByLabel('Загрузить изображение').setInputFiles({
+        name,
+        mimeType: 'image/png',
+        buffer: png,
+    });
+    await expect(library).toBeHidden();
+    await expect(properties.getByText(name)).toBeVisible();
+    await expectSaved(page);
+}
+
+/** Version-scoped URL of the hero background on a published page. */
+async function heroImageUrl(target: Page): Promise<string> {
+    const src = await target
+        .locator('img[src*="/_landflow/assets/"]')
+        .first()
+        .getAttribute('src');
+    expect(src).toBeTruthy();
+
+    return new URL(src ?? '', owner.publicUrl).href;
+}
 
 async function login(page: Page, email: string, password: string) {
     await page.goto('/login');
@@ -115,6 +153,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         .click();
     await expect(page).toHaveURL(/\/sites\/[0-9A-HJKMNP-TV-Z]{26}\/designer$/i);
     const siteUrl = page.url().replace(/\/designer$/, '');
+    await setHeroImage(page, 'showroom-a.png');
 
     // Draft v1 in preview.
     const preview = await page.context().newPage();
@@ -147,8 +186,25 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         .getAttribute('src');
     expect(v1Image).toBeTruthy();
     const v1ImageUrl = new URL(v1Image ?? '', owner.publicUrl).href;
+    const imageA = await heroImageUrl(raw);
 
-    // Draft v2: heading, price and Form field label.
+    // Production SEO head, robots.txt and sitemap.
+    await expect(raw.locator('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        `${owner.publicUrl}/`,
+    );
+    await expect(raw.locator('meta[name="robots"]')).toHaveAttribute(
+        'content',
+        'index, follow',
+    );
+    await raw.goto(`${owner.publicUrl}/robots.txt`);
+    expect(await raw.content()).toContain(
+        `Sitemap: ${owner.publicUrl}/sitemap.xml`,
+    );
+    await raw.goto(`${owner.publicUrl}/sitemap.xml`);
+    expect(await raw.content()).toContain(`<loc>${owner.publicUrl}/</loc>`);
+
+    // Draft v2: heading, hero image, price and Form field label.
     await page.goto(`${siteUrl}/designer`);
     await page
         .getByRole('button', { name: 'Выбрать блок «Первый экран»' })
@@ -158,6 +214,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         .getByLabel('Заголовок', { exact: true })
         .fill('Цикл: версия 2');
     await expectSaved(page);
+    await setHeroImage(page, 'showroom-b.png');
 
     await page.goto(`${siteUrl}/vehicles`);
     await page.getByRole('link', { name: /Кроссовер/ }).click();
@@ -187,6 +244,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         'Цикл: версия 2',
     );
     await expect(visitor.getByText(v2Price)).toHaveCount(0);
+    expect(await heroImageUrl(visitor)).toBe(imageA);
     await visitor
         .getByRole('button', { name: 'Записаться на тест-драйв' })
         .click();
@@ -243,8 +301,11 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         v2Price,
         'Цикл: версия 1',
     );
-    const historicalImage = await raw.goto(v1ImageUrl);
-    expect(historicalImage?.status()).toBe(200);
+    const imageB = await heroImageUrl(visitor);
+    expect(imageB.split('/').pop()).not.toBe(imageA.split('/').pop());
+    for (const historical of [v1ImageUrl, imageA]) {
+        expect((await raw.goto(historical))?.status()).toBe(200);
+    }
 
     // A broken action (scroll to a hidden block) blocks Publish until it is fixed.
     await page.goto(`${siteUrl}/designer`);
@@ -261,6 +322,12 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     await expect(
         page.getByRole('button', { name: 'Опубликовать' }),
     ).toBeDisabled();
+    await expectVisitorSees(
+        visitor,
+        'Цикл: версия 2',
+        v2Price,
+        'Цикл: версия 1',
+    );
     await page.goto(`${siteUrl}/designer`);
     await page
         .getByRole('button', { name: 'Показать «Карточка автомобиля»' })
@@ -316,7 +383,58 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         'Цикл: версия 2',
     );
 
-    // Interactive after hydration and usable at 375 px without horizontal overflow.
+    // Public interactivity after hydration: carousel, lightbox, colors, offer details, Popup.
+    const carousel = visitor.getByRole('region', {
+        name: 'Автомобили в наличии',
+    });
+    const dot = (position: number) =>
+        carousel.getByRole('button', { name: `Перейти к слайду ${position}` });
+    await expect(carousel.getByRole('group', { name: /из 2$/ })).toHaveCount(2);
+    await expect(dot(1)).toHaveAttribute('aria-current', 'true');
+    await carousel.getByRole('button', { name: 'Следующий слайд' }).click();
+    await expect(dot(2)).toHaveAttribute('aria-current', 'true');
+
+    const photo = visitor
+        .getByRole('button', { name: /Открыть фото на весь экран/ })
+        .first();
+    await photo.click();
+    const lightbox = visitor.getByRole('dialog', { name: /Фото:/ });
+    await expect(lightbox).toContainText('1 из 2');
+    await lightbox.getByRole('button', { name: 'Следующее фото' }).click();
+    await expect(lightbox).toContainText('2 из 2');
+    await visitor.keyboard.press('Escape');
+    await expect(lightbox).toBeHidden();
+
+    const card = visitor
+        .getByRole('article')
+        .filter({ has: visitor.getByRole('button', { name: 'Красный' }) })
+        .first();
+    const cardImage = card.getByRole('img').first();
+    await expect(cardImage).toHaveAccessibleName(/Белый/);
+    await card.getByRole('button', { name: 'Красный' }).click();
+    await expect(cardImage).toHaveAccessibleName(/Красный/);
+    await expect(card.getByRole('button', { name: 'Красный' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+    );
+
+    await visitor
+        .getByRole('button', { name: 'Подробнее', expanded: false })
+        .first()
+        .click();
+    await expect(
+        visitor.getByRole('button', { name: 'Скрыть подробности' }),
+    ).toHaveAttribute('aria-expanded', 'true');
+    await expect(
+        visitor.getByText('Модификация 1.5 CVT 150 л.с.'),
+    ).toBeVisible();
+    await visitor.getByRole('button', { name: 'Оставить заявку' }).click();
+    await expect(
+        visitor.getByRole('dialog', { name: 'Тест-драйв за 15 минут' }),
+    ).toBeVisible();
+    await visitor.keyboard.press('Escape');
+
+    // Usable at 375 px without horizontal overflow.
     await visitor.setViewportSize({ width: 375, height: 812 });
     await visitor.reload();
     await visitor
@@ -335,12 +453,18 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     ).toBe(true);
     await noScript.close();
 
-    // A Designer member can see the page but cannot publish or restore.
+    // Designer: preview yes, publish/restore no. Admin: publish yes, restore no.
     const designer = await signedIn(
         browser,
         users.lifecycleDesigner.email,
         users.lifecycleDesigner.password,
     );
+    await designer.goto(`${siteUrl}/preview`);
+    await expect(
+        designer
+            .getByRole('main', { name: 'Предпросмотр страницы' })
+            .getByRole('heading', { name: 'Цикл: версия 1' }),
+    ).toBeVisible();
     await openPublishing(designer, siteUrl);
     await expect(
         designer.getByText('У вас нет права публиковать этот сайт.'),
@@ -352,6 +476,30 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         designer.getByRole('button', { name: /^Восстановить версию/ }),
     ).toHaveCount(0);
     await designer.context().close();
+
+    const workspaceAdmin = await signedIn(
+        browser,
+        users.lifecycleAdmin.email,
+        users.lifecycleAdmin.password,
+    );
+    await openPublishing(workspaceAdmin, siteUrl);
+    await expect(
+        workspaceAdmin.getByRole('button', { name: 'Опубликовать' }),
+    ).toBeEnabled();
+    await expect(
+        workspaceAdmin.getByRole('button', { name: /^Восстановить версию/ }),
+    ).toHaveCount(0);
+    await workspaceAdmin.context().close();
+
+    // Another Workspace's member gets 404 for this Site.
+    const stranger = await signedIn(
+        browser,
+        users.publisher.email,
+        users.publisher.password,
+    );
+    expect((await stranger.goto(`${siteUrl}/publishing`))?.status()).toBe(404);
+    expect((await stranger.goto(`${siteUrl}/preview`))?.status()).toBe(404);
+    await stranger.context().close();
 
     // Platform media referenced by a Published Version cannot be deleted.
     const admin = await signedIn(
@@ -365,6 +513,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     await admin.getByRole('link', { name: 'I', exact: true }).click();
     await admin.getByRole('link', { name: 'Медиа серии Кроссовер' }).click();
     await admin
+        .getByRole('region', { name: 'Белый' })
         .getByRole('button', { name: 'Удалить изображение: Спереди 3/4' })
         .click();
     await expect(

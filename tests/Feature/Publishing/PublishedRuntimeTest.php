@@ -5,7 +5,12 @@ namespace Tests\Feature\Publishing;
 use App\Enums\PlatformRole;
 use App\Enums\PublishedVersionStatus;
 use App\Enums\SubmissionMode;
+use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
+use App\Models\BlockVersion;
+use App\Models\Catalog\AutoEquipment;
+use App\Models\Catalog\AutoMark;
+use App\Models\Catalog\AutoSeries;
 use App\Models\Form;
 use App\Models\Page;
 use App\Models\PlatformRoleAssignment;
@@ -94,6 +99,22 @@ class PublishedRuntimeTest extends TestCase
         $this->publish();
 
         $this->visit('/')->assertSee('Заголовок v2')->assertSee("2\u{A0}300\u{A0}000")->assertDontSee('Заголовок v1');
+    }
+
+    public function test_catalog_and_block_catalog_changes_do_not_reach_production(): void
+    {
+        $this->publish();
+        $before = (string) strstr((string) $this->visit('/')->assertOk()->getContent(), '<body');
+
+        AutoMark::query()->update(['name' => 'Новая марка']);
+        AutoSeries::query()->update(['name' => 'Новый кузов', 'status' => false]);
+        AutoEquipment::query()->update(['name' => 'Новая комплектация']);
+        $hero = BlockDefinition::query()->where('slug', 'hero')->sole();
+        BlockVersion::factory()->create(['block_definition_id' => $hero->id, 'version' => '9.0.0']);
+
+        $this->assertSame($before, (string) strstr((string) $this->visit('/')->getContent(), '<body'));
+        $this->assertStringContainsString('Седан', $before);
+        $this->assertStringContainsString('Prestige', $before);
     }
 
     public function test_unknown_pages_application_routes_and_other_methods_are_404_on_public_hosts(): void

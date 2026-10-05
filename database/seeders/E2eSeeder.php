@@ -92,11 +92,12 @@ class E2eSeeder extends Seeder
         $publisher = $this->createUser('Павел Публикаторов', 'publisher@landflow.test');
         $this->createPublishingSite($this->createWorkspace($publisher, 'Автосалон Центр', plan: $plan));
 
-        // Full publishing lifecycle: a ready Draft v1 (hero + priced vehicle card) and a Designer
-        // member without publish/restore rights.
+        // Full publishing lifecycle: a ready Draft v1 with interactive automotive Blocks, an Admin
+        // (publish, no restore) and a Designer (preview only).
         $lifecycle = $this->createUser('Лев Циклов', 'lifecycle@landflow.test');
         $lifecycleWorkspace = $this->createWorkspace($lifecycle, 'Автосалон Цикл', plan: $plan);
         $lifecycleWorkspace->addMember($this->createUser('Дарья Оформителева', 'lifecycle-designer@landflow.test'), WorkspaceRole::Designer);
+        $lifecycleWorkspace->addMember($this->createUser('Антон Админов', 'lifecycle-admin@landflow.test'), WorkspaceRole::Admin);
         $this->createLifecycleSite($lifecycleWorkspace);
     }
 
@@ -110,8 +111,9 @@ class E2eSeeder extends Seeder
 
     /**
      * Site «Сайт жизненного цикла» on `lifecycle-e2e`: home Page with a hero (Popup button and a
-     * scroll button to the vehicle card) and a priced vehicle of a dedicated catalog branch whose
-     * media image is backed by a real file.
+     * scroll button to the vehicle card), vehicle card, offers, a one-card vehicle carousel and a
+     * gallery. Two vehicles of a dedicated catalog branch; the priced one has two colors backed by
+     * real image files (two angles for «Белый»).
      */
     private function createLifecycleSite(Workspace $workspace): void
     {
@@ -125,34 +127,52 @@ class E2eSeeder extends Seeder
         $model = $mark->models()->firstOrCreate(['url' => 'moskvich-3'], ['name' => 'Moskvich 3', 'name_ru' => 'Москвич 3', 'year_from' => 2022, 'status' => true]);
         $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2022, 'status' => true]);
         $series = $generation->series()->firstOrCreate(['url' => 'crossover'], ['name' => 'Кроссовер', 'status' => true]);
+        $liftback = $generation->series()->firstOrCreate(['url' => 'liftback'], ['name' => 'Лифтбек', 'status' => true]);
         $equipment = AutoEquipment::factory()
             ->for(AutoModification::factory()->for($series, 'series')->state(['name' => '1.5 CVT 150 л.с.']), 'modification')
             ->create(['name' => 'Люкс']);
         $vehicle = SiteVehicle::factory()->for($site)->forSeries($series)->create(['sort_order' => 0]);
+        SiteVehicle::factory()->for($site)->forSeries($liftback)->create(['sort_order' => 1]);
         SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 199_000_000]);
 
-        $set = new SeriesMediaSet(['name' => 'Белый', 'swatch_hex' => '#f4f4f4', 'status' => true, 'sort_order' => 0]);
-        $set->catalog_series_public_id = $series->public_id;
-        $set->save();
         $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-        $path = 'series-media/e2e-lifecycle/front_3_4.png';
-        Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
-        SeriesMediaImage::factory()->for($set, 'set')->create([
-            'angle' => MediaAngle::FrontThreeQuarter,
-            'path' => $path,
-            'original_name' => 'front_3_4.png',
-            'size_bytes' => strlen($png),
-            'width' => 1,
-            'height' => 1,
-        ]);
+        $colors = [['Белый', '#f4f4f4', [MediaAngle::FrontThreeQuarter, MediaAngle::Side]], ['Красный', '#c62828', [MediaAngle::FrontThreeQuarter]]];
 
+        foreach ($colors as $order => [$name, $swatch, $angles]) {
+            $set = new SeriesMediaSet(['name' => $name, 'swatch_hex' => $swatch, 'status' => true, 'sort_order' => $order]);
+            $set->catalog_series_public_id = $series->public_id;
+            $set->save();
+
+            foreach ($angles as $angle) {
+                $path = "series-media/e2e-lifecycle/{$order}-{$angle->value}.png";
+                Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
+                SeriesMediaImage::factory()->for($set, 'set')->create([
+                    'angle' => $angle,
+                    'path' => $path,
+                    'original_name' => "{$angle->value}.png",
+                    'size_bytes' => strlen($png),
+                    'width' => 1,
+                    'height' => 1,
+                ]);
+            }
+        }
+
+        $popupAction = ['type' => 'open_popup', 'popup' => $popup->public_id];
         $home = $site->pages()->where('is_home', true)->firstOrFail();
         $card = $this->placeBlock($home, 'vehicle-card', 1, ['vehicle' => $vehicle->public_id]);
         $this->placeBlock($home, 'hero', 0, [
             'title' => 'Цикл: версия 1',
-            'primary_button' => ['label' => 'Записаться на тест-драйв', 'action' => ['type' => 'open_popup', 'popup' => $popup->public_id]],
+            'primary_button' => ['label' => 'Записаться на тест-драйв', 'action' => $popupAction],
             'secondary_button' => ['label' => 'К ценам', 'action' => ['type' => 'scroll_to', 'block' => $card->public_id]],
         ]);
+        $this->placeBlock($home, 'vehicle-offers', 2, [
+            'vehicle' => $vehicle->public_id,
+            'button' => ['label' => 'Оставить заявку', 'action' => $popupAction],
+        ]);
+        $this->placeBlock($home, 'vehicle-grid', 3, [
+            'carousel' => ['enabled' => true, 'per_view' => 'one', 'gap' => 'medium', 'arrows' => true, 'dots' => true, 'loop' => false, 'autoplay' => false, 'delay' => 's5'],
+        ]);
+        $this->placeBlock($home, 'vehicle-gallery', 4, ['vehicle' => $vehicle->public_id]);
     }
 
     /**

@@ -37,6 +37,11 @@ use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
+// Not a static file in public/: the web server would serve it on published hosts as well.
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow:\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']))
+    ->withoutMiddleware('web')
+    ->name('robots');
+
 Route::middleware(['guest', 'throttle:yandex-oauth'])->group(function () {
     Route::get('auth/yandex/redirect', [YandexOAuthController::class, 'redirect'])
         ->name('auth.yandex.redirect');
