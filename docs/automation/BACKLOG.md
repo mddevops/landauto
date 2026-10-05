@@ -70,9 +70,11 @@ Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
 
 Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`).
 
-Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
+Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-015 — Phase 6 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 7 — Paid Site Features: NOT_STARTED.
+
+Next ready task: `P7-001 — Custom Domain Schema`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2966,8 +2968,15 @@ SSRF protection mandatory.
 
 ## P6-015 — Phase 6 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-014
+
+### Result
+
+- Audit (no Phase 6 regressions found, no code changes): Workspace owns profiles and Sites store only bindings/overrides (no credential copies); credentials are `encrypted:array`, hidden from serialization, shown only as a mask and never re-displayed; Submission is persisted before any Delivery is created and the job is dispatched after commit; preview Submissions never create Deliveries; one Delivery and attempt log per route (route failures independent), bounded retry ladder, Delivery `public_id` as idempotency key, manual retry under `retry_deliveries`; email and HTTP adapters run in the queued job; one SSRF policy for delivery and Test Connection (https, public IPs only, pinned connection against DNS rebinding, no redirects, no proxy, timeouts, response cap); delivery logs keep only safe Russian messages and metadata (no bodies, tokens or lead values); logs carry public IDs, provider type, HTTP status, error code and exception class only; permissions are semantic keys (no role or plan checks); Metrica config is frozen into the Published manifest, loaded only on published pages, never in Preview, goals carry no payload. No Phase 7 work started.
+- Notes: Metrica settings are live Draft settings like form security, so restoring an old version to Draft does not change them; the next Publish uses the current settings.
+
+Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run check`, build), Playwright `npm run test:e2e` 44 passed, `git diff --check` PASS. Phase 6 COMPLETED; Phase 7 not started.
 
 ---
 
