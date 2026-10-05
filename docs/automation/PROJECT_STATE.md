@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-010 — Version History / Restore`.
+**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-011 — Publishing E2E`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -165,6 +165,7 @@ Current focus:
 - `P5-007` DONE: anonymous public runtime on `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` from stored artifacts only (no Draft reads, no Node per request), hydration from the stored payload, version-scoped immutable file delivery, version-bound public Form endpoint (`/_landflow/forms/{version}/{form}`, manifest-derived context and price, mode `public`). `sites.subdomain` column added (rules/UI in P5-008). The Draft public endpoint `POST /forms/{form}/submissions` was removed; preview keeps mode `preview`. Published Series media images cannot be deleted.
 - `P5-008` DONE: Landflow subdomains — `SiteSubdomain` rules (DNS label, global uniqueness incl. archived, reserved list + `xn--`), transliterated suggestion at Site creation (stable on rename), backfill migration, explicit change on «Публикация» (`manage_domains`), pre-publish `subdomain_missing`.
 - `P5-009` DONE: Page SEO fields (title, description, noindex) with `edit_seo` / `edit_seo_basic` split, published head (title, description, robots, canonical, real-value Open Graph, no invented image), `/sitemap.xml` (indexable Pages of the active version only), `/robots.txt` (no Draft URLs), preview `X-Robots-Tag: noindex, nofollow`.
+- `P5-010` DONE: version history on «Публикация» (number, date, publisher, status, production badge) and Owner-only `restore_version` restore of the private Draft snapshot into the Draft in one transaction (Pages, Blocks, SEO, design, Forms/Fields, Popups, Vehicles, Offers, benefits; public IDs reused, cross-Site IDs rejected, missing Forms switched off not deleted); production unchanged until the next Publish creates a new version; operational data (Submissions, blacklists, form security, subdomain) untouched.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

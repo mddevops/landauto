@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Models\Publication;
+use App\Models\PublishedVersion;
 use App\Models\Site;
 use App\Publishing\PublishSite;
 use App\Publishing\PublishValidator;
@@ -20,6 +21,8 @@ use Inertia\Response;
  */
 class SitePublishingController extends Controller
 {
+    private const HISTORY_LIMIT = 30;
+
     public function __construct(private DesignerScope $scope) {}
 
     public function show(Site $site, PublishValidator $validator): Response
@@ -44,11 +47,29 @@ class SitePublishingController extends Controller
                 'publisher' => $active->creator?->name,
             ],
             'lastAttempt' => $last === null ? null : $this->attempt($last),
+            'versions' => $site->publishedVersions()
+                ->select(['id', 'public_id', 'site_id', 'version_number', 'status', 'created_by', 'ready_at', 'created_at'])
+                ->with('creator:id,name')
+                ->orderByDesc('version_number')
+                ->limit(self::HISTORY_LIMIT)
+                ->get()
+                ->map(fn (PublishedVersion $version): array => [
+                    'public_id' => $version->public_id,
+                    'version_number' => $version->version_number,
+                    'status' => $version->status->value,
+                    'status_label' => $version->status->label(),
+                    'published_at' => ($version->ready_at ?? $version->created_at)?->toIso8601String(),
+                    'publisher' => $version->creator?->name,
+                    'is_production' => $version->id === $site->active_published_version_id,
+                ])
+                ->values()
+                ->all(),
             'check' => $validator->validate($site)->toArray(),
             'can' => [
                 'publish' => Gate::allows('publish', $site),
                 'preview' => Gate::allows('preview', $site),
                 'manageDomains' => Gate::allows('manageDomains', $site),
+                'restoreVersion' => Gate::allows('restoreVersion', $site),
             ],
         ]);
     }

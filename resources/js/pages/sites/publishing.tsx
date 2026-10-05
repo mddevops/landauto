@@ -3,9 +3,11 @@ import {
     CircleAlert,
     ExternalLink,
     Eye,
+    History,
     Rocket,
     TriangleAlert,
 } from 'lucide-react';
+import { useState } from 'react';
 import type { FormEvent } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
@@ -16,12 +18,21 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
+import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { designer, preview } from '@/routes/sites';
 import { store } from '@/routes/sites/publishing';
 import { update as updateSubdomain } from '@/routes/sites/subdomain';
+import { restore as restoreVersion } from '@/routes/sites/versions';
 
 type PublishIssue = {
     code: string;
@@ -46,8 +57,24 @@ type PublishingProps = {
         actor: string | null;
         error: string | null;
     } | null;
+    versions: PublishedVersionRow[];
     check: { errors: PublishIssue[]; warnings: PublishIssue[] };
-    can: { publish: boolean; preview: boolean; manageDomains: boolean };
+    can: {
+        publish: boolean;
+        preview: boolean;
+        manageDomains: boolean;
+        restoreVersion: boolean;
+    };
+};
+
+type PublishedVersionRow = {
+    public_id: string;
+    version_number: number;
+    status: string;
+    status_label: string;
+    published_at: string | null;
+    publisher: string | null;
+    is_production: boolean;
 };
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', {
@@ -64,6 +91,7 @@ export default function Publishing({
     address,
     production,
     lastAttempt,
+    versions,
     check,
     can,
 }: PublishingProps) {
@@ -245,8 +273,147 @@ export default function Publishing({
                         )}
                     </CardContent>
                 </Card>
+
+                <VersionHistory
+                    site={site}
+                    versions={versions}
+                    canRestore={can.restoreVersion}
+                />
             </main>
         </>
+    );
+}
+
+function VersionHistory({
+    site,
+    versions,
+    canRestore,
+}: {
+    site: PublishingProps['site'];
+    versions: PublishedVersionRow[];
+    canRestore: boolean;
+}) {
+    const [restoring, setRestoring] = useState<PublishedVersionRow | null>(
+        null,
+    );
+    const form = useForm({});
+
+    function restore() {
+        if (restoring === null) {
+            return;
+        }
+
+        form.submit(
+            restoreVersion({
+                site: site.public_id,
+                version: restoring.public_id,
+            }),
+            { preserveScroll: true, onFinish: () => setRestoring(null) },
+        );
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <h2 className="leading-none font-semibold">История версий</h2>
+                <CardDescription>
+                    Восстановление заменяет черновик выбранной версией.
+                    Опубликованный сайт не меняется до новой публикации.
+                </CardDescription>
+            </CardHeader>
+            <CardContent>
+                {versions.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                        Версий пока нет.
+                    </p>
+                ) : (
+                    <ul
+                        className="divide-y rounded-md border"
+                        data-testid="version-history"
+                    >
+                        {versions.map((version) => (
+                            <li
+                                key={version.public_id}
+                                className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
+                            >
+                                <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                    <span className="font-medium">
+                                        {`Версия ${version.version_number}`}
+                                    </span>
+                                    {version.is_production && (
+                                        <Badge>На сайте</Badge>
+                                    )}
+                                    <Badge
+                                        variant={
+                                            version.status === 'failed'
+                                                ? 'destructive'
+                                                : 'secondary'
+                                        }
+                                    >
+                                        {version.status_label}
+                                    </Badge>
+                                    <span className="text-muted-foreground">
+                                        {formatDate(version.published_at)}
+                                        {version.publisher
+                                            ? ` · ${version.publisher}`
+                                            : ''}
+                                    </span>
+                                </div>
+                                {canRestore && version.status === 'ready' && (
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        onClick={() => setRestoring(version)}
+                                        aria-label={`Восстановить версию ${version.version_number} в черновик`}
+                                    >
+                                        <History aria-hidden="true" />
+                                        Восстановить в черновик
+                                    </Button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </CardContent>
+
+            <Dialog
+                open={restoring !== null}
+                onOpenChange={(open) => !open && setRestoring(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>
+                            {`Восстановить версию ${restoring?.version_number ?? ''}?`}
+                        </DialogTitle>
+                        <DialogDescription>
+                            Текущий черновик будет заменён страницами, блоками,
+                            автомобилями, формами и попапами этой версии. Заявки
+                            и настройки защиты форм не изменятся. Опубликованный
+                            сайт останется прежним, пока вы не опубликуете
+                            черновик.
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setRestoring(null)}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            type="button"
+                            onClick={restore}
+                            disabled={form.processing}
+                        >
+                            {form.processing && <Spinner />}
+                            Восстановить
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
+        </Card>
     );
 }
 

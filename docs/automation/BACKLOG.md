@@ -72,7 +72,7 @@ Current phase:
 
 `P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-010 — Version History / Restore`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P5-011 — Publishing E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2737,8 +2737,10 @@ Result: Pages gained Draft SEO (`seo_title` ≤ 120, `seo_description` ≤ 300, 
 
 ## P5-010 — Version History / Restore
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-006
+
+Result: «Публикация» → «История версий» lists the last 30 versions (number, date, publisher, status label, «На сайте» badge on the production version); the private snapshot never reaches React. `POST sites/{site}/versions/{version}/restore` (`restore_version`: Owner only; foreign Site/version 404; throttled) runs `App\Publishing\RestoreVersion` in one transaction with the Site locked: only ready versions with the current snapshot schema; the private Draft snapshot rebuilds Site name/design tokens, Pages (incl. SEO), Block instances (pinned versions, state, hidden, order), Forms + Fields, Popups, Site Vehicles (status, order, active media sets), Offers (price, availability, badge, CTA, benefits). Public IDs are reused; a public ID owned by another Site aborts (`RestoreFailed`, Russian toast). Forms absent from the version are switched off, never deleted (leads keep their Form); vehicles/offers whose catalog series/equipment disappeared are skipped and reported. Submissions, blacklists, form security, subdomain, Integration data, Catalog and Platform Series Media are untouched. Production pointer, versions and publications do not change; the next Publish creates a new version (same manifest hash as the restored one). Tests: `RestoreVersionTest`.
 
 ---
 

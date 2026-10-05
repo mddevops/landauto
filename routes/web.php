@@ -27,6 +27,7 @@ use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\SiteSubdomainController;
+use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
@@ -70,6 +71,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');
             Route::post('publishing', [SitePublishingController::class, 'store'])->middleware('throttle:10,1')->name('publishing.store');
             Route::put('subdomain', [SiteSubdomainController::class, 'update'])->name('subdomain.update');
+            Route::post('versions/{version}/restore', SiteVersionRestoreController::class)->whereUlid('version')->middleware('throttle:10,1')->name('versions.restore');
             Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
                 ->whereUlid('form')
                 ->middleware('throttle:form-submissions')
