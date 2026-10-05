@@ -45,7 +45,7 @@ return new class extends Migration
             $table->string('safe_error_message', 255)->nullable();
             $table->timestamps();
 
-            $table->unique(['submission_delivery_id', 'attempt_number']);
+            $table->unique(['submission_delivery_id', 'attempt_number'], 'delivery_attempts_number_unique');
         });
     }
 
