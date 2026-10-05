@@ -9,6 +9,9 @@ use App\Forms\Captcha\FakeCaptchaVerifier;
 use App\Forms\Captcha\YandexSmartCaptchaVerifier;
 use App\Integrations\Delivery\DeliveryAdapters;
 use App\Integrations\Delivery\EmailDeliveryAdapter;
+use App\Integrations\Delivery\HttpDeliveryAdapter;
+use App\Integrations\Http\HostResolver;
+use App\Integrations\Http\SystemHostResolver;
 use App\Models\Site;
 use App\Models\User;
 use App\Policies\SitePolicy;
@@ -51,7 +54,8 @@ class AppServiceProvider extends ServiceProvider
                 (int) config('services.yandex_smartcaptcha.timeout'),
             );
         });
-        $this->app->tag([EmailDeliveryAdapter::class], DeliveryAdapters::TAG);
+        $this->app->bind(HostResolver::class, SystemHostResolver::class);
+        $this->app->tag([EmailDeliveryAdapter::class, HttpDeliveryAdapter::class], DeliveryAdapters::TAG);
         $this->app->singleton(DeliveryAdapters::class, fn (Application $app): DeliveryAdapters => new DeliveryAdapters(
             $app->tagged(DeliveryAdapters::TAG),
         ));

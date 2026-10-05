@@ -13,14 +13,17 @@ final class DeliveryFailures
 
     public const TEMPORARY_MESSAGE = 'Сервис временно недоступен. Доставка будет повторена.';
 
-    public static function forHttpStatus(int $status, ?int $latencyMs = null): DeliveryResult
+    /**
+     * @param  array<string, scalar>  $metadata
+     */
+    public static function forHttpStatus(int $status, ?int $latencyMs = null, array $metadata = []): DeliveryResult
     {
         if ($status >= 200 && $status < 300) {
-            return DeliveryResult::success($status, latencyMs: $latencyMs);
+            return DeliveryResult::success($status, $metadata, $latencyMs);
         }
 
         if (in_array($status, self::TRANSIENT_STATUSES, true)) {
-            return DeliveryResult::transient("http_{$status}", self::TEMPORARY_MESSAGE, $status, latencyMs: $latencyMs);
+            return DeliveryResult::transient("http_{$status}", self::TEMPORARY_MESSAGE, $status, $metadata, $latencyMs);
         }
 
         [$code, $message] = match (true) {
@@ -31,7 +34,7 @@ final class DeliveryFailures
             default => ["http_{$status}", 'Сервис вернул ошибку.'],
         };
 
-        return DeliveryResult::permanent($code, $message, $status, latencyMs: $latencyMs);
+        return DeliveryResult::permanent($code, $message, $status, $metadata, $latencyMs);
     }
 
     public static function timeout(?int $latencyMs = null): DeliveryResult

@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-009 — Webhook / Custom API Adapter`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-010 — Delivery Logs UI`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2887,12 +2887,19 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-009 — Webhook / Custom API Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-006
 
 ### Security
 
 SSRF protection mandatory.
+
+### Result
+
+- `HttpDeliveryAdapter` (webhook and custom API): profile base URL + route path, route method (`POST` | `PUT` | `PATCH`), re-validated safe headers, mapped JSON payload (`FieldMapper::fromStored`, malformed rules fail permanently), `Idempotency-Key` = Delivery public ID.
+- One `OutboundHttpPolicy` (shared with Test Connection): `https` only unless `INTEGRATIONS_HTTP_ALLOW_PLAIN` is set; no userinfo, fragment, control characters or numeric/hex/short IP hostnames; every resolved A/AAAA address must be public (loopback, RFC 1918, CGNAT, link-local/metadata, multicast, reserved, documentation, unique-local, NAT64, 6to4, IPv4-mapped/compatible IPv6 refused). DNS goes through `HostResolver` (system in production, fake in tests); an empty answer is a transient `dns_error`.
+- `OutboundHttpClient`: connection pinned to the vetted address (cURL `RESOLVE`, so DNS rebinding cannot redirect it), redirects never followed (3xx = permanent `redirect_not_followed`), environment proxies disabled, TLS verification on, 3 s connect / 10 s total timeouts, response read aborted past 1 MB. Auth `none` | `bearer` | `basic` | `api_key_header` is built only from encrypted credentials and always overrides route headers. Only status, latency, response size, content type and a well-formed request ID are kept; bodies, tokens and Authorization are never stored or logged.
+- Tests never touch the network: the base `TestCase` enables `Http::preventStrayRequests()` and an empty fake resolver.
 
 ---
 

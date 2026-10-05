@@ -143,6 +143,33 @@ final class FieldMapper
     }
 
     /**
+     * Rules read back from a route row; a malformed rule fails the delivery instead of being skipped.
+     *
+     * @param  list<array<string, mixed>>|null  $stored
+     * @return list<Rule>
+     *
+     * @throws MappingFailure
+     */
+    public static function fromStored(?array $stored): array
+    {
+        $rules = [];
+
+        foreach ($stored ?? [] as $rule) {
+            $constant = ($rule['source'] ?? null) === MappingSources::CONSTANT;
+
+            if (! is_string($rule['target'] ?? null) || ! is_string($rule['source'] ?? null)
+                || ! in_array($rule['missing'] ?? self::MISSING_OMIT, self::MISSING, true)
+                || ($constant && ! is_string($rule['value'] ?? null))) {
+                throw new MappingFailure('invalid_mapping', 'Настройка передачи содержит недопустимое поле.');
+            }
+
+            $rules[] = self::normalize($rule);
+        }
+
+        return $rules;
+    }
+
+    /**
      * @param  array<string, mixed>  $rule
      * @return Rule
      */
