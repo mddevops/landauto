@@ -4,8 +4,10 @@ namespace App\Http\Controllers\Platform;
 
 use App\Enums\MediaAngle;
 use App\Enums\PlatformPermission;
+use App\Enums\PublishedAssetKind;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Platform\UploadSeriesMediaImageRequest;
+use App\Models\PublishedAssetReference;
 use App\Models\SeriesMediaImage;
 use App\Models\SeriesMediaSet;
 use App\Models\User;
@@ -16,6 +18,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Support\Str;
+use Inertia\Inertia;
 use Symfony\Component\HttpFoundation\StreamedResponse;
 use Throwable;
 
@@ -56,6 +59,13 @@ class SeriesMediaImageController extends Controller
     public function destroy(SeriesMediaImage $image): RedirectResponse
     {
         Gate::authorize(PlatformPermission::ManageCatalogMedia->value);
+
+        // Published Sites keep rendering this file (ADR-006 §4), so it is never deleted.
+        if (PublishedAssetReference::isReferenced(PublishedAssetKind::SeriesMediaImage, $image->public_id)) {
+            Inertia::flash('toast', ['type' => 'error', 'message' => 'Фото используется на опубликованных сайтах, удалить его нельзя.']);
+
+            return back();
+        }
 
         $path = $image->path;
         DB::transaction(fn () => $image->delete());

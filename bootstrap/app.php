@@ -7,14 +7,35 @@ use App\Http\Middleware\ValidateFortifyEmail;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
 use Illuminate\Foundation\Configuration\Middleware;
+use Illuminate\Foundation\Events\DiagnosingHealth;
 use Illuminate\Http\Middleware\AddLinkHeadersForPreloadedAssets;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Event;
+use Illuminate\Support\Facades\Route;
 
 return Application::configure(basePath: dirname(__DIR__))
     ->withRouting(
-        web: __DIR__.'/../routes/web.php',
         commands: __DIR__.'/../routes/console.php',
-        health: '/up',
+        using: function (): void {
+            // Published Site hosts first and without the `web` group, so their catch-all wins
+            // over application routes and public hosts never get sessions, cookies or CSRF.
+            Route::group([], base_path('routes/public.php'));
+
+            Route::get('/up', function (Request $request) {
+                $healthy = true;
+
+                try {
+                    Event::dispatch(new DiagnosingHealth);
+                } catch (Throwable $exception) {
+                    report($exception);
+                    $healthy = false;
+                }
+
+                return response()->json(['status' => $healthy ? 'up' : 'down'], $healthy ? 200 : 500);
+            });
+
+            Route::middleware('web')->group(base_path('routes/web.php'));
+        },
     )
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);

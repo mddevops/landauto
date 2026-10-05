@@ -1,9 +1,11 @@
-import { Form, Link } from '@inertiajs/react';
-import { FileText, House, Pencil, Plus, Trash2 } from 'lucide-react';
+import { Form, Link, useForm } from '@inertiajs/react';
+import { FileText, House, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
 import type { DesignerPage, DesignerSite } from '@/components/designer/types';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -17,17 +19,21 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import { designer } from '@/routes/sites';
 import { destroy, store, update } from '@/routes/sites/pages';
+import { update as updateSeo } from '@/routes/sites/pages/seo';
 
 type PagesPanelProps = {
     site: DesignerSite;
     pages: DesignerPage[];
     currentPageId: string;
     canEdit: boolean;
+    canEditSeo: boolean;
+    canEditSeoIndexing: boolean;
 };
 
 type DialogState =
     | { mode: 'create' }
     | { mode: 'edit'; page: DesignerPage }
+    | { mode: 'seo'; page: DesignerPage }
     | { mode: 'delete'; page: DesignerPage }
     | null;
 
@@ -36,6 +42,8 @@ export function PagesPanel({
     pages,
     currentPageId,
     canEdit,
+    canEditSeo,
+    canEditSeoIndexing,
 }: PagesPanelProps) {
     const [dialog, setDialog] = useState<DialogState>(null);
     const close = () => setDialog(null);
@@ -76,6 +84,18 @@ export function PagesPanel({
                             )}
                             <span className="truncate">{page.title}</span>
                         </Link>
+                        {canEditSeo && (
+                            <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                className="size-8"
+                                aria-label={`SEO страницы «${page.title}»`}
+                                onClick={() => setDialog({ mode: 'seo', page })}
+                            >
+                                <Search aria-hidden="true" />
+                            </Button>
+                        )}
                         {canEdit && (
                             <>
                                 <Button
@@ -166,6 +186,14 @@ export function PagesPanel({
                                 </>
                             )}
                         </Form>
+                    ) : dialog?.mode === 'seo' ? (
+                        <SeoForm
+                            key={dialog.page.public_id}
+                            site={site}
+                            page={dialog.page}
+                            canEditIndexing={canEditSeoIndexing}
+                            onDone={close}
+                        />
                     ) : dialog ? (
                         <PageForm
                             key={
@@ -181,6 +209,111 @@ export function PagesPanel({
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+function SeoForm({
+    site,
+    page,
+    canEditIndexing,
+    onDone,
+}: {
+    site: DesignerSite;
+    page: DesignerPage;
+    canEditIndexing: boolean;
+    onDone: () => void;
+}) {
+    const form = useForm({
+        seo_title: page.seo.title ?? '',
+        seo_description: page.seo.description ?? '',
+        seo_noindex: page.seo.noindex,
+    });
+
+    function save(event: FormEvent) {
+        event.preventDefault();
+        form.transform((data) =>
+            canEditIndexing
+                ? data
+                : {
+                      seo_title: data.seo_title,
+                      seo_description: data.seo_description,
+                  },
+        );
+        form.submit(updateSeo({ site: site.public_id, page: page.public_id }), {
+            preserveScroll: true,
+            onSuccess: onDone,
+        });
+    }
+
+    return (
+        <form onSubmit={save} className="flex flex-col gap-4">
+            <DialogHeader>
+                <DialogTitle>{`SEO страницы «${page.title}»`}</DialogTitle>
+                <DialogDescription>
+                    Посетители и поисковики увидят изменения после публикации.
+                </DialogDescription>
+            </DialogHeader>
+            <div className="grid gap-2">
+                <Label htmlFor="seo-title">Заголовок для поисковиков</Label>
+                <Input
+                    id="seo-title"
+                    value={form.data.seo_title}
+                    onChange={(event) =>
+                        form.setData('seo_title', event.target.value)
+                    }
+                    maxLength={120}
+                    placeholder={page.title}
+                    aria-invalid={Boolean(form.errors.seo_title)}
+                    aria-describedby="seo-title-help"
+                />
+                <p
+                    id="seo-title-help"
+                    className="text-xs text-muted-foreground"
+                >
+                    Если оставить пустым, используется название страницы.
+                </p>
+                <InputError message={form.errors.seo_title} />
+            </div>
+            <div className="grid gap-2">
+                <Label htmlFor="seo-description">
+                    Описание для поисковиков
+                </Label>
+                <textarea
+                    id="seo-description"
+                    value={form.data.seo_description}
+                    onChange={(event) =>
+                        form.setData('seo_description', event.target.value)
+                    }
+                    maxLength={300}
+                    rows={3}
+                    aria-invalid={Boolean(form.errors.seo_description)}
+                    className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive"
+                />
+                <InputError message={form.errors.seo_description} />
+            </div>
+            {canEditIndexing && (
+                <div className="flex items-start gap-2">
+                    <Checkbox
+                        id="seo-noindex"
+                        checked={form.data.seo_noindex}
+                        onCheckedChange={(checked) =>
+                            form.setData('seo_noindex', checked === true)
+                        }
+                    />
+                    <Label htmlFor="seo-noindex" className="leading-snug">
+                        Скрыть страницу от поисковых систем
+                    </Label>
+                </div>
+            )}
+            <DialogFooter>
+                <Button type="button" variant="outline" onClick={onDone}>
+                    Отмена
+                </Button>
+                <Button type="submit" disabled={form.processing}>
+                    Сохранить
+                </Button>
+            </DialogFooter>
+        </form>
     );
 }
 

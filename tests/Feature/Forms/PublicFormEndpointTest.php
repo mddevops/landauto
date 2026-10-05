@@ -7,15 +7,15 @@ use App\Enums\SiteStatus;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\Site;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Testing\TestResponse;
+use Tests\Concerns\SubmitsPublishedForms;
 use Tests\TestCase;
 
 class PublicFormEndpointTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SubmitsPublishedForms;
 
     private Form $form;
 
@@ -26,16 +26,18 @@ class PublicFormEndpointTest extends TestCase
         $this->form = Form::factory()->withLeadFields()->create(['success_message' => 'Спасибо, ждите звонка.']);
     }
 
-    public function test_guest_submits_a_valid_form_without_csrf_token(): void
+    public function test_guest_submits_a_published_form_without_session_or_csrf(): void
     {
         $this->submit(['fields' => $this->fields()])
             ->assertCreated()
-            ->assertExactJson(['message' => 'Спасибо, ждите звонка.']);
+            ->assertExactJson(['message' => 'Спасибо, ждите звонка.'])
+            ->assertCookieMissing(config('session.cookie'));
 
-        $route = Route::getRoutes()->getByName('forms.submissions.store');
+        $route = Route::getRoutes()->getByName('public.forms');
         $this->assertNotNull($route);
-        $this->assertContains(ValidateCsrfToken::class, $route->excludedMiddleware());
+        $this->assertNotContains('web', $route->gatherMiddleware());
         $this->assertNotContains('auth', $route->gatherMiddleware());
+        $this->assertNull(Route::getRoutes()->getByName('forms.submissions.store'));
     }
 
     public function test_field_values_are_validated_by_the_backend(): void
@@ -91,15 +93,24 @@ class PublicFormEndpointTest extends TestCase
         $this->submit(['name' => 'Без полей'])->assertUnprocessable();
     }
 
-    public function test_inactive_missing_numeric_and_archived_site_forms_are_unavailable(): void
+    public function test_inactive_unpublished_foreign_and_archived_site_forms_are_unavailable(): void
     {
         $inactive = Form::factory()->inactive()->withLeadFields()->create();
-        $archived = Form::factory()->for(Site::factory()->state(['status' => SiteStatus::Archived]))->withLeadFields()->create();
-
         $this->submit(['fields' => $this->fields()], $inactive)->assertNotFound()->assertExactJson(['message' => 'Форма недоступна.']);
-        $this->submit(['fields' => $this->fields()], $archived)->assertNotFound();
-        $this->postJson('/forms/01ARZ3NDEKTSV4RRFFQ69G5FAV/submissions', ['fields' => $this->fields()])->assertNotFound()->assertExactJson(['message' => 'Форма недоступна.']);
-        $this->postJson("/forms/{$this->form->id}/submissions", ['fields' => $this->fields()])->assertNotFound();
+
+        $version = $this->publishFormSite($this->form);
+        $site = Site::query()->findOrFail($this->form->site_id);
+        $this->postJson($this->publicUrl($site, "/_landflow/forms/{$version->public_id}/01arz3ndektsv4rrffq69g5fav"), ['fields' => $this->fields()])
+            ->assertNotFound()->assertExactJson(['message' => 'Форма недоступна.']);
+        $this->postJson($this->publicUrl($site, "/_landflow/forms/{$version->public_id}/{$this->form->id}"), ['fields' => $this->fields()])->assertNotFound();
+
+        $foreign = Form::factory()->withLeadFields()->create();
+        $foreignVersion = $this->publishFormSite($foreign);
+        $this->postJson($this->publicUrl($site, "/_landflow/forms/{$foreignVersion->public_id}/{$foreign->public_id}"), ['fields' => $this->fields()])
+            ->assertNotFound();
+
+        $site->forceFill(['status' => SiteStatus::Archived])->save();
+        $this->postJson($this->publicUrl($site, "/_landflow/forms/{$version->public_id}/{$this->form->public_id}"), ['fields' => $this->fields()])->assertNotFound();
     }
 
     public function test_coarse_ip_backstop_limits_bursts(): void
@@ -118,7 +129,7 @@ class PublicFormEndpointTest extends TestCase
      */
     private function submit(array $payload, ?Form $form = null): TestResponse
     {
-        return $this->postJson(route('forms.submissions.store', ($form ?? $this->form)->public_id), $payload);
+        return $this->submitPublished($form ?? $this->form, $payload);
     }
 
     /**

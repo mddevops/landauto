@@ -5,13 +5,13 @@ use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
-use App\Http\Controllers\Forms\FormSubmissionController;
 use App\Http\Controllers\Forms\PreviewSubmissionController;
 use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\PageBlockController;
+use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
 use App\Http\Controllers\Platform\CatalogEntryController;
@@ -25,21 +25,22 @@ use App\Http\Controllers\SiteDesignController;
 use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
+use App\Http\Controllers\SitePublishingController;
+use App\Http\Controllers\SiteSubdomainController;
+use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\RequireWorkspaceContext;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
 
-Route::post('forms/{form}/submissions', [FormSubmissionController::class, 'store'])
-    ->whereUlid('form')
-    ->middleware('throttle:form-submissions')
-    ->withoutMiddleware(ValidateCsrfToken::class)
-    ->name('forms.submissions.store');
+// Not a static file in public/: the web server would serve it on published hosts as well.
+Route::get('robots.txt', fn () => response("User-agent: *\nDisallow:\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']))
+    ->withoutMiddleware('web')
+    ->name('robots');
 
 Route::middleware(['guest', 'throttle:yandex-oauth'])->group(function () {
     Route::get('auth/yandex/redirect', [YandexOAuthController::class, 'redirect'])
@@ -72,6 +73,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('designer', SiteDesignerController::class)->name('designer');
             Route::get('preview', SitePreviewController::class)->name('preview');
+            Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');
+            Route::post('publishing', [SitePublishingController::class, 'store'])->middleware('throttle:10,1')->name('publishing.store');
+            Route::put('subdomain', [SiteSubdomainController::class, 'update'])->name('subdomain.update');
+            Route::post('versions/{version}/restore', SiteVersionRestoreController::class)->whereUlid('version')->middleware('throttle:10,1')->name('versions.restore');
             Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
                 ->whereUlid('form')
                 ->middleware('throttle:form-submissions')
@@ -83,6 +88,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('pages', [SitePageController::class, 'store'])->name('pages.store');
             Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');
             Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
+            Route::patch('pages/{page}/seo', [PageSeoController::class, 'update'])->name('pages.seo.update');
 
             Route::post('pages/{page}/blocks', [PageBlockController::class, 'store'])->name('blocks.store');
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');

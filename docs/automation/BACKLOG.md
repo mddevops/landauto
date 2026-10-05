@@ -68,11 +68,11 @@ Phase 3 — Automotive Foundation: COMPLETED (gate `P3-017` DONE; Catalog V2 sch
 
 Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
 
-Current phase:
+Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`).
 
-`P5 — Publishing` — NOT_STARTED; starts only on explicit owner go-ahead.
+Phase 6 — Integrations & Analytics: NOT_STARTED (needs owner go-ahead).
 
-Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
+Next ready task: `P6-001 — Workspace Integration Profiles`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2692,50 +2692,64 @@ Result: `App\Publishing\PublishValidator` returns `errors[]` / `warnings[]` of `
 
 ## P5-005 — Published Snapshot Builder
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-001, P5-004
+
+Result: `PublishedSnapshotBuilder` reads the Draft in one transaction and builds the public manifest (Site identity, branding flag from `remove_branding`, resolved design tokens, CAPTCHA requirement, Pages with SEO and visible Blocks pinned to definition slug + version, referenced Site Asset IDs, display-ready vehicles with media image public IDs and server-only exact offer money, Popups, published Form definitions) and the private draft snapshot (all Pages and Blocks incl. hidden, vehicles/offers/benefits/media-set selection, all Forms with fields, all Popups). Canonical-JSON SHA-256 `manifest_hash`; same Draft → same manifest. No secrets, Submissions, blacklists, form security or numeric IDs. `PublishedArtifactBuilder` derives one version-scoped payload per Page (`/_landflow/assets|media|forms/{version}/…`, no Draft URLs), renders all Pages with the compiled React renderer outside any transaction, rejects missing/empty artifacts and stores `published_pages` + `published_asset_references`; it never activates. Renderer: `resources/js/public-runtime/{published-site,render-server,hydrate-client}.tsx`, built by `npm run build` (`vp build --ssr` → `bootstrap/ssr/render-server.js`), invoked by `NodePageRenderer` via the Process API (argument array, STDIN, timeout, safe errors). PHPUnit binds a deterministic fake renderer; `NodePageRendererTest` runs the real bundle when built.
 
 ---
 
 ## P5-006 — Atomic Activation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-005
+
+Result: `App\Publishing\PublishSite` orchestrates a whole-Site Publish. A short Site-locked transaction creates the Publication; a second attempt while one is running is recorded as a failed `conflict`, and attempts stuck past `publishing.stale_after_minutes` are abandoned (`internal_error`, `abandoned`). Validation, snapshots and SSR run outside transactions; the version number is allocated under the Site lock (gaps allowed). The final transaction re-checks the attempt and the building version, verifies every artifact (one per manifest Page, non-empty, hash match), marks the version `ready`, switches `sites.active_published_version_id` and marks the Publication `succeeded`. Any failure fails the attempt with a safe code, fails a building version, keeps the previous production and Draft, and logs only the publication public ID, failure code and exception class. «Публикация» page (`sites/{site}/publishing`, `view_site`): production version, last attempt, live pre-publish check, Publish button (`publish_site`, throttled); Designer header link. Tests: first/second publish, production unchanged during render, validation and render failures, concurrent and abandoned attempts, Owner/Admin allowed, Designer/Content Editor forbidden, foreign Workspace 404.
 
 ---
 
 ## P5-007 — Public Runtime
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-006
+
+Result: Public hosts `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` (`config/publishing.php`, `routes/public.php`, registered before `web` and without session/CSRF/Inertia) resolve host → active Site → active ready Published Version → `published_pages` artifact; nothing reads the Draft. `sites.subdomain` (nullable, unique) was added for host resolution; label rules, generation and UI belong to P5-008. Reserved labels never resolve. Pages are cached as `published:{site}:{version}:{page}`, served as the stored HTML plus the stored hydration payload (`resources/views/published/page.blade.php`, `hydrate-client.tsx`); unknown hosts, unpublished Sites, unknown paths and every application route on a public host return the safe Russian 404. Version-scoped files `/_landflow/assets|media/{version}/{id}` are served only when a ready version of that Site references them (`nosniff`, `public, max-age=31536000, immutable`); historical versions keep working, Draft-only and foreign files are 404. Public leads post only to `/_landflow/forms/{version}/{form}`: the Form definition comes from that version's manifest, the version must be ready with the Site active and published, and page/block/popup/vehicle/offer context and the price come from the manifest (`PublishedSubmissionContext`), never from the Draft or the browser; mode `public`. The old Draft endpoint `POST /forms/{form}/submissions` was removed; the preview endpoint keeps the Draft path with mode `preview`. Platform Series media images referenced by a Published Version cannot be deleted. `NodePageRenderer` passes `PATH`/`SystemRoot`/`TEMP`/`TMP` explicitly (web SAPIs filter child environments). Tests: `PublishedRuntimeTest`, Forms suite on the published path, Playwright `publishing.spec.ts` (publish, raw HTML before JS, hydration, public lead, Draft isolation).
 
 ---
 
 ## P5-008 — Landflow Subdomains
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-007
+
+Result: `App\Support\SiteSubdomain` owns the label rules: one lowercase DNS label (`a-z`, `0-9`, inner hyphens, ≤ 63), globally unique across all Sites including archived, reserved `www/admin/api/app/support/static/assets/platform/auth/login/register` plus IDN `xn--` labels. `CreateSite` assigns a transliterated suggestion from the Site name (`changan-moskva`, then `-2`, `-3`…; reserved → `-site`; nothing usable → `site`); renaming never changes it. Migration `2026_10_08_000005` backfills existing Sites. Explicit change on «Публикация» → «Адрес сайта» (`PUT sites/{site}/subdomain`, `manage_domains`: Owner/Admin; Russian errors; unique-index race → validation error); the public host switches immediately and the old address returns 404. Pre-publish check `subdomain_missing`. Local root `LANDFLOW_PUBLIC_DOMAIN=localhost` (`dealer.localhost`), no custom domains, no plan gating, no billing. Tests: `SiteSubdomainTest`, Playwright address change.
 
 ---
 
 ## P5-009 — SEO / Sitemap / Robots
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-007
+
+Result: Pages gained Draft SEO (`seo_title` ≤ 120, `seo_description` ≤ 300, `seo_noindex`), edited in the designer («Страницы» → «SEO страницы», `PATCH sites/{site}/pages/{page}/seo`): title/description need `edit_seo` or `edit_seo_basic` (Owner, Admin, Content Editor), indexing needs `edit_seo` (Owner, Admin); Designer forbidden. The manifest carries `seo.title` (falls back to the Page title), `seo.description`, `seo.indexable`; the private snapshot keeps the raw SEO fields for restore. Published head: `<title>`, meta description only when set, `robots` `index, follow` / `noindex, follow`, canonical `{scheme}://{subdomain}.{domain}{path}`, Open Graph type/locale/title/url/site name and description only from real values — no `og:image` is ever invented. Public `/sitemap.xml` lists only indexable Pages of the active version (`lastmod` = version ready time); `/robots.txt` allows the Site, disallows `/_landflow/forms/` and points to the sitemap; both 404 without a published version and never contain Draft or application URLs. Preview responses send `X-Robots-Tag: noindex, nofollow` (plus the existing meta). Draft SEO edits reach visitors only after Publish. Tests: `PublishedSeoTest`, Playwright SEO dialog → raw head + sitemap.
 
 ---
 
 ## P5-010 — Version History / Restore
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-006
+
+Result: «Публикация» → «История версий» lists the last 30 versions (number, date, publisher, status label, «На сайте» badge on the production version); the private snapshot never reaches React. `POST sites/{site}/versions/{version}/restore` (`restore_version`: Owner only; foreign Site/version 404; throttled) runs `App\Publishing\RestoreVersion` in one transaction with the Site locked: only ready versions with the current snapshot schema; the private Draft snapshot rebuilds Site name/design tokens, Pages (incl. SEO), Block instances (pinned versions, state, hidden, order), Forms + Fields, Popups, Site Vehicles (status, order, active media sets), Offers (price, availability, badge, CTA, benefits). Public IDs are reused; a public ID owned by another Site aborts (`RestoreFailed`, Russian toast). Forms absent from the version are switched off, never deleted (leads keep their Form); vehicles/offers whose catalog series/equipment disappeared are skipped and reported. Submissions, blacklists, form security, subdomain, Integration data, Catalog and Platform Series Media are untouched. Production pointer, versions and publications do not change; the next Publish creates a new version (same manifest hash as the restored one). Tests: `RestoreVersionTest`.
 
 ---
 
 ## P5-011 — Publishing E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-008, P5-009, P5-010
+
+Result: `tests/browser/publishing-lifecycle.spec.ts` on the seeded `lifecycle-e2e` Site (E2eSeeder: Owner + Designer member, ready Draft v1 with hero and priced vehicle card, dedicated Moskvich catalog branch with a real media file) covers: public 404 before the first Publish → Draft v1 in preview → Publish v1 → no-JS HTML with heading and price → Draft v2 (heading, Offer price, Form field label) while production stays v1 → public Popup uses the published v1 Form and posts a real lead to `/_landflow/forms/…` → preview shows v2 and posts a preview test lead → leads listed apart → Publish v2 with the v1 media URL still served → scroll action to a hidden block blocks Publish (error listed, button disabled) → fix → Publish v3 → version history (production badge, publisher) → restore v1 → preview restored, production still v3 → Publish creates v4 with v1 content → hydrated Popup at 375 px without horizontal overflow → Designer sees no Publish/restore → referenced platform image cannot be deleted. Console errors and failed requests fail the test (fixture). Existing `publishing.spec.ts` keeps SEO head/sitemap and subdomain change coverage.
 
 ### Flow
 
@@ -2751,8 +2765,12 @@ Also test failed Publish.
 
 ## P5-012 — Phase 5 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-011
+
+Result: Phase 5 audit against ADR-006 and the publishing acceptance list. Fixed: the default static `public/robots.txt` shadowed the per-Site `/robots.txt` on public hosts (web servers serve existing files before routing); it was removed and the application host now serves the same body from a route (`PublishedSeoTest` guards against static `robots.txt` / `sitemap.xml`). Added coverage: catalog and Block catalog changes leave production HTML byte-identical (`PublishedRuntimeTest`); the lifecycle E2E now also covers hero image A → B stability, public v2 kept during a blocked Publish, robots/canonical/sitemap, carousel, lightbox, color switch, offer details and offer Popup after hydration, Designer preview, Admin publish without restore, foreign Workspace 404. Template independence is structural: a Site keeps no Template reference. Follow-ups (not Phase 5 criteria): «unpublished changes» indicator (PUBLISHING.md §23), publication notes, rollback, audit log of restores.
+
+Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPStan PASS, Pint PASS, `npm run check` and build PASS, Playwright `npm run test:e2e` 43 passed, `git diff --check` PASS. Local MySQL (`landauto`) incremental migrations `2026_10_08_000004`–`000006` applied (no catalog migrations). Phase 5 COMPLETED; Phase 6 not started.
 
 ---
 

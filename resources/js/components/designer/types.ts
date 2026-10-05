@@ -11,6 +11,11 @@ export type DesignerPage = {
     title: string;
     slug: string;
     is_home: boolean;
+    seo: {
+        title: string | null;
+        description: string | null;
+        noindex: boolean;
+    };
 };
 
 export type DesignerBlock = {

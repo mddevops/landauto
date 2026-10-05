@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: NOT_STARTED** (status: §54). Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002).
+**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: NOT_STARTED** (needs owner go-ahead). Next ready task per `BACKLOG.md`: `P6-001 — Workspace Integration Profiles`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -153,13 +153,21 @@ Current focus:
 - `P4-012` DONE: reusable `Lightbox` (D-033; keyboard, focus trap/return, alt text) adopted in the Vehicle Gallery.
 - `P4-013` DONE: interactive Playwright flows (form/popup/submission, vehicle offer trusted context + spoofed price, duplicate, honeypot, fake CAPTCHA, carousel, lightbox, 375 px); fixture monitors all tabs.
 - `P4-014` DONE: Phase 4 gate (composer quality 509 tests, 41 E2E passed, diff check); Phase 4 COMPLETED.
-- Phase 5 (in progress on `autopilot/phase5-2026-10-05`):
+- Phase 5 (COMPLETED on `autopilot/phase5-2026-10-05`):
 - `X-021` DONE (D-108): trunk-8 phone rewrite, typed Submission `mode` (`public` | `preview`) with an authenticated preview endpoint and separate per-mode duplicates/counters, real leads listed apart from preview test entries, Admin `edit_popups`, form security and Site blacklist under `edit_forms`.
 - `X-018` DONE: reusable `BlockReferenceInspector` (stale Page / scroll target / Popup / asset / vehicle references, disabled Popup Form warning, publish mode for hidden Blocks); Designer warnings in the Navigator, properties summary and inline fields; state never rewritten.
 - `P5-001` DONE: ADR-006 accepted — D-073 and D-074 APPROVED (publish-time React SSR, public manifest + private draft snapshot, DB HTML artifacts, versioned cache, published asset references, atomic activation, Published-Version-bound public forms, restore to Draft).
 - `P5-002` DONE: Published Version schema — `published_versions`, `published_pages`, `published_asset_references`, `sites.active_published_version_id`; immutability guards and pointer validation in the models.
 - `P5-003` DONE: Publication attempt records (actor, enforced status machine, safe failure code/summary/metadata) and `publish` / `restoreVersion` Site policy abilities.
 - `P5-004` DONE: `PublishValidator` (errors block, warnings inform) reusing the X-018 inspector, pinned-schema validation and new publish-time completeness checks.
+- `P5-005` DONE: `PublishedSnapshotBuilder` (public manifest + private draft snapshot, canonical hash) and `PublishedArtifactBuilder` (version-scoped per-Page payloads, publish-time React SSR via the compiled `bootstrap/ssr/render-server.js`, stored HTML artifacts and asset references, no activation).
+- `P5-006` DONE: `PublishSite` atomic activation (Site-locked start with conflict/abandon handling, rendering outside transactions, final locked pointer switch after artifact verification, safe failure handling) and the «Публикация» page with the Publish action.
+- `P5-007` DONE: anonymous public runtime on `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` from stored artifacts only (no Draft reads, no Node per request), hydration from the stored payload, version-scoped immutable file delivery, version-bound public Form endpoint (`/_landflow/forms/{version}/{form}`, manifest-derived context and price, mode `public`). `sites.subdomain` column added (rules/UI in P5-008). The Draft public endpoint `POST /forms/{form}/submissions` was removed; preview keeps mode `preview`. Published Series media images cannot be deleted.
+- `P5-008` DONE: Landflow subdomains — `SiteSubdomain` rules (DNS label, global uniqueness incl. archived, reserved list + `xn--`), transliterated suggestion at Site creation (stable on rename), backfill migration, explicit change on «Публикация» (`manage_domains`), pre-publish `subdomain_missing`.
+- `P5-009` DONE: Page SEO fields (title, description, noindex) with `edit_seo` / `edit_seo_basic` split, published head (title, description, robots, canonical, real-value Open Graph, no invented image), `/sitemap.xml` (indexable Pages of the active version only), `/robots.txt` (no Draft URLs), preview `X-Robots-Tag: noindex, nofollow`.
+- `P5-010` DONE: version history on «Публикация» (number, date, publisher, status, production badge) and Owner-only `restore_version` restore of the private Draft snapshot into the Draft in one transaction (Pages, Blocks, SEO, design, Forms/Fields, Popups, Vehicles, Offers, benefits; public IDs reused, cross-Site IDs rejected, missing Forms switched off not deleted); production unchanged until the next Publish creates a new version; operational data (Submissions, blacklists, form security, subdomain) untouched.
+- `P5-011` DONE: Playwright `publishing-lifecycle.spec.ts` covers the full lifecycle (404 before publish, preview, publish v1–v4, no-JS HTML with price, Draft isolation incl. Form label and price, public vs preview leads, historical media URL, blocked Publish on a broken action, history, restore, permissions, protected platform image, 375 px).
+- `P5-012` DONE: Phase 5 gate. Fixed static `public/robots.txt` shadowing per-Site robots on public hosts (route on the application host instead); added catalog/Block-catalog isolation test and extended lifecycle E2E (image A → B, interactivity after hydration, Admin/Designer/foreign permissions, robots/canonical). Phase 5 COMPLETED.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1156,7 +1164,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P5-001 — Publishing Runtime ADR`** (Phase 5 — Publishing, NOT_STARTED) per `BACKLOG.md`.
+**Next: `P6-001 — Workspace Integration Profiles`** (Phase 6 — Integrations & Analytics, NOT_STARTED; Phase 5 COMPLETED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1447,7 +1455,7 @@ Phase 1 — Core Platform: COMPLETED (gate P1-017)
 Phase 2 — Designer Foundation: COMPLETED (gate P2-018)
 Phase 3 — Automotive Foundation: COMPLETED (gate P3-017)
 Phase 4 — Forms & Interactive Components: COMPLETED
-Phase 5 — Publishing: NOT_STARTED
+Phase 5 — Publishing: COMPLETED (gate P5-012)
 Phase 6 — Integrations & Analytics: NOT_STARTED
 Phase 7 — Paid Features: NOT_STARTED
 Phase 8 — Team: NOT_STARTED
@@ -1714,7 +1722,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P5-001 — Publishing Runtime ADR`** (see §42). Phases 0–4 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014 DONE); Phase 5 is NOT_STARTED.
+**`P6-001 — Workspace Integration Profiles`** (needs owner go-ahead). Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is NOT_STARTED.
 
 ---
 
@@ -1767,8 +1775,8 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–4 COMPLETED)
+Core Landflow implementation: IN_PROGRESS (Phases 0–5 COMPLETED)
 ```
 
-**Current phase: Phase 5 — Publishing (NOT_STARTED; Phases 0–4 COMPLETED).
-Next: `P5-001 — Publishing Runtime ADR` per `BACKLOG.md`.**
+**Current phase: Phase 6 — Integrations & Analytics (NOT_STARTED; Phases 0–5 COMPLETED).
+Next: `P6-001 — Workspace Integration Profiles` per `BACKLOG.md`.**

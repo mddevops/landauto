@@ -20,11 +20,12 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use LogicException;
+use Tests\Concerns\SubmitsPublishedForms;
 use Tests\TestCase;
 
 class BlacklistTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SubmitsPublishedForms;
 
     private Workspace $workspace;
 
@@ -180,9 +181,9 @@ class BlacklistTest extends TestCase
 
     private function submit(string $phone, string $ip, ?Form $form = null): TestResponse
     {
-        return $this->withServerVariables(['REMOTE_ADDR' => $ip])->postJson(route('forms.submissions.store', ($form ?? $this->form)->public_id), [
+        return $this->submitPublished($form ?? $this->form, [
             'fields' => ['name' => 'Иван', 'phone' => $phone, 'consent' => true],
-        ]);
+        ], $ip);
     }
 
     private function as(User $user): static

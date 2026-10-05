@@ -9,6 +9,7 @@ use App\Models\Page;
 use App\Models\Site;
 use App\Models\Template;
 use App\Models\Workspace;
+use App\Support\SiteSubdomain;
 use App\Support\WorkspaceEntitlements;
 use Illuminate\Support\Facades\DB;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
@@ -38,6 +39,7 @@ final class CreateSite
             }
 
             $site = new Site(['name' => $name]);
+            $site->subdomain = SiteSubdomain::suggest($name);
             $site->workspace()->associate($lockedWorkspace);
             $site->save();
 

@@ -20,6 +20,9 @@ use LogicException;
  * @property int $site_id
  * @property string $title
  * @property string $slug
+ * @property string|null $seo_title
+ * @property string|null $seo_description
+ * @property bool $seo_noindex
  * @property int $sort_order
  * @property bool $is_home
  * @property Carbon|null $created_at
@@ -43,6 +46,7 @@ class Page extends Model
     {
         return [
             'sort_order' => 'integer',
+            'seo_noindex' => 'boolean',
         ];
     }
 

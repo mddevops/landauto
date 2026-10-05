@@ -180,7 +180,7 @@ class SubmissionContextResolver
      * @param  array<array-key, mixed>  $tracking
      * @return array<string, string>
      */
-    private function visitor(array $tracking): array
+    public function visitor(array $tracking): array
     {
         $visitor = [];
 

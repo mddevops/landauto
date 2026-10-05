@@ -56,6 +56,34 @@ export const users = {
         workspace: 'Автосалон Запад',
         template: 'Пустой шаблон',
     },
+    // Publishing flow: Site «Сайт для публикации» on the `publish-e2e` subdomain.
+    publisher: {
+        name: 'Павел Публикаторов',
+        email: 'publisher@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Центр',
+        site: 'Сайт для публикации',
+        publicUrl: 'http://publish-e2e.localhost:8200',
+    },
+    // Full publishing lifecycle on `lifecycle-e2e`: Owner, Admin (publish) and Designer (preview).
+    lifecycle: {
+        name: 'Лев Циклов',
+        email: 'lifecycle@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Цикл',
+        site: 'Сайт жизненного цикла',
+        publicUrl: 'http://lifecycle-e2e.localhost:8200',
+    },
+    lifecycleDesigner: {
+        name: 'Дарья Оформителева',
+        email: 'lifecycle-designer@landflow.test',
+        password: 'e2e-password',
+    },
+    lifecycleAdmin: {
+        name: 'Антон Админов',
+        email: 'lifecycle-admin@landflow.test',
+        password: 'e2e-password',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

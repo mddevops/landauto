@@ -20,6 +20,7 @@ use LogicException;
  * @property string $public_id
  * @property int $workspace_id
  * @property string $name
+ * @property string|null $subdomain
  * @property SiteStatus $status
  * @property array<string, string>|null $design_tokens
  * @property array<string, int|bool>|null $form_security

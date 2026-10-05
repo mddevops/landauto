@@ -15,11 +15,12 @@ use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\SubmitsPublishedForms;
 use Tests\TestCase;
 
 class AntiSpamTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SubmitsPublishedForms;
 
     private Site $site;
 
@@ -93,7 +94,7 @@ class AntiSpamTest extends TestCase
         FormField::factory()->for($form)->create(['key' => 'question', 'type' => FormFieldType::Textarea, 'required' => true]);
 
         for ($i = 0; $i < 3; $i++) {
-            $this->postJson(route('forms.submissions.store', $form->public_id), ['fields' => ['question' => 'Есть ли в наличии?']])->assertCreated();
+            $this->submitPublished($form, ['fields' => ['question' => 'Есть ли в наличии?']])->assertCreated();
         }
 
         $this->assertNull(Submission::query()->latest('id')->value('phone_normalized'));
@@ -146,10 +147,10 @@ class AntiSpamTest extends TestCase
      */
     private function submit(Form $form, string $phone, string $ip = '10.0.0.1', array $extra = []): TestResponse
     {
-        return $this->withServerVariables(['REMOTE_ADDR' => $ip])->postJson(route('forms.submissions.store', $form->public_id), [
+        return $this->submitPublished($form, [
             'fields' => ['name' => 'Иван', 'phone' => $phone, 'consent' => true],
             ...$extra,
-        ]);
+        ], $ip);
     }
 
     private function as(User $user, Workspace $workspace): static

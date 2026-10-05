@@ -10,7 +10,13 @@ import { defineConfig, lazyPlugins } from 'vite-plus';
 export default defineConfig({
     plugins: lazyPlugins(() => [
         laravel({
-            input: ['resources/css/app.css', 'resources/js/app.tsx'],
+            input: [
+                'resources/css/app.css',
+                'resources/js/app.tsx',
+                'resources/js/public-runtime/hydrate-client.tsx',
+            ],
+            // Publish-time renderer (ADR-006); visitor requests never run Node.
+            ssr: 'resources/js/public-runtime/render-server.tsx',
             refresh: true,
             fonts: [
                 bunny('Instrument Sans', {
@@ -18,7 +24,7 @@ export default defineConfig({
                 }),
             ],
         }),
-        inertia(),
+        inertia({ ssr: false }),
         react(),
         babel({
             presets: [reactCompilerPreset()],
@@ -28,6 +34,10 @@ export default defineConfig({
             formVariants: true,
         }),
     ]),
+    ssr: {
+        // Self-contained renderer bundle in bootstrap/ssr.
+        noExternal: true,
+    },
     server: {
         watch: {
             ignored: [
