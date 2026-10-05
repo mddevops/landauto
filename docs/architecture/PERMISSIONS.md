@@ -154,7 +154,7 @@ Typical permissions:
 - edit_vehicles
 - edit_prices
 - edit_forms (also Site form security and Site blacklist, D-108)
-- manage_integrations
+- view_integrations, manage_integrations, edit_form_routes, view_delivery_logs, retry_deliveries (D-109)
 - view_submissions
 - edit_seo
 - manage_domains

@@ -6,6 +6,7 @@ use App\Enums\SubmissionMode;
 use App\Http\Controllers\Controller;
 use App\Models\Site;
 use App\Models\Submission;
+use App\Models\SubmissionDelivery;
 use App\Support\DesignerScope;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
@@ -31,9 +32,11 @@ class SiteSubmissionController extends Controller
         Gate::authorize('viewSubmissions', $site);
 
         $mode = $request->query('mode') === SubmissionMode::Preview->value ? SubmissionMode::Preview : SubmissionMode::Public;
+        $canViewDeliveries = Gate::allows('viewDeliveryLogs', $site);
         $submissions = $site->submissions()
             ->where('mode', $mode->value)
             ->with('form:id,public_id,name')
+            ->when($canViewDeliveries, fn ($query) => $query->with('deliveries.route:id,name'))
             ->latest('submitted_at')
             ->latest('id')
             ->paginate(self::PER_PAGE)
@@ -53,7 +56,13 @@ class SiteSubmissionController extends Controller
                 'phone_normalized' => $submission->phone_normalized,
                 'values' => $submission->payload,
                 'context' => $submission->context ?? ['trusted' => (object) [], 'visitor' => (object) []],
+                'deliveries' => $canViewDeliveries ? array_values($submission->deliveries->map(fn (SubmissionDelivery $delivery): array => [
+                    'route' => $delivery->route->name,
+                    'status' => $delivery->status->value,
+                    'status_label' => $delivery->status->label(),
+                ])->all()) : [],
             ])->all()),
+            'canViewDeliveries' => $canViewDeliveries,
             'pagination' => [
                 'current' => $submissions->currentPage(),
                 'last' => $submissions->lastPage(),

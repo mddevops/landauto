@@ -106,6 +106,32 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ViewSubmissions);
     }
 
+    public function viewIntegrations(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ViewIntegrations)
+            || $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageIntegrations);
+    }
+
+    public function manageIntegrations(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageIntegrations);
+    }
+
+    public function editFormRoutes(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditFormRoutes);
+    }
+
+    public function viewDeliveryLogs(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ViewDeliveryLogs);
+    }
+
+    public function retryDeliveries(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::RetryDeliveries);
+    }
+
     public function viewVehicles(User $user, Site $site): bool
     {
         foreach ([WorkspacePermission::ViewVehicles, WorkspacePermission::EditVehicles, WorkspacePermission::EditPrices, WorkspacePermission::EditBenefits] as $permission) {

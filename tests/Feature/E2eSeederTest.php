@@ -43,7 +43,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'publisher@landflow.test'],
+            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'publisher@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -71,5 +71,10 @@ class E2eSeederTest extends TestCase
         $lifecycle = Site::query()->where('subdomain', 'lifecycle-e2e')->sole();
         $this->assertTrue(app(PublishValidator::class)->validate($lifecycle)->passes());
         $this->assertSame(WorkspaceRole::Designer, $lifecycle->workspace->members()->whereRelation('user', 'email', 'lifecycle-designer@landflow.test')->sole()->role);
+
+        $integrations = Site::query()->where('subdomain', 'integrations-e2e')->sole();
+        $this->assertTrue(app(PublishValidator::class)->validate($integrations)->passes());
+        $this->assertSame(0, $integrations->integrationBindings()->count());
+        $this->assertSame(WorkspaceRole::Admin, $integrations->workspace->members()->whereRelation('user', 'email', 'integrations-admin@landflow.test')->sole()->role);
     }
 }

@@ -5,11 +5,17 @@ use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
+use App\Http\Controllers\Forms\FormRouteController;
 use App\Http\Controllers\Forms\PreviewSubmissionController;
 use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
+use App\Http\Controllers\Integrations\IntegrationProfileController;
+use App\Http\Controllers\Integrations\IntegrationTestConnectionController;
+use App\Http\Controllers\Integrations\SiteAnalyticsController;
+use App\Http\Controllers\Integrations\SiteIntegrationController;
+use App\Http\Controllers\Integrations\SubmissionDeliveryController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
@@ -67,6 +73,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->name('sites.store');
 
     Route::middleware(RequireWorkspaceContext::class)
+        ->prefix('integrations')
+        ->name('integrations.')
+        ->group(function () {
+            Route::get('/', [IntegrationProfileController::class, 'index'])->name('index');
+            Route::post('/', [IntegrationProfileController::class, 'store'])->name('store');
+            Route::patch('{profile}', [IntegrationProfileController::class, 'update'])->whereUlid('profile')->name('update');
+            Route::delete('{profile}', [IntegrationProfileController::class, 'destroy'])->whereUlid('profile')->name('destroy');
+            Route::post('{profile}/test', IntegrationTestConnectionController::class)->whereUlid('profile')->name('test');
+        });
+
+    Route::middleware(RequireWorkspaceContext::class)
         ->prefix('sites/{site}')
         ->whereUlid(['site', 'page'])
         ->name('sites.')
@@ -105,6 +122,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('forms/{form}/fields/order', [FormFieldController::class, 'order'])->whereUlid('form')->name('forms.fields.order');
             Route::patch('forms/{form}/fields/{field}', [FormFieldController::class, 'update'])->whereUlid('form')->where('field', '[a-z][a-z0-9_]{0,39}')->name('forms.fields.update');
             Route::delete('forms/{form}/fields/{field}', [FormFieldController::class, 'destroy'])->whereUlid('form')->where('field', '[a-z][a-z0-9_]{0,39}')->name('forms.fields.destroy');
+            Route::get('forms/{form}/routes', [FormRouteController::class, 'index'])->whereUlid('form')->name('forms.routes.index');
+            Route::post('forms/{form}/routes', [FormRouteController::class, 'store'])->whereUlid('form')->name('forms.routes.store');
+            Route::patch('forms/{form}/routes/{route}', [FormRouteController::class, 'update'])->whereUlid(['form', 'route'])->name('forms.routes.update');
+            Route::delete('forms/{form}/routes/{route}', [FormRouteController::class, 'destroy'])->whereUlid(['form', 'route'])->name('forms.routes.destroy');
 
             Route::get('popups', [SitePopupController::class, 'index'])->name('popups.index');
             Route::post('popups', [SitePopupController::class, 'store'])->name('popups.store');
@@ -112,10 +133,18 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
 
             Route::get('submissions', [SiteSubmissionController::class, 'index'])->name('submissions.index');
+            Route::get('deliveries', [SubmissionDeliveryController::class, 'index'])->name('deliveries.index');
+            Route::post('deliveries/{delivery}/retry', [SubmissionDeliveryController::class, 'retry'])->whereUlid('delivery')->middleware('throttle:30,1')->name('deliveries.retry');
             Route::get('form-security', [SiteFormSecurityController::class, 'show'])->name('form-security.show');
             Route::put('form-security', [SiteFormSecurityController::class, 'update'])->name('form-security.update');
             Route::post('blacklist', [SiteBlacklistController::class, 'store'])->name('blacklist.store');
             Route::delete('blacklist/{entry}', [SiteBlacklistController::class, 'destroy'])->whereUlid('entry')->name('blacklist.destroy');
+
+            Route::get('integrations', [SiteIntegrationController::class, 'index'])->name('integrations.index');
+            Route::post('integrations', [SiteIntegrationController::class, 'store'])->name('integrations.store');
+            Route::patch('integrations/{binding}', [SiteIntegrationController::class, 'update'])->whereUlid('binding')->name('integrations.update');
+            Route::delete('integrations/{binding}', [SiteIntegrationController::class, 'destroy'])->whereUlid('binding')->name('integrations.destroy');
+            Route::put('analytics', [SiteAnalyticsController::class, 'update'])->name('analytics.update');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');

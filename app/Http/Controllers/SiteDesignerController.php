@@ -103,6 +103,8 @@ class SiteDesignerController extends Controller
                 'manageAssets' => Gate::allows('manageAssets', $site),
                 'preview' => Gate::allows('preview', $site),
                 'viewSubmissions' => Gate::allows('viewSubmissions', $site),
+                'viewIntegrations' => Gate::allows('viewIntegrations', $site),
+                'viewDeliveryLogs' => Gate::allows('viewDeliveryLogs', $site),
                 'editSeo' => Gate::allows('editSeo', $site),
                 'editSeoIndexing' => Gate::allows('editSeoIndexing', $site),
             ],

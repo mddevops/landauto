@@ -2,11 +2,14 @@
 
 namespace Tests;
 
+use App\Integrations\Http\HostResolver;
 use App\Publishing\Rendering\PageRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
+use Illuminate\Support\Facades\Http;
 use Laravel\Fortify\Features;
 use RuntimeException;
+use Tests\Support\FakeHostResolver;
 use Tests\Support\FakePageRenderer;
 
 abstract class TestCase extends BaseTestCase
@@ -46,6 +49,10 @@ abstract class TestCase extends BaseTestCase
 
         // The compiled publish renderer is a build artifact; see NodePageRendererTest.
         $this->app->instance(PageRenderer::class, new FakePageRenderer);
+
+        // No real network in tests: unfaked HTTP fails, and DNS resolves nothing unless a test binds hosts.
+        Http::preventStrayRequests();
+        $this->app->instance(HostResolver::class, new FakeHostResolver([]));
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

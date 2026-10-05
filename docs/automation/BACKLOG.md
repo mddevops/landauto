@@ -70,9 +70,11 @@ Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
 
 Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`).
 
-Phase 6 — Integrations & Analytics: NOT_STARTED (needs owner go-ahead).
+Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-001 — Workspace Integration Profiles`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 7 — Paid Site Features: NOT_STARTED.
+
+Next ready task: `P7-001 — Custom Domain Schema`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2780,110 +2782,201 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-001 — Workspace Integration Profiles
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P5-012
+
+### Result
+
+- Table `integration_profiles` (ULID `public_id`, Workspace-owned, provider `webhook` | `custom_api`, auth `none` | `bearer` | `basic` | `api_key_header`, `encrypted_credentials`, `settings_json`, status `active` | `disabled` | `archived`). Owner and provider type are immutable.
+- Russian «Интеграции» page at `/integrations`, shown in the sidebar to members with `view_integrations`. Members with `manage_integrations` can create, edit non-secret fields, disable and delete profiles. A profile that is still referenced is archived instead of deleted.
+- Profiles are always resolved inside the current Workspace; a foreign public ID returns 404. No named CRM adapters.
+- Permission reconciliation D-109: Admin gains `view_integrations`, `edit_form_routes`, `view_delivery_logs` and `retry_deliveries`; Designer and ContentEditor get no integration permissions.
 
 ---
 
 ## P6-002 — Secret Encryption / Masking
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-001
+
+### Result
+
+- Credentials are stored with Laravel's `encrypted:array` cast (application key, no custom cryptography). The model hides `encrypted_credentials` and the hint; browser props are built explicitly.
+- The UI shows a fixed mask `••••••••` plus the last four characters only for secrets of at least 12 characters (`••••••••7K2F`). Secret inputs are never prefilled; an empty input keeps the stored value, a new value replaces it, a changed auth type requires a full new secret, and `none` drops stored credentials.
+- Secret inputs (`credential_*`) are excluded from session old-input flashing; tests assert the fake token is absent from the HTML page, Inertia JSON, model serialization, the raw DB row, the session and validation responses.
 
 ---
 
 ## P6-003 — Site Integration Bindings
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-001
+
+### Result
+
+- Table `site_integration_bindings` (ULID `public_id`, Site, profile, optional name, `overrides_json` key/value map, `mapping_defaults_json`, status). Site and profile are immutable; the model refuses a profile from another Workspace.
+- «Интеграции сайта» page (`/sites/{site}/integrations`, linked from the Designer «Разделы» menu): view with `view_integrations`; bind, edit overrides (up to 20 `snake_case` keys, single-line values), disable and unbind with `manage_integrations`. Only active profiles of the Site's own Workspace can be bound; a foreign profile is a validation error.
+- Tokens are never copied to the binding. A bound profile is archived instead of deleted.
 
 ---
 
 ## P6-004 — Form Routes
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P4-003, P6-003
+
+### Result
+
+- Table `form_routes` (ULID `public_id`, Form, name, destination `email` | `webhook` | `custom_api`, profile and Site binding, `email_destination`, `mapping_json`, `settings_json`, status, sort order). Form, destination and binding are immutable. The model refuses a binding of another Site or one whose profile provider type does not match.
+- «Передача заявок» page (`/sites/{site}/forms/{form}/routes`, linked from the Form page), gated by `edit_form_routes`. Email routes take up to 5 RFC-valid recipients, a subject restricted to the placeholders `{form.name}`, `{site.name}`, `{vehicle.title}`, `{offer.price}`, and an optional reply-to email field. HTTP routes take an active binding of this Site, a method (`POST` | `PUT` | `PATCH`), an optional path and up to 10 safe headers (transport, proxy, cookie, Authorization, Content-Type and Idempotency-Key are forbidden).
+- Routes are independent; at most 10 per Form. A route with delivery history is archived instead of deleted; a binding used by a route is archived instead of unbound. Central settings live in `config/integrations.php`.
 
 ---
 
 ## P6-005 — Field Mapping
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-004
+
+### Result
+
+- Declarative mapping rules on HTTP routes (`mapping_json`: `target`, `source`, `missing` = `omit` | `null` | `error`, optional constant `value`), up to 50 rules, targets up to 4 dotted `snake_case` segments, no expressions or code.
+- Allowlisted sources (`MappingSources`): Form fields `field.<key>`, Submission public ID and time, Form, page URL/title, referrer, UTM, Popup, Block, trusted vehicle and offer snapshot (public IDs, titles, price, currency), Site name/URL and binding overrides `override.<key>`. Unknown sources and targets, conflicting targets, unknown field or override keys are rejected on save; numeric internal IDs and blacklist data are not sources.
+- `FieldMapper` builds the payload from `MappingContext` (Submission + optional binding, refuses a binding of another Site). Empty rules produce a deterministic default payload. A missing required value fails with `missing_required_value`.
+- Route editor gains a «Сопоставление полей» section with grouped source selects.
 
 ---
 
 ## P6-006 — Delivery Records / Jobs
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-004
+
+### Result
+
+- Tables `submission_deliveries` (ULID `public_id`, Submission, Form Route, destination, status `pending` | `processing` | `delivered` | `retry_scheduled` | `failed` | `cancelled`, attempt count, next retry, delivered/last attempt time, last HTTP status, safe error code and Russian message; unique Submission + route) and `submission_delivery_attempts` (attempt number, trigger `automatic` | `manual`, start/finish, outcome, HTTP status, provider code, latency, allowlisted scalar summary, safe error).
+- `SubmissionPipeline` persists the Submission first, then `DeliveryDispatcher` creates one Delivery per active route of public Submissions only (preview never delivers) and queues `ProcessSubmissionDelivery` after commit with only the Delivery ID. A dispatch failure never undoes the lead; the visitor response does not wait for providers (database queue in production).
+- Adapter contract `DeliveryAdapter` (`supports`, `deliver`, `testConnection`) returning `DeliveryResult` (`success` | `transient_failure` | `permanent_failure`, HTTP status, provider code, safe message, safe metadata). `DeliveryProcessor` claims atomically, records the Attempt, maps disabled route → `cancelled`, disabled profile/binding or missing adapter → `failed`, unexpected adapter exceptions → transient `internal_error` (only the class name is logged). Failure logs carry only delivery/profile public IDs, provider type, HTTP status, error code and attempt number.
 
 ---
 
 ## P6-007 — Retry / Idempotency
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-006
+
+### Result
+
+- Idempotency: unique Submission + route Delivery; the Delivery `public_id` is the stable key sent as `Idempotency-Key` on every attempt; a single conditional UPDATE claims a due Delivery, so duplicate jobs, duplicate dispatches and concurrent workers never repeat a provider call.
+- Retry ladder: immediate, +1, +5, +15, +60 minutes (`INTEGRATIONS_RETRY_DELAYS`), then `failed`. Retries are stored on the row (`next_retry_at`) and queued by `integrations:dispatch-due-deliveries`, scheduled every minute without overlap (production needs the Laravel scheduler and a queue worker). The command also recovers deliveries stuck in `processing` (`worker_lost`) and pending deliveries whose job was lost.
+- `DeliveryFailures` is the shared classifier: timeout, DNS, network, 408, 425, 429, 500, 502, 503, 504 are transient; 3xx (`redirect_not_followed`), 401, 403, other 4xx and other 5xx are permanent, with short Russian messages.
+- Manual retry `POST /sites/{site}/deliveries/{delivery}/retry` requires `retry_deliveries`, works only for `failed` deliveries of this Site (foreign → 404), creates a new `manual` Attempt and never rewrites the Submission.
 
 ---
 
 ## P6-008 — Email Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-006
+
+### Result
+
+- `EmailDeliveryAdapter` sends `SubmissionLeadMail` through Laravel Mail inside the delivery job. Recipients are re-validated at send time (none valid → permanent `invalid_recipients`); the subject uses only the allowlisted placeholders and is a sanitized single line; reply-to is set only from a valid value of the configured email field.
+- Escaped Blade template `mail/submission-lead`: Form, Site and Site URL, submitted fields (Да/Нет for checkboxes), vehicle/color/offer/price, page, Popup, referrer and UTM, Submission public ID and time. No IP, user agent, numeric IDs, blacklist data or credentials.
+- SMTP/transport failures are transient (`mail_transport_error`, exception text never stored). Tests use `Mail::fake()`.
 
 ---
 
 ## P6-009 — Webhook / Custom API Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-006
 
 ### Security
 
 SSRF protection mandatory.
 
+### Result
+
+- `HttpDeliveryAdapter` (webhook and custom API): profile base URL + route path, route method (`POST` | `PUT` | `PATCH`), re-validated safe headers, mapped JSON payload (`FieldMapper::fromStored`, malformed rules fail permanently), `Idempotency-Key` = Delivery public ID.
+- One `OutboundHttpPolicy` (shared with Test Connection): `https` only unless `INTEGRATIONS_HTTP_ALLOW_PLAIN` is set; no userinfo, fragment, control characters or numeric/hex/short IP hostnames; every resolved A/AAAA address must be public (loopback, RFC 1918, CGNAT, link-local/metadata, multicast, reserved, documentation, unique-local, NAT64, 6to4, IPv4-mapped/compatible IPv6 refused). DNS goes through `HostResolver` (system in production, fake in tests); an empty answer is a transient `dns_error`.
+- `OutboundHttpClient`: connection pinned to the vetted address (cURL `RESOLVE`, so DNS rebinding cannot redirect it), redirects never followed (3xx = permanent `redirect_not_followed`), environment proxies disabled, TLS verification on, 3 s connect / 10 s total timeouts, response read aborted past 1 MB. Auth `none` | `bearer` | `basic` | `api_key_header` is built only from encrypted credentials and always overrides route headers. Only status, latency, response size, content type and a well-formed request ID are kept; bodies, tokens and Authorization are never stored or logged.
+- Tests never touch the network: the base `TestCase` enables `Http::preventStrayRequests()` and an empty fake resolver.
+
 ---
 
 ## P6-010 — Delivery Logs UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-007, P6-008, P6-009
+
+### Result
+
+- «Доставка заявок» page (`/sites/{site}/deliveries`, `view_delivery_logs`; Owner and Admin): per Submission + route status badge, destination, Form and time, attempt count, delivered / next retry time, safe Russian error with HTTP status, collapsible attempt history (manual flag, outcome, HTTP status, latency) and a status filter. No lead field values, provider bodies, credentials or numeric IDs.
+- «Повторить» button on failed deliveries only with `retry_deliveries`. Linked from the Designer «Разделы» menu and the Submissions page; the Submissions page shows per-lead delivery badges only to members with `view_delivery_logs`. No CRM features.
 
 ---
 
 ## P6-011 — Test Connection
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-001, P6-009
+
+### Result
+
+- «Проверить подключение» on the «Интеграции» page (`POST /integrations/{profile}/test`, `manage_integrations`, current Workspace only, foreign → 404). It calls the provider adapter's `testConnection`, i.e. the same `OutboundHttpClient`: same SSRF policy, pinned connection, timeouts, auth builder and classifier as delivery. It sends `POST {"event":"landflow.test_connection"}` with a `test-…` Idempotency-Key to the profile base URL and creates no Submission or Delivery.
+- The result is a Russian toast with success, HTTP status and latency, or the safe failure message; tokens and provider bodies are never returned. Rate limit per user: `INTEGRATIONS_TEST_CONNECTION_PER_MINUTE` (default 5).
 
 ---
 
 ## P6-012 — Yandex Metrica Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P5-007
+
+### Result
+
+- Official API checked 2026-10-05 ([counter initialization](https://yandex.ru/support/metrica/code/counter-initialize.html), [reachGoal](https://yandex.ru/support/metrica/objects/reachgoal.html)): async loader for `https://mc.yandex.ru/metrika/tag.js` defining `window.ym`, `ym(ID, "init", {clickmap, trackLinks, accurateTrackBounce, webvisor})`, goals via `ym(ID, "reachGoal", target)`; goal IDs must not contain `/ \ & # ? = "`. Matches the architecture; no contradiction.
+- `site_analytics_settings` (DATABASE.md §63): enabled, counter ID (digits, 4–15, public by design), clickmap / trackLinks / accurateTrackBounce (default on), Webvisor (default off). Edited in «Интеграции сайта» → «Яндекс Метрика» with `manage_integrations` (Owner, Admin); Designer / ContentEditor 403.
+- Saving changes only Draft settings. Publish copies the safe subset into the Published manifest (`analytics.yandex_metrica`, only when enabled, so other Sites keep their hash); the published page emits the official loader, `init` and the noscript pixel only when the active version has it. No user IDs, `userParams` or form data. Authenticated Preview never loads Metrica.
 
 ---
 
 ## P6-013 — Semantic Analytics Events
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-012
+
+### Result
+
+- Published runtime event bus (`public-runtime/analytics.ts`): `form.start` (first focus), `form.submit`, `form.validation_error` (client or server field errors), `form.success`, `popup.open`, `popup.close`, `vehicle.form_submit` (Form opened with a vehicle context). Events carry no payload: no field values, phone, email, IP, IDs or Submission data.
+- Metrica adapter connects once at hydration when the active version has a counter and calls `ym(counter, "reachGoal", goal)` with goals `form_start`, `form_submit`, `form_validation_error`, `form_success`, `popup_open`, `popup_close`, `vehicle_form_submit` (no reserved characters). Without a counter, or if the loader is blocked, it is a silent no-op; listener errors are swallowed so analytics never breaks the site. Editor previews and authenticated Preview emit nothing.
 
 ---
 
 ## P6-014 — Integrations E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-010 through P6-013
+
+### Result
+
+- `tests/browser/integrations.spec.ts` (seeded Owner / Admin / Designer on `integrations-e2e`): profile with masked token (absent from HTML/props after save and reload), Test Connection, SSRF refusal of a host resolving to a private network, Site binding with override, Metrica settings, email + webhook routes with field / trusted price / override mapping, Publish, public lead (201 while both Deliveries are still queued), worker → delivered, 503 → retry scheduled → delivered on attempt 2, 401 → failed with one attempt, Admin manual retry → attempt «№2 (вручную)», preview lead → no Delivery and no Metrica, Designer 403 and foreign Workspace 404, published loader + `ym` goals (`popup_open`, `form_start`, `form_validation_error`, `form_submit`, `vehicle_form_submit`, `form_success`, `popup_close`) with no phone, email or name.
+- E2E-only fakes (`app/Integrations/Testing/E2eIntegrationFakes`, `INTEGRATIONS_E2E_FAKE`, honoured only in `testing` / `e2e`): fixed DNS answers and a fake CRM transport; the real SSRF policy, auth builder and classifier still run and no request leaves the machine. E2E uses the `database` queue driven by the spec (`queue:work --stop-when-empty`, `integrations:dispatch-due-deliveries`) with zero retry delays; production queue and SSRF settings are unchanged.
 
 ---
 
 ## P6-015 — Phase 6 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-014
+
+### Result
+
+- Audit (no Phase 6 regressions found, no code changes): Workspace owns profiles and Sites store only bindings/overrides (no credential copies); credentials are `encrypted:array`, hidden from serialization, shown only as a mask and never re-displayed; Submission is persisted before any Delivery is created and the job is dispatched after commit; preview Submissions never create Deliveries; one Delivery and attempt log per route (route failures independent), bounded retry ladder, Delivery `public_id` as idempotency key, manual retry under `retry_deliveries`; email and HTTP adapters run in the queued job; one SSRF policy for delivery and Test Connection (https, public IPs only, pinned connection against DNS rebinding, no redirects, no proxy, timeouts, response cap); delivery logs keep only safe Russian messages and metadata (no bodies, tokens or lead values); logs carry public IDs, provider type, HTTP status, error code and exception class only; permissions are semantic keys (no role or plan checks); Metrica config is frozen into the Published manifest, loaded only on published pages, never in Preview, goals carry no payload. No Phase 7 work started.
+- Notes: Metrica settings are live Draft settings like form security, so restoring an old version to Draft does not change them; the next Publish uses the current settings.
+
+Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run check`, build), Playwright `npm run test:e2e` 44 passed, `git diff --check` PASS. Phase 6 COMPLETED; Phase 7 not started.
 
 ---
 

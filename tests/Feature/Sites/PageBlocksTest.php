@@ -110,7 +110,7 @@ class PageBlocksTest extends TestCase
 
         $asEditor()->get(route('sites.designer', $this->site))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('can', ['editDesign' => false, 'editContent' => true, 'manageAssets' => false, 'preview' => false, 'viewSubmissions' => false, 'editSeo' => true, 'editSeoIndexing' => false])
+                ->where('can', ['editDesign' => false, 'editContent' => true, 'manageAssets' => false, 'preview' => false, 'viewSubmissions' => false, 'viewIntegrations' => false, 'viewDeliveryLogs' => false, 'editSeo' => true, 'editSeoIndexing' => false])
                 ->where('blocks.0.schema.fields.1.key', 'title'));
 
         $asEditor()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => [

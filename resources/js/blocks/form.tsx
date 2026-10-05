@@ -1,4 +1,4 @@
-import { useId, useState } from 'react';
+import { useId, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import { cn } from '@/lib/utils';
 import { CaptchaWidget } from './captcha';
@@ -39,6 +39,8 @@ export type FormValues = Record<string, string | boolean>;
 
 /** Anti-spam signals collected by the form; the backend decides what they mean. */
 export type FormSubmitMeta = { honeypot: string; captchaToken: string | null };
+
+export type FormInteraction = 'start' | 'validation_error';
 
 export type FormSubmitResult =
     | { ok: true; message: string }
@@ -98,6 +100,7 @@ function clientErrors(
 export function FormView({
     form,
     onSubmit,
+    onEvent,
     extra,
     captcha = null,
 }: {
@@ -106,10 +109,13 @@ export function FormView({
         values: FormValues,
         meta: FormSubmitMeta,
     ) => Promise<FormSubmitResult>;
+    /** Payload-free interaction signals for analytics. */
+    onEvent?: (event: FormInteraction) => void;
     extra?: ReactNode;
     captcha?: CaptchaConfig | null;
 }) {
     const id = useId();
+    const started = useRef(false);
     const [values, setValues] = useState<FormValues>(() => initialValues(form));
     const [honeypot, setHoneypot] = useState('');
     const [captchaToken, setCaptchaToken] = useState('');
@@ -149,6 +155,7 @@ export function FormView({
 
         if (Object.keys(local).length > 0) {
             setStatus('error');
+            onEvent?.('validation_error');
 
             return;
         }
@@ -167,6 +174,10 @@ export function FormView({
             setMessage(result.message);
             setStatus('error');
 
+            if (Object.keys(result.errors).length > 0) {
+                onEvent?.('validation_error');
+            }
+
             if (captcha) {
                 setCaptchaToken('');
                 setCaptchaRound((round) => round + 1);
@@ -178,7 +189,17 @@ export function FormView({
         setValues((current) => ({ ...current, [key]: value }));
 
     return (
-        <form noValidate onSubmit={submit} className="flex flex-col gap-4">
+        <form
+            noValidate
+            onSubmit={submit}
+            onFocus={() => {
+                if (onSubmit && !started.current) {
+                    started.current = true;
+                    onEvent?.('start');
+                }
+            }}
+            className="flex flex-col gap-4"
+        >
             {status === 'error' && message && (
                 <p
                     role="alert"

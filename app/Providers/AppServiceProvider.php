@@ -7,6 +7,12 @@ use App\Enums\WorkspacePermission;
 use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\Captcha\FakeCaptchaVerifier;
 use App\Forms\Captcha\YandexSmartCaptchaVerifier;
+use App\Integrations\Delivery\DeliveryAdapters;
+use App\Integrations\Delivery\EmailDeliveryAdapter;
+use App\Integrations\Delivery\HttpDeliveryAdapter;
+use App\Integrations\Http\HostResolver;
+use App\Integrations\Http\SystemHostResolver;
+use App\Integrations\Testing\E2eIntegrationFakes;
 use App\Models\Site;
 use App\Models\User;
 use App\Policies\SitePolicy;
@@ -49,6 +55,11 @@ class AppServiceProvider extends ServiceProvider
                 (int) config('services.yandex_smartcaptcha.timeout'),
             );
         });
+        $this->app->bind(HostResolver::class, $this->usesE2eIntegrationFakes() ? E2eIntegrationFakes::class : SystemHostResolver::class);
+        $this->app->tag([EmailDeliveryAdapter::class, HttpDeliveryAdapter::class], DeliveryAdapters::TAG);
+        $this->app->singleton(DeliveryAdapters::class, fn (Application $app): DeliveryAdapters => new DeliveryAdapters(
+            $app->tagged(DeliveryAdapters::TAG),
+        ));
     }
 
     /**
@@ -58,6 +69,10 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         Gate::policy(Site::class, SitePolicy::class);
+
+        if ($this->usesE2eIntegrationFakes()) {
+            E2eIntegrationFakes::install();
+        }
 
         foreach (WorkspacePermission::cases() as $permission) {
             Gate::define(
@@ -77,6 +92,11 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('form-submissions', fn (Request $request) => Limit::perMinute(30)
             ->by($request->ip() ?? 'unknown')
             ->response(fn () => response()->json(['message' => 'Слишком много попыток. Попробуйте позже.'], 429)));
+    }
+
+    private function usesE2eIntegrationFakes(): bool
+    {
+        return config('integrations.e2e_fake') === true && $this->app->environment(['testing', 'e2e']);
     }
 
     /**

@@ -1957,6 +1957,24 @@ Owner approval in the Phase 5 autopilot instruction (2026-10-05); X-021.
 
 ---
 
+## D-109 — Phase 6 Integration Permission Reconciliation
+
+**Status:** APPROVED
+
+### Decision
+
+- Owner keeps every permission.
+- Admin additionally receives `view_integrations`, `edit_form_routes`, `view_delivery_logs` and `retry_deliveries` (it already had `manage_integrations` and `view_submissions`).
+- Designer and ContentEditor receive no integration permission: no credentials, routes, delivery logs, retries or lead access.
+- Workspace Integration Profiles, Site integration bindings and Site analytics settings need `manage_integrations` to change and `view_integrations` (or `manage_integrations`) to view. Form routes and mappings need `edit_form_routes`. Delivery logs need `view_delivery_logs`; manual retry needs `retry_deliveries`. Delivery logs show delivery metadata only, never the lead's field values.
+- `export_submissions` stays unassigned to Admin; Submission export remains blocked by D-094.
+
+### Resolved By
+
+Owner instruction in the Phase 6 autopilot prompt (2026-10-05); P6-001.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

@@ -85,7 +85,7 @@ class SiteFormController extends Controller
             'choices' => [
                 'fieldTypes' => array_map(fn (FormFieldType $case): array => ['value' => $case->value, 'label' => $case->label()], FormFieldType::cases()),
             ],
-            'can' => ['editForms' => Gate::allows('editForms', $site)],
+            'can' => ['editForms' => Gate::allows('editForms', $site), 'editFormRoutes' => Gate::allows('editFormRoutes', $site)],
         ]);
     }
 
