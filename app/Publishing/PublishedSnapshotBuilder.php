@@ -115,7 +115,11 @@ final class PublishedSnapshotBuilder
                 'is_home' => $page->is_home,
                 'title' => $page->title,
                 'sort_order' => $page->sort_order,
-                'seo' => ['title' => $page->title, 'description' => null, 'indexable' => true],
+                'seo' => [
+                    'title' => $page->seo_title ?? $page->title,
+                    'description' => $page->seo_description,
+                    'indexable' => ! $page->seo_noindex,
+                ],
                 'blocks' => $blocks,
             ];
         }
@@ -224,6 +228,7 @@ final class PublishedSnapshotBuilder
                 'slug' => $page->slug,
                 'sort_order' => $page->sort_order,
                 'is_home' => $page->is_home,
+                'seo' => ['title' => $page->seo_title, 'description' => $page->seo_description, 'noindex' => $page->seo_noindex],
                 'blocks' => array_values($page->blocks->map(fn (BlockInstance $block): array => [
                     'public_id' => $block->public_id,
                     'definition' => $block->version->definition->slug,

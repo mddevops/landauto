@@ -83,4 +83,25 @@ final class PublishedPages
                 ->all(),
         );
     }
+
+    /**
+     * Public paths of the indexable Pages of the version, in Page order.
+     *
+     * @return list<string>
+     */
+    public function indexablePaths(Site $site, PublishedVersion $version): array
+    {
+        return Cache::remember(
+            "published:{$site->public_id}:{$version->public_id}:indexable",
+            (int) config('publishing.cache_ttl'),
+            fn (): array => array_values(PublishedPage::query()
+                ->where('published_version_id', $version->id)
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get(['slug', 'is_home', 'seo_json'])
+                ->filter(fn (PublishedPage $page): bool => ($page->seo_json['indexable'] ?? true) === true)
+                ->map(fn (PublishedPage $page): string => $page->path())
+                ->all()),
+        );
+    }
 }

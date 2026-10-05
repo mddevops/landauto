@@ -74,6 +74,23 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::PublishSite);
     }
 
+    /**
+     * Page title and description: full SEO or the basic SEO permission of Content Editors.
+     */
+    public function editSeo(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditSeo)
+            || $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditSeoBasic);
+    }
+
+    /**
+     * Indexing directives need full SEO rights.
+     */
+    public function editSeoIndexing(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::EditSeo);
+    }
+
     public function manageDomains(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageDomains);

@@ -3,6 +3,7 @@
 use App\Http\Controllers\PublicSite\PublishedAssetController;
 use App\Http\Controllers\PublicSite\PublishedFormController;
 use App\Http\Controllers\PublicSite\PublishedPageController;
+use App\Http\Controllers\PublicSite\PublishedSeoController;
 use App\Http\Middleware\ResolvePublicSite;
 use App\Publishing\Runtime\PublicSiteResolver;
 use Illuminate\Support\Facades\Route;
@@ -28,6 +29,8 @@ Route::domain('{subdomain}.'.config('publishing.public_domain'))
             ->whereUlid(['version', 'form'])
             ->middleware('throttle:form-submissions')
             ->name('forms');
+        Route::get('sitemap.xml', [PublishedSeoController::class, 'sitemap'])->name('sitemap');
+        Route::get('robots.txt', [PublishedSeoController::class, 'robots'])->name('robots');
 
         Route::get('{path?}', PublishedPageController::class)->where('path', '[a-z0-9-]*')->name('page');
         Route::any('{any?}', [PublishedPageController::class, 'missing'])->where('any', '.*')->name('missing');

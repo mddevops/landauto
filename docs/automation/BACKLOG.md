@@ -72,7 +72,7 @@ Current phase:
 
 `P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-009 — SEO / Sitemap / Robots`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P5-010 — Version History / Restore`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2728,8 +2728,10 @@ Result: `App\Support\SiteSubdomain` owns the label rules: one lowercase DNS labe
 
 ## P5-009 — SEO / Sitemap / Robots
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-007
+
+Result: Pages gained Draft SEO (`seo_title` ≤ 120, `seo_description` ≤ 300, `seo_noindex`), edited in the designer («Страницы» → «SEO страницы», `PATCH sites/{site}/pages/{page}/seo`): title/description need `edit_seo` or `edit_seo_basic` (Owner, Admin, Content Editor), indexing needs `edit_seo` (Owner, Admin); Designer forbidden. The manifest carries `seo.title` (falls back to the Page title), `seo.description`, `seo.indexable`; the private snapshot keeps the raw SEO fields for restore. Published head: `<title>`, meta description only when set, `robots` `index, follow` / `noindex, follow`, canonical `{scheme}://{subdomain}.{domain}{path}`, Open Graph type/locale/title/url/site name and description only from real values — no `og:image` is ever invented. Public `/sitemap.xml` lists only indexable Pages of the active version (`lastmod` = version ready time); `/robots.txt` allows the Site, disallows `/_landflow/forms/` and points to the sitemap; both 404 without a published version and never contain Draft or application URLs. Preview responses send `X-Robots-Tag: noindex, nofollow` (plus the existing meta). Draft SEO edits reach visitors only after Publish. Tests: `PublishedSeoTest`, Playwright SEO dialog → raw head + sitemap.
 
 ---
 

@@ -67,6 +67,8 @@ type DesignerProps = {
         manageAssets: boolean;
         preview: boolean;
         viewSubmissions: boolean;
+        editSeo: boolean;
+        editSeoIndexing: boolean;
     };
 };
 
@@ -258,6 +260,8 @@ export default function Designer({
                                     pages={pages}
                                     currentPageId={page.public_id}
                                     canEdit={can.editDesign}
+                                    canEditSeo={can.editSeo}
+                                    canEditSeoIndexing={can.editSeoIndexing}
                                 />
                             ) : (
                                 <Navigator

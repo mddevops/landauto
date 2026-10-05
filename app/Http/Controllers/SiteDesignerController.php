@@ -49,6 +49,11 @@ class SiteDesignerController extends Controller
                     'title' => $sitePage->title,
                     'slug' => $sitePage->slug,
                     'is_home' => $sitePage->is_home,
+                    'seo' => [
+                        'title' => $sitePage->seo_title,
+                        'description' => $sitePage->seo_description,
+                        'noindex' => $sitePage->seo_noindex,
+                    ],
                 ])
                 ->values()
                 ->all(),
@@ -98,6 +103,8 @@ class SiteDesignerController extends Controller
                 'manageAssets' => Gate::allows('manageAssets', $site),
                 'preview' => Gate::allows('preview', $site),
                 'viewSubmissions' => Gate::allows('viewSubmissions', $site),
+                'editSeo' => Gate::allows('editSeo', $site),
+                'editSeoIndexing' => Gate::allows('editSeoIndexing', $site),
             ],
         ]);
     }

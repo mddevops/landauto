@@ -11,6 +11,7 @@ use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\PageBlockController;
+use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
 use App\Http\Controllers\Platform\CatalogEntryController;
@@ -80,6 +81,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('pages', [SitePageController::class, 'store'])->name('pages.store');
             Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');
             Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
+            Route::patch('pages/{page}/seo', [PageSeoController::class, 'update'])->name('pages.seo.update');
 
             Route::post('pages/{page}/blocks', [PageBlockController::class, 'store'])->name('blocks.store');
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');

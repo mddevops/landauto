@@ -77,6 +77,22 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
         .selectOption({ label: 'Обратный звонок' });
     await expectSaved(page);
 
+    // Draft SEO of the home Page goes into the published head.
+    const left = page.getByRole('complementary', { name: 'Левая панель' });
+    await left.getByRole('tab', { name: 'Страницы' }).click();
+    await left.getByRole('button', { name: 'SEO страницы «Главная»' }).click();
+    const seo = page.getByRole('dialog', { name: 'SEO страницы «Главная»' });
+    await seo
+        .getByLabel('Заголовок для поисковиков')
+        .fill('Дилер — новые автомобили');
+    await seo
+        .getByLabel('Описание для поисковиков')
+        .fill('Автомобили в наличии и спецпредложения.');
+    await seo.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(
+        page.getByText('SEO страницы сохранено.').first(),
+    ).toBeVisible();
+
     await publish(page, 1);
 
     // Publish-time HTML: the content is there before any JavaScript runs.
@@ -87,6 +103,17 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
         raw.getByRole('heading', { name: 'Опубликованный заголовок' }),
     ).toBeVisible();
     expect(await raw.content()).toContain('id="lf-page-data"');
+    await expect(raw).toHaveTitle('Дилер — новые автомобили');
+    await expect(raw.locator('meta[name="description"]')).toHaveAttribute(
+        'content',
+        'Автомобили в наличии и спецпредложения.',
+    );
+    await expect(raw.locator('link[rel="canonical"]')).toHaveAttribute(
+        'href',
+        `${publisher.publicUrl}/`,
+    );
+    await raw.goto(`${publisher.publicUrl}/sitemap.xml`);
+    expect(await raw.content()).toContain(`${publisher.publicUrl}/`);
     await noScript.close();
 
     // Hydrated page: the button opens the published Popup and the lead goes to the version.

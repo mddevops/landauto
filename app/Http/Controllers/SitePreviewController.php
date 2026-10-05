@@ -15,7 +15,8 @@ use App\Support\SiteDesignTokens;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
-use Inertia\Response;
+use Inertia\Response as InertiaResponse;
+use Symfony\Component\HttpFoundation\Response;
 
 /**
  * Authenticated preview of the current draft. It renders draft state only and never creates
@@ -24,6 +25,14 @@ use Inertia\Response;
 class SitePreviewController extends Controller
 {
     public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha): Response
+    {
+        $response = $this->page($request, $site, $scope, $vehicleBindings, $popups, $captcha)->toResponse($request);
+        $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
+
+        return $response;
+    }
+
+    private function page(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha): InertiaResponse
     {
         $scope->site($site);
         Gate::authorize('preview', $site);

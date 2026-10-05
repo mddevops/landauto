@@ -6,6 +6,7 @@ use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\SiteSecurityPolicy;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolvePublicSite;
+use App\Publishing\Runtime\PublicSiteResolver;
 use App\Publishing\Runtime\PublishedPages;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -29,11 +30,19 @@ class PublishedPageController extends Controller
         // CAPTCHA is a live security setting: the widget follows what the server enforces now.
         $widget = SiteSecurityPolicy::forSite($site)->captchaRequired && $captcha->isConfigured() ? $captcha->widget() : null;
 
+        $payload = json_decode($artifact['payload'], false, 512, JSON_THROW_ON_ERROR);
+        $seo = $artifact['seo'];
+        $description = is_string($seo['description'] ?? null) && $seo['description'] !== '' ? $seo['description'] : null;
+
         return response()->view('published.page', [
-            'title' => $artifact['seo']['title'] ?? $artifact['title'],
+            'title' => is_string($seo['title'] ?? null) ? $seo['title'] : $artifact['title'],
+            'description' => $description,
+            'canonical' => PublicSiteResolver::url($site, $artifact['path']),
+            'robots' => ($seo['indexable'] ?? true) === true ? 'index, follow' : 'noindex, follow',
+            'siteName' => is_object($payload) && is_object($payload->site ?? null) && is_string($payload->site->name ?? null) ? $payload->site->name : null,
             'html' => $artifact['html'],
             'data' => json_encode(
-                ['payload' => json_decode($artifact['payload'], false, 512, JSON_THROW_ON_ERROR), 'captcha' => $widget],
+                ['payload' => $payload, 'captcha' => $widget],
                 JSON_HEX_TAG | JSON_HEX_AMP | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR,
             ),
         ]);
