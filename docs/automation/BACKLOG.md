@@ -72,7 +72,7 @@ Current phase:
 
 `P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-006 — Atomic Activation`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P5-007 — Public Runtime`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2701,8 +2701,10 @@ Result: `PublishedSnapshotBuilder` reads the Draft in one transaction and builds
 
 ## P5-006 — Atomic Activation
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-005
+
+Result: `App\Publishing\PublishSite` orchestrates a whole-Site Publish. A short Site-locked transaction creates the Publication; a second attempt while one is running is recorded as a failed `conflict`, and attempts stuck past `publishing.stale_after_minutes` are abandoned (`internal_error`, `abandoned`). Validation, snapshots and SSR run outside transactions; the version number is allocated under the Site lock (gaps allowed). The final transaction re-checks the attempt and the building version, verifies every artifact (one per manifest Page, non-empty, hash match), marks the version `ready`, switches `sites.active_published_version_id` and marks the Publication `succeeded`. Any failure fails the attempt with a safe code, fails a building version, keeps the previous production and Draft, and logs only the publication public ID, failure code and exception class. «Публикация» page (`sites/{site}/publishing`, `view_site`): production version, last attempt, live pre-publish check, Publish button (`publish_site`, throttled); Designer header link. Tests: first/second publish, production unchanged during render, validation and render failures, concurrent and abandoned attempts, Owner/Admin allowed, Designer/Content Editor forbidden, foreign Workspace 404.
 
 ---
 

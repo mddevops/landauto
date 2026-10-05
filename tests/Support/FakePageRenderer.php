@@ -4,6 +4,7 @@ namespace Tests\Support;
 
 use App\Publishing\Rendering\PageRenderer;
 use App\Publishing\Rendering\PageRenderException;
+use Closure;
 
 /**
  * Deterministic stand-in for the compiled React renderer: PHPUnit runs before the frontend
@@ -18,9 +19,18 @@ final class FakePageRenderer implements PageRenderer
 
     public ?string $emptyPage = null;
 
+    /** Runs once while rendering, e.g. to observe production or start a competing Publish. */
+    public ?Closure $onRender = null;
+
     public function render(array $payloads): array
     {
         $this->calls[] = $payloads;
+
+        if ($this->onRender !== null) {
+            $callback = $this->onRender;
+            $this->onRender = null;
+            $callback();
+        }
 
         if ($this->fail) {
             throw new PageRenderException('Fake render failure.');

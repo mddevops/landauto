@@ -1,5 +1,11 @@
 import { Head, Link, router, usePage } from '@inertiajs/react';
-import { ArrowLeft, Eye, LayoutList, TriangleAlert } from 'lucide-react';
+import {
+    ArrowLeft,
+    Eye,
+    LayoutList,
+    Rocket,
+    TriangleAlert,
+} from 'lucide-react';
 import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
@@ -40,6 +46,7 @@ import { update as updateDesign } from '@/routes/sites/design';
 import { show as formSecurity } from '@/routes/sites/form-security';
 import { index as formsIndex } from '@/routes/sites/forms';
 import { index as popupsIndex } from '@/routes/sites/popups';
+import { show as publishing } from '@/routes/sites/publishing';
 import { index as submissionsIndex } from '@/routes/sites/submissions';
 
 type DesignerProps = {
@@ -215,6 +222,15 @@ export default function Designer({
                                 </a>
                             </Button>
                         ))}
+                    <Button asChild size="sm">
+                        <Link
+                            href={publishing(site.public_id)}
+                            aria-label="Публикация"
+                        >
+                            <Rocket aria-hidden="true" />
+                            <span className="hidden sm:inline">Публикация</span>
+                        </Link>
+                    </Button>
                 </header>
 
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">

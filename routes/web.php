@@ -25,6 +25,7 @@ use App\Http\Controllers\SiteDesignController;
 use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
+use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
@@ -72,6 +73,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('designer', SiteDesignerController::class)->name('designer');
             Route::get('preview', SitePreviewController::class)->name('preview');
+            Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');
+            Route::post('publishing', [SitePublishingController::class, 'store'])->middleware('throttle:10,1')->name('publishing.store');
             Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
                 ->whereUlid('form')
                 ->middleware('throttle:form-submissions')

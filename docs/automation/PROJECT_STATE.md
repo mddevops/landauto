@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-006 — Atomic Activation`.
+**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-007 — Public Runtime`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -161,6 +161,7 @@ Current focus:
 - `P5-003` DONE: Publication attempt records (actor, enforced status machine, safe failure code/summary/metadata) and `publish` / `restoreVersion` Site policy abilities.
 - `P5-004` DONE: `PublishValidator` (errors block, warnings inform) reusing the X-018 inspector, pinned-schema validation and new publish-time completeness checks.
 - `P5-005` DONE: `PublishedSnapshotBuilder` (public manifest + private draft snapshot, canonical hash) and `PublishedArtifactBuilder` (version-scoped per-Page payloads, publish-time React SSR via the compiled `bootstrap/ssr/render-server.js`, stored HTML artifacts and asset references, no activation).
+- `P5-006` DONE: `PublishSite` atomic activation (Site-locked start with conflict/abandon handling, rendering outside transactions, final locked pointer switch after artifact verification, safe failure handling) and the «Публикация» page with the Publish action.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
