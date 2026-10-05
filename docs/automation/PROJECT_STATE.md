@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-011 — Publishing E2E`.
+**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-012 — Phase 5 Review`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -166,6 +166,7 @@ Current focus:
 - `P5-008` DONE: Landflow subdomains — `SiteSubdomain` rules (DNS label, global uniqueness incl. archived, reserved list + `xn--`), transliterated suggestion at Site creation (stable on rename), backfill migration, explicit change on «Публикация» (`manage_domains`), pre-publish `subdomain_missing`.
 - `P5-009` DONE: Page SEO fields (title, description, noindex) with `edit_seo` / `edit_seo_basic` split, published head (title, description, robots, canonical, real-value Open Graph, no invented image), `/sitemap.xml` (indexable Pages of the active version only), `/robots.txt` (no Draft URLs), preview `X-Robots-Tag: noindex, nofollow`.
 - `P5-010` DONE: version history on «Публикация» (number, date, publisher, status, production badge) and Owner-only `restore_version` restore of the private Draft snapshot into the Draft in one transaction (Pages, Blocks, SEO, design, Forms/Fields, Popups, Vehicles, Offers, benefits; public IDs reused, cross-Site IDs rejected, missing Forms switched off not deleted); production unchanged until the next Publish creates a new version; operational data (Submissions, blacklists, form security, subdomain) untouched.
+- `P5-011` DONE: Playwright `publishing-lifecycle.spec.ts` covers the full lifecycle (404 before publish, preview, publish v1–v4, no-JS HTML with price, Draft isolation incl. Form label and price, public vs preview leads, historical media URL, blocked Publish on a broken action, history, restore, permissions, protected platform image, 375 px).
 
 No product feature implementation should begin merely because architecture documents now exist.
 

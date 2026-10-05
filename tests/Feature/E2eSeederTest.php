@@ -4,11 +4,13 @@ namespace Tests\Feature;
 
 use App\Enums\Entitlement;
 use App\Enums\PlatformPermission;
+use App\Enums\WorkspaceRole;
 use App\Models\Catalog\AutoSeries;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\Template;
 use App\Models\User;
+use App\Publishing\PublishValidator;
 use App\Support\WorkspaceEntitlements;
 use Database\Seeders\E2eSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -41,7 +43,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'interactive@landflow.test', 'login@landflow.test', 'member@landflow.test', 'publisher@landflow.test'],
+            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'interactive@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'publisher@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -63,7 +65,11 @@ class E2eSeederTest extends TestCase
 
         $showcase = Site::query()->where('name', 'Витрина Запад')->sole();
         $this->assertSame(2, $showcase->vehicles()->count());
-        $this->assertSame(1, SiteOffer::query()->count());
+        $this->assertSame(1, SiteOffer::query()->whereRelation('vehicle', 'site_id', $showcase->id)->count());
         Storage::disk('local')->assertExists(['series-media/e2e/front_3_4.png', 'series-media/e2e/side.png']);
+
+        $lifecycle = Site::query()->where('subdomain', 'lifecycle-e2e')->sole();
+        $this->assertTrue(app(PublishValidator::class)->validate($lifecycle)->passes());
+        $this->assertSame(WorkspaceRole::Designer, $lifecycle->workspace->members()->whereRelation('user', 'email', 'lifecycle-designer@landflow.test')->sole()->role);
     }
 }

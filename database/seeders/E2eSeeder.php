@@ -3,15 +3,19 @@
 namespace Database\Seeders;
 
 use App\Actions\Sites\CreateSite;
+use App\Blocks\BlockStateDefaults;
 use App\Enums\Entitlement;
 use App\Enums\MediaAngle;
 use App\Enums\PlatformRole;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Models\BlockInstance;
+use App\Models\BlockVersion;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoMark;
 use App\Models\Catalog\AutoModification;
 use App\Models\Form;
+use App\Models\Page;
 use App\Models\Plan;
 use App\Models\PlatformRoleAssignment;
 use App\Models\Popup;
@@ -87,6 +91,13 @@ class E2eSeeder extends Seeder
         // Publishing flow: a Site on its own Landflow subdomain with a ready lead Form + Popup.
         $publisher = $this->createUser('Павел Публикаторов', 'publisher@landflow.test');
         $this->createPublishingSite($this->createWorkspace($publisher, 'Автосалон Центр', plan: $plan));
+
+        // Full publishing lifecycle: a ready Draft v1 (hero + priced vehicle card) and a Designer
+        // member without publish/restore rights.
+        $lifecycle = $this->createUser('Лев Циклов', 'lifecycle@landflow.test');
+        $lifecycleWorkspace = $this->createWorkspace($lifecycle, 'Автосалон Цикл', plan: $plan);
+        $lifecycleWorkspace->addMember($this->createUser('Дарья Оформителева', 'lifecycle-designer@landflow.test'), WorkspaceRole::Designer);
+        $this->createLifecycleSite($lifecycleWorkspace);
     }
 
     private function createPublishingSite(Workspace $workspace): void
@@ -95,6 +106,71 @@ class E2eSeeder extends Seeder
         $site->forceFill(['subdomain' => 'publish-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($site)->create(['name' => 'Обратный звонок'])->form()->associate($form)->save();
+    }
+
+    /**
+     * Site «Сайт жизненного цикла» on `lifecycle-e2e`: home Page with a hero (Popup button and a
+     * scroll button to the vehicle card) and a priced vehicle of a dedicated catalog branch whose
+     * media image is backed by a real file.
+     */
+    private function createLifecycleSite(Workspace $workspace): void
+    {
+        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт жизненного цикла');
+        $site->forceFill(['subdomain' => 'lifecycle-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка на тест-драйв']);
+        $popup = Popup::factory()->for($site)->create(['name' => 'Тест-драйв', 'title' => 'Тест-драйв за 15 минут']);
+        $popup->form()->associate($form)->save();
+
+        $mark = AutoMark::query()->firstOrCreate(['url' => 'moskvich'], ['name' => 'Moskvich', 'name_ru' => 'Москвич', 'country' => 'Россия', 'status' => true]);
+        $model = $mark->models()->firstOrCreate(['url' => 'moskvich-3'], ['name' => 'Moskvich 3', 'name_ru' => 'Москвич 3', 'year_from' => 2022, 'status' => true]);
+        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2022, 'status' => true]);
+        $series = $generation->series()->firstOrCreate(['url' => 'crossover'], ['name' => 'Кроссовер', 'status' => true]);
+        $equipment = AutoEquipment::factory()
+            ->for(AutoModification::factory()->for($series, 'series')->state(['name' => '1.5 CVT 150 л.с.']), 'modification')
+            ->create(['name' => 'Люкс']);
+        $vehicle = SiteVehicle::factory()->for($site)->forSeries($series)->create(['sort_order' => 0]);
+        SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 199_000_000]);
+
+        $set = new SeriesMediaSet(['name' => 'Белый', 'swatch_hex' => '#f4f4f4', 'status' => true, 'sort_order' => 0]);
+        $set->catalog_series_public_id = $series->public_id;
+        $set->save();
+        $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        $path = 'series-media/e2e-lifecycle/front_3_4.png';
+        Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
+        SeriesMediaImage::factory()->for($set, 'set')->create([
+            'angle' => MediaAngle::FrontThreeQuarter,
+            'path' => $path,
+            'original_name' => 'front_3_4.png',
+            'size_bytes' => strlen($png),
+            'width' => 1,
+            'height' => 1,
+        ]);
+
+        $home = $site->pages()->where('is_home', true)->firstOrFail();
+        $card = $this->placeBlock($home, 'vehicle-card', 1, ['vehicle' => $vehicle->public_id]);
+        $this->placeBlock($home, 'hero', 0, [
+            'title' => 'Цикл: версия 1',
+            'primary_button' => ['label' => 'Записаться на тест-драйв', 'action' => ['type' => 'open_popup', 'popup' => $popup->public_id]],
+            'secondary_button' => ['label' => 'К ценам', 'action' => ['type' => 'scroll_to', 'block' => $card->public_id]],
+        ]);
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     */
+    private function placeBlock(Page $page, string $slug, int $sortOrder, array $state): BlockInstance
+    {
+        $version = BlockVersion::query()->whereHas('definition', fn ($query) => $query->where('slug', $slug))->latest('id')->firstOrFail();
+
+        $block = new BlockInstance;
+        $block->forceFill([
+            'page_id' => $page->id,
+            'block_version_id' => $version->id,
+            'sort_order' => $sortOrder,
+            'state_json' => array_replace(app(BlockStateDefaults::class)->fromSchema($version->schema_json), $state),
+        ])->save();
+
+        return $block;
     }
 
     /**

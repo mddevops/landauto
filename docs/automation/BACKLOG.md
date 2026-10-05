@@ -72,7 +72,7 @@ Current phase:
 
 `P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-011 — Publishing E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P5-012 — Phase 5 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2746,8 +2746,10 @@ Result: «Публикация» → «История версий» lists the l
 
 ## P5-011 — Publishing E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-008, P5-009, P5-010
+
+Result: `tests/browser/publishing-lifecycle.spec.ts` on the seeded `lifecycle-e2e` Site (E2eSeeder: Owner + Designer member, ready Draft v1 with hero and priced vehicle card, dedicated Moskvich catalog branch with a real media file) covers: public 404 before the first Publish → Draft v1 in preview → Publish v1 → no-JS HTML with heading and price → Draft v2 (heading, Offer price, Form field label) while production stays v1 → public Popup uses the published v1 Form and posts a real lead to `/_landflow/forms/…` → preview shows v2 and posts a preview test lead → leads listed apart → Publish v2 with the v1 media URL still served → scroll action to a hidden block blocks Publish (error listed, button disabled) → fix → Publish v3 → version history (production badge, publisher) → restore v1 → preview restored, production still v3 → Publish creates v4 with v1 content → hydrated Popup at 375 px without horizontal overflow → Designer sees no Publish/restore → referenced platform image cannot be deleted. Console errors and failed requests fail the test (fixture). Existing `publishing.spec.ts` keeps SEO head/sitemap and subdomain change coverage.
 
 ### Flow
 

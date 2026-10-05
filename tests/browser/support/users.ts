@@ -65,6 +65,20 @@ export const users = {
         site: 'Сайт для публикации',
         publicUrl: 'http://publish-e2e.localhost:8200',
     },
+    // Full publishing lifecycle on `lifecycle-e2e`: Owner plus a Designer without publish rights.
+    lifecycle: {
+        name: 'Лев Циклов',
+        email: 'lifecycle@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Цикл',
+        site: 'Сайт жизненного цикла',
+        publicUrl: 'http://lifecycle-e2e.localhost:8200',
+    },
+    lifecycleDesigner: {
+        name: 'Дарья Оформителева',
+        email: 'lifecycle-designer@landflow.test',
+        password: 'e2e-password',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';
