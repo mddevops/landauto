@@ -40,4 +40,7 @@ return [
 
     'test_connection_per_minute' => (int) env('INTEGRATIONS_TEST_CONNECTION_PER_MINUTE', 5),
 
+    // Fake DNS + CRM transport for browser E2E; honoured only in the testing/e2e environments.
+    'e2e_fake' => (bool) env('INTEGRATIONS_E2E_FAKE', false),
+
 ];

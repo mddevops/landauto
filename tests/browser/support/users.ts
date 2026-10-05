@@ -79,6 +79,25 @@ export const users = {
         email: 'lifecycle-designer@landflow.test',
         password: 'e2e-password',
     },
+    // Integrations flow on `integrations-e2e`: Owner, Admin (logs, retry), Designer (no access).
+    integrations: {
+        name: 'Ирина Интеграторова',
+        email: 'integrations@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Интеграция',
+        site: 'Сайт интеграций',
+        publicUrl: 'http://integrations-e2e.localhost:8200',
+    },
+    integrationsAdmin: {
+        name: 'Игорь Админов',
+        email: 'integrations-admin@landflow.test',
+        password: 'e2e-password',
+    },
+    integrationsDesigner: {
+        name: 'Ника Дизайнова',
+        email: 'integrations-designer@landflow.test',
+        password: 'e2e-password',
+    },
     lifecycleAdmin: {
         name: 'Антон Админов',
         email: 'lifecycle-admin@landflow.test',

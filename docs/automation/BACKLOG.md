@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-014 — Integrations E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-015 — Phase 6 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2954,8 +2954,13 @@ SSRF protection mandatory.
 
 ## P6-014 — Integrations E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-010 through P6-013
+
+### Result
+
+- `tests/browser/integrations.spec.ts` (seeded Owner / Admin / Designer on `integrations-e2e`): profile with masked token (absent from HTML/props after save and reload), Test Connection, SSRF refusal of a host resolving to a private network, Site binding with override, Metrica settings, email + webhook routes with field / trusted price / override mapping, Publish, public lead (201 while both Deliveries are still queued), worker → delivered, 503 → retry scheduled → delivered on attempt 2, 401 → failed with one attempt, Admin manual retry → attempt «№2 (вручную)», preview lead → no Delivery and no Metrica, Designer 403 and foreign Workspace 404, published loader + `ym` goals (`popup_open`, `form_start`, `form_validation_error`, `form_submit`, `vehicle_form_submit`, `form_success`, `popup_close`) with no phone, email or name.
+- E2E-only fakes (`app/Integrations/Testing/E2eIntegrationFakes`, `INTEGRATIONS_E2E_FAKE`, honoured only in `testing` / `e2e`): fixed DNS answers and a fake CRM transport; the real SSRF policy, auth builder and classifier still run and no request leaves the machine. E2E uses the `database` queue driven by the spec (`queue:work --stop-when-empty`, `integrations:dispatch-due-deliveries`) with zero retry delays; production queue and SSRF settings are unchanged.
 
 ---
 

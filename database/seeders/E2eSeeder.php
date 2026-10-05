@@ -99,6 +99,48 @@ class E2eSeeder extends Seeder
         $lifecycleWorkspace->addMember($this->createUser('Дарья Оформителева', 'lifecycle-designer@landflow.test'), WorkspaceRole::Designer);
         $lifecycleWorkspace->addMember($this->createUser('Антон Админов', 'lifecycle-admin@landflow.test'), WorkspaceRole::Admin);
         $this->createLifecycleSite($lifecycleWorkspace);
+
+        // Integrations flow: Owner (profiles, routes), Admin (logs, retry), Designer (no access).
+        $integrator = $this->createUser('Ирина Интеграторова', 'integrations@landflow.test');
+        $integrationsWorkspace = $this->createWorkspace($integrator, 'Автосалон Интеграция', plan: $plan);
+        $integrationsWorkspace->addMember($this->createUser('Игорь Админов', 'integrations-admin@landflow.test'), WorkspaceRole::Admin);
+        $integrationsWorkspace->addMember($this->createUser('Ника Дизайнова', 'integrations-designer@landflow.test'), WorkspaceRole::Designer);
+        $this->createIntegrationsSite($integrationsWorkspace);
+    }
+
+    /**
+     * Site «Сайт интеграций» on `integrations-e2e`: hero with a Popup button and vehicle offers
+     * whose button opens the same Popup with the trusted vehicle/offer context. No routes,
+     * profiles or analytics: the spec configures them through the UI.
+     */
+    private function createIntegrationsSite(Workspace $workspace): void
+    {
+        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт интеграций');
+        $site->forceFill(['subdomain' => 'integrations-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
+        $popup = Popup::factory()->for($site)->create(['name' => 'Обратный звонок', 'title' => 'Перезвоним за 5 минут']);
+        $popup->form()->associate($form)->save();
+
+        $mark = AutoMark::query()->firstOrCreate(['url' => 'moskvich'], ['name' => 'Moskvich', 'name_ru' => 'Москвич', 'country' => 'Россия', 'status' => true]);
+        $model = $mark->models()->firstOrCreate(['url' => 'moskvich-6'], ['name' => 'Moskvich 6', 'name_ru' => 'Москвич 6', 'year_from' => 2023, 'status' => true]);
+        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2023, 'status' => true]);
+        $series = $generation->series()->firstOrCreate(['url' => 'liftback'], ['name' => 'Лифтбек', 'status' => true]);
+        $equipment = AutoEquipment::factory()
+            ->for(AutoModification::factory()->for($series, 'series')->state(['name' => '1.5 CVT 174 л.с.']), 'modification')
+            ->create(['name' => 'Престиж']);
+        $vehicle = SiteVehicle::factory()->for($site)->forSeries($series)->create(['sort_order' => 0]);
+        SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 254_000_000]);
+
+        $popupAction = ['type' => 'open_popup', 'popup' => $popup->public_id];
+        $home = $site->pages()->where('is_home', true)->firstOrFail();
+        $this->placeBlock($home, 'hero', 0, [
+            'title' => 'Интеграции: главная',
+            'primary_button' => ['label' => 'Перезвоните мне', 'action' => $popupAction],
+        ]);
+        $this->placeBlock($home, 'vehicle-offers', 1, [
+            'vehicle' => $vehicle->public_id,
+            'button' => ['label' => 'Узнать цену', 'action' => $popupAction],
+        ]);
     }
 
     private function createPublishingSite(Workspace $workspace): void
