@@ -143,7 +143,7 @@ final class PublishedSnapshotBuilder
         sort($assetIds);
         ksort($forms);
 
-        return [
+        $manifest = [
             'schema' => self::SCHEMA,
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
             'branding' => ! $this->entitlements->allows($site->workspace, Entitlement::RemoveBranding),
@@ -156,6 +156,15 @@ final class PublishedSnapshotBuilder
             'popups' => $manifestPopups,
             'forms' => array_values($forms),
         ];
+
+        // Present only when enabled, so Sites without analytics keep their manifest hash.
+        $metrica = $site->analyticsSettings()->first()?->publishedMetrica();
+
+        if ($metrica !== null) {
+            $manifest['analytics'] = ['yandex_metrica' => $metrica];
+        }
+
+        return $manifest;
     }
 
     /**

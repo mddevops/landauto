@@ -6,6 +6,7 @@ use App\Enums\PublishedVersionStatus;
 use App\Models\PublishedPage;
 use App\Models\PublishedVersion;
 use App\Models\Site;
+use App\Models\SiteAnalyticsSettings;
 use Illuminate\Support\Facades\Cache;
 
 /**
@@ -81,6 +82,36 @@ final class PublishedPages
                 ->get(['page_public_id', 'slug', 'is_home'])
                 ->mapWithKeys(fn (PublishedPage $page): array => [($page->is_home ? '' : $page->slug) => $page->page_public_id])
                 ->all(),
+        );
+    }
+
+    /**
+     * Yandex Metrica config frozen into the version's manifest; null when the version has none.
+     * Re-validated here because it is printed into an inline script.
+     *
+     * @return array{counter_id: string, clickmap: bool, track_links: bool, accurate_track_bounce: bool, webvisor: bool}|null
+     */
+    public function metrica(Site $site, PublishedVersion $version): ?array
+    {
+        return Cache::remember(
+            "published:{$site->public_id}:{$version->public_id}:metrica",
+            (int) config('publishing.cache_ttl'),
+            function () use ($version): ?array {
+                $manifest = PublishedVersion::query()->whereKey($version->id)->first(['id', 'public_manifest_json'])?->public_manifest_json;
+                $config = $manifest['analytics']['yandex_metrica'] ?? null;
+
+                if (! is_array($config) || ! is_string($config['counter_id'] ?? null) || preg_match(SiteAnalyticsSettings::COUNTER_PATTERN, $config['counter_id']) !== 1) {
+                    return null;
+                }
+
+                return [
+                    'counter_id' => $config['counter_id'],
+                    'clickmap' => ($config['clickmap'] ?? true) === true,
+                    'track_links' => ($config['track_links'] ?? true) === true,
+                    'accurate_track_bounce' => ($config['accurate_track_bounce'] ?? true) === true,
+                    'webvisor' => ($config['webvisor'] ?? false) === true,
+                ];
+            },
         );
     }
 

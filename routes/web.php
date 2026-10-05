@@ -13,6 +13,7 @@ use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\Integrations\IntegrationProfileController;
 use App\Http\Controllers\Integrations\IntegrationTestConnectionController;
+use App\Http\Controllers\Integrations\SiteAnalyticsController;
 use App\Http\Controllers\Integrations\SiteIntegrationController;
 use App\Http\Controllers\Integrations\SubmissionDeliveryController;
 use App\Http\Controllers\PageBlockController;
@@ -143,6 +144,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('integrations', [SiteIntegrationController::class, 'store'])->name('integrations.store');
             Route::patch('integrations/{binding}', [SiteIntegrationController::class, 'update'])->whereUlid('binding')->name('integrations.update');
             Route::delete('integrations/{binding}', [SiteIntegrationController::class, 'destroy'])->whereUlid('binding')->name('integrations.destroy');
+            Route::put('analytics', [SiteAnalyticsController::class, 'update'])->name('analytics.update');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');

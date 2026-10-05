@@ -120,6 +120,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasOne<SiteAnalyticsSettings, $this>
+     */
+    public function analyticsSettings(): HasOne
+    {
+        return $this->hasOne(SiteAnalyticsSettings::class);
+    }
+
+    /**
      * @return HasMany<Form, $this>
      */
     public function forms(): HasMany

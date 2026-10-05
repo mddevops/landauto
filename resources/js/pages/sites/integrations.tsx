@@ -2,6 +2,8 @@ import { Head, Link } from '@inertiajs/react';
 import { Plug, Plus } from 'lucide-react';
 import type { SiteBinding } from '@/components/integrations/binding-dialog';
 import { BindingDialog } from '@/components/integrations/binding-dialog';
+import type { MetricaSettings } from '@/components/integrations/metrica-settings';
+import { MetricaSettingsCard } from '@/components/integrations/metrica-settings';
 import type { Choice } from '@/components/platform/form-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -13,6 +15,7 @@ type SiteIntegrationsProps = {
     site: { public_id: string; name: string };
     bindings: SiteBinding[];
     profiles: Choice[];
+    analytics: MetricaSettings;
     can: { manage: boolean };
 };
 
@@ -20,6 +23,7 @@ export default function SiteIntegrations({
     site,
     bindings,
     profiles,
+    analytics,
     can,
 }: SiteIntegrationsProps) {
     return (
@@ -166,6 +170,12 @@ export default function SiteIntegrations({
                         </ul>
                     )}
                 </section>
+
+                <MetricaSettingsCard
+                    sitePublicId={site.public_id}
+                    settings={analytics}
+                    canManage={can.manage}
+                />
             </main>
         </>
     );

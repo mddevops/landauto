@@ -50,6 +50,7 @@ class SiteIntegrationController extends Controller
                 ->get()
                 ->map(fn (IntegrationProfile $profile): array => ['value' => $profile->public_id, 'label' => $profile->name.' — '.$profile->provider_type->label()])
                 ->all()),
+            'analytics' => SiteAnalyticsController::present($site->analyticsSettings),
             'can' => ['manage' => Gate::allows('manageIntegrations', $site)],
         ]);
     }
