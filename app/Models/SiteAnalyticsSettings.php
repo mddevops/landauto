@@ -29,7 +29,8 @@ use Illuminate\Support\Carbon;
 #[Hidden(['id', 'site_id'])]
 class SiteAnalyticsSettings extends Model
 {
-    public const COUNTER_PATTERN = '/^[1-9][0-9]{3,15}$/';
+    /** At most 15 digits: the counter is printed as a JavaScript number literal. */
+    public const COUNTER_PATTERN = '/^[1-9][0-9]{3,14}$/';
 
     /**
      * @var array<string, mixed>

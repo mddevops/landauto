@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-013 — Semantic Analytics Events`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-014 — Integrations E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2935,15 +2935,20 @@ SSRF protection mandatory.
 ### Result
 
 - Official API checked 2026-10-05 ([counter initialization](https://yandex.ru/support/metrica/code/counter-initialize.html), [reachGoal](https://yandex.ru/support/metrica/objects/reachgoal.html)): async loader for `https://mc.yandex.ru/metrika/tag.js` defining `window.ym`, `ym(ID, "init", {clickmap, trackLinks, accurateTrackBounce, webvisor})`, goals via `ym(ID, "reachGoal", target)`; goal IDs must not contain `/ \ & # ? = "`. Matches the architecture; no contradiction.
-- `site_analytics_settings` (DATABASE.md §63): enabled, counter ID (digits, 4–16, public by design), clickmap / trackLinks / accurateTrackBounce (default on), Webvisor (default off). Edited in «Интеграции сайта» → «Яндекс Метрика» with `manage_integrations` (Owner, Admin); Designer / ContentEditor 403.
+- `site_analytics_settings` (DATABASE.md §63): enabled, counter ID (digits, 4–15, public by design), clickmap / trackLinks / accurateTrackBounce (default on), Webvisor (default off). Edited in «Интеграции сайта» → «Яндекс Метрика» with `manage_integrations` (Owner, Admin); Designer / ContentEditor 403.
 - Saving changes only Draft settings. Publish copies the safe subset into the Published manifest (`analytics.yandex_metrica`, only when enabled, so other Sites keep their hash); the published page emits the official loader, `init` and the noscript pixel only when the active version has it. No user IDs, `userParams` or form data. Authenticated Preview never loads Metrica.
 
 ---
 
 ## P6-013 — Semantic Analytics Events
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-012
+
+### Result
+
+- Published runtime event bus (`public-runtime/analytics.ts`): `form.start` (first focus), `form.submit`, `form.validation_error` (client or server field errors), `form.success`, `popup.open`, `popup.close`, `vehicle.form_submit` (Form opened with a vehicle context). Events carry no payload: no field values, phone, email, IP, IDs or Submission data.
+- Metrica adapter connects once at hydration when the active version has a counter and calls `ym(counter, "reachGoal", goal)` with goals `form_start`, `form_submit`, `form_validation_error`, `form_success`, `popup_open`, `popup_close`, `vehicle_form_submit` (no reserved characters). Without a counter, or if the loader is blocked, it is a silent no-op; listener errors are swallowed so analytics never breaks the site. Editor previews and authenticated Preview emit nothing.
 
 ---
 

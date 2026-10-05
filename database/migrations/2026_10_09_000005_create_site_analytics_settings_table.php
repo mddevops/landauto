@@ -12,7 +12,7 @@ return new class extends Migration
             $table->id();
             $table->foreignId('site_id')->unique()->constrained()->cascadeOnDelete();
             $table->boolean('yandex_metrica_enabled')->default(false);
-            $table->string('yandex_metrica_counter_id', 16)->nullable();
+            $table->string('yandex_metrica_counter_id', 15)->nullable();
             $table->boolean('clickmap')->default(true);
             $table->boolean('track_links')->default(true);
             $table->boolean('accurate_track_bounce')->default(true);

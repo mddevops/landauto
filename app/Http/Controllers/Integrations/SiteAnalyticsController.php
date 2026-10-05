@@ -32,7 +32,7 @@ class SiteAnalyticsController extends Controller
             'accurate_track_bounce' => ['required', 'boolean'],
             'webvisor' => ['required', 'boolean'],
         ], [
-            'counter_id.regex' => 'Номер счётчика — только цифры, от 4 до 16 знаков.',
+            'counter_id.regex' => 'Номер счётчика — только цифры, от 4 до 15 знаков.',
         ], [
             'counter_id' => 'номер счётчика',
         ]);

@@ -14,6 +14,7 @@ import { SiteTheme } from '@/blocks/theme';
 import { TriggerScope } from '@/blocks/trigger-context';
 import type { TriggerContextValue } from '@/blocks/trigger-context';
 import type { VehicleBinding } from '@/blocks/vehicles';
+import { track } from './analytics';
 
 /**
  * Exact public payload of one published Page. The publish-time renderer and the browser
@@ -73,6 +74,7 @@ export function PublishedSite({
 
                 if (popup) {
                     setOpened({ popup, context, trigger });
+                    track('popup.open');
                 }
             },
         };
@@ -118,15 +120,33 @@ export function PublishedSite({
                     popup={opened.popup}
                     tokens={payload.design}
                     open
-                    onOpenChange={(open) => !open && setOpened(null)}
+                    onOpenChange={(open) => {
+                        if (!open) {
+                            setOpened(null);
+                            track('popup.close');
+                        }
+                    }}
                     returnFocusTo={opened.trigger}
                 >
                     {openedForm && (
                         <FormView
                             form={openedForm}
                             captcha={captcha}
-                            onSubmit={(values, meta) =>
-                                submitForm(
+                            onEvent={(event) =>
+                                track(
+                                    event === 'start'
+                                        ? 'form.start'
+                                        : 'form.validation_error',
+                                )
+                            }
+                            onSubmit={async (values, meta) => {
+                                track('form.submit');
+
+                                if (opened.context.vehicle) {
+                                    track('vehicle.form_submit');
+                                }
+
+                                const result = await submitForm(
                                     `${payload.form_action}/${openedForm.public_id}`,
                                     {
                                         fields: values,
@@ -141,8 +161,14 @@ export function PublishedSite({
                                         },
                                         tracking: currentTracking(),
                                     },
-                                )
-                            }
+                                );
+
+                                if (result.ok) {
+                                    track('form.success');
+                                }
+
+                                return result;
+                            }}
                         />
                     )}
                 </PopupView>

@@ -74,7 +74,7 @@ class YandexMetricaTest extends TestCase
 
     public function test_counter_is_required_when_enabled_and_must_be_digits(): void
     {
-        foreach ([null, '', '12ab5678', '0123456', '123', '1"onload="x', '<script>', str_repeat('9', 17)] as $counter) {
+        foreach ([null, '', '12ab5678', '0123456', '123', '1"onload="x', '<script>', str_repeat('9', 16)] as $counter) {
             $this->save($this->owner, ['counter_id' => $counter] + self::SETTINGS)->assertSessionHasErrors('counter_id');
         }
 
