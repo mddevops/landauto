@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: IN_PROGRESS** (branch `autopilot/phase6-2026-10-05`). Next ready task per `BACKLOG.md`: `P6-003 — Site Integration Bindings`.
+**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: IN_PROGRESS** (branch `autopilot/phase6-2026-10-05`). Next ready task per `BACKLOG.md`: `P6-004 — Form Routes`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -171,6 +171,7 @@ Current focus:
 - Phase 6 (IN_PROGRESS on `autopilot/phase6-2026-10-05`):
 - `P6-001` DONE: Workspace `integration_profiles` (webhook / custom API, auth none / bearer / basic / API-key header, encrypted credentials, archive when referenced) with the «Интеграции» page; D-109 permission reconciliation (Admin gains `view_integrations`, `edit_form_routes`, `view_delivery_logs`, `retry_deliveries`).
 - `P6-002` DONE: credentials in Laravel `encrypted:array`, fixed mask with a last-four hint only for long secrets, empty input keeps / new input replaces the secret, secret inputs never flashed; tests prove the token is absent from HTML, Inertia JSON, serialization, session and validation responses.
+- `P6-003` DONE: `site_integration_bindings` (Site-specific non-secret overrides such as `site_id`, same-Workspace profile enforced in validation and the model, no token copy) with the «Интеграции сайта» page.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1167,7 +1168,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P6-003 — Site Integration Bindings`** (Phase 6 — Integrations & Analytics, IN_PROGRESS; Phase 5 COMPLETED) per `BACKLOG.md`.
+**Next: `P6-004 — Form Routes`** (Phase 6 — Integrations & Analytics, IN_PROGRESS; Phase 5 COMPLETED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1725,7 +1726,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P6-003 — Site Integration Bindings`**. Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is IN_PROGRESS.
+**`P6-004 — Form Routes`**. Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is IN_PROGRESS.
 
 ---
 
@@ -1782,4 +1783,4 @@ Core Landflow implementation: IN_PROGRESS (Phases 0–5 COMPLETED)
 ```
 
 **Current phase: Phase 6 — Integrations & Analytics (IN_PROGRESS; Phases 0–5 COMPLETED).
-Next: `P6-003 — Site Integration Bindings` per `BACKLOG.md`.**
+Next: `P6-004 — Form Routes` per `BACKLOG.md`.**

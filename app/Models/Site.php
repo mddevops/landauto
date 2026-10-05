@@ -112,6 +112,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteIntegrationBinding, $this>
+     */
+    public function integrationBindings(): HasMany
+    {
+        return $this->hasMany(SiteIntegrationBinding::class);
+    }
+
+    /**
      * @return HasMany<Form, $this>
      */
     public function forms(): HasMany

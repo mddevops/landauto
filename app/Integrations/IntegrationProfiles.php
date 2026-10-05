@@ -4,6 +4,7 @@ namespace App\Integrations;
 
 use App\Enums\IntegrationAuthType;
 use App\Models\IntegrationProfile;
+use App\Models\SiteIntegrationBinding;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
 
@@ -45,7 +46,7 @@ final class IntegrationProfiles
 
     public function isReferenced(IntegrationProfile $profile): bool
     {
-        return false;
+        return SiteIntegrationBinding::query()->where('integration_profile_id', $profile->id)->exists();
     }
 
     /**

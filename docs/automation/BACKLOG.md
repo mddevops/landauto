@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-003 — Site Integration Bindings`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-004 — Form Routes`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2807,8 +2807,14 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-003 — Site Integration Bindings
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-001
+
+### Result
+
+- Table `site_integration_bindings` (ULID `public_id`, Site, profile, optional name, `overrides_json` key/value map, `mapping_defaults_json`, status). Site and profile are immutable; the model refuses a profile from another Workspace.
+- «Интеграции сайта» page (`/sites/{site}/integrations`, linked from the Designer «Разделы» menu): view with `view_integrations`; bind, edit overrides (up to 20 `snake_case` keys, single-line values), disable and unbind with `manage_integrations`. Only active profiles of the Site's own Workspace can be bound; a foreign profile is a validation error.
+- Tokens are never copied to the binding. A bound profile is archived instead of deleted.
 
 ---
 

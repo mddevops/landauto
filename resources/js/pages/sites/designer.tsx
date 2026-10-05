@@ -45,6 +45,7 @@ import { designer, preview } from '@/routes/sites';
 import { update as updateDesign } from '@/routes/sites/design';
 import { show as formSecurity } from '@/routes/sites/form-security';
 import { index as formsIndex } from '@/routes/sites/forms';
+import { index as siteIntegrations } from '@/routes/sites/integrations';
 import { index as popupsIndex } from '@/routes/sites/popups';
 import { show as publishing } from '@/routes/sites/publishing';
 import { index as submissionsIndex } from '@/routes/sites/submissions';
@@ -67,6 +68,7 @@ type DesignerProps = {
         manageAssets: boolean;
         preview: boolean;
         viewSubmissions: boolean;
+        viewIntegrations: boolean;
         editSeo: boolean;
         editSeoIndexing: boolean;
     };
@@ -202,6 +204,7 @@ export default function Designer({
                     <SiteSectionsMenu
                         siteId={site.public_id}
                         canViewSubmissions={can.viewSubmissions}
+                        canViewIntegrations={can.viewIntegrations}
                     />
                     {can.preview &&
                         (autosave.status === 'pending' ||
@@ -442,9 +445,11 @@ function ReferenceIssues({ issues }: { issues: ReferenceIssue[] }) {
 function SiteSectionsMenu({
     siteId,
     canViewSubmissions,
+    canViewIntegrations,
 }: {
     siteId: string;
     canViewSubmissions: boolean;
+    canViewIntegrations: boolean;
 }) {
     return (
         <DropdownMenu>
@@ -486,6 +491,16 @@ function SiteSectionsMenu({
                             href={submissionsIndex(siteId)}
                         >
                             Заявки
+                        </Link>
+                    </DropdownMenuItem>
+                )}
+                {canViewIntegrations && (
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full cursor-pointer"
+                            href={siteIntegrations(siteId)}
+                        >
+                            Интеграции сайта
                         </Link>
                     </DropdownMenuItem>
                 )}

@@ -11,6 +11,7 @@ use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\Integrations\IntegrationProfileController;
+use App\Http\Controllers\Integrations\SiteIntegrationController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
@@ -127,6 +128,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('form-security', [SiteFormSecurityController::class, 'update'])->name('form-security.update');
             Route::post('blacklist', [SiteBlacklistController::class, 'store'])->name('blacklist.store');
             Route::delete('blacklist/{entry}', [SiteBlacklistController::class, 'destroy'])->whereUlid('entry')->name('blacklist.destroy');
+
+            Route::get('integrations', [SiteIntegrationController::class, 'index'])->name('integrations.index');
+            Route::post('integrations', [SiteIntegrationController::class, 'store'])->name('integrations.store');
+            Route::patch('integrations/{binding}', [SiteIntegrationController::class, 'update'])->whereUlid('binding')->name('integrations.update');
+            Route::delete('integrations/{binding}', [SiteIntegrationController::class, 'destroy'])->whereUlid('binding')->name('integrations.destroy');
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
