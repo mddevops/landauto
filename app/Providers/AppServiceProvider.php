@@ -7,6 +7,7 @@ use App\Enums\WorkspacePermission;
 use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\Captcha\FakeCaptchaVerifier;
 use App\Forms\Captcha\YandexSmartCaptchaVerifier;
+use App\Integrations\Delivery\DeliveryAdapters;
 use App\Models\Site;
 use App\Models\User;
 use App\Policies\SitePolicy;
@@ -49,6 +50,9 @@ class AppServiceProvider extends ServiceProvider
                 (int) config('services.yandex_smartcaptcha.timeout'),
             );
         });
+        $this->app->singleton(DeliveryAdapters::class, fn (Application $app): DeliveryAdapters => new DeliveryAdapters(
+            $app->tagged(DeliveryAdapters::TAG),
+        ));
     }
 
     /**

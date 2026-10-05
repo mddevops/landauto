@@ -7,6 +7,7 @@ use App\Enums\SiteStatus;
 use App\Enums\SubmissionMode;
 use App\Forms\Captcha\CaptchaVerdict;
 use App\Forms\Captcha\CaptchaVerifier;
+use App\Integrations\Delivery\DeliveryDispatcher;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\PublishedVersion;
@@ -18,7 +19,7 @@ use Illuminate\Support\Str;
 /**
  * Canonical public submission pipeline (FORMS_AND_INTEGRATIONS.md §9): resolve the Form,
  * validate, normalize, apply anti-spam, resolve trusted context, then persist the
- * Submission before anything else may happen with it.
+ * Submission before anything else may happen with it. Deliveries are created only afterwards.
  */
 class SubmissionPipeline
 {
@@ -37,6 +38,7 @@ class SubmissionPipeline
         private CaptchaVerifier $captcha,
         private SubmissionContextResolver $context,
         private PublishedSubmissionContext $publishedContext,
+        private DeliveryDispatcher $deliveries,
     ) {}
 
     /**
@@ -213,6 +215,7 @@ class SubmissionPipeline
         ])->save();
 
         $this->guard->record($form, $policy, $ip, $normalizedPhone, $mode);
+        $this->deliveries->dispatchFor($submission);
 
         return SubmissionResult::accepted($submission, $successMessage);
     }

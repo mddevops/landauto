@@ -169,7 +169,7 @@ class FormRouteController extends Controller
 
     public static function hasHistory(FormRoute $route): bool
     {
-        return false;
+        return $route->deliveries()->exists();
     }
 
     /**

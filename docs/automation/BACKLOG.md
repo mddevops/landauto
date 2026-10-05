@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-006 — Delivery Records / Jobs`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-007 — Retry / Idempotency`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2847,8 +2847,14 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-006 — Delivery Records / Jobs
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-004
+
+### Result
+
+- Tables `submission_deliveries` (ULID `public_id`, Submission, Form Route, destination, status `pending` | `processing` | `delivered` | `retry_scheduled` | `failed` | `cancelled`, attempt count, next retry, delivered/last attempt time, last HTTP status, safe error code and Russian message; unique Submission + route) and `submission_delivery_attempts` (attempt number, trigger `automatic` | `manual`, start/finish, outcome, HTTP status, provider code, latency, allowlisted scalar summary, safe error).
+- `SubmissionPipeline` persists the Submission first, then `DeliveryDispatcher` creates one Delivery per active route of public Submissions only (preview never delivers) and queues `ProcessSubmissionDelivery` after commit with only the Delivery ID. A dispatch failure never undoes the lead; the visitor response does not wait for providers (database queue in production).
+- Adapter contract `DeliveryAdapter` (`supports`, `deliver`, `testConnection`) returning `DeliveryResult` (`success` | `transient_failure` | `permanent_failure`, HTTP status, provider code, safe message, safe metadata). `DeliveryProcessor` claims atomically, records the Attempt, maps disabled route → `cancelled`, disabled profile/binding or missing adapter → `failed`, unexpected adapter exceptions → transient `internal_error` (only the class name is logged). Failure logs carry only delivery/profile public IDs, provider type, HTTP status, error code and attempt number.
 
 ---
 

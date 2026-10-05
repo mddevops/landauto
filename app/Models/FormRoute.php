@@ -12,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -123,6 +124,14 @@ class FormRoute extends Model
     public function profile(): BelongsTo
     {
         return $this->belongsTo(IntegrationProfile::class, 'integration_profile_id');
+    }
+
+    /**
+     * @return HasMany<SubmissionDelivery, $this>
+     */
+    public function deliveries(): HasMany
+    {
+        return $this->hasMany(SubmissionDelivery::class);
     }
 
     public function isActive(): bool
