@@ -5,6 +5,7 @@ import type {
     FormRouteRow,
     RouteChoices,
     RouteField,
+    SourceChoice,
 } from '@/components/integrations/route-dialog';
 import { RouteDialog } from '@/components/integrations/route-dialog';
 import { Badge } from '@/components/ui/badge';
@@ -19,6 +20,7 @@ type FormRoutesProps = {
     fields: RouteField[];
     routes: FormRouteRow[];
     bindings: BindingChoice[];
+    sources: SourceChoice[];
     choices: RouteChoices;
 };
 
@@ -28,6 +30,7 @@ export default function FormRoutes({
     fields,
     routes,
     bindings,
+    sources,
     choices,
 }: FormRoutesProps) {
     const dialogProps = {
@@ -35,6 +38,7 @@ export default function FormRoutes({
         formPublicId: form.public_id,
         fields,
         bindings,
+        sources,
         choices,
     };
 

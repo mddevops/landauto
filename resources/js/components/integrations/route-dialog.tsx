@@ -6,6 +6,7 @@ import InputError from '@/components/input-error';
 import type { Choice } from '@/components/platform/form-fields';
 import {
     Field,
+    NativeSelect,
     SelectField,
     statusChoices,
     TextField,
@@ -27,6 +28,15 @@ import { destroy, store, update } from '@/routes/sites/forms/routes';
 
 export type HeaderRow = { name: string; value: string };
 
+export type MappingRow = {
+    target: string;
+    source: string;
+    value?: string;
+    missing: string;
+};
+
+export type SourceChoice = { value: string; group: string; label: string };
+
 export type FormRouteRow = {
     public_id: string;
     name: string;
@@ -45,9 +55,19 @@ export type FormRouteRow = {
     method: string;
     path: string;
     headers: HeaderRow[];
+    mapping: MappingRow[];
 };
 
-export type BindingChoice = Choice & { provider_type: string };
+export type BindingChoice = Choice & {
+    provider_type: string;
+    overrides: string[];
+};
+
+const missingChoices: Choice[] = [
+    { value: 'omit', label: 'Не передавать поле' },
+    { value: 'null', label: 'Передать null' },
+    { value: 'error', label: 'Ошибка доставки' },
+];
 
 export type RouteChoices = {
     destinations: Choice[];
@@ -62,6 +82,7 @@ export function RouteDialog({
     formPublicId,
     fields,
     bindings,
+    sources,
     choices,
     route,
     trigger,
@@ -70,6 +91,7 @@ export function RouteDialog({
     formPublicId: string;
     fields: RouteField[];
     bindings: BindingChoice[];
+    sources: SourceChoice[];
     choices: RouteChoices;
     route?: FormRouteRow;
     trigger: ReactNode;
@@ -88,6 +110,7 @@ export function RouteDialog({
         method: string;
         path: string;
         headers: HeaderRow[];
+        mapping: MappingRow[];
     }>({
         destination_type: route?.destination_type ?? 'email',
         name: route?.name ?? '',
@@ -99,6 +122,7 @@ export function RouteDialog({
         method: route?.method ?? 'POST',
         path: route?.path ?? '',
         headers: route?.headers ?? [],
+        mapping: route?.mapping ?? [],
     });
     const errors = form.errors as Record<string, string | undefined>;
     const type = form.data.destination_type;
@@ -112,6 +136,42 @@ export function RouteDialog({
     const recipientError = Object.entries(errors).find(([key]) =>
         key.startsWith('recipients'),
     )?.[1];
+    const selectedBinding = route
+        ? bindings.find((binding) => binding.value === route.binding?.public_id)
+        : (typeBindings.find(
+              (binding) => binding.value === form.data.binding,
+          ) ?? typeBindings[0]);
+    const sourceGroups = [
+        {
+            group: 'Поля формы',
+            options: fields.map((field) => ({
+                value: `field.${field.key}`,
+                label: field.label,
+            })),
+        },
+        ...Array.from(new Set(sources.map((source) => source.group))).map(
+            (group) => ({
+                group,
+                options: sources.filter((source) => source.group === group),
+            }),
+        ),
+        {
+            group: 'Параметры сайта',
+            options: (selectedBinding?.overrides ?? []).map((key) => ({
+                value: `override.${key}`,
+                label: key,
+            })),
+        },
+    ].filter((group) => group.options.length > 0);
+
+    function setRule(index: number, patch: Partial<MappingRow>) {
+        form.setData(
+            'mapping',
+            form.data.mapping.map((row, position) =>
+                position === index ? { ...row, ...patch } : row,
+            ),
+        );
+    }
 
     function submit(event: FormEvent) {
         event.preventDefault();
@@ -435,6 +495,172 @@ export function RouteDialog({
                                     </div>
                                 </div>
                             </Field>
+                            <fieldset className="grid gap-3">
+                                <legend className="mb-1 text-sm font-medium">
+                                    Сопоставление полей
+                                </legend>
+                                <p className="text-xs text-muted-foreground">
+                                    Без сопоставления передаются все поля формы,
+                                    автомобиль, цена и метки UTM в стандартном
+                                    формате.
+                                </p>
+                                {form.data.mapping.map((rule, index) => (
+                                    <div
+                                        key={index}
+                                        className="grid gap-2 rounded-md border p-3 sm:grid-cols-2"
+                                    >
+                                        <TextField
+                                            id={`${prefix}-map-${index}-target`}
+                                            label="Поле в системе"
+                                            placeholder="telephone"
+                                            value={rule.target}
+                                            maxLength={255}
+                                            onChange={(event) =>
+                                                setRule(index, {
+                                                    target: event.target.value,
+                                                })
+                                            }
+                                            required
+                                            error={
+                                                errors[
+                                                    `mapping.${index}.target`
+                                                ]
+                                            }
+                                        />
+                                        <Field
+                                            id={`${prefix}-map-${index}-source`}
+                                            label="Значение из Landflow"
+                                            error={
+                                                errors[
+                                                    `mapping.${index}.source`
+                                                ]
+                                            }
+                                        >
+                                            <NativeSelect
+                                                id={`${prefix}-map-${index}-source`}
+                                                value={rule.source}
+                                                onChange={(event) =>
+                                                    setRule(index, {
+                                                        source: event.target
+                                                            .value,
+                                                    })
+                                                }
+                                                required
+                                            >
+                                                <option value="">
+                                                    Выберите…
+                                                </option>
+                                                {sourceGroups.map((group) => (
+                                                    <optgroup
+                                                        key={group.group}
+                                                        label={group.group}
+                                                    >
+                                                        {group.options.map(
+                                                            (option) => (
+                                                                <option
+                                                                    key={
+                                                                        option.value
+                                                                    }
+                                                                    value={
+                                                                        option.value
+                                                                    }
+                                                                >
+                                                                    {
+                                                                        option.label
+                                                                    }
+                                                                </option>
+                                                            ),
+                                                        )}
+                                                    </optgroup>
+                                                ))}
+                                                <option value="constant">
+                                                    Постоянное значение
+                                                </option>
+                                            </NativeSelect>
+                                        </Field>
+                                        {rule.source === 'constant' && (
+                                            <TextField
+                                                id={`${prefix}-map-${index}-value`}
+                                                label="Постоянное значение"
+                                                value={rule.value ?? ''}
+                                                maxLength={255}
+                                                onChange={(event) =>
+                                                    setRule(index, {
+                                                        value: event.target
+                                                            .value,
+                                                    })
+                                                }
+                                                required
+                                                error={
+                                                    errors[
+                                                        `mapping.${index}.value`
+                                                    ]
+                                                }
+                                            />
+                                        )}
+                                        <SelectField
+                                            id={`${prefix}-map-${index}-missing`}
+                                            label="Если значения нет"
+                                            choices={missingChoices}
+                                            value={rule.missing}
+                                            onChange={(event) =>
+                                                setRule(index, {
+                                                    missing: event.target.value,
+                                                })
+                                            }
+                                            error={
+                                                errors[
+                                                    `mapping.${index}.missing`
+                                                ]
+                                            }
+                                        />
+                                        <div className="sm:col-span-2">
+                                            <Button
+                                                type="button"
+                                                variant="ghost"
+                                                size="sm"
+                                                onClick={() =>
+                                                    form.setData(
+                                                        'mapping',
+                                                        form.data.mapping.filter(
+                                                            (_, position) =>
+                                                                position !==
+                                                                index,
+                                                        ),
+                                                    )
+                                                }
+                                            >
+                                                <Trash2 aria-hidden="true" />
+                                                {`Удалить поле ${index + 1}`}
+                                            </Button>
+                                        </div>
+                                    </div>
+                                ))}
+                                <InputError message={form.errors.mapping} />
+                                <div>
+                                    <Button
+                                        type="button"
+                                        variant="outline"
+                                        size="sm"
+                                        disabled={
+                                            form.data.mapping.length >= 50
+                                        }
+                                        onClick={() =>
+                                            form.setData('mapping', [
+                                                ...form.data.mapping,
+                                                {
+                                                    target: '',
+                                                    source: '',
+                                                    missing: 'omit',
+                                                },
+                                            ])
+                                        }
+                                    >
+                                        <Plus aria-hidden="true" />
+                                        Добавить поле
+                                    </Button>
+                                </div>
+                            </fieldset>
                         </>
                     )}
                     <DialogFooter className="gap-2 sm:justify-between">

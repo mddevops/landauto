@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-005 — Field Mapping`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-006 — Delivery Records / Jobs`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2833,8 +2833,15 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-005 — Field Mapping
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-004
+
+### Result
+
+- Declarative mapping rules on HTTP routes (`mapping_json`: `target`, `source`, `missing` = `omit` | `null` | `error`, optional constant `value`), up to 50 rules, targets up to 4 dotted `snake_case` segments, no expressions or code.
+- Allowlisted sources (`MappingSources`): Form fields `field.<key>`, Submission public ID and time, Form, page URL/title, referrer, UTM, Popup, Block, trusted vehicle and offer snapshot (public IDs, titles, price, currency), Site name/URL and binding overrides `override.<key>`. Unknown sources and targets, conflicting targets, unknown field or override keys are rejected on save; numeric internal IDs and blacklist data are not sources.
+- `FieldMapper` builds the payload from `MappingContext` (Submission + optional binding, refuses a binding of another Site). Empty rules produce a deterministic default payload. A missing required value fails with `missing_required_value`.
+- Route editor gains a «Сопоставление полей» section with grouped source selects.
 
 ---
 

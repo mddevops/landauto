@@ -8,6 +8,8 @@ use App\Enums\IntegrationStatus;
 use App\Http\Controllers\Controller;
 use App\Integrations\Delivery\EmailSubject;
 use App\Integrations\Http\SafeHeaders;
+use App\Integrations\Mapping\FieldMapper;
+use App\Integrations\Mapping\MappingSources;
 use App\Models\Form;
 use App\Models\FormField;
 use App\Models\FormRoute;
@@ -70,8 +72,14 @@ class FormRouteController extends Controller
                     'value' => $binding->public_id,
                     'label' => ($binding->name ?? $binding->profile->name).' — '.$binding->profile->provider_type->label(),
                     'provider_type' => $binding->profile->provider_type->value,
+                    'overrides' => array_map('strval', array_keys($binding->overrides_json)),
                 ])
                 ->all()),
+            'sources' => array_map(
+                fn (string $key, array $meta): array => ['value' => $key, 'group' => $meta[0], 'label' => $meta[1]],
+                array_keys(MappingSources::FIXED),
+                array_values(MappingSources::FIXED),
+            ),
             'choices' => [
                 'destinations' => array_map(fn (DeliveryDestinationType $type): array => ['value' => $type->value, 'label' => $type->label()], DeliveryDestinationType::cases()),
                 'methods' => array_map(fn (string $method): array => ['value' => $method, 'label' => $method], self::METHODS),
@@ -104,6 +112,7 @@ class FormRouteController extends Controller
             $binding = $this->binding($site, (string) $validated['binding'], $route->destination_type);
             $route->site_integration_binding_id = $binding->id;
             $route->integration_profile_id = $binding->integration_profile_id;
+            $this->validateMapping($form, $binding, $validated['mapping'] ?? []);
         }
 
         $route->sort_order = (int) $form->routes()->max('sort_order') + 1;
@@ -124,6 +133,10 @@ class FormRouteController extends Controller
             ...$this->rules($form, $model->destination_type),
             'status' => ['required', Rule::in([IntegrationStatus::Active->value, IntegrationStatus::Disabled->value])],
         ], [], self::attributes());
+
+        if ($model->binding !== null) {
+            $this->validateMapping($form, $model->binding, $validated['mapping'] ?? []);
+        }
 
         $this->fill($model, $validated);
         $model->status = IntegrationStatus::from($validated['status']);
@@ -188,6 +201,21 @@ class FormRouteController extends Controller
         ];
     }
 
+    /**
+     * @param  list<array<string, mixed>>  $rules
+     */
+    private function validateMapping(Form $form, SiteIntegrationBinding $binding, array $rules): void
+    {
+        $fieldKeys = $form->fields->map(fn (FormField $field): string => $field->key)->all();
+        $overrideKeys = array_map('strval', array_keys($binding->overrides_json));
+
+        $errors = FieldMapper::validate($rules, $fieldKeys, $overrideKeys);
+
+        if ($errors !== []) {
+            throw ValidationException::withMessages($errors);
+        }
+    }
+
     private function find(Site $site, Form $form, string $publicId): FormRoute
     {
         $this->scope->form($site, $form);
@@ -242,6 +270,8 @@ class FormRouteController extends Controller
 
         return [
             ...$rules,
+            'mapping' => ['nullable', 'array', 'max:'.FieldMapper::MAX_RULES],
+            'mapping.*' => ['array'],
             'method' => ['required', Rule::in(self::METHODS)],
             'path' => ['nullable', 'string', 'max:512', 'regex:'.self::PATH_PATTERN],
             'headers' => ['nullable', 'array', 'max:'.self::MAX_HEADERS],
@@ -275,6 +305,8 @@ class FormRouteController extends Controller
             return;
         }
 
+        $mapping = array_values(array_map(fn (array $rule): array => FieldMapper::normalize($rule), $validated['mapping'] ?? []));
+        $route->mapping_json = $mapping === [] ? null : $mapping;
         $route->settings_json = array_filter([
             'method' => $validated['method'],
             'path' => $validated['path'] ?? null,
