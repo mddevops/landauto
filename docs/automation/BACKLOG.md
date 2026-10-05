@@ -2770,6 +2770,8 @@ Also test failed Publish.
 
 Result: Phase 5 audit against ADR-006 and the publishing acceptance list. Fixed: the default static `public/robots.txt` shadowed the per-Site `/robots.txt` on public hosts (web servers serve existing files before routing); it was removed and the application host now serves the same body from a route (`PublishedSeoTest` guards against static `robots.txt` / `sitemap.xml`). Added coverage: catalog and Block catalog changes leave production HTML byte-identical (`PublishedRuntimeTest`); the lifecycle E2E now also covers hero image A → B stability, public v2 kept during a blocked Publish, robots/canonical/sitemap, carousel, lightbox, color switch, offer details and offer Popup after hydration, Designer preview, Admin publish without restore, foreign Workspace 404. Template independence is structural: a Site keeps no Template reference. Follow-ups (not Phase 5 criteria): «unpublished changes» indicator (PUBLISHING.md §23), publication notes, rollback, audit log of restores.
 
+Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPStan PASS, Pint PASS, `npm run check` and build PASS, Playwright `npm run test:e2e` 43 passed, `git diff --check` PASS. Local MySQL (`landauto`) incremental migrations `2026_10_08_000004`–`000006` applied (no catalog migrations). Phase 5 COMPLETED; Phase 6 not started.
+
 ---
 
 # PHASE 6 — INTEGRATIONS & ANALYTICS
