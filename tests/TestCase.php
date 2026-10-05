@@ -2,10 +2,12 @@
 
 namespace Tests;
 
+use App\Publishing\Rendering\PageRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
 use Laravel\Fortify\Features;
 use RuntimeException;
+use Tests\Support\FakePageRenderer;
 
 abstract class TestCase extends BaseTestCase
 {
@@ -41,6 +43,9 @@ abstract class TestCase extends BaseTestCase
         // Backend tests must not depend on the production frontend build (public/build).
         // Tests that exercise real Vite output can opt back in with $this->withVite().
         $this->withoutVite();
+
+        // The compiled publish renderer is a build artifact; see NodePageRendererTest.
+        $this->app->instance(PageRenderer::class, new FakePageRenderer);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

@@ -21,7 +21,7 @@ final class VehicleMediaResolver
 
     /**
      * @param  iterable<SiteVehicle>  $vehicles
-     * @return array<string, array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{angle: string, url: string, width: int, height: int}>}>}>
+     * @return array<string, array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, url: string, width: int, height: int}>}>}>
      */
     public function resolveMany(iterable $vehicles): array
     {
@@ -66,7 +66,7 @@ final class VehicleMediaResolver
     }
 
     /**
-     * @return array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{angle: string, url: string, width: int, height: int}>}>}
+     * @return array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, url: string, width: int, height: int}>}>}
      */
     public function resolve(SiteVehicle $vehicle): array
     {
@@ -76,7 +76,7 @@ final class VehicleMediaResolver
     /**
      * @param  Collection<int, SeriesMediaSet>  $sets
      * @param  array<int, list<SeriesMediaImage>>  $images
-     * @return list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{angle: string, url: string, width: int, height: int}>}>
+     * @return list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, url: string, width: int, height: int}>}>
      */
     private function present(Collection $sets, array $images): array
     {
@@ -89,6 +89,7 @@ final class VehicleMediaResolver
 
             foreach ($ordered as $image) {
                 $setImages[] = [
+                    'public_id' => $image->public_id,
                     'angle' => $image->angle->value,
                     'url' => $image->url(),
                     'width' => $image->width,

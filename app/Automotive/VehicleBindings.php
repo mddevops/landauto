@@ -23,7 +23,7 @@ use App\Support\Money;
  *
  * @phpstan-type Spec array{label: string, value: string}
  * @phpstan-type Offer array{public_id: string, modification: array{name: string, summary: string, specs: list<Spec>}, equipment: array{name: string}, price_label: string, rrp_label: string|null, availability_label: string|null, badge: string|null, benefits: list<array{label: string, amount_label: string}>, characteristics: list<array{group: string, items: list<Spec>}>, options: list<array{group: string, items: list<array{name: string, availability: string}>}>}
- * @phpstan-type Vehicle array{public_id: string, mark: string, model: string, generation: string, series: string, title: string, price_from_label: string|null, benefit_up_to_label: string|null, media: array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{angle: string, label: string, url: string, width: int, height: int}>}>}, offers: list<Offer>}
+ * @phpstan-type Vehicle array{public_id: string, mark: string, model: string, generation: string, series: string, title: string, price_from_label: string|null, benefit_up_to_label: string|null, media: array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, label: string, url: string, width: int, height: int}>}>}, offers: list<Offer>}
  */
 final class VehicleBindings
 {
@@ -39,6 +39,25 @@ final class VehicleBindings
      */
     public function forSite(Site $site): array
     {
+        return $this->build($site)['vehicles'];
+    }
+
+    /**
+     * Bindings plus the exact money of each shown Offer, read from the same rows, for the
+     * Published Version (ADR-006). The money map is server-side trusted context only.
+     *
+     * @return array{vehicles: list<Vehicle>, offers: array<string, array{price_minor: int, currency: string}>}
+     */
+    public function forPublication(Site $site): array
+    {
+        return $this->build($site);
+    }
+
+    /**
+     * @return array{vehicles: list<Vehicle>, offers: array<string, array{price_minor: int, currency: string}>}
+     */
+    private function build(Site $site): array
+    {
         $vehicles = $site->vehicles()
             ->where('status', true)
             ->ordered()
@@ -46,7 +65,7 @@ final class VehicleBindings
             ->get();
 
         if ($vehicles->isEmpty()) {
-            return [];
+            return ['vehicles' => [], 'offers' => []];
         }
 
         $series = AutoSeries::query()
@@ -67,6 +86,7 @@ final class VehicleBindings
         $options = $this->options($equipments->modelKeys());
         $media = $this->media->resolveMany($vehicles);
         $bindings = [];
+        $money = [];
 
         foreach ($vehicles as $vehicle) {
             $title = $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]);
@@ -77,6 +97,7 @@ final class VehicleBindings
 
             foreach ($visibleOffers as $offer) {
                 $offerBindings[] = $this->offer($offer, $equipments[$offer->catalog_equipment_public_id], $characteristics, $options);
+                $money[$offer->public_id] = ['price_minor' => $offer->price_minor, 'currency' => $offer->currency];
             }
 
             $bindings[] = [
@@ -98,7 +119,7 @@ final class VehicleBindings
             ];
         }
 
-        return $bindings;
+        return ['vehicles' => $bindings, 'offers' => $money];
     }
 
     /**

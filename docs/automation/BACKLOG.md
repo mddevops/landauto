@@ -70,9 +70,9 @@ Phase 4 — Forms & Interactive Components: COMPLETED (gate `P4-014` DONE).
 
 Current phase:
 
-`P5 — Publishing` — NOT_STARTED; starts only on explicit owner go-ahead.
+`P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-001 — Publishing Runtime ADR` (owner-approved ADR required before P5-002). Non-blocking follow-ups: `X-017` (storage quota, before production), `X-018` (action reference integrity, before Publishing).
+Next ready task: `P5-006 — Atomic Activation`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2692,8 +2692,10 @@ Result: `App\Publishing\PublishValidator` returns `errors[]` / `warnings[]` of `
 
 ## P5-005 — Published Snapshot Builder
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-001, P5-004
+
+Result: `PublishedSnapshotBuilder` reads the Draft in one transaction and builds the public manifest (Site identity, branding flag from `remove_branding`, resolved design tokens, CAPTCHA requirement, Pages with SEO and visible Blocks pinned to definition slug + version, referenced Site Asset IDs, display-ready vehicles with media image public IDs and server-only exact offer money, Popups, published Form definitions) and the private draft snapshot (all Pages and Blocks incl. hidden, vehicles/offers/benefits/media-set selection, all Forms with fields, all Popups). Canonical-JSON SHA-256 `manifest_hash`; same Draft → same manifest. No secrets, Submissions, blacklists, form security or numeric IDs. `PublishedArtifactBuilder` derives one version-scoped payload per Page (`/_landflow/assets|media|forms/{version}/…`, no Draft URLs), renders all Pages with the compiled React renderer outside any transaction, rejects missing/empty artifacts and stores `published_pages` + `published_asset_references`; it never activates. Renderer: `resources/js/public-runtime/{published-site,render-server,hydrate-client}.tsx`, built by `npm run build` (`vp build --ssr` → `bootstrap/ssr/render-server.js`), invoked by `NodePageRenderer` via the Process API (argument array, STDIN, timeout, safe errors). PHPUnit binds a deterministic fake renderer; `NodePageRendererTest` runs the real bundle when built.
 
 ---
 
