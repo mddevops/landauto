@@ -31,6 +31,7 @@ export type IntegrationProfileRow = {
     auth_type: string;
     auth_type_label: string;
     api_key_header: string | null;
+    credentials_mask: string | null;
     status: string;
     status_label: string;
 };
@@ -62,7 +63,10 @@ export function ProfileDialog({
         credential_password: '',
     });
     const authType = form.data.auth_type;
-    const needsCredentials = !profile || profile.auth_type !== authType;
+    const replacing = Boolean(profile) && profile?.auth_type === authType;
+    const keepHint = replacing
+        ? `Сейчас сохранено: ${profile?.credentials_mask ?? ''}. Оставьте пустым, чтобы не менять.`
+        : undefined;
 
     function submit(event: FormEvent) {
         event.preventDefault();
@@ -226,31 +230,40 @@ export function ProfileDialog({
                             error={form.errors.api_key_header}
                         />
                     )}
-                    {needsCredentials &&
-                        (authType === 'bearer' ||
-                            authType === 'api_key_header') && (
-                            <TextField
-                                id={`${prefix}-token`}
-                                label="Токен или ключ"
-                                type="password"
-                                autoComplete="new-password"
-                                value={form.data.credential_token}
-                                onChange={(event) =>
-                                    form.setData(
-                                        'credential_token',
-                                        event.target.value,
-                                    )
-                                }
-                                maxLength={4096}
-                                required
-                                error={form.errors.credential_token}
-                            />
-                        )}
-                    {needsCredentials && authType === 'basic' && (
+                    {(authType === 'bearer' ||
+                        authType === 'api_key_header') && (
+                        <TextField
+                            id={`${prefix}-token`}
+                            label={
+                                replacing
+                                    ? 'Новый токен или ключ'
+                                    : 'Токен или ключ'
+                            }
+                            hint={keepHint}
+                            type="password"
+                            autoComplete="new-password"
+                            value={form.data.credential_token}
+                            onChange={(event) =>
+                                form.setData(
+                                    'credential_token',
+                                    event.target.value,
+                                )
+                            }
+                            maxLength={4096}
+                            required={!replacing}
+                            error={form.errors.credential_token}
+                        />
+                    )}
+                    {authType === 'basic' && (
                         <div className="grid gap-4 sm:grid-cols-2">
                             <TextField
                                 id={`${prefix}-username`}
-                                label="Логин"
+                                label={replacing ? 'Новый логин' : 'Логин'}
+                                hint={
+                                    replacing
+                                        ? 'Оставьте пустым, чтобы не менять.'
+                                        : undefined
+                                }
                                 autoComplete="off"
                                 value={form.data.credential_username}
                                 onChange={(event) =>
@@ -260,12 +273,13 @@ export function ProfileDialog({
                                     )
                                 }
                                 maxLength={255}
-                                required
+                                required={!replacing}
                                 error={form.errors.credential_username}
                             />
                             <TextField
                                 id={`${prefix}-password`}
-                                label="Пароль"
+                                label={replacing ? 'Новый пароль' : 'Пароль'}
+                                hint={keepHint}
                                 type="password"
                                 autoComplete="new-password"
                                 value={form.data.credential_password}
@@ -276,7 +290,7 @@ export function ProfileDialog({
                                     )
                                 }
                                 maxLength={1024}
-                                required
+                                required={!replacing}
                                 error={form.errors.credential_password}
                             />
                         </div>

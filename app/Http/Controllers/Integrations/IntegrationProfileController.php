@@ -86,24 +86,18 @@ class IntegrationProfileController extends Controller
         Gate::authorize(WorkspacePermission::ManageIntegrations->value);
         $model = $this->profiles->find($profile);
 
+        $authChanged = $model->auth_type->value !== $request->input('auth_type');
+
+        // A changed auth type needs a full new secret; otherwise empty secret inputs keep the stored value.
         $validated = $request->validate([
             ...$this->rules(),
             'status' => ['required', Rule::in([IntegrationStatus::Active->value, IntegrationStatus::Disabled->value])],
+            ...$this->profiles->credentialRules((string) $request->input('auth_type'), required: $authChanged),
         ], [], self::ATTRIBUTES);
-
-        $authChanged = $model->auth_type->value !== $validated['auth_type'];
-
-        if ($authChanged) {
-            $request->validate($this->profiles->credentialRules($validated['auth_type'], required: true), [], self::ATTRIBUTES);
-        }
 
         $this->fill($model, $validated);
         $model->status = IntegrationStatus::from($validated['status']);
-
-        if ($authChanged) {
-            $this->profiles->writeCredentials($model, $request->only(array_keys($this->profiles->credentialRules($validated['auth_type'], required: true))));
-        }
-
+        $this->profiles->writeCredentials($model, $validated, replace: $authChanged);
         $model->save();
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Подключение сохранено.']);

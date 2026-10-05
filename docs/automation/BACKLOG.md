@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-002 — Secret Encryption / Masking`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-003 — Site Integration Bindings`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2794,8 +2794,14 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-002 — Secret Encryption / Masking
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-001
+
+### Result
+
+- Credentials are stored with Laravel's `encrypted:array` cast (application key, no custom cryptography). The model hides `encrypted_credentials` and the hint; browser props are built explicitly.
+- The UI shows a fixed mask `••••••••` plus the last four characters only for secrets of at least 12 characters (`••••••••7K2F`). Secret inputs are never prefilled; an empty input keeps the stored value, a new value replaces it, a changed auth type requires a full new secret, and `none` drops stored credentials.
+- Secret inputs (`credential_*`) are excluded from session old-input flashing; tests assert the fake token is absent from the HTML page, Inertia JSON, model serialization, the raw DB row, the session and validation responses.
 
 ---
 

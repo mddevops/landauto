@@ -9,10 +9,19 @@ use App\Support\WorkspaceContext;
 
 /**
  * Workspace-scoped access to Integration Profiles plus the only place credentials are written.
- * Foreign or unknown public IDs are reported as missing.
+ * Foreign or unknown public IDs are reported as missing. Secrets are never read back for display:
+ * the browser gets a fixed mask with at most the last four characters of a long secret (D-042).
  */
 final class IntegrationProfiles
 {
+    /** Request inputs that carry secrets; never flashed to the session or echoed. */
+    public const CREDENTIAL_INPUTS = ['credential_token', 'credential_username', 'credential_password'];
+
+    public const MASK = '••••••••';
+
+    /** Shorter secrets get no visible hint at all. */
+    private const HINT_MIN_LENGTH = 12;
+
     private const SAFE_TEXT = 'regex:/^[^\x00-\x1F\x7F]+$/';
 
     public function __construct(private WorkspaceContext $context) {}
@@ -54,9 +63,19 @@ final class IntegrationProfiles
             'auth_type' => $profile->auth_type->value,
             'auth_type_label' => $profile->auth_type->label(),
             'api_key_header' => $profile->settings_json['api_key_header'] ?? null,
+            'credentials_mask' => self::mask($profile),
             'status' => $profile->status->value,
             'status_label' => $profile->status->label(),
         ];
+    }
+
+    public static function mask(IntegrationProfile $profile): ?string
+    {
+        if ($profile->auth_type === IntegrationAuthType::None) {
+            return null;
+        }
+
+        return self::MASK.($profile->credentials_hint ?? '');
     }
 
     /**
@@ -81,16 +100,23 @@ final class IntegrationProfiles
     }
 
     /**
+     * Writes the credentials of the profile's current auth type. With `$replace` every key is
+     * taken from the input; otherwise an empty input keeps the stored value of that key.
+     *
      * @param  array<string, mixed>  $input
      */
-    public function writeCredentials(IntegrationProfile $profile, array $input): void
+    public function writeCredentials(IntegrationProfile $profile, array $input, bool $replace = true): void
     {
+        $current = $replace ? [] : ($profile->encrypted_credentials ?? []);
         $credentials = [];
 
         foreach ($profile->auth_type->credentialKeys() as $key) {
-            $credentials[$key] = (string) $input['credential_'.$key];
+            $value = $input['credential_'.$key] ?? null;
+            $credentials[$key] = is_string($value) && $value !== '' ? $value : (string) ($current[$key] ?? '');
         }
 
+        $main = $credentials[$profile->auth_type->credentialKeys()[0] ?? ''] ?? '';
         $profile->encrypted_credentials = $credentials === [] ? null : $credentials;
+        $profile->credentials_hint = mb_strlen($main) >= self::HINT_MIN_LENGTH ? mb_substr($main, -4) : null;
     }
 }

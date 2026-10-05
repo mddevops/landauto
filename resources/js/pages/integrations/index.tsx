@@ -105,6 +105,16 @@ export default function IntegrationsIndex({
                                             Авторизация
                                         </dt>
                                         <dd>{profile.auth_type_label}</dd>
+                                        {profile.credentials_mask && (
+                                            <>
+                                                <dt className="text-muted-foreground">
+                                                    Секрет
+                                                </dt>
+                                                <dd className="font-mono">
+                                                    {profile.credentials_mask}
+                                                </dd>
+                                            </>
+                                        )}
                                     </dl>
                                     {can.manage && (
                                         <div>
