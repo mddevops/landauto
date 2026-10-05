@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-008 — Email Adapter`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-009 — Webhook / Custom API Adapter`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2874,8 +2874,14 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-008 — Email Adapter
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-006
+
+### Result
+
+- `EmailDeliveryAdapter` sends `SubmissionLeadMail` through Laravel Mail inside the delivery job. Recipients are re-validated at send time (none valid → permanent `invalid_recipients`); the subject uses only the allowlisted placeholders and is a sanitized single line; reply-to is set only from a valid value of the configured email field.
+- Escaped Blade template `mail/submission-lead`: Form, Site and Site URL, submitted fields (Да/Нет for checkboxes), vehicle/color/offer/price, page, Popup, referrer and UTM, Submission public ID and time. No IP, user agent, numeric IDs, blacklist data or credentials.
+- SMTP/transport failures are transient (`mail_transport_error`, exception text never stored). Tests use `Mail::fake()`.
 
 ---
 
