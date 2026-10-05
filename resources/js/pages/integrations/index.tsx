@@ -1,5 +1,6 @@
-import { Head } from '@inertiajs/react';
+import { Head, router } from '@inertiajs/react';
 import { Plug, Plus } from 'lucide-react';
+import { useState } from 'react';
 import type {
     IntegrationChoices,
     IntegrationProfileRow,
@@ -9,7 +10,7 @@ import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { dashboard } from '@/routes';
-import { index as integrationsIndex } from '@/routes/integrations';
+import { index as integrationsIndex, test } from '@/routes/integrations';
 
 type IntegrationsIndexProps = {
     profiles: IntegrationProfileRow[];
@@ -22,6 +23,17 @@ export default function IntegrationsIndex({
     choices,
     can,
 }: IntegrationsIndexProps) {
+    const [testing, setTesting] = useState<string | null>(null);
+
+    function testConnection(profilePublicId: string) {
+        setTesting(profilePublicId);
+        router.post(
+            test.url(profilePublicId),
+            {},
+            { preserveScroll: true, onFinish: () => setTesting(null) },
+        );
+    }
+
     return (
         <>
             <Head title="Интеграции" />
@@ -117,7 +129,25 @@ export default function IntegrationsIndex({
                                         )}
                                     </dl>
                                     {can.manage && (
-                                        <div>
+                                        <div className="flex flex-wrap gap-2">
+                                            <Button
+                                                variant="outline"
+                                                size="sm"
+                                                disabled={
+                                                    testing ===
+                                                    profile.public_id
+                                                }
+                                                aria-label={`Проверить подключение ${profile.name}`}
+                                                onClick={() =>
+                                                    testConnection(
+                                                        profile.public_id,
+                                                    )
+                                                }
+                                            >
+                                                {testing === profile.public_id
+                                                    ? 'Проверяем…'
+                                                    : 'Проверить подключение'}
+                                            </Button>
                                             <ProfileDialog
                                                 choices={choices}
                                                 profile={profile}

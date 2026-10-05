@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: IN_PROGRESS** (branch `autopilot/phase6-2026-10-05`). Next ready task per `BACKLOG.md`: `P6-011 — Test Connection`.
+**Phase 5 — Publishing: COMPLETED** (gate `P5-012` DONE, branch `autopilot/phase5-2026-10-05`). **Phase 6 — Integrations & Analytics: IN_PROGRESS** (branch `autopilot/phase6-2026-10-05`). Next ready task per `BACKLOG.md`: `P6-012 — Yandex Metrica Adapter`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -179,6 +179,7 @@ Current focus:
 - `P6-008` DONE: `EmailDeliveryAdapter` + escaped `SubmissionLeadMail` (validated recipients, allowlisted subject placeholders, safe reply-to, no IP/IDs/blacklist/secrets; transport failures retried).
 - `P6-009` DONE: `HttpDeliveryAdapter` (webhook / custom API) over the shared `OutboundHttpPolicy` + `OutboundHttpClient` (https only, all resolved IPs public, pinned connection, no redirects, no proxy, 3 s / 10 s timeouts, 1 MB response cap, auth from encrypted credentials, safe metadata only); tests forbid stray HTTP and real DNS.
 - `P6-010` DONE: «Доставка заявок» log page (`view_delivery_logs`, status filter, attempt history, safe errors, retry button with `retry_deliveries`) and delivery badges on the Submissions page.
+- `P6-011` DONE: «Проверить подключение» (`manage_integrations`, rate-limited) through the delivery adapter / `OutboundHttpClient` (same SSRF policy, timeouts, auth, classifier), no Submission, safe toast only.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1175,7 +1176,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P6-011 — Test Connection`** (Phase 6 — Integrations & Analytics, IN_PROGRESS; Phase 5 COMPLETED) per `BACKLOG.md`.
+**Next: `P6-012 — Yandex Metrica Adapter`** (Phase 6 — Integrations & Analytics, IN_PROGRESS; Phase 5 COMPLETED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1733,7 +1734,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P6-011 — Test Connection`**. Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is IN_PROGRESS.
+**`P6-012 — Yandex Metrica Adapter`**. Phases 0–5 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012 DONE); Phase 6 is IN_PROGRESS.
 
 ---
 
@@ -1790,4 +1791,4 @@ Core Landflow implementation: IN_PROGRESS (Phases 0–5 COMPLETED)
 ```
 
 **Current phase: Phase 6 — Integrations & Analytics (IN_PROGRESS; Phases 0–5 COMPLETED).
-Next: `P6-011 — Test Connection` per `BACKLOG.md`.**
+Next: `P6-012 — Yandex Metrica Adapter` per `BACKLOG.md`.**

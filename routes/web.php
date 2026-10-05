@@ -12,6 +12,7 @@ use App\Http\Controllers\Forms\SiteFormController;
 use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\Integrations\IntegrationProfileController;
+use App\Http\Controllers\Integrations\IntegrationTestConnectionController;
 use App\Http\Controllers\Integrations\SiteIntegrationController;
 use App\Http\Controllers\Integrations\SubmissionDeliveryController;
 use App\Http\Controllers\PageBlockController;
@@ -78,6 +79,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [IntegrationProfileController::class, 'store'])->name('store');
             Route::patch('{profile}', [IntegrationProfileController::class, 'update'])->whereUlid('profile')->name('update');
             Route::delete('{profile}', [IntegrationProfileController::class, 'destroy'])->whereUlid('profile')->name('destroy');
+            Route::post('{profile}/test', IntegrationTestConnectionController::class)->whereUlid('profile')->name('test');
         });
 
     Route::middleware(RequireWorkspaceContext::class)

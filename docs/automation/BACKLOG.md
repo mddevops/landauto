@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-011 — Test Connection`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-012 — Yandex Metrica Adapter`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2917,8 +2917,13 @@ SSRF protection mandatory.
 
 ## P6-011 — Test Connection
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-001, P6-009
+
+### Result
+
+- «Проверить подключение» on the «Интеграции» page (`POST /integrations/{profile}/test`, `manage_integrations`, current Workspace only, foreign → 404). It calls the provider adapter's `testConnection`, i.e. the same `OutboundHttpClient`: same SSRF policy, pinned connection, timeouts, auth builder and classifier as delivery. It sends `POST {"event":"landflow.test_connection"}` with a `test-…` Idempotency-Key to the profile base URL and creates no Submission or Delivery.
+- The result is a Russian toast with success, HTTP status and latency, or the safe failure message; tokens and provider bodies are never returned. Rate limit per user: `INTEGRATIONS_TEST_CONNECTION_PER_MINUTE` (default 5).
 
 ---
 
