@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-007 — Retry / Idempotency`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-008 — Email Adapter`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2860,8 +2860,15 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-007 — Retry / Idempotency
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-006
+
+### Result
+
+- Idempotency: unique Submission + route Delivery; the Delivery `public_id` is the stable key sent as `Idempotency-Key` on every attempt; a single conditional UPDATE claims a due Delivery, so duplicate jobs, duplicate dispatches and concurrent workers never repeat a provider call.
+- Retry ladder: immediate, +1, +5, +15, +60 minutes (`INTEGRATIONS_RETRY_DELAYS`), then `failed`. Retries are stored on the row (`next_retry_at`) and queued by `integrations:dispatch-due-deliveries`, scheduled every minute without overlap (production needs the Laravel scheduler and a queue worker). The command also recovers deliveries stuck in `processing` (`worker_lost`) and pending deliveries whose job was lost.
+- `DeliveryFailures` is the shared classifier: timeout, DNS, network, 408, 425, 429, 500, 502, 503, 504 are transient; 3xx (`redirect_not_followed`), 401, 403, other 4xx and other 5xx are permanent, with short Russian messages.
+- Manual retry `POST /sites/{site}/deliveries/{delivery}/retry` requires `retry_deliveries`, works only for `failed` deliveries of this Site (foreign → 404), creates a new `manual` Attempt and never rewrites the Submission.
 
 ---
 

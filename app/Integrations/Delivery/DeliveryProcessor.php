@@ -21,8 +21,6 @@ use Throwable;
  */
 final class DeliveryProcessor
 {
-    public const TEMPORARY_MESSAGE = 'Сервис временно недоступен. Доставка будет повторена.';
-
     private const ROUTE_DISABLED = 'route_disabled';
 
     public function __construct(private DeliveryAdapters $adapters) {}
@@ -117,7 +115,7 @@ final class DeliveryProcessor
                 'exception' => $exception::class,
             ]);
 
-            return DeliveryResult::transient('internal_error', self::TEMPORARY_MESSAGE);
+            return DeliveryResult::transient('internal_error', DeliveryFailures::TEMPORARY_MESSAGE);
         }
     }
 

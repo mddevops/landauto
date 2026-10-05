@@ -13,6 +13,7 @@ use App\Http\Controllers\Forms\SiteFormSecurityController;
 use App\Http\Controllers\Forms\SiteSubmissionController;
 use App\Http\Controllers\Integrations\IntegrationProfileController;
 use App\Http\Controllers\Integrations\SiteIntegrationController;
+use App\Http\Controllers\Integrations\SubmissionDeliveryController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
@@ -129,6 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
 
             Route::get('submissions', [SiteSubmissionController::class, 'index'])->name('submissions.index');
+            Route::post('deliveries/{delivery}/retry', [SubmissionDeliveryController::class, 'retry'])->whereUlid('delivery')->middleware('throttle:30,1')->name('deliveries.retry');
             Route::get('form-security', [SiteFormSecurityController::class, 'show'])->name('form-security.show');
             Route::put('form-security', [SiteFormSecurityController::class, 'update'])->name('form-security.update');
             Route::post('blacklist', [SiteBlacklistController::class, 'store'])->name('blacklist.store');
