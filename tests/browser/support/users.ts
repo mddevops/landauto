@@ -56,6 +56,15 @@ export const users = {
         workspace: 'Автосалон Запад',
         template: 'Пустой шаблон',
     },
+    // Publishing flow: Site «Сайт для публикации» on the `publish-e2e` subdomain.
+    publisher: {
+        name: 'Павел Публикаторов',
+        email: 'publisher@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Центр',
+        site: 'Сайт для публикации',
+        publicUrl: 'http://publish-e2e.localhost:8200',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-007 — Public Runtime`.
+**Phase 5 — Publishing: IN_PROGRESS** (status: §54). Next ready task: `P5-008 — Landflow Subdomains`.
 
 Phase 4 — Forms & Interactive Components is COMPLETED: gate `P4-014 — Phase 4 Review` DONE.
 
@@ -162,6 +162,7 @@ Current focus:
 - `P5-004` DONE: `PublishValidator` (errors block, warnings inform) reusing the X-018 inspector, pinned-schema validation and new publish-time completeness checks.
 - `P5-005` DONE: `PublishedSnapshotBuilder` (public manifest + private draft snapshot, canonical hash) and `PublishedArtifactBuilder` (version-scoped per-Page payloads, publish-time React SSR via the compiled `bootstrap/ssr/render-server.js`, stored HTML artifacts and asset references, no activation).
 - `P5-006` DONE: `PublishSite` atomic activation (Site-locked start with conflict/abandon handling, rendering outside transactions, final locked pointer switch after artifact verification, safe failure handling) and the «Публикация» page with the Publish action.
+- `P5-007` DONE: anonymous public runtime on `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` from stored artifacts only (no Draft reads, no Node per request), hydration from the stored payload, version-scoped immutable file delivery, version-bound public Form endpoint (`/_landflow/forms/{version}/{form}`, manifest-derived context and price, mode `public`). `sites.subdomain` column added (rules/UI in P5-008). The Draft public endpoint `POST /forms/{form}/submissions` was removed; preview keeps mode `preview`. Published Series media images cannot be deleted.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

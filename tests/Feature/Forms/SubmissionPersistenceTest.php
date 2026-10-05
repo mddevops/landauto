@@ -17,11 +17,12 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use LogicException;
+use Tests\Concerns\SubmitsPublishedForms;
 use Tests\TestCase;
 
 class SubmissionPersistenceTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SubmitsPublishedForms;
 
     private Workspace $workspace;
 
@@ -195,7 +196,7 @@ class SubmissionPersistenceTest extends TestCase
      */
     private function submit(array $payload, array $headers = []): TestResponse
     {
-        return $this->postJson(route('forms.submissions.store', $this->form->public_id), $payload, $headers);
+        return $this->submitPublished($this->form, $payload, headers: $headers);
     }
 
     /**

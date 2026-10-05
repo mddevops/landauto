@@ -3,6 +3,7 @@
 namespace Tests\Feature\Forms;
 
 use App\Enums\FormFieldType;
+use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoGeneration;
@@ -18,16 +19,24 @@ use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use App\Models\Submission;
+use App\Models\User;
+use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
 
+/**
+ * Draft context resolution behind the authenticated preview endpoint; published pages resolve
+ * context from their Published Version manifest (PublishedRuntimeTest).
+ */
 class SubmissionContextTest extends TestCase
 {
     use RefreshCatalogDatabase, RefreshDatabase;
 
     private Site $site;
+
+    private User $owner;
 
     private Form $form;
 
@@ -44,6 +53,8 @@ class SubmissionContextTest extends TestCase
         parent::setUp();
 
         $this->site = Site::factory()->create();
+        $this->owner = User::factory()->create();
+        $this->site->workspace->addMember($this->owner, WorkspaceRole::Owner);
         $this->form = Form::factory()->for($this->site)->withLeadFields()->create();
         $this->popup = Popup::factory()->for($this->site)->create(['name' => 'Получить предложение']);
         $this->popup->form()->associate($this->form)->save();
@@ -192,11 +203,13 @@ class SubmissionContextTest extends TestCase
      */
     private function submit(array $context, array $tracking = [], array $fields = [], array $extra = []): TestResponse
     {
-        return $this->postJson(route('forms.submissions.store', $this->form->public_id), [
-            'fields' => ['name' => 'Иван', 'phone' => '+7 (999) 111-22-33', 'consent' => true, ...$fields],
-            'context' => $context,
-            'tracking' => $tracking,
-            ...$extra,
-        ]);
+        return $this->actingAs($this->owner)
+            ->withSession([WorkspaceContext::SESSION_KEY => $this->site->workspace->public_id])
+            ->postJson(route('sites.preview.submissions.store', [$this->site, $this->form->public_id]), [
+                'fields' => ['name' => 'Иван', 'phone' => '+7 (999) 111-22-33', 'consent' => true, ...$fields],
+                'context' => $context,
+                'tracking' => $tracking,
+                ...$extra,
+            ]);
     }
 }

@@ -29,6 +29,7 @@ final class NodePageRenderer implements PageRenderer
 
         try {
             $result = Process::timeout((int) config('publishing.render_timeout'))
+                ->env(self::systemEnvironment())
                 ->input($input)
                 ->run([(string) config('publishing.node_binary'), $renderer]);
         } catch (ProcessTimedOutException) {
@@ -55,5 +56,26 @@ final class NodePageRenderer implements PageRenderer
         }
 
         return $html;
+    }
+
+    /**
+     * Web SAPIs hand child processes a filtered environment; without SystemRoot Node cannot
+     * even start on Windows, and without PATH the binary may not resolve.
+     *
+     * @return array<string, string>
+     */
+    private static function systemEnvironment(): array
+    {
+        $environment = [];
+
+        foreach (['PATH', 'SystemRoot', 'TEMP', 'TMP'] as $key) {
+            $value = getenv($key);
+
+            if (is_string($value) && $value !== '') {
+                $environment[$key] = $value;
+            }
+        }
+
+        return $environment;
     }
 }

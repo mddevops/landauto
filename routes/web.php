@@ -5,7 +5,6 @@ use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
-use App\Http\Controllers\Forms\FormSubmissionController;
 use App\Http\Controllers\Forms\PreviewSubmissionController;
 use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
@@ -31,16 +30,9 @@ use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\RequireWorkspaceContext;
-use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Support\Facades\Route;
 
 Route::inertia('/', 'welcome')->name('home');
-
-Route::post('forms/{form}/submissions', [FormSubmissionController::class, 'store'])
-    ->whereUlid('form')
-    ->middleware('throttle:form-submissions')
-    ->withoutMiddleware(ValidateCsrfToken::class)
-    ->name('forms.submissions.store');
 
 Route::middleware(['guest', 'throttle:yandex-oauth'])->group(function () {
     Route::get('auth/yandex/redirect', [YandexOAuthController::class, 'redirect'])

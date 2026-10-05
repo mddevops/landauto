@@ -9,8 +9,10 @@ use App\Forms\Captcha\CaptchaVerdict;
 use App\Forms\Captcha\CaptchaVerifier;
 use App\Models\Form;
 use App\Models\FormField;
+use App\Models\PublishedVersion;
 use App\Models\Submission;
 use App\Support\PhoneNormalizer;
+use Closure;
 use Illuminate\Support\Str;
 
 /**
@@ -34,6 +36,7 @@ class SubmissionPipeline
         private SubmissionGuard $guard,
         private CaptchaVerifier $captcha,
         private SubmissionContextResolver $context,
+        private PublishedSubmissionContext $publishedContext,
     ) {}
 
     /**
@@ -54,13 +57,13 @@ class SubmissionPipeline
     }
 
     /**
-     * Preview submissions come from an authenticated editor testing the draft. They pass the
-     * same protection as visitors, but duplicates and rate-limit counters are kept per mode,
-     * so testing can never block or shadow real visitor leads.
+     * Draft Form submission from the authenticated preview. It passes the same protection as
+     * visitors, but duplicates and rate-limit counters are kept per mode, so testing can never
+     * block or shadow real visitor leads. Public leads never use the Draft Form (ADR-006 §7).
      *
      * @param  array<array-key, mixed>  $payload
      */
-    public function handle(string $formPublicId, array $payload, ?string $ip, ?string $userAgent, SubmissionMode $mode = SubmissionMode::Public): SubmissionResult
+    public function handlePreview(string $formPublicId, array $payload, ?string $ip, ?string $userAgent): SubmissionResult
     {
         $form = Form::query()->with(['fields', 'site'])->where('public_id', $formPublicId)->first();
 
@@ -68,6 +71,87 @@ class SubmissionPipeline
             return SubmissionResult::unavailable();
         }
 
+        return $this->process(
+            $form,
+            $form->success_message,
+            $payload,
+            $ip,
+            $userAgent,
+            SubmissionMode::Preview,
+            fn (mixed $context, mixed $tracking): ?array => $this->context->resolve($form, $context, $tracking),
+        );
+    }
+
+    /**
+     * Visitor submission from a published page. Fields, labels, success text and trusted context
+     * come from that Published Version's manifest; the Draft Form row only anchors the Submission.
+     * The version must belong to an active, published Site and have reached `ready`; an older
+     * ready version keeps accepting its own already-loaded pages.
+     *
+     * @param  array<array-key, mixed>  $payload
+     */
+    public function handlePublished(PublishedVersion $version, string $formPublicId, array $payload, ?string $ip, ?string $userAgent): SubmissionResult
+    {
+        $site = $version->site;
+        $definition = null;
+
+        foreach ($version->public_manifest_json['forms'] as $candidate) {
+            if ($candidate['public_id'] === $formPublicId) {
+                $definition = $candidate;
+            }
+        }
+
+        $form = $site->forms()->where('public_id', $formPublicId)->first();
+
+        if ($definition === null || $form === null || ! $version->isReady()
+            || $site->status !== SiteStatus::Active || $site->active_published_version_id === null) {
+            return SubmissionResult::unavailable();
+        }
+
+        $form->setRelation('site', $site);
+        $form->setRelation('fields', $form->fields()->getRelated()->newCollection(array_map(
+            fn (array $field): FormField => self::publishedField($field),
+            $definition['fields'],
+        )));
+
+        return $this->process(
+            $form,
+            $definition['success_message'],
+            $payload,
+            $ip,
+            $userAgent,
+            SubmissionMode::Public,
+            fn (mixed $context, mixed $tracking): ?array => $this->publishedContext->resolve($version, $formPublicId, $context, $tracking),
+        );
+    }
+
+    /**
+     * An unsaved field rebuilt from the published Form definition, used only for validation and
+     * the Submission field snapshot.
+     *
+     * @param  array<string, mixed>  $field
+     */
+    private static function publishedField(array $field): FormField
+    {
+        $model = new FormField;
+        $model->forceFill([
+            'key' => $field['key'],
+            'type' => $field['type'],
+            'label' => $field['label'],
+            'required' => $field['required'],
+            'options' => $field['options'] === [] ? null : $field['options'],
+            'validation' => $field['max_length'] === null ? null : ['max_length' => $field['max_length']],
+        ]);
+
+        return $model;
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $payload
+     * @param  Closure(mixed, mixed): ?array{trusted: array<string, array<string, mixed>>, visitor: array<string, string>}  $resolveContext
+     */
+    private function process(Form $form, string $successMessage, array $payload, ?string $ip, ?string $userAgent, SubmissionMode $mode, Closure $resolveContext): SubmissionResult
+    {
         $fields = $payload['fields'] ?? null;
 
         if (array_diff(array_keys($payload), self::PAYLOAD_KEYS) !== [] || ! is_array($fields)) {
@@ -101,7 +185,7 @@ class SubmissionPipeline
             return SubmissionResult::rejected(self::CAPTCHA_MESSAGE);
         }
 
-        $context = $this->context->resolve($form, $payload['context'] ?? null, $payload['tracking'] ?? null);
+        $context = $resolveContext($payload['context'] ?? null, $payload['tracking'] ?? null);
 
         if ($context === null) {
             return SubmissionResult::rejected('Данные страницы устарели. Обновите страницу и отправьте заявку снова.');
@@ -130,7 +214,7 @@ class SubmissionPipeline
 
         $this->guard->record($form, $policy, $ip, $normalizedPhone, $mode);
 
-        return SubmissionResult::accepted($submission, $form->success_message);
+        return SubmissionResult::accepted($submission, $successMessage);
     }
 
     /**

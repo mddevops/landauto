@@ -21,11 +21,12 @@ use Illuminate\Support\Facades\Http;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\SubmitsPublishedForms;
 use Tests\TestCase;
 
 class SmartCaptchaTest extends TestCase
 {
-    use RefreshDatabase;
+    use RefreshDatabase, SubmitsPublishedForms;
 
     private const CLIENT_KEY = 'ysc1_test_client_key';
 
@@ -183,10 +184,10 @@ class SmartCaptchaTest extends TestCase
      */
     private function submit(array $extra = [], string $phone = '79991112233'): TestResponse
     {
-        return $this->withServerVariables(['REMOTE_ADDR' => '10.0.0.1'])->postJson(route('forms.submissions.store', $this->form->public_id), [
+        return $this->submitPublished($this->form, [
             'fields' => ['name' => 'Иван', 'phone' => $phone, 'consent' => true],
             ...$extra,
-        ]);
+        ], '10.0.0.1');
     }
 
     private function as(User $user): static

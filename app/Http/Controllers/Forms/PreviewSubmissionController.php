@@ -2,7 +2,6 @@
 
 namespace App\Http\Controllers\Forms;
 
-use App\Enums\SubmissionMode;
 use App\Forms\SubmissionPipeline;
 use App\Http\Controllers\Controller;
 use App\Models\Site;
@@ -24,7 +23,7 @@ class PreviewSubmissionController extends Controller
         Gate::authorize('preview', $site);
         abort_unless($site->forms()->where('public_id', $form)->exists(), 404);
 
-        $result = $pipeline->handle($form, $request->json()->all(), $request->ip(), $request->userAgent(), SubmissionMode::Preview);
+        $result = $pipeline->handlePreview($form, $request->json()->all(), $request->ip(), $request->userAgent());
 
         return response()->json(
             $result->status === 422 ? ['message' => $result->message, 'errors' => (object) $result->errors] : ['message' => $result->message],

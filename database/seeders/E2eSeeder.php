@@ -11,8 +11,10 @@ use App\Enums\WorkspaceRole;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoMark;
 use App\Models\Catalog\AutoModification;
+use App\Models\Form;
 use App\Models\Plan;
 use App\Models\PlatformRoleAssignment;
+use App\Models\Popup;
 use App\Models\SeriesMediaImage;
 use App\Models\SeriesMediaSet;
 use App\Models\Site;
@@ -81,6 +83,18 @@ class E2eSeeder extends Seeder
         // Interactive flow: Forms, Popups and submissions on its own Site.
         $interactive = $this->createUser('Инна Интерактивова', 'interactive@landflow.test');
         $this->createVehicleShowcase($this->createWorkspace($interactive, 'Автосалон Запад', plan: $plan));
+
+        // Publishing flow: a Site on its own Landflow subdomain with a ready lead Form + Popup.
+        $publisher = $this->createUser('Павел Публикаторов', 'publisher@landflow.test');
+        $this->createPublishingSite($this->createWorkspace($publisher, 'Автосалон Центр', plan: $plan));
+    }
+
+    private function createPublishingSite(Workspace $workspace): void
+    {
+        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт для публикации');
+        $site->forceFill(['subdomain' => 'publish-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
+        Popup::factory()->for($site)->create(['name' => 'Обратный звонок'])->form()->associate($form)->save();
     }
 
     /**

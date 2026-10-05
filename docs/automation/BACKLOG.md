@@ -72,7 +72,7 @@ Current phase:
 
 `P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-007 — Public Runtime`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P5-008 — Landflow Subdomains`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2710,8 +2710,10 @@ Result: `App\Publishing\PublishSite` orchestrates a whole-Site Publish. A short 
 
 ## P5-007 — Public Runtime
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-006
+
+Result: Public hosts `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` (`config/publishing.php`, `routes/public.php`, registered before `web` and without session/CSRF/Inertia) resolve host → active Site → active ready Published Version → `published_pages` artifact; nothing reads the Draft. `sites.subdomain` (nullable, unique) was added for host resolution; label rules, generation and UI belong to P5-008. Reserved labels never resolve. Pages are cached as `published:{site}:{version}:{page}`, served as the stored HTML plus the stored hydration payload (`resources/views/published/page.blade.php`, `hydrate-client.tsx`); unknown hosts, unpublished Sites, unknown paths and every application route on a public host return the safe Russian 404. Version-scoped files `/_landflow/assets|media/{version}/{id}` are served only when a ready version of that Site references them (`nosniff`, `public, max-age=31536000, immutable`); historical versions keep working, Draft-only and foreign files are 404. Public leads post only to `/_landflow/forms/{version}/{form}`: the Form definition comes from that version's manifest, the version must be ready with the Site active and published, and page/block/popup/vehicle/offer context and the price come from the manifest (`PublishedSubmissionContext`), never from the Draft or the browser; mode `public`. The old Draft endpoint `POST /forms/{form}/submissions` was removed; the preview endpoint keeps the Draft path with mode `preview`. Platform Series media images referenced by a Published Version cannot be deleted. `NodePageRenderer` passes `PATH`/`SystemRoot`/`TEMP`/`TMP` explicitly (web SAPIs filter child environments). Tests: `PublishedRuntimeTest`, Forms suite on the published path, Playwright `publishing.spec.ts` (publish, raw HTML before JS, hydration, public lead, Draft isolation).
 
 ---
 
