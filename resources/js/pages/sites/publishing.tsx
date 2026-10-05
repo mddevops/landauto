@@ -1,5 +1,13 @@
 import { Head, Link, useForm } from '@inertiajs/react';
-import { CircleAlert, Eye, Rocket, TriangleAlert } from 'lucide-react';
+import {
+    CircleAlert,
+    ExternalLink,
+    Eye,
+    Rocket,
+    TriangleAlert,
+} from 'lucide-react';
+import type { FormEvent } from 'react';
+import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -8,9 +16,12 @@ import {
     CardDescription,
     CardHeader,
 } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { designer, preview } from '@/routes/sites';
 import { store } from '@/routes/sites/publishing';
+import { update as updateSubdomain } from '@/routes/sites/subdomain';
 
 type PublishIssue = {
     code: string;
@@ -21,6 +32,7 @@ type PublishIssue = {
 
 type PublishingProps = {
     site: { public_id: string; name: string };
+    address: { subdomain: string | null; domain: string; url: string | null };
     production: {
         public_id: string;
         version_number: number;
@@ -35,7 +47,7 @@ type PublishingProps = {
         error: string | null;
     } | null;
     check: { errors: PublishIssue[]; warnings: PublishIssue[] };
-    can: { publish: boolean; preview: boolean };
+    can: { publish: boolean; preview: boolean; manageDomains: boolean };
 };
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', {
@@ -49,6 +61,7 @@ function formatDate(value: string | null): string {
 
 export default function Publishing({
     site,
+    address,
     production,
     lastAttempt,
     check,
@@ -184,6 +197,13 @@ export default function Publishing({
                     </Card>
                 </div>
 
+                <AddressCard
+                    site={site}
+                    address={address}
+                    published={production !== null}
+                    canManage={can.manageDomains}
+                />
+
                 <Card>
                     <CardHeader>
                         <h2 className="leading-none font-semibold">
@@ -227,6 +247,116 @@ export default function Publishing({
                 </Card>
             </main>
         </>
+    );
+}
+
+function AddressCard({
+    site,
+    address,
+    published,
+    canManage,
+}: {
+    site: PublishingProps['site'];
+    address: PublishingProps['address'];
+    published: boolean;
+    canManage: boolean;
+}) {
+    const form = useForm({ subdomain: address.subdomain ?? '' });
+    const unchanged = form.data.subdomain === (address.subdomain ?? '');
+
+    function save(event: FormEvent) {
+        event.preventDefault();
+        form.submit(updateSubdomain(site.public_id), { preserveScroll: true });
+    }
+
+    return (
+        <Card>
+            <CardHeader>
+                <h2 className="leading-none font-semibold">Адрес сайта</h2>
+                <CardDescription>
+                    Сайт открывается на поддомене Landflow. Смена названия сайта
+                    адрес не меняет.
+                </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4 text-sm">
+                {address.url === null ? (
+                    <p className="text-muted-foreground">Адрес не задан.</p>
+                ) : published ? (
+                    <a
+                        href={address.url}
+                        target="_blank"
+                        rel="noopener"
+                        className="inline-flex max-w-full items-center gap-1 font-medium break-all underline underline-offset-4"
+                        data-testid="public-url"
+                    >
+                        {address.url}
+                        <ExternalLink
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                        />
+                    </a>
+                ) : (
+                    <p data-testid="public-url">
+                        <span className="font-medium break-all">
+                            {address.url}
+                        </span>
+                        <span className="text-muted-foreground">
+                            {' '}
+                            — начнёт работать после публикации.
+                        </span>
+                    </p>
+                )}
+
+                {canManage && (
+                    <form onSubmit={save} className="space-y-2">
+                        <Label htmlFor="subdomain">Поддомен</Label>
+                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
+                            <div className="flex min-w-0 flex-1 items-center gap-2">
+                                <Input
+                                    id="subdomain"
+                                    name="subdomain"
+                                    value={form.data.subdomain}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'subdomain',
+                                            event.target.value,
+                                        )
+                                    }
+                                    maxLength={63}
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    aria-invalid={
+                                        form.errors.subdomain ? true : undefined
+                                    }
+                                    aria-describedby="subdomain-help"
+                                    className="min-w-0"
+                                />
+                                <span className="shrink-0 text-muted-foreground">
+                                    .{address.domain}
+                                </span>
+                            </div>
+                            <Button
+                                type="submit"
+                                variant="outline"
+                                disabled={form.processing || unchanged}
+                            >
+                                {form.processing && <Spinner />}
+                                Сохранить адрес
+                            </Button>
+                        </div>
+                        <p
+                            id="subdomain-help"
+                            className="text-xs text-muted-foreground"
+                        >
+                            Строчные латинские буквы, цифры и дефис.
+                            {published &&
+                                ' После смены старый адрес перестанет открываться.'}
+                        </p>
+                        <InputError message={form.errors.subdomain} />
+                    </form>
+                )}
+            </CardContent>
+        </Card>
     );
 }
 

@@ -72,7 +72,7 @@ Current phase:
 
 `P5 — Publishing` — IN_PROGRESS (owner go-ahead 2026-10-05, branch `autopilot/phase5-2026-10-05`).
 
-Next ready task: `P5-008 — Landflow Subdomains`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P5-009 — SEO / Sitemap / Robots`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2719,8 +2719,10 @@ Result: Public hosts `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` (`config/publishing.
 
 ## P5-008 — Landflow Subdomains
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-007
+
+Result: `App\Support\SiteSubdomain` owns the label rules: one lowercase DNS label (`a-z`, `0-9`, inner hyphens, ≤ 63), globally unique across all Sites including archived, reserved `www/admin/api/app/support/static/assets/platform/auth/login/register` plus IDN `xn--` labels. `CreateSite` assigns a transliterated suggestion from the Site name (`changan-moskva`, then `-2`, `-3`…; reserved → `-site`; nothing usable → `site`); renaming never changes it. Migration `2026_10_08_000005` backfills existing Sites. Explicit change on «Публикация» → «Адрес сайта» (`PUT sites/{site}/subdomain`, `manage_domains`: Owner/Admin; Russian errors; unique-index race → validation error); the public host switches immediately and the old address returns 404. Pre-publish check `subdomain_missing`. Local root `LANDFLOW_PUBLIC_DOMAIN=localhost` (`dealer.localhost`), no custom domains, no plan gating, no billing. Tests: `SiteSubdomainTest`, Playwright address change.
 
 ---
 

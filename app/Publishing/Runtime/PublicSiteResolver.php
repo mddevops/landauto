@@ -4,6 +4,7 @@ namespace App\Publishing\Runtime;
 
 use App\Enums\SiteStatus;
 use App\Models\Site;
+use App\Support\SiteSubdomain;
 
 /**
  * Maps a public request host to its Site (ADR-006 §9). Only Landflow subdomains of the configured
@@ -12,23 +13,20 @@ use App\Models\Site;
  */
 final class PublicSiteResolver
 {
-    /** Platform labels that never address a Site. */
-    public const RESERVED = ['www', 'admin', 'api', 'app', 'support', 'static', 'assets', 'platform', 'auth', 'login', 'register'];
-
     /**
      * Route requirement for the subdomain host parameter: one DNS label, not reserved. The
      * lookahead ends with the dot that follows the label inside the host pattern.
      */
     public static function routePattern(): string
     {
-        return '(?!(?:'.implode('|', self::RESERVED).')\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?';
+        return '(?!(?:'.implode('|', SiteSubdomain::RESERVED).')\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?';
     }
 
     public function resolve(string $host): ?Site
     {
         $label = self::subdomainOf($host);
 
-        if ($label === null || in_array($label, self::RESERVED, true)) {
+        if ($label === null || SiteSubdomain::isReserved($label)) {
             return null;
         }
 

@@ -163,6 +163,7 @@ Current focus:
 - `P5-005` DONE: `PublishedSnapshotBuilder` (public manifest + private draft snapshot, canonical hash) and `PublishedArtifactBuilder` (version-scoped per-Page payloads, publish-time React SSR via the compiled `bootstrap/ssr/render-server.js`, stored HTML artifacts and asset references, no activation).
 - `P5-006` DONE: `PublishSite` atomic activation (Site-locked start with conflict/abandon handling, rendering outside transactions, final locked pointer switch after artifact verification, safe failure handling) and the «Публикация» page with the Publish action.
 - `P5-007` DONE: anonymous public runtime on `{subdomain}.{LANDFLOW_PUBLIC_DOMAIN}` from stored artifacts only (no Draft reads, no Node per request), hydration from the stored payload, version-scoped immutable file delivery, version-bound public Form endpoint (`/_landflow/forms/{version}/{form}`, manifest-derived context and price, mode `public`). `sites.subdomain` column added (rules/UI in P5-008). The Draft public endpoint `POST /forms/{form}/submissions` was removed; preview keeps mode `preview`. Published Series media images cannot be deleted.
+- `P5-008` DONE: Landflow subdomains — `SiteSubdomain` rules (DNS label, global uniqueness incl. archived, reserved list + `xn--`), transliterated suggestion at Site creation (stable on rename), backfill migration, explicit change on «Публикация» (`manage_domains`), pre-publish `subdomain_missing`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

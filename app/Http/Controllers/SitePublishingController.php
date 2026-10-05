@@ -6,6 +6,7 @@ use App\Models\Publication;
 use App\Models\Site;
 use App\Publishing\PublishSite;
 use App\Publishing\PublishValidator;
+use App\Publishing\Runtime\PublicSiteResolver;
 use App\Support\DesignerScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -31,6 +32,11 @@ class SitePublishingController extends Controller
 
         return Inertia::render('sites/publishing', [
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
+            'address' => [
+                'subdomain' => $site->subdomain,
+                'domain' => (string) config('publishing.public_domain'),
+                'url' => PublicSiteResolver::url($site),
+            ],
             'production' => $active === null ? null : [
                 'public_id' => $active->public_id,
                 'version_number' => $active->version_number,
@@ -42,6 +48,7 @@ class SitePublishingController extends Controller
             'can' => [
                 'publish' => Gate::allows('publish', $site),
                 'preview' => Gate::allows('preview', $site),
+                'manageDomains' => Gate::allows('manageDomains', $site),
             ],
         ]);
     }

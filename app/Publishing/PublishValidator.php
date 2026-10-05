@@ -62,6 +62,10 @@ final class PublishValidator
             $this->error('site_archived', 'Архивный сайт нельзя опубликовать.');
         }
 
+        if ($site->subdomain === null) {
+            $this->error('subdomain_missing', 'Укажите адрес сайта на Landflow.');
+        }
+
         $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
         $this->validatePages($pages);
         $referenced = $this->validateBlocks($pages);

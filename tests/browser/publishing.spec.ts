@@ -142,4 +142,19 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
     await expect(
         visitor.getByRole('heading', { name: 'Черновой заголовок' }),
     ).toBeVisible();
+
+    // An explicit address change moves the public host at once.
+    await expect(page.getByTestId('public-url')).toHaveText(
+        `${publisher.publicUrl}/`,
+    );
+    await page.getByLabel('Поддомен').fill('publish-e2e-renamed');
+    await page.getByRole('button', { name: 'Сохранить адрес' }).click();
+    await expect(page.getByText('Адрес сайта сохранён.').first()).toBeVisible();
+    await expect(page.getByTestId('public-url')).toHaveText(
+        'http://publish-e2e-renamed.localhost:8200/',
+    );
+    await visitor.goto('http://publish-e2e-renamed.localhost:8200/');
+    await expect(
+        visitor.getByRole('heading', { name: 'Черновой заголовок' }),
+    ).toBeVisible();
 });

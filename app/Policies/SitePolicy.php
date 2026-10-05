@@ -74,6 +74,11 @@ final class SitePolicy
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::PublishSite);
     }
 
+    public function manageDomains(User $user, Site $site): bool
+    {
+        return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::ManageDomains);
+    }
+
     public function restoreVersion(User $user, Site $site): bool
     {
         return $this->authorization->allowsForWorkspace($user, $site->workspace, WorkspacePermission::RestoreVersion);
