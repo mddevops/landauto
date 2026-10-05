@@ -27,6 +27,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import { index as formsIndex, update } from '@/routes/sites/forms';
 import { destroy, order } from '@/routes/sites/forms/fields';
+import { index as routesIndex } from '@/routes/sites/forms/routes';
 
 type FormShowProps = {
     site: { public_id: string; name: string };
@@ -41,7 +42,7 @@ type FormShowProps = {
     fields: ManagedField[];
     runtime: FormRuntime;
     choices: { fieldTypes: Choice[] };
-    can: { editForms: boolean };
+    can: { editForms: boolean; editFormRoutes: boolean };
 };
 
 export default function FormShow({
@@ -120,6 +121,18 @@ export default function FormShow({
                         </h1>
                         {!form.status && (
                             <Badge variant="secondary">Выключена</Badge>
+                        )}
+                        {can.editFormRoutes && (
+                            <Button asChild variant="outline" size="sm">
+                                <Link
+                                    href={routesIndex({
+                                        site: site.public_id,
+                                        form: form.public_id,
+                                    })}
+                                >
+                                    Передача заявок
+                                </Link>
+                            </Button>
                         )}
                     </div>
                 </header>

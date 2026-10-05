@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Integrations;
 
 use App\Enums\IntegrationStatus;
 use App\Http\Controllers\Controller;
+use App\Models\FormRoute;
 use App\Models\IntegrationProfile;
 use App\Models\Site;
 use App\Models\SiteIntegrationBinding;
@@ -130,7 +131,7 @@ class SiteIntegrationController extends Controller
 
     public static function isReferenced(SiteIntegrationBinding $binding): bool
     {
-        return false;
+        return FormRoute::query()->where('site_integration_binding_id', $binding->id)->exists();
     }
 
     /**

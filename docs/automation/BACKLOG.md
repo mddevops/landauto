@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-004 — Form Routes`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-005 — Field Mapping`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2820,8 +2820,14 @@ Final Phase 5 gate (commit `bd45982`): `composer quality` PASS (593 tests), PHPS
 
 ## P6-004 — Form Routes
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P4-003, P6-003
+
+### Result
+
+- Table `form_routes` (ULID `public_id`, Form, name, destination `email` | `webhook` | `custom_api`, profile and Site binding, `email_destination`, `mapping_json`, `settings_json`, status, sort order). Form, destination and binding are immutable. The model refuses a binding of another Site or one whose profile provider type does not match.
+- «Передача заявок» page (`/sites/{site}/forms/{form}/routes`, linked from the Form page), gated by `edit_form_routes`. Email routes take up to 5 RFC-valid recipients, a subject restricted to the placeholders `{form.name}`, `{site.name}`, `{vehicle.title}`, `{offer.price}`, and an optional reply-to email field. HTTP routes take an active binding of this Site, a method (`POST` | `PUT` | `PATCH`), an optional path and up to 10 safe headers (transport, proxy, cookie, Authorization, Content-Type and Idempotency-Key are forbidden).
+- Routes are independent; at most 10 per Form. A route with delivery history is archived instead of deleted; a binding used by a route is archived instead of unbound. Central settings live in `config/integrations.php`.
 
 ---
 

@@ -90,6 +90,14 @@ class Form extends Model
     }
 
     /**
+     * @return HasMany<FormRoute, $this>
+     */
+    public function routes(): HasMany
+    {
+        return $this->hasMany(FormRoute::class)->orderBy('sort_order')->orderBy('id');
+    }
+
+    /**
      * @param  Builder<static>  $query
      */
     public function scopeActive(Builder $query): void

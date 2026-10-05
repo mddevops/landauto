@@ -5,6 +5,7 @@ use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Forms\FormFieldController;
+use App\Http\Controllers\Forms\FormRouteController;
 use App\Http\Controllers\Forms\PreviewSubmissionController;
 use App\Http\Controllers\Forms\SiteBlacklistController;
 use App\Http\Controllers\Forms\SiteFormController;
@@ -117,6 +118,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('forms/{form}/fields/order', [FormFieldController::class, 'order'])->whereUlid('form')->name('forms.fields.order');
             Route::patch('forms/{form}/fields/{field}', [FormFieldController::class, 'update'])->whereUlid('form')->where('field', '[a-z][a-z0-9_]{0,39}')->name('forms.fields.update');
             Route::delete('forms/{form}/fields/{field}', [FormFieldController::class, 'destroy'])->whereUlid('form')->where('field', '[a-z][a-z0-9_]{0,39}')->name('forms.fields.destroy');
+            Route::get('forms/{form}/routes', [FormRouteController::class, 'index'])->whereUlid('form')->name('forms.routes.index');
+            Route::post('forms/{form}/routes', [FormRouteController::class, 'store'])->whereUlid('form')->name('forms.routes.store');
+            Route::patch('forms/{form}/routes/{route}', [FormRouteController::class, 'update'])->whereUlid(['form', 'route'])->name('forms.routes.update');
+            Route::delete('forms/{form}/routes/{route}', [FormRouteController::class, 'destroy'])->whereUlid(['form', 'route'])->name('forms.routes.destroy');
 
             Route::get('popups', [SitePopupController::class, 'index'])->name('popups.index');
             Route::post('popups', [SitePopupController::class, 'store'])->name('popups.store');
