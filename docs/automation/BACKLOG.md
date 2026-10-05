@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: IN_PROGRESS (branch `autopilot/phase6-2026-10-05`).
 
-Next ready task: `P6-010 — Delivery Logs UI`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P6-011 — Test Connection`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2905,8 +2905,13 @@ SSRF protection mandatory.
 
 ## P6-010 — Delivery Logs UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE  
 **Dependencies:** P6-007, P6-008, P6-009
+
+### Result
+
+- «Доставка заявок» page (`/sites/{site}/deliveries`, `view_delivery_logs`; Owner and Admin): per Submission + route status badge, destination, Form and time, attempt count, delivered / next retry time, safe Russian error with HTTP status, collapsible attempt history (manual flag, outcome, HTTP status, latency) and a status filter. No lead field values, provider bodies, credentials or numeric IDs.
+- «Повторить» button on failed deliveries only with `retry_deliveries`. Linked from the Designer «Разделы» menu and the Submissions page; the Submissions page shows per-lead delivery badges only to members with `view_delivery_logs`. No CRM features.
 
 ---
 

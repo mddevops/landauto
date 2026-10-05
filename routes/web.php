@@ -130,6 +130,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
 
             Route::get('submissions', [SiteSubmissionController::class, 'index'])->name('submissions.index');
+            Route::get('deliveries', [SubmissionDeliveryController::class, 'index'])->name('deliveries.index');
             Route::post('deliveries/{delivery}/retry', [SubmissionDeliveryController::class, 'retry'])->whereUlid('delivery')->middleware('throttle:30,1')->name('deliveries.retry');
             Route::get('form-security', [SiteFormSecurityController::class, 'show'])->name('form-security.show');
             Route::put('form-security', [SiteFormSecurityController::class, 'update'])->name('form-security.update');

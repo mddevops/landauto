@@ -1,10 +1,13 @@
 import { Head, Link } from '@inertiajs/react';
 import { Inbox } from 'lucide-react';
+import type { DeliveryStatus } from '@/components/integrations/delivery-status-badge';
+import { DeliveryStatusBadge } from '@/components/integrations/delivery-status-badge';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { designer } from '@/routes/sites';
+import { index as deliveriesIndex } from '@/routes/sites/deliveries';
 import { index as submissionsIndex } from '@/routes/sites/submissions';
 
 type SubmittedValue = {
@@ -35,6 +38,11 @@ type SubmissionRow = {
     phone_normalized: string | null;
     values: SubmittedValue[];
     context: { trusted: TrustedContext; visitor: Record<string, string> };
+    deliveries: {
+        route: string;
+        status: DeliveryStatus;
+        status_label: string;
+    }[];
 };
 
 const visitorLabels: Record<string, string> = {
@@ -93,6 +101,7 @@ type SubmissionsIndexProps = {
     mode: SubmissionMode;
     previewCount: number;
     submissions: SubmissionRow[];
+    canViewDeliveries: boolean;
     pagination: {
         current: number;
         last: number;
@@ -120,6 +129,7 @@ export default function SubmissionsIndex({
     mode,
     previewCount,
     submissions,
+    canViewDeliveries,
     pagination,
 }: SubmissionsIndexProps) {
     const isPreview = mode === 'preview';
@@ -140,11 +150,20 @@ export default function SubmissionsIndex({
                             {`Всего: ${pagination.total}`}
                         </p>
                     </div>
-                    <Button asChild variant="outline">
-                        <Link href={designer(site.public_id)}>
-                            Открыть дизайнер
-                        </Link>
-                    </Button>
+                    <div className="flex flex-wrap gap-2">
+                        {canViewDeliveries && (
+                            <Button asChild variant="outline">
+                                <Link href={deliveriesIndex(site.public_id)}>
+                                    Доставка заявок
+                                </Link>
+                            </Button>
+                        )}
+                        <Button asChild variant="outline">
+                            <Link href={designer(site.public_id)}>
+                                Открыть дизайнер
+                            </Link>
+                        </Button>
+                    </div>
                 </header>
 
                 <nav aria-label="Тип заявок" className="flex flex-wrap gap-2">
@@ -287,6 +306,34 @@ export default function SubmissionsIndex({
                                                     </div>
                                                 ))}
                                             </dl>
+                                        </section>
+                                    )}
+                                    {submission.deliveries.length > 0 && (
+                                        <section
+                                            aria-label="Доставка заявки"
+                                            className="flex flex-wrap items-center gap-2 border-t pt-3 text-sm"
+                                        >
+                                            <h3 className="font-medium">
+                                                Доставка:
+                                            </h3>
+                                            {submission.deliveries.map(
+                                                (delivery, index) => (
+                                                    <span
+                                                        key={index}
+                                                        className="flex items-center gap-1"
+                                                    >
+                                                        {delivery.route}
+                                                        <DeliveryStatusBadge
+                                                            status={
+                                                                delivery.status
+                                                            }
+                                                            label={
+                                                                delivery.status_label
+                                                            }
+                                                        />
+                                                    </span>
+                                                ),
+                                            )}
                                         </section>
                                     )}
                                 </article>
