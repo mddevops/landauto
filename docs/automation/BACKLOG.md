@@ -3129,11 +3129,10 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ### Result
 
-- Executable Phase 7 work is DONE: X-022, P7-001 … P7-007. P7-008 is BLOCKED on the owner (D-078 Billing Provider ADR); P7-009 stays DEFERRED behind it.
+- Phase 7 work is DONE: X-022, P7-001 … P7-008 and this review (P7-010). P7-008 resolved D-078 (APPROVED via ADR-007, YooKassa selected). P7-009 — Real Subscription Integration is DEFERRED by plan.
 - Review (no regressions found): custom domains are Site-owned, unique across Workspaces, managed only with `manage_domains` + `custom_domain`, served only while ownership + routing + SSL are verified, the Site is active and the Workspace is entitled; DNS checks use a DNS resolver only (no HTTP fetch of customer hosts); SSL runs through a configured server command (no private keys or ACME material in the DB, repo, React props or logs) with bounded automatic retries and rate limits; app hosts can never become customer hosts; primary-domain 301s cannot loop; branding and custom-domain serving follow the live entitlements; SEO output is consistent on the primary address; no logic branches on plan keys.
-- Open follow-ups (not blocking): expiry of unverified hostname claims, certificate deprovisioning for removed domains, extra dotted app hostnames, Published Versions from before P7-005 keep the old frozen footer until republished, `max_members` enforcement with invitations (P8-001), account-level limit / anti-abuse policy for number of Free Workspaces.
-- Phase 7 status: PARTIAL / BLOCKED (owner decision D-078). Phase 8 NOT_STARTED. Next task: `P7-008 — Billing Provider ADR`.
-- Update after P7-008 (2026-10-06): D-078 approved (YooKassa, ADR-007), so Phase 7 is COMPLETED for planned scope; P7-009 DEFERRED by plan. Additional open follow-up: root cause of the flaky tablet run of `tests/browser/auth.spec.ts` (verification resend stalled > 5 s only in full local runs); the raised assertion timeout (`54e9895`) is not a root-cause fix.
+- Open follow-ups (not blocking): expiry of unverified hostname claims; certificate deprovisioning for removed domains; hardening against extra dotted app hostnames; Published Versions from before P7-005 keep the old frozen footer until republished; `max_members` enforcement with invitations (P8-001); account-level limit / anti-abuse policy for number of Free Workspaces; root cause of the flaky tablet run of `tests/browser/auth.spec.ts` (verification resend stalled > 5 s only in full local runs) — the raised assertion timeout (`54e9895`) is only a mitigation, not a fix.
+- Phase 7 status: COMPLETED for planned scope. Phase 8 NOT_STARTED. Next task: `P8-001 — Workspace Invitations`.
 
 ---
 
