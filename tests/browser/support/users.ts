@@ -103,6 +103,14 @@ export const users = {
         email: 'lifecycle-admin@landflow.test',
         password: 'e2e-password',
     },
+    // Workspace / Site navigation: starts with one Workspace and one Site.
+    navigator: {
+        name: 'Нина Навигаторова',
+        email: 'navigator@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автодом Навигатор',
+        site: 'Сайт навигации',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

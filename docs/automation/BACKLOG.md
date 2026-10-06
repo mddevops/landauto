@@ -72,7 +72,7 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`).
 
-Phase 7 — Paid Site Features: NOT_STARTED.
+Phase 7 — Paid Site Features: NOT_STARTED. Cross-cutting `X-022 — Workspace / Site Dashboard Navigation` runs before P7-001.
 
 Next ready task: `P7-001 — Custom Domain Schema`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
@@ -3788,6 +3788,26 @@ Result:
 - Admin has `edit_popups`; «Защита форм» and the Site blacklist require `edit_forms`; the Workspace blacklist keeps `edit_workspace`.
 - Tests: phone cases (trunk 8, «+8», foreign 13 digits, 10 digits), preview permission/foreign Form/mode marking/list separation, preview not counted as a public duplicate, updated permission matrices; interactive E2E reads preview leads from the test tab.
 - D-094 stays open; no Submission export.
+
+---
+
+## X-022 — Workspace / Site Dashboard Navigation
+
+**Status:** DONE  
+**Trigger:** before P7-001  
+**Decision:** D-110
+
+Separate the Workspace context from the Site context and prepare the navigation structure for Phase 7 domain, SEO and publishing settings: default «Моё пространство» name for new accounts, an always-interactive Workspace switcher, Workspace creation and management, a Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and a Site shell with grouped Site sections.
+
+### Result
+
+- `CreateWorkspace` action (one transaction: Workspace on the `DefaultWorkspacePlan` Free plan + active Owner membership) is shared by `CreateNewAccount` (email/password and Yandex) and the new `GET /workspaces/create` + `POST /workspaces` (verified users, throttled, name required/trimmed/≤120/plain text). New accounts get «Моё пространство»; existing Workspaces are untouched. The created Workspace becomes current. No workspace cap.
+- `GET|PATCH /workspace/settings` renames the current Workspace (`edit_workspace`; others get 403; no IDs exposed).
+- Workspace switcher is always a menu: Workspaces with a selected mark, «Создать пространство», «Управление пространством» (with `edit_workspace`). Switching lands on the dashboard.
+- Workspace shell: «Все сайты», «Интеграции» (`view_integrations`), «Настройки пространства» (`edit_workspace`), platform catalog only with a platform permission. Dashboard heading «Все сайты»; Site cards have «Открыть» (Site context), status and the public address once published.
+- Site shell (`SiteLayout` for `sites/*` pages): «← Все сайты», Site name, groups Общее (Общее, Дизайнер, Предпросмотр), Контент (Автомобили, Формы, Попапы), Заявки (Заявки, Доставка заявок), Настройки (Интеграции, Защита форм, Публикация). Visibility comes from a backend-computed `siteContext` shared prop (Site policy abilities, current Workspace only); pages still authorize themselves.
+- `GET /sites/{site}` «Общее»: name, status, subdomain, publish state, active address; `PATCH /sites/{site}` renames with `edit_site_settings`.
+- Tests: default names (registration, Yandex, no backfill), switcher props, Workspace creation (Free plan, Owner, current, validation, unverified), foreign Workspace, rename permission, Site shell abilities for Owner/Admin/Designer, foreign Site 404, Site rename permission; E2E switcher (one and many), create + rename Workspace, Site context and back, Designer/Admin navigation, tablet/375px.
 
 ---
 

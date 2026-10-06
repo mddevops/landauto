@@ -37,6 +37,8 @@ use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
+use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceSettingsController;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +66,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereUlid('workspace')
         ->name('workspace.switch');
 
+    Route::get('workspaces/create', [WorkspaceController::class, 'create'])->name('workspaces.create');
+    Route::post('workspaces', [WorkspaceController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('workspaces.store');
+
+    Route::middleware(RequireWorkspaceContext::class)->group(function () {
+        Route::get('workspace/settings', [WorkspaceSettingsController::class, 'edit'])->name('workspace.settings.edit');
+        Route::patch('workspace/settings', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
+    });
+
     Route::get('sites/create', [SiteController::class, 'create'])
         ->middleware(RequireWorkspaceContext::class)
         ->name('sites.create');
@@ -88,6 +100,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereUlid(['site', 'page'])
         ->name('sites.')
         ->group(function () {
+            Route::get('/', [SiteController::class, 'show'])->name('show');
+            Route::patch('/', [SiteController::class, 'update'])->name('update');
             Route::get('designer', SiteDesignerController::class)->name('designer');
             Route::get('preview', SitePreviewController::class)->name('preview');
             Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');

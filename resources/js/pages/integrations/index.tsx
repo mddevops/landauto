@@ -175,7 +175,7 @@ export default function IntegrationsIndex({
 
 IntegrationsIndex.layout = {
     breadcrumbs: [
-        { title: 'Панель управления', href: dashboard() },
+        { title: 'Все сайты', href: dashboard() },
         { title: 'Интеграции', href: integrationsIndex() },
     ],
 };

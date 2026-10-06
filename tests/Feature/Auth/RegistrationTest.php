@@ -79,7 +79,8 @@ class RegistrationTest extends TestCase
         $workspace = Workspace::query()->sole();
         $membership = $user->memberships()->sole();
 
-        $this->assertSame('Иван Петров', $workspace->name);
+        $this->assertSame('Моё пространство', $workspace->name);
+        $this->assertSame('Иван Петров', $user->name);
         $this->assertSame($workspace->id, $membership->workspace_id);
         $this->assertSame(WorkspaceRole::Owner, $membership->role);
         $this->assertSame(WorkspaceMemberStatus::Active, $membership->status);

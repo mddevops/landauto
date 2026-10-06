@@ -126,7 +126,7 @@ class YandexOAuthTest extends TestCase
         $this->assertSame(AuthProvider::Yandex, $identity->provider);
         $this->assertSame('provider-2', $identity->provider_user_id);
         $this->assertSame(WorkspaceRole::Owner, $membership->role);
-        $this->assertSame('Иван Петров', $membership->workspace->name);
+        $this->assertSame('Моё пространство', $membership->workspace->name);
         $this->assertSame(1, $user->workspaces()->count());
         $this->assertSame(Plan::FREE_KEY, $membership->workspace->plan?->key);
         $this->assertSame(2, app(WorkspaceEntitlements::class)->limit($membership->workspace, Entitlement::MaxSites));

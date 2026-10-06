@@ -43,6 +43,21 @@ export type WorkspacePermission =
     | 'publish_site'
     | 'restore_version';
 
+export type SiteContext = {
+    public_id: string;
+    name: string;
+    can: {
+        preview: boolean;
+        viewVehicles: boolean;
+        viewSubmissions: boolean;
+        viewDeliveryLogs: boolean;
+        viewIntegrations: boolean;
+        editForms: boolean;
+        publish: boolean;
+        manageDomains: boolean;
+    };
+};
+
 export type WorkspaceContext = {
     current: WorkspaceSummary | null;
     available: WorkspaceSummary[];

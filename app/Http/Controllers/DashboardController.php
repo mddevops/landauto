@@ -7,6 +7,7 @@ use App\Enums\SiteStatus;
 use App\Enums\WorkspacePermission;
 use App\Models\Site;
 use App\Models\User;
+use App\Publishing\Runtime\PublicSiteResolver;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use App\Support\WorkspaceEntitlements;
@@ -43,11 +44,14 @@ class DashboardController extends Controller
             'sites' => $canViewSites
                 ? $workspace->sites()
                     ->orderBy('name')
-                    ->get(['public_id', 'name', 'status'])
+                    ->get(['id', 'public_id', 'name', 'status', 'subdomain', 'active_published_version_id'])
                     ->map(fn (Site $site): array => [
                         'public_id' => $site->public_id,
                         'name' => $site->name,
                         'status' => $site->status->value,
+                        'address' => $site->active_published_version_id !== null && $site->status === SiteStatus::Active
+                            ? PublicSiteResolver::url($site)
+                            : null,
                     ])
                     ->values()
                     ->all()

@@ -172,7 +172,7 @@ export default function CreateSite({
 CreateSite.layout = {
     breadcrumbs: [
         {
-            title: 'Панель управления',
+            title: 'Все сайты',
             href: dashboard(),
         },
         {

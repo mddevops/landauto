@@ -186,6 +186,8 @@ Current focus:
 - `P6-013` DONE: payload-free semantic events (form start / submit / validation error / success, popup open / close, vehicle form submit) in the published runtime, routed once to `ym(counter, "reachGoal", goal)`; no-op without a counter or with a blocked loader.
 - `P6-014` DONE: integrations browser lifecycle (`tests/browser/integrations.spec.ts`) over E2E-only fake DNS + CRM transport (`INTEGRATIONS_E2E_FAKE`, testing/e2e only; real SSRF policy) and a spec-driven `database` queue in E2E.
 - `P6-015` DONE: Phase 6 gate. Audit found no regressions (ownership, encrypted/masked secrets, persist-before-deliver, preview never delivered, bounded retries, idempotency, SSRF incl. DNS rebinding and redirects, safe logs, semantic permissions, Metrica frozen per version and absent from Preview). Final gate: `composer quality` PASS (728 tests), `npm run test:e2e` 44 passed. Phase 6 COMPLETED; Phase 7 NOT_STARTED.
+- Phase 7 (in progress on `autopilot/phase7-2026-10-06`):
+- `X-022` DONE (D-110): shared `CreateWorkspace` action; new accounts get «Моё пространство»; always-interactive switcher with «Создать пространство» / «Управление пространством»; `/workspaces/create` (Free plan, Owner, becomes current, no cap) and `/workspace/settings` rename (`edit_workspace`); Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and Site shell (`SiteLayout`, backend `siteContext` abilities, grouped Site sections, «← Все сайты»); `/sites/{site}` «Общее» with rename under `edit_site_settings`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

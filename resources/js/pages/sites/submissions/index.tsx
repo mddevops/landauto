@@ -372,5 +372,5 @@ export default function SubmissionsIndex({
 }
 
 SubmissionsIndex.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

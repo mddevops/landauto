@@ -1,5 +1,5 @@
-import { router, usePage } from '@inertiajs/react';
-import { Building2, Check, ChevronsUpDown } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Building2, Check, ChevronsUpDown, Plus, Settings } from 'lucide-react';
 import { useState } from 'react';
 import WorkspaceContextController from '@/actions/App/Http/Controllers/WorkspaceContextController';
 import {
@@ -7,6 +7,7 @@ import {
     DropdownMenuContent,
     DropdownMenuItem,
     DropdownMenuLabel,
+    DropdownMenuSeparator,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
 import {
@@ -15,6 +16,8 @@ import {
     SidebarMenuItem,
 } from '@/components/ui/sidebar';
 import { Spinner } from '@/components/ui/spinner';
+import { edit as workspaceSettings } from '@/routes/workspace/settings';
+import { create as createWorkspace } from '@/routes/workspaces';
 import type { WorkspaceSummary } from '@/types';
 
 export function WorkspaceSwitcher() {
@@ -25,6 +28,8 @@ export function WorkspaceSwitcher() {
     if (!current) {
         return null;
     }
+
+    const canManage = workspace.permissions.includes('edit_workspace');
 
     const switchWorkspace = (selected: WorkspaceSummary) => {
         if (switchingTo || selected.public_id === current.public_id) {
@@ -42,33 +47,6 @@ export function WorkspaceSwitcher() {
         );
     };
 
-    const currentLabel = (
-        <>
-            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                <Building2 className="size-4" aria-hidden="true" />
-            </div>
-            <span className="min-w-0 flex-1 truncate font-medium">
-                {current.name}
-            </span>
-        </>
-    );
-
-    if (workspace.available.length === 1) {
-        return (
-            <SidebarMenu aria-label="Текущее рабочее пространство">
-                <SidebarMenuItem>
-                    <SidebarMenuButton size="lg" asChild tooltip={current.name}>
-                        <div
-                            aria-label={`Текущее рабочее пространство: ${current.name}`}
-                        >
-                            {currentLabel}
-                        </div>
-                    </SidebarMenuButton>
-                </SidebarMenuItem>
-            </SidebarMenu>
-        );
-    }
-
     return (
         <SidebarMenu aria-label="Переключатель рабочих пространств">
             <SidebarMenuItem>
@@ -81,7 +59,20 @@ export function WorkspaceSwitcher() {
                             aria-busy={switchingTo !== null}
                             disabled={switchingTo !== null}
                         >
-                            {currentLabel}
+                            <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
+                                <Building2
+                                    className="size-4"
+                                    aria-hidden="true"
+                                />
+                            </div>
+                            <span className="grid min-w-0 flex-1 text-left leading-tight">
+                                <span className="truncate text-xs text-muted-foreground">
+                                    Пространство
+                                </span>
+                                <span className="truncate font-medium">
+                                    {current.name}
+                                </span>
+                            </span>
                             {switchingTo ? (
                                 <Spinner className="ml-auto" />
                             ) : (
@@ -125,6 +116,21 @@ export function WorkspaceSwitcher() {
                                 </DropdownMenuItem>
                             );
                         })}
+                        <DropdownMenuSeparator />
+                        <DropdownMenuItem asChild>
+                            <Link href={createWorkspace()}>
+                                <Plus aria-hidden="true" />
+                                Создать пространство
+                            </Link>
+                        </DropdownMenuItem>
+                        {canManage && (
+                            <DropdownMenuItem asChild>
+                                <Link href={workspaceSettings()}>
+                                    <Settings aria-hidden="true" />
+                                    Управление пространством
+                                </Link>
+                            </DropdownMenuItem>
+                        )}
                     </DropdownMenuContent>
                 </DropdownMenu>
             </SidebarMenuItem>

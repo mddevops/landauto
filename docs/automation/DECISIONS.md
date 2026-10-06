@@ -1975,6 +1975,26 @@ Owner instruction in the Phase 6 autopilot prompt (2026-10-05); P6-001.
 
 ---
 
+## D-110 — Workspace and Site Navigation UX
+
+**Status:** APPROVED
+
+### Decision
+
+- Workspace is not User: the UI never presents the user's name as the Workspace name.
+- The initial Workspace of every new account (email/password and Yandex, through the shared account-creation path) is named «Моё пространство». Existing Workspaces are not renamed or backfilled.
+- The Workspace switcher is always interactive, even with one Workspace. Its menu lists the user's Workspaces with a selected indicator, then «Создать пространство» and «Управление пространством». There is no Developer Workspace entry. Switching always lands on the Workspace dashboard; the backend `WorkspaceContext` stays authoritative.
+- A verified User may create additional Workspaces. The new Workspace gets a typed `public_id`, the creator becomes its Owner, it receives the default Free plan through `DefaultWorkspacePlan` (D-100) and becomes the current Workspace. There is no `max_workspaces` entitlement or cap.
+- Workspace management shows and renames the current Workspace and requires `edit_workspace`. Team, billing, ownership transfer, deletion, branding and developer workspace are out of scope.
+- The application has two shells: a Workspace context (all Sites, integrations, Workspace settings) and a Site context (the Site's sections, opened from a Site card, with «← Все сайты» back). Navigation items follow semantic permissions; the backend stays authoritative.
+- Account-level limits / anti-abuse policy for the number of Free Workspaces is an open product/billing follow-up.
+
+### Resolved By
+
+Owner approval in the Phase 7 autopilot instruction (2026-10-06); X-022.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

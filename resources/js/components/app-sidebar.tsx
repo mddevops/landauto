@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Car, LayoutGrid, Plug } from 'lucide-react';
+import { Car, LayoutGrid, Plug, Settings } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -12,50 +12,55 @@ import {
     SidebarMenu,
     SidebarMenuButton,
     SidebarMenuItem,
+    SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as integrationsIndex } from '@/routes/integrations';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { edit as editProfile } from '@/routes/profile';
-import type { Auth, NavItem, WorkspaceContext } from '@/types';
-import type { PlatformContext } from '@/types/platform';
-
-const mainNavItems: NavItem[] = [
-    {
-        title: 'Панель управления',
-        href: dashboard(),
-        icon: LayoutGrid,
-    },
-];
-
-const catalogNavItem: NavItem = {
-    title: 'Каталог автомобилей',
-    href: catalogIndex(),
-    icon: Car,
-};
-
-const integrationsNavItem: NavItem = {
-    title: 'Интеграции',
-    href: integrationsIndex(),
-    icon: Plug,
-};
+import { edit as workspaceSettings } from '@/routes/workspace/settings';
+import type { NavItem } from '@/types';
 
 export function AppSidebar() {
-    const { auth, platform, workspace } = usePage<{
-        auth: Auth;
-        platform?: PlatformContext;
-        workspace?: WorkspaceContext;
-    }>().props;
+    const { auth, platform, workspace } = usePage().props;
     const isVerified = auth.user.email_verified_at !== null;
-    const navItems = [
-        ...mainNavItems,
-        ...(workspace?.permissions.includes('view_integrations')
-            ? [integrationsNavItem]
-            : []),
-        ...(platform?.permissions.includes('view_catalog')
-            ? [catalogNavItem]
+    const permissions = workspace.permissions;
+
+    const workspaceItems: NavItem[] = [
+        { title: 'Все сайты', href: dashboard(), icon: LayoutGrid },
+        ...(permissions.includes('view_integrations')
+            ? [
+                  {
+                      title: 'Интеграции',
+                      href: integrationsIndex(),
+                      icon: Plug,
+                  },
+              ]
             : []),
     ];
+
+    const settingsItems: NavItem[] = permissions.includes('edit_workspace')
+        ? [
+              {
+                  title: 'Настройки пространства',
+                  href: workspaceSettings(),
+                  icon: Settings,
+              },
+          ]
+        : [];
+
+    const platformItems: NavItem[] = platform.permissions.includes(
+        'view_catalog',
+    )
+        ? [
+              {
+                  title: 'Каталог автомобилей',
+                  href: catalogIndex(),
+                  icon: Car,
+                  matchPrefix: true,
+              },
+          ]
+        : [];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -76,7 +81,21 @@ export function AppSidebar() {
             </SidebarHeader>
 
             <SidebarContent>
-                {isVerified && <NavMain items={navItems} />}
+                {isVerified && (
+                    <nav
+                        aria-label="Навигация по пространству"
+                        className="flex flex-col gap-2"
+                    >
+                        <NavMain items={workspaceItems} />
+                        {settingsItems.length > 0 && (
+                            <>
+                                <SidebarSeparator className="mx-0" />
+                                <NavMain items={settingsItems} />
+                            </>
+                        )}
+                        <NavMain items={platformItems} label="Платформа" />
+                    </nav>
+                )}
             </SidebarContent>
 
             <SidebarFooter>

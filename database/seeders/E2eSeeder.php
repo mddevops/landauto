@@ -106,6 +106,11 @@ class E2eSeeder extends Seeder
         $integrationsWorkspace->addMember($this->createUser('Игорь Админов', 'integrations-admin@landflow.test'), WorkspaceRole::Admin);
         $integrationsWorkspace->addMember($this->createUser('Ника Дизайнова', 'integrations-designer@landflow.test'), WorkspaceRole::Designer);
         $this->createIntegrationsSite($integrationsWorkspace);
+
+        // Workspace / Site navigation: a single-Workspace Owner who creates and renames Workspaces.
+        $navigator = $this->createUser('Нина Навигаторова', 'navigator@landflow.test');
+        $navigatorWorkspace = $this->createWorkspace($navigator, 'Автодом Навигатор', plan: $plan);
+        app(CreateSite::class)->create($navigatorWorkspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт навигации');
     }
 
     /**

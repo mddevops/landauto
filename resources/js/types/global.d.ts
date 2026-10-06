@@ -1,6 +1,6 @@
 import type { Auth } from '@/types/auth';
 import type { PlatformContext } from '@/types/platform';
-import type { WorkspaceContext } from '@/types/workspace';
+import type { SiteContext, WorkspaceContext } from '@/types/workspace';
 
 declare module 'react' {
     interface InputHTMLAttributes<T> {
@@ -15,6 +15,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             workspace: WorkspaceContext;
             platform: PlatformContext;
+            siteContext: SiteContext | null;
             sidebarOpen: boolean;
             [key: string]: unknown;
         };

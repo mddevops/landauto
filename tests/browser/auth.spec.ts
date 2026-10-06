@@ -145,7 +145,7 @@ test('user can log in with the keyboard and reach the dashboard', async ({
     await page.keyboard.press('Enter');
 
     await expect(page).toHaveURL('/dashboard');
-    await expect(page).toHaveTitle('Панель управления - Landflow');
+    await expect(page).toHaveTitle('Все сайты - Landflow');
 });
 
 test(
@@ -220,7 +220,7 @@ test(
         await expect(
             page
                 .locator('[data-slot="sidebar"]')
-                .getByRole('link', { name: 'Панель управления' }),
+                .getByRole('link', { name: 'Все сайты' }),
         ).toHaveCount(0);
 
         await captureScreenshot(
