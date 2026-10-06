@@ -2010,6 +2010,7 @@ Owner approval in the Phase 7 autopilot instruction (2026-10-06); X-022.
 - Custom domains need both `manage_domains` and the typed `custom_domain` entitlement; no plan-name checks; deny by default (Free has no `custom_domain`).
 - SSL is always issued and renewed by Landflow infrastructure (Let's Encrypt over ACME HTTP-01 after routing is verified). Customers never upload certificates, keys or CSRs. The application stores lifecycle metadata only (status, issued/expiry dates, safe error) and calls a `SslProvisioner` adapter; certificates, private keys and ACME account keys never enter the database, logs or repository.
 - The Landflow subdomain is never removed. Without an active custom primary it is the primary address; with one, it and alternate hosts 301-redirect to the primary, preserving path and query.
+- Provisioning adapter contract (`CUSTOM_DOMAIN_SSL_DRIVER=command`): the app runs the executable at `CUSTOM_DOMAIN_SSL_COMMAND` with the validated hostname as its only argument (argument vector, no shell), bounded by `CUSTOM_DOMAIN_SSL_TIMEOUT`. Exit 0 = certificate installed (optional stdout line `expires_at=<ISO-8601>`), exit 75 = temporary failure, any other exit = permanent failure. Output is never logged. Automatic retries back off (15, 30 min) for at most 3 attempts; afterwards, and after a permanent failure, only a manual retry (4 per hour per domain) restarts provisioning — inside the CA limit of 5 failed authorizations per hostname per hour.
 
 ### Resolved By
 

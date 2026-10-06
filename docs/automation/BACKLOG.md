@@ -3018,8 +3018,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-003 — SSL Provisioning Integration
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-002
+**Decision:** D-111
+
+### Result
+
+- Verified against Let's Encrypt documentation (challenge types, rate limits): HTTP-01 on port 80 after routing is verified; works for hosts CNAMEd to the ingress; no wildcard.
+- `SslProvisioner` contract with drivers `none` (default; safe «не настроен» message), `command` (configured executable, hostname as a discrete argument via Laravel/Symfony Process, hostname re-validated, timeout, exit-code contract, bounded output parsing, nothing logged) and `fake` (testing/e2e only; success, temporary and permanent failure).
+- `DomainSsl`: eligibility (active Site, verified ownership + routing, `custom_domain` entitlement, hostname not active for another Site; initiator `manage_domains` + entitlement checked by the controller), atomic claim to `provisioning`, queued `ProvisionDomainSsl` re-checks eligibility, statuses pending / provisioning / active / failed, bounded backoff (`ssl_attempts`, `ssl_retry_at`), stale-provisioning recovery, safe log events. DB stores metadata only (issued / expiry dates).
+- DNS check that completes DNS requests the certificate; `domains:reconcile` requests due certificates; manual «Выпустить сертификат» (`POST /sites/{site}/domains/{domain}/ssl`, 4/hour per domain).
+- Tests: before DNS ready, fake success / temporary backoff → failed / permanent → manual retry, job re-checks eligibility, lost entitlement, none driver, stale recovery, command argv + timeout + expiry parsing, exit-code mapping, invalid hostname / missing script refusal, no key columns, endpoint permission + rate limit, DNS check → SSL, reconcile.
 
 ---
 

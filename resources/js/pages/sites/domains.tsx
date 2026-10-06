@@ -1,5 +1,12 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { Globe, Lock, Plus, RefreshCw, Trash2 } from 'lucide-react';
+import {
+    Globe,
+    Lock,
+    Plus,
+    RefreshCw,
+    ShieldCheck,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -24,7 +31,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
-import { check, destroy, store } from '@/routes/sites/domains';
+import { check, destroy, ssl, store } from '@/routes/sites/domains';
 
 type DomainState =
     | 'pending'
@@ -44,6 +51,7 @@ export type SiteDomainRow = {
     ssl_status: 'pending' | 'provisioning' | 'active' | 'failed';
     is_primary: boolean;
     ssl_expires_at: string | null;
+    can_provision_ssl: boolean;
     last_checked_at: string | null;
     last_error: string | null;
     verification: { name: string; value: string };
@@ -131,16 +139,16 @@ function DomainCard({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [removing, setRemoving] = useState(false);
-    const [checking, setChecking] = useState(false);
+    const [busy, setBusy] = useState<'check' | 'ssl' | null>(null);
     const dnsConfigured = Boolean(dns.cname_target || dns.ipv4);
     const ids = { site: site.public_id, domain: domain.public_id };
 
-    function checkDns() {
-        setChecking(true);
+    function post(action: 'check' | 'ssl') {
+        setBusy(action);
         router.post(
-            check.url(ids),
+            action === 'check' ? check.url(ids) : ssl.url(ids),
             {},
-            { preserveScroll: true, onFinish: () => setChecking(false) },
+            { preserveScroll: true, onFinish: () => setBusy(null) },
         );
     }
 
@@ -193,6 +201,12 @@ function DomainCard({
                         label="Сертификат"
                     />
                 </ul>
+
+                {domain.ssl_status === 'active' && domain.ssl_expires_at && (
+                    <p className="text-sm text-muted-foreground">
+                        {`Сертификат действует до ${formatDate(domain.ssl_expires_at)} и продлевается автоматически.`}
+                    </p>
+                )}
 
                 {domain.last_error && (
                     <Alert variant="destructive">
@@ -263,17 +277,33 @@ function DomainCard({
                         <Button
                             type="button"
                             variant="outline"
-                            disabled={checking}
-                            onClick={checkDns}
+                            disabled={busy !== null}
+                            onClick={() => post('check')}
                             aria-label={`Проверить DNS домена ${domain.hostname}`}
                         >
-                            {checking ? (
+                            {busy === 'check' ? (
                                 <Spinner />
                             ) : (
                                 <RefreshCw aria-hidden="true" />
                             )}
                             Проверить DNS
                         </Button>
+                        {domain.can_provision_ssl && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={busy !== null}
+                                onClick={() => post('ssl')}
+                                aria-label={`Выпустить сертификат для ${domain.hostname}`}
+                            >
+                                {busy === 'ssl' ? (
+                                    <Spinner />
+                                ) : (
+                                    <ShieldCheck aria-hidden="true" />
+                                )}
+                                Выпустить сертификат
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             variant="outline"

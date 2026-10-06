@@ -54,8 +54,11 @@ final class DomainVerifier
 
         $code = collect($errors)->filter()->first();
         $domain->last_checked_at = now();
-        $domain->last_error_code = $code;
-        $domain->last_error_message_safe = $code === null ? null : self::MESSAGES[$code];
+
+        if ($code !== null || ! str_starts_with((string) $domain->last_error_code, 'ssl_')) {
+            $domain->last_error_code = $code;
+            $domain->last_error_message_safe = $code === null ? null : self::MESSAGES[$code];
+        }
         $domain->save();
 
         $context = ['site' => $domain->site->public_id, 'domain' => $domain->public_id, 'hostname' => $domain->hostname];

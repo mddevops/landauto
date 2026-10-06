@@ -5,6 +5,10 @@ namespace App\Providers;
 use App\Domains\Dns\DnsResolver;
 use App\Domains\Dns\FakeDnsResolver;
 use App\Domains\Dns\SystemDnsResolver;
+use App\Domains\Ssl\CommandSslProvisioner;
+use App\Domains\Ssl\FakeSslProvisioner;
+use App\Domains\Ssl\NoneSslProvisioner;
+use App\Domains\Ssl\SslProvisioner;
 use App\Enums\PlatformPermission;
 use App\Enums\WorkspacePermission;
 use App\Forms\Captcha\CaptchaVerifier;
@@ -17,6 +21,7 @@ use App\Integrations\Http\HostResolver;
 use App\Integrations\Http\SystemHostResolver;
 use App\Integrations\Testing\E2eIntegrationFakes;
 use App\Models\Site;
+use App\Models\SiteDomain;
 use App\Models\User;
 use App\Policies\SitePolicy;
 use App\Publishing\Rendering\NodePageRenderer;
@@ -61,6 +66,11 @@ class AppServiceProvider extends ServiceProvider
         });
         $this->app->bind(HostResolver::class, $this->usesE2eIntegrationFakes() ? E2eIntegrationFakes::class : SystemHostResolver::class);
         $this->app->bind(DnsResolver::class, $this->usesFakeDomainDriver('dns_driver') ? FakeDnsResolver::class : SystemDnsResolver::class);
+        $this->app->bind(SslProvisioner::class, match (true) {
+            $this->usesFakeDomainDriver('ssl_driver') => FakeSslProvisioner::class,
+            config('domains.ssl_driver') === 'command' => CommandSslProvisioner::class,
+            default => NoneSslProvisioner::class,
+        });
         $this->app->tag([EmailDeliveryAdapter::class, HttpDeliveryAdapter::class], DeliveryAdapters::TAG);
         $this->app->singleton(DeliveryAdapters::class, fn (Application $app): DeliveryAdapters => new DeliveryAdapters(
             $app->tagged(DeliveryAdapters::TAG),
@@ -109,6 +119,23 @@ class AppServiceProvider extends ServiceProvider
                 })
                 ->response(function () {
                     Inertia::flash('toast', ['type' => 'error', 'message' => 'Слишком частые проверки. Подождите минуту и попробуйте снова.']);
+
+                    return back(303);
+                });
+        });
+
+        // Manual certificate retries per domain; each failed ACME validation counts against the CA's per-hostname limit.
+        RateLimiter::for('domain-ssl', function (Request $request) {
+            $domain = $request->route('domain');
+
+            return Limit::perHour(4)
+                ->by('domain-ssl:'.match (true) {
+                    $domain instanceof SiteDomain => $domain->public_id,
+                    is_string($domain) => $domain,
+                    default => $request->ip() ?? 'unknown',
+                })
+                ->response(function () {
+                    Inertia::flash('toast', ['type' => 'error', 'message' => 'Слишком много попыток выпуска сертификата. Повторите позже.']);
 
                     return back(303);
                 });

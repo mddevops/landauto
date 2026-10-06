@@ -27,6 +27,8 @@ use Illuminate\Support\Str;
  * @property DomainVerificationStatus $verification_status
  * @property DomainRoutingStatus $routing_status
  * @property DomainSslStatus $ssl_status
+ * @property int $ssl_attempts
+ * @property CarbonImmutable|null $ssl_retry_at
  * @property bool $is_primary
  * @property CarbonImmutable|null $verified_at
  * @property CarbonImmutable|null $routing_verified_at
@@ -51,6 +53,7 @@ class SiteDomain extends Model
         'verification_status' => 'pending',
         'routing_status' => 'pending',
         'ssl_status' => 'pending',
+        'ssl_attempts' => 0,
         'is_primary' => false,
     ];
 
@@ -63,6 +66,8 @@ class SiteDomain extends Model
             'verification_status' => DomainVerificationStatus::class,
             'routing_status' => DomainRoutingStatus::class,
             'ssl_status' => DomainSslStatus::class,
+            'ssl_attempts' => 'integer',
+            'ssl_retry_at' => 'datetime',
             'is_primary' => 'boolean',
             'verified_at' => 'datetime',
             'routing_verified_at' => 'datetime',

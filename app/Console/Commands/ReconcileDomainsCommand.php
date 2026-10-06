@@ -18,7 +18,7 @@ class ReconcileDomainsCommand extends Command
     {
         $result = $reconciler->run();
 
-        $this->info("Checked: {$result['checked']}, skipped: {$result['skipped']}.");
+        $this->info("Checked: {$result['checked']}, skipped: {$result['skipped']}, SSL requested: {$result['ssl_requested']}.");
 
         return self::SUCCESS;
     }

@@ -196,7 +196,7 @@ class DomainVerificationTest extends TestCase
         $unentitled = SiteDomain::factory()->create(['hostname' => 'free.ru']);
         $this->dns->set('a', 'due.ru', ['203.0.113.10']);
 
-        $this->artisan('domains:reconcile')->assertSuccessful()->expectsOutput('Checked: 1, skipped: 1.');
+        $this->artisan('domains:reconcile')->assertSuccessful()->expectsOutput('Checked: 1, skipped: 1, SSL requested: 0.');
 
         $this->assertSame(DomainRoutingStatus::Verified, $due->refresh()->routing_status);
         $this->assertNull($unentitled->refresh()->last_checked_at);
