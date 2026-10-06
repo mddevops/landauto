@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-009 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 DONE.
 
-Next ready task: `P8-010 — Team E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-011 — Phase 8 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3275,8 +3275,14 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-010 — Team E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-001 through P8-009
+
+### Result
+
+- E2E fixtures (`E2eSeeder::createTeamWorkspace`): test-only `e2e-team` plan (10 seats), Owner «Автосалон Команда» with Site A (`team-a-e2e`, hero, Form + Submission, vehicle + offer) and Site B, Pricing / Publisher / Lead / Integrations members, a not-yet-member Designer and a foreign Workspace with fixed public IDs. Free plan untouched.
+- `team:e2e-invitation-url {email}`: refuses outside `testing` / `e2e`, rotates the open invitation's token, stores only the hash and prints the relative URL once (PHPUnit-covered).
+- `tests/browser/team.spec.ts`: invite → pending → accept → selected Site A only (Site B 404) → Designer edits design but not prices / Publish → suspend (access lost) → restore (switcher) → remove; specialised roles on Site A; Workspace library → Site A independent copy; Site A → B copy, default skip, explicit text-only update keeps the destination price, explicit offers update changes it; Workspace Asset copy survives source deletion; Publisher publishes with a note, Owner restores v1 into the Draft while production stays on v2; foreign vehicle / asset / member / Workspace switch 404; 375px checks for team dialogs, library, assets, conflict panel and history. No invitation token in Team HTML / props.
 
 ---
 

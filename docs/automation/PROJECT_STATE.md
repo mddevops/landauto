@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team: IN_PROGRESS** (branch `autopilot/phase8-2026-10-06`; P8-001 … P8-009 DONE). Next ready task per `BACKLOG.md`: `P8-010 — Team E2E`.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team: IN_PROGRESS** (branch `autopilot/phase8-2026-10-06`; P8-001 … P8-010 DONE). Next ready task per `BACKLOG.md`: `P8-011 — Phase 8 Review`.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -206,6 +206,7 @@ Current focus:
 - `P8-007` DONE: copy conflict resolution — conflict = destination Site + Series, default skip, read-only preview (text / media / status / offer matches and price differences), explicit «Обновить выбранное» per field with `edit_prices` / `edit_benefits` for commercial fields; offers matched by Equipment, missing created, unrelated destination offers kept; summary Copied / Updated / Skipped / Conflicts unresolved.
 - `P8-008` DONE (D-087 resolved by D-116): «Медиатека» — `workspace_assets` with SiteAsset file semantics and `manage_workspace_assets` (Owner); «Копировать на сайт» creates an independent `SiteAsset` file copy (Site access + `manage_assets`); deleting a Workspace Asset never touches Site copies; X-017 quota scope now includes Workspace Assets.
 - `P8-009` DONE: publication note (≤ 500, plain text, on the immutable `Publication`), richer paginated history (note, actor, restore count / last restore), `site_version_restores` audit in the restore transaction, unpublished-changes indicator via deterministic manifest hash; Publisher cannot restore. Follow-up: draft snapshot omits Site Vehicle custom name/description.
+- `P8-010` DONE: Team E2E fixtures (test-only 10-seat plan, Site A / B, role accounts, foreign Workspace with fixed IDs), env-gated `team:e2e-invitation-url` (testing / e2e only, hash-only storage) and `tests/browser/team.spec.ts` covering invitation, site access, suspend / restore / remove, role limits, library / copy / conflicts, shared assets, version notes / restore, foreign-resource 404s and 375px layouts.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1202,7 +1203,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P8-010 — Team E2E`** (Phase 8 — Team / Collaboration, IN_PROGRESS; P8-001 … P8-009 DONE; Phase 7 COMPLETED for planned scope, P7-009 DEFERRED) per `BACKLOG.md`.
+**Next: `P8-011 — Phase 8 Review`** (Phase 8 — Team / Collaboration, IN_PROGRESS; P8-001 … P8-010 DONE; Phase 7 COMPLETED for planned scope, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1760,7 +1761,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P8-010 — Team E2E`**. Phases 0–7 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED); Phase 8 is IN_PROGRESS (P8-001 … P8-009 DONE).
+**`P8-011 — Phase 8 Review`**. Phases 0–7 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED); Phase 8 is IN_PROGRESS (P8-001 … P8-010 DONE).
 
 ---
 
@@ -1817,4 +1818,4 @@ Core Landflow implementation: IN_PROGRESS (Phases 0–6 COMPLETED)
 ```
 
 **Current phase: Phase 8 — Team / Collaboration (IN_PROGRESS; Phases 0–7 COMPLETED, P7-009 DEFERRED).
-Next: `P8-010 — Team E2E` per `BACKLOG.md`.**
+Next: `P8-011 — Phase 8 Review` per `BACKLOG.md`.**

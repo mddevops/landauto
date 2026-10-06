@@ -43,7 +43,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'publisher@landflow.test'],
+            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'publisher@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -76,5 +76,11 @@ class E2eSeederTest extends TestCase
         $this->assertTrue(app(PublishValidator::class)->validate($integrations)->passes());
         $this->assertSame(0, $integrations->integrationBindings()->count());
         $this->assertSame(WorkspaceRole::Admin, $integrations->workspace->members()->whereRelation('user', 'email', 'integrations-admin@landflow.test')->sole()->role);
+
+        $teamSite = Site::query()->where('subdomain', 'team-a-e2e')->sole();
+        $this->assertTrue(app(PublishValidator::class)->validate($teamSite)->passes());
+        $this->assertSame(10, $entitlements->limit($teamSite->workspace, Entitlement::MaxMembers));
+        $this->assertSame(5, $teamSite->workspace->members()->count());
+        $this->assertFalse($teamSite->workspace->members()->whereRelation('user', 'email', 'team-designer@landflow.test')->exists());
     }
 }

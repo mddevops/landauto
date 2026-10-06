@@ -24,9 +24,13 @@ use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
+use App\Models\Submission;
 use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Models\WorkspaceAsset;
+use App\Models\WorkspaceMember;
+use App\Models\WorkspaceVehicle;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\Storage;
 use RuntimeException;
@@ -122,6 +126,61 @@ class E2eSeeder extends Seeder
         $domainsSite = app(CreateSite::class)->create($domainsWorkspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт с доменом');
         $domainsSite->forceFill(['subdomain' => 'domains-e2e'])->save();
         $this->placeBlock($domainsSite->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Свой домен: главная']);
+
+        $this->createTeamWorkspace();
+    }
+
+    /**
+     * Phase 8 team flows: a test-only Team plan (10 seats), an Owner with Site A and Site B, one
+     * member per specialised role, a Designer who is invited through the UI and a foreign
+     * Workspace whose resources have fixed public IDs (tests/browser/support/users.ts).
+     */
+    private function createTeamWorkspace(): void
+    {
+        $plan = Plan::factory()->create(['key' => 'e2e-team', 'name' => 'E2E Team']);
+        $plan->setEntitlement(Entitlement::MaxSites, 100);
+        $plan->setEntitlement(Entitlement::MaxMembers, 10);
+        $workspace = $this->createWorkspace($this->createUser('Тимур Командиров', 'team-owner@landflow.test'), 'Автосалон Команда', plan: $plan);
+        $blank = Template::query()->where('slug', 'blank')->firstOrFail();
+
+        $siteA = app(CreateSite::class)->create($workspace, $blank, 'Сайт команды А');
+        $siteA->forceFill(['subdomain' => 'team-a-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $siteB = app(CreateSite::class)->create($workspace, $blank, 'Сайт команды Б');
+        $siteB->forceFill(['subdomain' => 'team-b-e2e'])->save();
+        $this->placeBlock($siteA->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Команда: главная']);
+        $form = Form::factory()->for($siteA)->withLeadFields()->create(['name' => 'Заявка команды']);
+        Submission::factory()->create(['form_id' => $form->id]);
+
+        $mark = AutoMark::query()->firstOrCreate(['url' => 'testmash'], ['name' => 'Тестмаш', 'name_ru' => 'Тестмаш', 'country' => 'Россия', 'status' => true]);
+        $model = $mark->models()->firstOrCreate(['url' => 't-1'], ['name' => 'Т-1', 'name_ru' => 'Т-1', 'year_from' => 2024, 'status' => true]);
+        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2024, 'status' => true]);
+        $hatchback = $generation->series()->firstOrCreate(['url' => 'hatchback'], ['name' => 'Хэтчбек', 'status' => true]);
+        $generation->series()->firstOrCreate(['url' => 'wagon'], ['name' => 'Универсал', 'status' => true]);
+        $equipment = AutoEquipment::factory()
+            ->for(AutoModification::factory()->for($hatchback, 'series')->state(['name' => '1.6 MT 110 л.с.']), 'modification')
+            ->create(['name' => 'Стандарт']);
+        $vehicle = SiteVehicle::factory()->for($siteA)->forSeries($hatchback)->create(['sort_order' => 0]);
+        SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 200_000_000]);
+
+        $workspace->addMember($this->createUser('Полина Ценова', 'team-pricing@landflow.test'), WorkspaceRole::PricingManager);
+        $workspace->addMember($this->createUser('Пётр Выпускалов', 'team-publisher@landflow.test'), WorkspaceRole::Publisher);
+        $workspace->addMember($this->createUser('Лидия Заявкина', 'team-leads@landflow.test'), WorkspaceRole::LeadManager);
+        $workspace->addMember($this->createUser('Иван Связев', 'team-integrations@landflow.test'), WorkspaceRole::IntegrationsManager);
+        $this->createWorkspace($this->createUser('Дмитрий Макетов', 'team-designer@landflow.test'), 'Студия Макетова');
+
+        $foreign = new Workspace;
+        $foreign->forceFill(['public_id' => '01k0f0re0000000000000000w1', 'name' => 'Автосалон Чужой'])->save();
+        $foreignMember = new WorkspaceMember;
+        $foreignMember->forceFill([
+            'public_id' => '01k0f0re0000000000000000m1',
+            'workspace_id' => $foreign->id,
+            'user_id' => $this->createUser('Фёдор Чужаков', 'team-foreign@landflow.test')->id,
+            'role' => WorkspaceRole::Owner,
+            'status' => WorkspaceMemberStatus::Active,
+            'joined_at' => now(),
+        ])->save();
+        WorkspaceVehicle::factory()->for($foreign)->forSeries($hatchback)->create(['public_id' => '01k0f0re0000000000000000v1']);
+        WorkspaceAsset::factory()->for($foreign)->create(['public_id' => '01k0f0re0000000000000000a1']);
     }
 
     /**
