@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: NOT_STARTED.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 DONE.
 
-Next ready task: `P8-001 — Workspace Invitations`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-002 — Member Suspension / Removal`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3142,8 +3142,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-001 — Workspace Invitations
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-010
+
+### Result
+
+- Separate `workspace_invitations` entity (ULID `public_id`, normalized email, role, SHA-256 `token_hash`, `expires_at`, `accepted_at`, `cancelled_at`); no placeholder Users. Raw token (32 random bytes) exists only in the synchronously sent Russian `WorkspaceInvitationMail`; resend rotates the token; TTL `WORKSPACE_INVITATION_TTL_HOURS` (default 168).
+- «Команда» (`/workspace/team`, `manage_members`): members and open invitations, Пригласить / Отправить повторно / Отменить приглашение, seat state («Добавление участников недоступно на текущем тарифе.» when the limit is 0).
+- `max_members` enforced as reserved seats (membership rows + pending unexpired invitations) under a Workspace row lock for invite, resend of an expired invitation and acceptance; a lowered limit blocks only new invitations / acceptances.
+- Central `TeamAuthority`: Owner is never invitable; Admin invites and manages invitations only for roles below Admin.
+- Landing `/invitations/{token}` stores only a session reference and redirects to `/invitation` (`Referrer-Policy: no-referrer`); login / registration / verification return via the intended URL. Acceptance requires an authenticated, verified User with the matching normalized email, creates an active membership and switches the context; other Workspaces untouched.
+- Logs `workspace.invitation_created` / `_resent` / `_cancelled` / `_accepted` with public IDs only.
 
 ---
 

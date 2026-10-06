@@ -2039,6 +2039,23 @@ Owner instruction in the Phase 7 autopilot (2026-10-06); P7-005. Versions publis
 
 ---
 
+## D-113 — Workspace Invitations and Seat Accounting
+
+**Status:** APPROVED
+
+### Decision
+
+- Invitations are a separate `workspace_invitations` entity; no placeholder Users are created. Only a SHA-256 hash of a 32-byte random token is stored; resend rotates the token; TTL is `WORKSPACE_INVITATION_TTL_HOURS` (default 168). The raw token is mailed synchronously and never queued, logged or exposed in app props.
+- `max_members` counts reserved seats: active and suspended memberships plus pending, unexpired invitations. Removed members, cancelled and expired invitations do not count. The bootstrap Owner may exist with a limit of 0 (D-100 unchanged). A lowered limit never removes members; it blocks new invitations and acceptances only. Invite and accept lock the Workspace row.
+- Owner is never invitable. Owner invites any other role; Admin invites only roles below Admin.
+- Acceptance requires an authenticated, verified User whose normalized email equals the invitation email; registration and verification are never bypassed.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-001.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

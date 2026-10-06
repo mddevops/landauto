@@ -1,5 +1,5 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Car, LayoutGrid, Plug, Settings } from 'lucide-react';
+import { Car, LayoutGrid, Plug, Settings, Users } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -19,6 +19,7 @@ import { index as integrationsIndex } from '@/routes/integrations';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
+import { index as teamIndex } from '@/routes/workspace/team';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
@@ -36,6 +37,9 @@ export function AppSidebar() {
                       icon: Plug,
                   },
               ]
+            : []),
+        ...(permissions.includes('manage_members')
+            ? [{ title: 'Команда', href: teamIndex(), icon: Users }]
             : []),
     ];
 

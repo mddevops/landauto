@@ -12,4 +12,14 @@ enum WorkspaceRole: string
     case Admin = 'admin';
     case Designer = 'designer';
     case ContentEditor = 'content_editor';
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::Owner => 'Владелец',
+            self::Admin => 'Администратор',
+            self::Designer => 'Дизайнер',
+            self::ContentEditor => 'Редактор контента',
+        };
+    }
 }

@@ -36,6 +36,9 @@ use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
+use App\Http\Controllers\Team\InvitationAcceptanceController;
+use App\Http\Controllers\Team\WorkspaceInvitationController;
+use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
@@ -59,7 +62,18 @@ Route::middleware(['guest', 'throttle:yandex-oauth'])->group(function () {
         ->name('auth.yandex.callback');
 });
 
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('invitations/{token}', [InvitationAcceptanceController::class, 'show'])
+        ->where('token', '[A-Za-z0-9]{1,128}')
+        ->name('invitations.show');
+    Route::get('invitation', [InvitationAcceptanceController::class, 'pending'])->name('invitations.pending');
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('invitation/accept', [InvitationAcceptanceController::class, 'accept'])
+        ->middleware('throttle:10,1')
+        ->name('invitations.accept');
+
     Route::get('dashboard', DashboardController::class)
         ->middleware(RequireWorkspaceContext::class)
         ->name('dashboard');
@@ -76,6 +90,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(RequireWorkspaceContext::class)->group(function () {
         Route::get('workspace/settings', [WorkspaceSettingsController::class, 'edit'])->name('workspace.settings.edit');
         Route::patch('workspace/settings', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
+
+        Route::prefix('workspace/team')->name('workspace.team.')->group(function () {
+            Route::get('/', [WorkspaceTeamController::class, 'index'])->name('index');
+            Route::post('invitations', [WorkspaceInvitationController::class, 'store'])
+                ->middleware('throttle:20,1')
+                ->name('invitations.store');
+            Route::post('invitations/{invitation}/resend', [WorkspaceInvitationController::class, 'resend'])
+                ->whereUlid('invitation')
+                ->middleware('throttle:20,1')
+                ->name('invitations.resend');
+            Route::delete('invitations/{invitation}', [WorkspaceInvitationController::class, 'destroy'])
+                ->whereUlid('invitation')
+                ->name('invitations.destroy');
+        });
     });
 
     Route::get('sites/create', [SiteController::class, 'create'])

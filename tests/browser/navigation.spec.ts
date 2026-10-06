@@ -217,7 +217,7 @@ test('admin site navigation includes leads and settings but not workspace settin
         admin
             .getByRole('navigation', { name: 'Навигация по пространству' })
             .getByRole('link'),
-    ).toHaveText(['Все сайты', 'Интеграции']);
+    ).toHaveText(['Все сайты', 'Интеграции', 'Команда']);
 
     await admin
         .getByRole('link', {
