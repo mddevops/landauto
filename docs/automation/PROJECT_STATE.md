@@ -189,6 +189,7 @@ Current focus:
 - Phase 7 (in progress on `autopilot/phase7-2026-10-06`):
 - `X-022` DONE (D-110): shared `CreateWorkspace` action; new accounts get «Моё пространство»; always-interactive switcher with «Создать пространство» / «Управление пространством»; `/workspaces/create` (Free plan, Owner, becomes current, no cap) and `/workspace/settings` rename (`edit_workspace`); Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and Site shell (`SiteLayout`, backend `siteContext` abilities, grouped Site sections, «← Все сайты»); `/sites/{site}` «Общее» with rename under `edit_site_settings`.
 - `P7-001` DONE (D-111): `site_domains` (normalized globally unique hostname, TXT token, independent verification/routing/SSL states, no key material), `CustomHostname` validation, `CustomDomainAccess` (`manage_domains` + `custom_domain`), «Домены» page with DNS instructions from `config/domains.php`.
+- `P7-002` DONE: `DnsResolver` (system / fake, fake only in testing/e2e), `DomainVerifier` (exact TXT ownership, sticky; routing via CNAME chain or A/AAAA vs configured ingress, re-checked every time; safe error codes), rate-limited «Проверить DNS», `domains:reconcile` every 5 minutes, `domains:fake-dns` E2E helper. No HTTP fetch.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

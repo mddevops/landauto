@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Domains;
 
 use App\Domains\CustomDomainAccess;
+use App\Domains\DomainVerifier;
 use App\Domains\SiteDomains;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\StoreSiteDomainRequest;
@@ -60,6 +61,19 @@ class SiteDomainController extends Controller
         $this->domains->add($site, $request->string('hostname')->toString());
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Домен добавлен. Настройте DNS-записи и запустите проверку.']);
+
+        return to_route('sites.domains.index', $site);
+    }
+
+    public function check(Request $request, Site $site, SiteDomain $domain, DomainVerifier $verifier): RedirectResponse
+    {
+        $this->authorizeDomain($request, $site, $domain);
+
+        $verifier->check($domain);
+
+        Inertia::flash('toast', $domain->isDnsReady()
+            ? ['type' => 'success', 'message' => 'DNS настроен верно.']
+            : ['type' => 'error', 'message' => $domain->last_error_message_safe ?? 'DNS ещё не настроен.']);
 
         return to_route('sites.domains.index', $site);
     }

@@ -2,6 +2,8 @@
 
 namespace Tests;
 
+use App\Domains\Dns\DnsResolver;
+use App\Domains\Dns\FakeDnsResolver;
 use App\Integrations\Http\HostResolver;
 use App\Publishing\Rendering\PageRenderer;
 use Illuminate\Foundation\Application;
@@ -53,6 +55,7 @@ abstract class TestCase extends BaseTestCase
         // No real network in tests: unfaked HTTP fails, and DNS resolves nothing unless a test binds hosts.
         Http::preventStrayRequests();
         $this->app->instance(HostResolver::class, new FakeHostResolver([]));
+        $this->app->instance(DnsResolver::class, new FakeDnsResolver);
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

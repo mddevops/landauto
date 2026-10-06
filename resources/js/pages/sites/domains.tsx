@@ -1,5 +1,5 @@
 import { Form, Head, router } from '@inertiajs/react';
-import { Globe, Lock, Plus, Trash2 } from 'lucide-react';
+import { Globe, Lock, Plus, RefreshCw, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
@@ -24,7 +24,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
-import { destroy, store } from '@/routes/sites/domains';
+import { check, destroy, store } from '@/routes/sites/domains';
 
 type DomainState =
     | 'pending'
@@ -131,11 +131,22 @@ function DomainCard({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [removing, setRemoving] = useState(false);
+    const [checking, setChecking] = useState(false);
     const dnsConfigured = Boolean(dns.cname_target || dns.ipv4);
+    const ids = { site: site.public_id, domain: domain.public_id };
+
+    function checkDns() {
+        setChecking(true);
+        router.post(
+            check.url(ids),
+            {},
+            { preserveScroll: true, onFinish: () => setChecking(false) },
+        );
+    }
 
     function remove() {
         setRemoving(true);
-        router.delete(destroy([site.public_id, domain.public_id]).url, {
+        router.delete(destroy.url(ids), {
             preserveScroll: true,
             onFinish: () => {
                 setRemoving(false);
@@ -249,6 +260,20 @@ function DomainCard({
 
                 {canManage && (
                     <div className="flex flex-wrap gap-2">
+                        <Button
+                            type="button"
+                            variant="outline"
+                            disabled={checking}
+                            onClick={checkDns}
+                            aria-label={`Проверить DNS домена ${domain.hostname}`}
+                        >
+                            {checking ? (
+                                <Spinner />
+                            ) : (
+                                <RefreshCw aria-hidden="true" />
+                            )}
+                            Проверить DNS
+                        </Button>
                         <Button
                             type="button"
                             variant="outline"

@@ -11,7 +11,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Support\Carbon;
+use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
 /**
@@ -28,15 +28,15 @@ use Illuminate\Support\Str;
  * @property DomainRoutingStatus $routing_status
  * @property DomainSslStatus $ssl_status
  * @property bool $is_primary
- * @property Carbon|null $verified_at
- * @property Carbon|null $routing_verified_at
- * @property Carbon|null $ssl_issued_at
- * @property Carbon|null $ssl_expires_at
- * @property Carbon|null $last_checked_at
+ * @property CarbonImmutable|null $verified_at
+ * @property CarbonImmutable|null $routing_verified_at
+ * @property CarbonImmutable|null $ssl_issued_at
+ * @property CarbonImmutable|null $ssl_expires_at
+ * @property CarbonImmutable|null $last_checked_at
  * @property string|null $last_error_code
  * @property string|null $last_error_message_safe
- * @property Carbon|null $created_at
- * @property Carbon|null $updated_at
+ * @property CarbonImmutable|null $created_at
+ * @property CarbonImmutable|null $updated_at
  */
 #[Hidden(['id', 'site_id', 'verification_token'])]
 class SiteDomain extends Model

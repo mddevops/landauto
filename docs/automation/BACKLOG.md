@@ -2986,8 +2986,8 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-001 — Custom Domain Schema
 
-**Status:** DONE  
-**Dependencies:** P6-015, X-022  
+**Status:** DONE
+**Dependencies:** P6-015, X-022
 **Decision:** D-111
 
 ### Result
@@ -3002,8 +3002,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-002 — Domain Validation / Verification
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-001
+**Decision:** D-111
+
+### Result
+
+- `DnsResolver` abstraction: `SystemDnsResolver` (`dns_get_record`, bounded answers) and `FakeDnsResolver` (cache-backed; bound only when `CUSTOM_DOMAIN_DNS_DRIVER=fake` in the testing/e2e environments). No HTTP fetch of the customer host.
+- `DomainVerifier`: ownership by exact TXT match on `_landflow-verification.<host>` (sticky once verified); routing re-evaluated every check — CNAME chain (≤5 hops) reaching `CUSTOM_DOMAIN_CNAME_TARGET`, or all A answers equal to `CUSTOM_DOMAIN_IPV4` and AAAA empty or equal to `CUSTOM_DOMAIN_IPV6`. Independent states, safe error codes and Russian messages only; log events `custom_domain.ownership_verified` / `custom_domain.routing_verified`.
+- Manual «Проверить DNS» (`POST /sites/{site}/domains/{domain}/check`), server-side, rate-limited per Site (`domain-checks`, `CUSTOM_DOMAIN_CHECK_PER_MINUTE`).
+- `domains:reconcile` scheduled every 5 minutes (`withoutOverlapping`): pending domains after `reconcile_after_minutes`, ready domains daily; skips Workspaces without `custom_domain`. `domains:fake-dns` E2E helper refuses without the fake driver.
+- Tests: TXT correct/wrong/missing, A ingress, CNAME chain, wrong routing, AAAA mismatch/normalization, missing ingress config, sticky ownership + routing regression, no HTTP, logs, rate limit, permission, reconcile scope, fake command guard.
 
 ---
 
@@ -3802,8 +3811,8 @@ Result:
 
 ## X-022 — Workspace / Site Dashboard Navigation
 
-**Status:** DONE  
-**Trigger:** before P7-001  
+**Status:** DONE
+**Trigger:** before P7-001
 **Decision:** D-110
 
 Separate the Workspace context from the Site context and prepare the navigation structure for Phase 7 domain, SEO and publishing settings: default «Моё пространство» name for new accounts, an always-interactive Workspace switcher, Workspace creation and management, a Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and a Site shell with grouped Site sections.

@@ -111,6 +111,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('domains', [SiteDomainController::class, 'index'])->name('domains.index');
             Route::post('domains', [SiteDomainController::class, 'store'])->middleware('throttle:20,1')->name('domains.store');
             Route::delete('domains/{domain}', [SiteDomainController::class, 'destroy'])->whereUlid('domain')->name('domains.destroy');
+            Route::post('domains/{domain}/check', [SiteDomainController::class, 'check'])->whereUlid('domain')->middleware('throttle:domain-checks')->name('domains.check');
             Route::post('versions/{version}/restore', SiteVersionRestoreController::class)->whereUlid('version')->middleware('throttle:10,1')->name('versions.restore');
             Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
                 ->whereUlid('form')

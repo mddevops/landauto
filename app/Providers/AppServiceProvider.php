@@ -2,6 +2,9 @@
 
 namespace App\Providers;
 
+use App\Domains\Dns\DnsResolver;
+use App\Domains\Dns\FakeDnsResolver;
+use App\Domains\Dns\SystemDnsResolver;
 use App\Enums\PlatformPermission;
 use App\Enums\WorkspacePermission;
 use App\Forms\Captcha\CaptchaVerifier;
@@ -32,6 +35,7 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
+use Inertia\Inertia;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -56,6 +60,7 @@ class AppServiceProvider extends ServiceProvider
             );
         });
         $this->app->bind(HostResolver::class, $this->usesE2eIntegrationFakes() ? E2eIntegrationFakes::class : SystemHostResolver::class);
+        $this->app->bind(DnsResolver::class, $this->usesFakeDomainDriver('dns_driver') ? FakeDnsResolver::class : SystemDnsResolver::class);
         $this->app->tag([EmailDeliveryAdapter::class, HttpDeliveryAdapter::class], DeliveryAdapters::TAG);
         $this->app->singleton(DeliveryAdapters::class, fn (Application $app): DeliveryAdapters => new DeliveryAdapters(
             $app->tagged(DeliveryAdapters::TAG),
@@ -92,11 +97,33 @@ class AppServiceProvider extends ServiceProvider
         RateLimiter::for('form-submissions', fn (Request $request) => Limit::perMinute(30)
             ->by($request->ip() ?? 'unknown')
             ->response(fn () => response()->json(['message' => 'Слишком много попыток. Попробуйте позже.'], 429)));
+
+        RateLimiter::for('domain-checks', function (Request $request) {
+            $site = $request->route('site');
+
+            return Limit::perMinute(max(1, (int) config('domains.check_per_minute')))
+                ->by('domain-checks:'.match (true) {
+                    $site instanceof Site => $site->public_id,
+                    is_string($site) => $site,
+                    default => $request->ip() ?? 'unknown',
+                })
+                ->response(function () {
+                    Inertia::flash('toast', ['type' => 'error', 'message' => 'Слишком частые проверки. Подождите минуту и попробуйте снова.']);
+
+                    return back(303);
+                });
+        });
     }
 
     private function usesE2eIntegrationFakes(): bool
     {
         return config('integrations.e2e_fake') === true && $this->app->environment(['testing', 'e2e']);
+    }
+
+    /** Domain fakes (DNS, SSL) are honoured only in the testing and e2e environments. */
+    private function usesFakeDomainDriver(string $key): bool
+    {
+        return config("domains.{$key}") === 'fake' && $this->app->environment(['testing', 'e2e']);
     }
 
     /**
