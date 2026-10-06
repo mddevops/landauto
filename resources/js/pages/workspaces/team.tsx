@@ -35,6 +35,7 @@ import { destroy, resend, store } from '@/routes/workspace/team/invitations';
 import {
     destroy as removeMember,
     reactivate as reactivateMember,
+    role as updateRole,
     siteAccess as updateSiteAccess,
     suspend as suspendMember,
 } from '@/routes/workspace/team/members';
@@ -72,8 +73,92 @@ type TeamProps = {
     seats: { limit: number; reserved: number };
     assignableRoles: Choice[];
     allSitesRoles: string[];
+    canManageRoles: boolean;
     invitationTtlHours: number;
 };
+
+function RoleDialog({
+    member,
+    roles,
+    allSitesRoles,
+}: {
+    member: MemberRow;
+    roles: Choice[];
+    allSitesRoles: string[];
+}) {
+    const [open, setOpen] = useState(false);
+    const form = useForm({ role: member.role });
+    const forcesAllSites =
+        allSitesRoles.includes(form.data.role) &&
+        member.site_access_mode === 'selected_sites';
+
+    function submit(event: FormEvent) {
+        event.preventDefault();
+        form.submit(updateRole(member.public_id), {
+            preserveScroll: true,
+            onSuccess: () => setOpen(false),
+        });
+    }
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+                form.clearErrors();
+
+                if (next) {
+                    form.setData('role', member.role);
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline">
+                    Изменить роль
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Роль участника</DialogTitle>
+                    <DialogDescription>
+                        {member.name || member.email}. Роль определяет, что
+                        участник может делать в пространстве.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={submit} className="grid gap-4">
+                    <SelectField
+                        id={`role-${member.public_id}`}
+                        label="Роль"
+                        choices={roles}
+                        value={form.data.role}
+                        onChange={(event) =>
+                            form.setData('role', event.target.value)
+                        }
+                        required
+                        error={form.errors.role}
+                    />
+                    {forcesAllSites && (
+                        <p className="text-sm text-muted-foreground">
+                            Для этой роли откроется доступ ко всем сайтам
+                            пространства.
+                        </p>
+                    )}
+                    <DialogFooter className="gap-2">
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Отмена
+                            </Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={form.processing}>
+                            {form.processing && <Spinner />}
+                            Сохранить
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function siteAccessSummary(mode: SiteAccessMode, count: number): string {
     return mode === 'all_sites' ? 'Все сайты' : `Выбранные сайты: ${count}`;
@@ -375,10 +460,14 @@ function MemberActions({
     member,
     sites,
     allSitesRoles,
+    roles,
+    canManageRoles,
 }: {
     member: MemberRow;
     sites: TeamSite[];
     allSitesRoles: string[];
+    roles: Choice[];
+    canManageRoles: boolean;
 }) {
     const [confirmRemove, setConfirmRemove] = useState(false);
     const [processing, setProcessing] = useState(false);
@@ -397,6 +486,13 @@ function MemberActions({
 
     return (
         <div className="flex flex-wrap gap-2">
+            {canManageRoles && (
+                <RoleDialog
+                    member={member}
+                    roles={roles}
+                    allSitesRoles={allSitesRoles}
+                />
+            )}
             {!allSitesRoles.includes(member.role) && (
                 <SiteAccessDialog member={member} sites={sites} />
             )}
@@ -470,6 +566,7 @@ export default function WorkspaceTeam({
     seats,
     assignableRoles,
     allSitesRoles,
+    canManageRoles,
     invitationTtlHours,
 }: TeamProps) {
     const unavailable = seats.limit === 0;
@@ -560,6 +657,8 @@ export default function WorkspaceTeam({
                                             member={member}
                                             sites={sites}
                                             allSitesRoles={allSitesRoles}
+                                            roles={assignableRoles}
+                                            canManageRoles={canManageRoles}
                                         />
                                     </div>
                                 </li>

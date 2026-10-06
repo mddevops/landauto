@@ -2,10 +2,13 @@
 
 namespace App\Team;
 
+use App\Enums\SiteAccessMode;
 use App\Enums\WorkspaceMemberStatus;
+use App\Enums\WorkspaceRole;
 use App\Enums\WorkspaceStatus;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
+use App\Support\SiteAccessResolver;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Validation\ValidationException;
@@ -19,7 +22,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  */
 final class WorkspaceMembers
 {
-    public function __construct(private TeamAuthority $authority) {}
+    public function __construct(
+        private TeamAuthority $authority,
+        private MemberSiteAccess $siteAccess,
+    ) {}
 
     public function suspend(Workspace $workspace, WorkspaceMember $actor, string $memberPublicId): WorkspaceMember
     {
@@ -29,6 +35,39 @@ final class WorkspaceMembers
     public function reactivate(Workspace $workspace, WorkspaceMember $actor, string $memberPublicId): WorkspaceMember
     {
         return $this->changeStatus($workspace, $actor, $memberPublicId, WorkspaceMemberStatus::Active, 'workspace.member_reactivated');
+    }
+
+    /**
+     * Callers check `manage_roles`. Owner is never assignable here (ownership transfer is separate);
+     * roles that span Workspace-scoped resources are forced to all Sites.
+     */
+    public function changeRole(Workspace $workspace, WorkspaceMember $actor, string $memberPublicId, WorkspaceRole $role): WorkspaceMember
+    {
+        if (! $this->authority->canAssign($actor->role, $role)) {
+            throw ValidationException::withMessages(['role' => 'Эту роль нельзя назначить.']);
+        }
+
+        [$member, $previous] = DB::transaction(function () use ($workspace, $actor, $memberPublicId, $role): array {
+            $member = $this->manageableMember($workspace, $actor, $memberPublicId);
+            $previous = $member->role;
+            $member->forceFill(['role' => $role])->save();
+
+            if (SiteAccessResolver::forcesAllSites($role)) {
+                $this->siteAccess->apply($member, SiteAccessMode::AllSites, []);
+            }
+
+            return [$member, $previous];
+        });
+
+        Log::info('workspace.member_role_changed', [
+            'workspace' => $workspace->public_id,
+            'member' => $member->public_id,
+            'actor' => $actor->public_id,
+            'from' => $previous->value,
+            'to' => $role->value,
+        ]);
+
+        return $member;
     }
 
     public function remove(Workspace $workspace, WorkspaceMember $actor, string $memberPublicId): WorkspaceMember

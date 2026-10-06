@@ -27,6 +27,7 @@ class WorkspacePermissionResolver
                 WorkspacePermission::EditVehicles,
                 WorkspacePermission::EditPrices,
                 WorkspacePermission::EditBenefits,
+                WorkspacePermission::ImportVehicles,
                 WorkspacePermission::ViewIntegrations,
                 WorkspacePermission::ManageIntegrations,
                 WorkspacePermission::EditFormRoutes,
@@ -52,6 +53,33 @@ class WorkspacePermissionResolver
                 WorkspacePermission::EditText,
                 WorkspacePermission::EditImages,
                 WorkspacePermission::EditSeoBasic,
+            ],
+            WorkspaceRole::PricingManager => [
+                WorkspacePermission::ViewSite,
+                WorkspacePermission::ViewVehicles,
+                WorkspacePermission::EditPrices,
+                WorkspacePermission::EditBenefits,
+            ],
+            // No export_submissions while D-094 is open.
+            WorkspaceRole::LeadManager => [
+                WorkspacePermission::ViewSite,
+                WorkspacePermission::ViewSubmissions,
+                WorkspacePermission::ViewDeliveryLogs,
+                WorkspacePermission::RetryDeliveries,
+            ],
+            // Delivery metadata only: lead contents need view_submissions.
+            WorkspaceRole::IntegrationsManager => [
+                WorkspacePermission::ViewSite,
+                WorkspacePermission::ViewIntegrations,
+                WorkspacePermission::ManageIntegrations,
+                WorkspacePermission::EditFormRoutes,
+                WorkspacePermission::ViewDeliveryLogs,
+                WorkspacePermission::RetryDeliveries,
+            ],
+            WorkspaceRole::Publisher => [
+                WorkspacePermission::ViewSite,
+                WorkspacePermission::PreviewSite,
+                WorkspacePermission::PublishSite,
             ],
         };
     }

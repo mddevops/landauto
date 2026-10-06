@@ -29,7 +29,7 @@ final class SiteAccessResolver
      */
     public static function forcesAllSites(WorkspaceRole $role): bool
     {
-        return in_array($role, [WorkspaceRole::Owner, WorkspaceRole::Admin], true);
+        return in_array($role, [WorkspaceRole::Owner, WorkspaceRole::Admin, WorkspaceRole::IntegrationsManager], true);
     }
 
     public static function effectiveMode(WorkspaceMember $member): SiteAccessMode

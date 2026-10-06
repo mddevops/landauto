@@ -89,6 +89,7 @@ class WorkspaceTeamController extends Controller
                 fn (WorkspaceRole $role): string => $role->value,
                 array_filter(WorkspaceRole::cases(), fn (WorkspaceRole $role): bool => SiteAccessResolver::forcesAllSites($role)),
             )),
+            'canManageRoles' => Gate::allows(WorkspacePermission::ManageRoles->value),
             'invitationTtlHours' => (int) config('workspaces.invitation_ttl_hours'),
         ]);
     }

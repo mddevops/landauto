@@ -287,7 +287,7 @@ class SiteAccessTest extends TestCase
                 ->has('sites', 2)
                 ->where('members.1.site_access_mode', 'selected_sites')
                 ->where('members.1.sites', [$this->siteA->public_id])
-                ->where('allSitesRoles', ['owner', 'admin']));
+                ->where('allSitesRoles', ['owner', 'admin', 'integrations_manager']));
 
         $this->assertStringNotContainsString('"site_id"', (string) $response->getContent());
     }

@@ -218,6 +218,16 @@ Not automatically granted:
 
 ---
 
+**Implemented in Phase 8 (P8-004, D-114).** Sections 10–13 below are the original design notes; the code matrix in `WorkspacePermissionResolver` is authoritative:
+
+- `pricing_manager`: view_site, view_vehicles, edit_prices, edit_benefits.
+- `lead_manager`: view_site, view_submissions, view_delivery_logs, retry_deliveries — no `export_submissions` while D-094 is open.
+- `integrations_manager`: view_site, view_integrations, manage_integrations, edit_form_routes, view_delivery_logs, retry_deliveries — no `view_submissions`; always `all_sites`.
+- `publisher`: view_site, preview_site, publish_site — no `restore_version`.
+- Admin additionally has `import_vehicles`. Role changes need `manage_roles` (Owner); Owner is never assignable. Site access scope (`all_sites` / `selected_sites`) limits which Sites a role applies to; there are no Site-specific roles (D-114 supersedes the future pattern in §80–§82 for Phase 8).
+
+---
+
 # 10. Pricing Manager Role
 
 Potential Team role.

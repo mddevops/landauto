@@ -4,6 +4,7 @@ namespace App\Http\Controllers\Team;
 
 use App\Enums\SiteAccessMode;
 use App\Enums\WorkspacePermission;
+use App\Enums\WorkspaceRole;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Team\UpdateMemberSiteAccessRequest;
 use App\Models\Workspace;
@@ -12,7 +13,9 @@ use App\Support\WorkspaceContext;
 use App\Team\MemberSiteAccess;
 use App\Team\WorkspaceMembers;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
 use Inertia\Inertia;
 
 class WorkspaceMemberController extends Controller
@@ -51,6 +54,20 @@ class WorkspaceMemberController extends Controller
         );
 
         return $this->done('Доступ к сайтам сохранён.');
+    }
+
+    public function updateRole(Request $request, string $member, WorkspaceContext $workspaceContext): RedirectResponse
+    {
+        Gate::authorize(WorkspacePermission::ManageRoles->value);
+        $validated = $request->validate(
+            ['role' => ['required', 'string', Rule::enum(WorkspaceRole::class)]],
+            attributes: ['role' => 'роль'],
+        );
+
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $this->members->changeRole($workspace, $actor, $member, WorkspaceRole::from($validated['role']));
+
+        return $this->done('Роль участника изменена.');
     }
 
     public function destroy(string $member, WorkspaceContext $workspaceContext): RedirectResponse

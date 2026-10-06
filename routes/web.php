@@ -111,6 +111,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('members/{member}/reactivate', [WorkspaceMemberController::class, 'reactivate'])
                 ->whereUlid('member')
                 ->name('members.reactivate');
+            Route::put('members/{member}/role', [WorkspaceMemberController::class, 'updateRole'])
+                ->whereUlid('member')
+                ->name('members.role');
             Route::put('members/{member}/site-access', [WorkspaceMemberController::class, 'updateSiteAccess'])
                 ->whereUlid('member')
                 ->name('members.site-access');

@@ -49,7 +49,7 @@ class WorkspaceInvitationTest extends TestCase
             ->where('invitations.0.public_id', $invitation->public_id)
             ->where('invitations.0.state', 'pending')
             ->where('seats', ['limit' => 3, 'reserved' => 3])
-            ->has('assignableRoles', 3));
+            ->has('assignableRoles', 7));
 
         $content = (string) $response->getContent();
         $this->assertStringNotContainsString($invitation->token_hash, $content);

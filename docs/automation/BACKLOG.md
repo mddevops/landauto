@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-003 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-004 DONE.
 
-Next ready task: `P8-004 — Expanded System Roles`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-005 — Workspace Vehicle Library`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3186,7 +3186,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-004 — Expanded System Roles
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-003
 
 ### Roles
@@ -3195,6 +3195,12 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - Lead Manager
 - Integrations Manager
 - Publisher
+
+### Result
+
+- New system roles `pricing_manager` («Менеджер по ценам»), `lead_manager` («Менеджер по заявкам»), `integrations_manager` («Менеджер интеграций», always `all_sites`), `publisher` («Публикатор») with the exact approved permission lists; no `export_submissions` (D-094), no `view_submissions` for Integrations Manager, no `restore_version` for Publisher. Admin gains `import_vehicles` (no library / assets / billing / roles).
+- Role change («Изменить роль») requires `manage_roles` (Owner); Owner is never assignable; no self-change; changing to Admin / Integrations Manager forces `all_sites` and drops Site rows. Logs `workspace.member_role_changed`.
+- Exact matrix and per-role HTTP behavior covered by tests; `PERMISSIONS.md` notes the implemented matrix.
 
 ---
 
