@@ -33,7 +33,7 @@ class PublishedSnapshotBuilderTest extends TestCase
 
         $this->assertSame(1, $manifest['schema']);
         $this->assertSame(['public_id' => $this->site->public_id, 'name' => 'Дилер'], $manifest['site']);
-        $this->assertTrue($manifest['branding']);
+        $this->assertArrayNotHasKey('branding', $manifest, 'Branding follows the live entitlement, never the version.');
         $this->assertCount(1, $manifest['pages']);
         $page = $manifest['pages'][0];
         $this->assertSame([$this->home->public_id, 'home', true], [$page['public_id'], $page['slug'], $page['is_home']]);

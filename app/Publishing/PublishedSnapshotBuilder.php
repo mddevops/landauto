@@ -4,7 +4,6 @@ namespace App\Publishing;
 
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockStateValidator;
-use App\Enums\Entitlement;
 use App\Enums\PublishedAssetKind;
 use App\Forms\SiteSecurityPolicy;
 use App\Models\BlockInstance;
@@ -19,7 +18,6 @@ use App\Models\SiteOfferBenefit;
 use App\Models\SiteVehicle;
 use App\Popups\PopupRuntime;
 use App\Support\SiteDesignTokens;
-use App\Support\WorkspaceEntitlements;
 use Illuminate\Support\Facades\DB;
 
 /**
@@ -36,7 +34,6 @@ final class PublishedSnapshotBuilder
         private VehicleBindings $vehicles,
         private PopupRuntime $popups,
         private BlockStateValidator $states,
-        private WorkspaceEntitlements $entitlements,
     ) {}
 
     public function build(Site $site): PublishedSnapshot
@@ -146,7 +143,6 @@ final class PublishedSnapshotBuilder
         $manifest = [
             'schema' => self::SCHEMA,
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
-            'branding' => ! $this->entitlements->allows($site->workspace, Entitlement::RemoveBranding),
             'design' => SiteDesignTokens::resolve($site->design_tokens),
             'captcha_required' => SiteSecurityPolicy::forSite($site)->captchaRequired,
             'pages' => $manifestPages,

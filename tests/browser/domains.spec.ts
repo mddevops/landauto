@@ -168,6 +168,20 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
         `${customUrl}/`,
     );
 
+    // Branding follows the live `remove_branding` entitlement, without republishing.
+    await expect(visitor.getByTestId('landflow-branding')).toHaveText(
+        'Создано на Landflow',
+    );
+    artisan(
+        'tinker',
+        "--execute=App\\Models\\Plan::query()->where('key', 'e2e-domains')->firstOrFail()->setEntitlement(App\\Enums\\Entitlement::RemoveBranding, true);",
+    );
+    await visitor.reload();
+    await expect(
+        visitor.getByRole('heading', { name: 'Свой домен: главная' }),
+    ).toBeVisible();
+    await expect(visitor.getByTestId('landflow-branding')).toHaveCount(0);
+
     await visitor.goto(`${customUrl}/sitemap.xml`);
     const sitemap = await visitor.content();
     expect(sitemap).toContain(`${customUrl}/`);

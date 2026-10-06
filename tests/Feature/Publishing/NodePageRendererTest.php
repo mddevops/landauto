@@ -28,14 +28,13 @@ class NodePageRendererTest extends TestCase
             'assets' => [],
             'vehicles' => [],
             'popups' => [],
-            'branding' => true,
             'form_action' => '/_landflow/forms/01JAAAAAAAAAAAAAAAAAAAAAAA',
         ]]);
 
         $page = $html['01JBBBBBBBBBBBBBBBBBBBBBBB'];
         $this->assertStringContainsString('Цена &lt;2 100 000 ₽&gt;', $page);
         $this->assertStringContainsString('id="block-01JCCCCCCCCCCCCCCCCCCCCCCC"', $page);
-        $this->assertStringContainsString('Сайт создан на Landflow', $page);
+        $this->assertStringNotContainsString('Landflow', $page, 'Branding is added at request time, never stored.');
     }
 
     public function test_missing_bundle_fails_safely(): void

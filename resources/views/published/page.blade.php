@@ -45,6 +45,9 @@
 @endif
         {{-- Stored publish-time HTML (ADR-006); hydrated from the payload below. --}}
         <div id="lf-root">{!! $html !!}</div>
+@if ($branding)
+        <footer data-testid="landflow-branding" class="border-t border-neutral-200 bg-white px-4 py-3 text-center text-xs text-neutral-500">Создано на Landflow</footer>
+@endif
         <script type="application/json" id="lf-page-data">{!! $data !!}</script>
     </body>
 </html>

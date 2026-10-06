@@ -2018,6 +2018,22 @@ Owner approval in the Phase 7 autopilot instruction (2026-10-06); P7-001…P7-00
 
 ---
 
+## D-112 — Landflow Branding Is Resolved at Request Time
+
+**Status:** APPROVED
+
+### Decision
+
+- The published-site footer «Создано на Landflow» is shown unless the Site's Workspace currently has the typed `remove_branding` entitlement. No plan-name checks.
+- It is decided per request by the public runtime and rendered by the page shell outside the stored publish-time HTML. It is never part of the Published Version manifest, rendered HTML or hydration payload, so upgrades and downgrades apply immediately without republishing.
+- Preview does not show the footer.
+
+### Resolved By
+
+Owner instruction in the Phase 7 autopilot (2026-10-06); P7-005. Versions published before P7-005 keep their old frozen footer in stored HTML until the next publish.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

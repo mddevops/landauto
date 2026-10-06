@@ -3052,8 +3052,14 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-005 — Landflow Branding Entitlement
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-009, P5-007
+**Decision:** D-112
+
+### Result
+
+- `branding` removed from the Published Version manifest, hydration payload and React runtime; the public page shell renders «Создано на Landflow» (`data-testid="landflow-branding"`) outside `#lf-root` unless the Workspace currently has `remove_branding`.
+- Tests: footer for Workspaces without the entitlement, grant → absent / revoke or plan change → visible again on the same version, nothing stored in rendered HTML / hydration / manifest. Browser: footer visible on the custom primary domain, entitlement granted → absent after reload.
 
 ---
 
