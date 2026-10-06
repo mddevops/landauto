@@ -164,6 +164,7 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
     await expect(lead).not.toContainText('Тестовая (предпросмотр)');
 
     await page.getByRole('link', { name: 'Открыть дизайнер' }).click();
+    await expect(page).toHaveURL(/\/designer$/);
     await publish(page, 2);
     await visitor.reload();
     await expect(

@@ -121,7 +121,6 @@ final class PublishedArtifactBuilder
                 ...$popup,
                 'form' => is_string($popup['form']) ? ($forms[$popup['form']] ?? null) : null,
             ], $manifest['popups']),
-            'branding' => $manifest['branding'],
             'form_action' => "/_landflow/forms/{$versionId}",
         ];
     }

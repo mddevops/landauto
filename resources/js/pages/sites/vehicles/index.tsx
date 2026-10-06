@@ -123,5 +123,5 @@ export default function VehiclesIndex({
 }
 
 VehiclesIndex.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

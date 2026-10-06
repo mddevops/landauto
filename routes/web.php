@@ -4,6 +4,7 @@ use App\Catalog\CatalogLevel;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormRouteController;
 use App\Http\Controllers\Forms\PreviewSubmissionController;
@@ -32,11 +33,14 @@ use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\SitePublishingController;
+use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
+use App\Http\Controllers\WorkspaceController;
+use App\Http\Controllers\WorkspaceSettingsController;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
@@ -64,6 +68,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereUlid('workspace')
         ->name('workspace.switch');
 
+    Route::get('workspaces/create', [WorkspaceController::class, 'create'])->name('workspaces.create');
+    Route::post('workspaces', [WorkspaceController::class, 'store'])
+        ->middleware('throttle:10,1')
+        ->name('workspaces.store');
+
+    Route::middleware(RequireWorkspaceContext::class)->group(function () {
+        Route::get('workspace/settings', [WorkspaceSettingsController::class, 'edit'])->name('workspace.settings.edit');
+        Route::patch('workspace/settings', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
+    });
+
     Route::get('sites/create', [SiteController::class, 'create'])
         ->middleware(RequireWorkspaceContext::class)
         ->name('sites.create');
@@ -88,11 +102,20 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->whereUlid(['site', 'page'])
         ->name('sites.')
         ->group(function () {
+            Route::get('/', [SiteController::class, 'show'])->name('show');
+            Route::patch('/', [SiteController::class, 'update'])->name('update');
             Route::get('designer', SiteDesignerController::class)->name('designer');
             Route::get('preview', SitePreviewController::class)->name('preview');
             Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');
             Route::post('publishing', [SitePublishingController::class, 'store'])->middleware('throttle:10,1')->name('publishing.store');
             Route::put('subdomain', [SiteSubdomainController::class, 'update'])->name('subdomain.update');
+            Route::get('domains', [SiteDomainController::class, 'index'])->name('domains.index');
+            Route::post('domains', [SiteDomainController::class, 'store'])->middleware('throttle:20,1')->name('domains.store');
+            Route::delete('domains/{domain}', [SiteDomainController::class, 'destroy'])->whereUlid('domain')->name('domains.destroy');
+            Route::post('domains/{domain}/check', [SiteDomainController::class, 'check'])->whereUlid('domain')->middleware('throttle:domain-checks')->name('domains.check');
+            Route::post('domains/{domain}/primary', [SiteDomainController::class, 'makePrimary'])->whereUlid('domain')->name('domains.primary');
+            Route::delete('domains/primary', [SiteDomainController::class, 'resetPrimary'])->name('domains.reset-primary');
+            Route::post('domains/{domain}/ssl', [SiteDomainController::class, 'provisionSsl'])->whereUlid('domain')->middleware('throttle:domain-ssl')->name('domains.ssl');
             Route::post('versions/{version}/restore', SiteVersionRestoreController::class)->whereUlid('version')->middleware('throttle:10,1')->name('versions.restore');
             Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
                 ->whereUlid('form')
@@ -106,6 +129,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');
             Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
             Route::patch('pages/{page}/seo', [PageSeoController::class, 'update'])->name('pages.seo.update');
+            Route::get('seo', SiteSeoController::class)->name('seo.index');
 
             Route::post('pages/{page}/blocks', [PageBlockController::class, 'store'])->name('blocks.store');
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');

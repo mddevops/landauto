@@ -170,5 +170,5 @@ function CreateFormDialog({ sitePublicId }: { sitePublicId: string }) {
 }
 
 FormsIndex.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

@@ -10,11 +10,11 @@ test(
         const response = await page.goto('/dashboard');
 
         expect(response?.status()).toBe(200);
-        await expect(page).toHaveTitle('Панель управления - Landflow');
+        await expect(page).toHaveTitle('Все сайты - Landflow');
         await expect(
             page
                 .getByRole('navigation', { name: 'Навигационная цепочка' })
-                .getByText('Панель управления'),
+                .getByText('Все сайты'),
         ).toBeVisible();
         await expectNoHorizontalOverflow(page);
 
@@ -26,7 +26,7 @@ test(
         // The breadcrumb's current page also has role "link", so scope to the sidebar.
         const sidebarNavLink = page
             .locator('[data-slot="sidebar"]')
-            .getByRole('link', { name: 'Панель управления' });
+            .getByRole('link', { name: 'Все сайты' });
 
         if (isMobileViewport(page)) {
             // Mobile: the sidebar is a sheet opened from the header.
@@ -70,8 +70,11 @@ test('empty dashboard shows workspace context and create site CTA', async ({
 }) => {
     await page.goto('/dashboard');
 
+    await expect(page.getByTestId('dashboard-workspace')).toHaveText(
+        `Пространство: ${users.member.workspaces[0]}`,
+    );
     await expect(
-        page.getByRole('heading', { name: users.member.workspaces[0] }),
+        page.getByRole('heading', { level: 1, name: 'Все сайты' }),
     ).toBeVisible();
     await expect(
         page.getByRole('heading', { name: 'Здесь пока нет сайтов' }),
@@ -154,7 +157,7 @@ test('workspace switcher lists accessible workspaces and changes context', async
     ).toBeVisible();
 });
 
-test('single workspace is shown without a switch menu', async ({ page }) => {
+test('single workspace switcher stays interactive', async ({ page }) => {
     await page.context().clearCookies();
     await page.goto('/login');
     await page.getByLabel('Электронная почта').fill(users.login.email);
@@ -162,14 +165,23 @@ test('single workspace is shown without a switch menu', async ({ page }) => {
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
     await expect(page).toHaveURL('/dashboard');
+    await page
+        .getByRole('button', {
+            name: `Сменить рабочее пространство. Текущее: ${users.login.workspace}`,
+        })
+        .click();
+
+    const menu = page.getByRole('menu');
     await expect(
-        page.getByLabel(
-            `Текущее рабочее пространство: ${users.login.workspace}`,
-        ),
+        menu.getByRole('menuitem', { name: users.login.workspace }),
+    ).toBeDisabled();
+    await expect(
+        menu.getByRole('menuitem', { name: 'Создать пространство' }),
     ).toBeVisible();
     await expect(
-        page.getByRole('button', { name: /Сменить рабочее пространство/ }),
-    ).toHaveCount(0);
+        menu.getByRole('menuitem', { name: 'Управление пространством' }),
+    ).toBeVisible();
+    await expect(menu.getByText(/Developer|Разработчик/)).toHaveCount(0);
 });
 
 test('collapsed sidebar state survives a reload on desktop', async ({

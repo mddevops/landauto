@@ -343,5 +343,5 @@ export default function DeliveriesIndex({
 }
 
 DeliveriesIndex.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

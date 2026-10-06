@@ -26,7 +26,7 @@ class PublishedSeoController extends Controller
 
         return response()
             ->view('published.sitemap', [
-                'urls' => array_map(fn (string $path): string => (string) PublicSiteResolver::url($site, $path), $pages->indexablePaths($site, $version)),
+                'urls' => array_map(fn (string $path): string => (string) PublicSiteResolver::primaryUrl($site, $path), $pages->indexablePaths($site, $version)),
                 'lastmod' => $version->ready_at?->toAtomString(),
             ])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
@@ -44,7 +44,7 @@ class PublishedSeoController extends Controller
             'User-agent: *',
             'Disallow: /_landflow/forms/',
             '',
-            'Sitemap: '.PublicSiteResolver::url($site, '/sitemap.xml'),
+            'Sitemap: '.PublicSiteResolver::primaryUrl($site, '/sitemap.xml'),
         ];
 
         return response(implode("\n", $lines)."\n", 200, ['Content-Type' => 'text/plain; charset=UTF-8']);

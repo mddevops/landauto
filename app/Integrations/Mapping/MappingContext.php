@@ -66,6 +66,6 @@ final readonly class MappingContext
 
     private static function siteUrl(Site $site): string
     {
-        return (string) PublicSiteResolver::url($site, '/');
+        return (string) PublicSiteResolver::primaryUrl($site, '/');
     }
 }

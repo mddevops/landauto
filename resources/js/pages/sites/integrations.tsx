@@ -182,5 +182,5 @@ export default function SiteIntegrations({
 }
 
 SiteIntegrations.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

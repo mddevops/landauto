@@ -187,5 +187,5 @@ export default function CreateVehicle({ site, levels }: CreateVehicleProps) {
 }
 
 CreateVehicle.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

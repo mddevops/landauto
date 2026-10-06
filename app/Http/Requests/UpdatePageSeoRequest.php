@@ -52,6 +52,7 @@ class UpdatePageSeoRequest extends FormRequest
             'seo_title' => ['nullable', 'string', 'max:120'],
             'seo_description' => ['nullable', 'string', 'max:300'],
             'seo_noindex' => ['sometimes', 'boolean'],
+            'return' => ['sometimes', 'in:seo'],
         ];
     }
 

@@ -30,7 +30,6 @@ export type PublishedPagePayload = {
     assets: { public_id: string; url: string }[];
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
-    branding: boolean;
     form_action: string;
 };
 
@@ -107,14 +106,6 @@ export function PublishedSite({
                     </SiteTheme>
                 </BlockRenderContext>
             </main>
-            {payload.branding && (
-                <p
-                    data-testid="landflow-branding"
-                    className="border-t border-neutral-200 bg-white px-4 py-3 text-center text-xs text-neutral-500"
-                >
-                    Сайт создан на Landflow
-                </p>
-            )}
             {opened && (
                 <PopupView
                     popup={opened.popup}

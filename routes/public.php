@@ -9,16 +9,14 @@ use App\Publishing\Runtime\PublicSiteResolver;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Published Sites on {subdomain}.{public_domain} (ADR-006 §9). Content comes only from the active
-| Published Version. Reserved paths: /_landflow/*, /sitemap.xml, /robots.txt. Anything else that is
-| not a published Page is a safe 404, so no application route is reachable through a public host.
+| Published Sites on {subdomain}.{public_domain} (ADR-006 §9) and on connected custom domains
+| (D-111). Content comes only from the active Published Version. Reserved paths: /_landflow/*,
+| /sitemap.xml, /robots.txt. Anything else that is not a published Page is a safe 404, so no
+| application route is reachable through a public host.
 */
 
-Route::domain('{subdomain}.'.config('publishing.public_domain'))
-    ->where(['subdomain' => PublicSiteResolver::routePattern()])
-    ->middleware(ResolvePublicSite::class)
-    ->name('public.')
-    ->group(function () {
+$runtime = function (string $name): void {
+    Route::middleware(ResolvePublicSite::class)->name($name)->group(function () {
         Route::get('_landflow/assets/{version}/{asset}', [PublishedAssetController::class, 'asset'])
             ->whereUlid(['version', 'asset'])
             ->name('assets');
@@ -35,3 +33,12 @@ Route::domain('{subdomain}.'.config('publishing.public_domain'))
         Route::get('{path?}', PublishedPageController::class)->where('path', '[a-z0-9-]*')->name('page');
         Route::any('{any?}', [PublishedPageController::class, 'missing'])->where('any', '.*')->name('missing');
     });
+};
+
+Route::domain('{subdomain}.'.config('publishing.public_domain'))
+    ->where(['subdomain' => PublicSiteResolver::routePattern()])
+    ->group(fn () => $runtime('public.'));
+
+Route::domain('{host}')
+    ->where(['host' => PublicSiteResolver::customHostPattern()])
+    ->group(fn () => $runtime('public.custom.'));

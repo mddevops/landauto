@@ -32,6 +32,11 @@ class Workspace extends Model
     /** @use HasFactory<WorkspaceFactory> */
     use HasFactory, HasImmutablePublicId;
 
+    /** Initial name for the Workspace of a new account; never derived from the user's name (D-110). */
+    public const DEFAULT_NAME = 'Моё пространство';
+
+    public const NAME_MAX_LENGTH = 120;
+
     /**
      * @var array<string, mixed>
      */

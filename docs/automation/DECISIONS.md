@@ -1435,23 +1435,28 @@ Adopt only if measured/real need appears.
 
 ## D-078 — Billing Provider
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — ADR-007: YooKassa (ЮKassa) is the initial billing / payment provider behind a provider-abstracted `BillingProvider` contract.
 
-### Decision Needed
+### Decision
 
-Choose subscription/payment provider.
+- Billing customer = Workspace (never User, Site or member). Free Workspaces need no Subscription; each Workspace has independent billing state. Billing actions require `manage_billing`.
+- Landflow owns the Subscription (plan, period, status) as source of truth; YooKassa only executes payments. `provider_subscription_id` stays nullable. Entitlements keep flowing through `workspaces.plan_id` → `WorkspaceEntitlements`; billing only switches the Workspace Plan.
+- Initial checkout creates a payment with `save_payment_method = true`; only `payment_method_id` (encrypted, server-side, never in React / public output / logs) and a masked display are stored, never PAN / CVV / full card data.
+- Renewals: Landflow-scheduled server-side job charges the saved method with a stable unique `Idempotence-Key` per BillingPayment; bounded, idempotent retries (cadence finalized in P7-009); no Redis requirement.
+- Lifecycle: initial success → paid Plan + period; renewal success → period extended; renewal failure during a paid period → `past_due`, paid entitlements kept until `current_period_end`; period end without renewal → downgrade to Free without deleting Workspaces, Sites or content (Phase 7 fallbacks apply). Cancellation = `cancel_at_period_end`, access kept until period end; refunds and immediate cancellation not defined.
+- Immutable Landflow billing history (Workspace, Plan, amount in minor units per ADR-004, `RUB`, period, provider payment ID, status, timestamps); prices are Plan configuration, not hardcoded. Fiscal receipt ≠ Landflow invoice record.
+- Webhook `POST /billing/webhooks/yookassa`: public but provider-verified — HTTPS, known events only (`payment.succeeded`, `payment.canceled`), sender IP check against current official ranges, authoritative re-fetch of the payment from the YooKassa API, amount / currency / metadata match, idempotent processing. Browser return is UX only.
+- Merchant credentials (`YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`, `BILLING_PROVIDER`) are platform secrets in env / config only; HTTP Basic Auth; no OAuth Partner API.
+- 54-FZ: YooKassa supports fiscalization; VAT, tax system, `payment_subject` and receipt texts depend on the legal entity and are not decided; the architecture keeps a configuration-driven receipt payload adapter point.
+- Production prerequisite: autopayments must be enabled for the production merchant account before real subscription launch.
 
-### Must Define
+### Resolved By
 
-- customer;
-- subscription;
-- invoices;
-- webhook verification;
-- entitlement lifecycle.
+P7-008 Billing Provider ADR + owner approval (2026-10-06); `docs/architecture/decisions/ADR-007-billing-provider-yookassa.md`.
 
-### Blocking
+### Still Blocks
 
-Real paid subscription implementation.
+Nothing in planned scope. Real subscription integration is `P7-009` (DEFERRED).
 
 ---
 
@@ -1972,6 +1977,65 @@ Owner approval in the Phase 5 autopilot instruction (2026-10-05); X-021.
 ### Resolved By
 
 Owner instruction in the Phase 6 autopilot prompt (2026-10-05); P6-001.
+
+---
+
+## D-110 — Workspace and Site Navigation UX
+
+**Status:** APPROVED
+
+### Decision
+
+- Workspace is not User: the UI never presents the user's name as the Workspace name.
+- The initial Workspace of every new account (email/password and Yandex, through the shared account-creation path) is named «Моё пространство». Existing Workspaces are not renamed or backfilled.
+- The Workspace switcher is always interactive, even with one Workspace. Its menu lists the user's Workspaces with a selected indicator, then «Создать пространство» and «Управление пространством». There is no Developer Workspace entry. Switching always lands on the Workspace dashboard; the backend `WorkspaceContext` stays authoritative.
+- A verified User may create additional Workspaces. The new Workspace gets a typed `public_id`, the creator becomes its Owner, it receives the default Free plan through `DefaultWorkspacePlan` (D-100) and becomes the current Workspace. There is no `max_workspaces` entitlement or cap.
+- Workspace management shows and renames the current Workspace and requires `edit_workspace`. Team, billing, ownership transfer, deletion, branding and developer workspace are out of scope.
+- The application has two shells: a Workspace context (all Sites, integrations, Workspace settings) and a Site context (the Site's sections, opened from a Site card, with «← Все сайты» back). Navigation items follow semantic permissions; the backend stays authoritative.
+- Account-level limits / anti-abuse policy for the number of Free Workspaces is an open product/billing follow-up.
+
+### Resolved By
+
+Owner approval in the Phase 7 autopilot instruction (2026-10-06); X-022.
+
+---
+
+## D-111 — Custom Domain Connection and Managed SSL
+
+**Status:** APPROVED
+
+### Decision
+
+- Customers keep their registrar and DNS provider; Landflow never asks to change NS records. They add only the records shown in «Домены».
+- All custom hostnames reach one shared ingress (no dedicated IP per customer). The Site is identified by the normalized request Host.
+- Ownership: a per-hostname random token published as TXT at `_landflow-verification.<hostname>` with the exact value `landflow-site-verification=<token>`. No HTTP fetch is used for ownership.
+- Routing: the hostname must ultimately resolve to the configured ingress — A/AAAA to `CUSTOM_DOMAIN_IPV4` / `CUSTOM_DOMAIN_IPV6` (apex without CNAME flattening) or CNAME to `CUSTOM_DOMAIN_CNAME_TARGET` (www and other subdomains). No public-suffix heuristic: apex and subdomains are verified alike. Production IPs are never hardcoded.
+- Ownership, routing and SSL are independent states. Only a domain with verified ownership, verified routing and active SSL can become primary.
+- Hostnames: lowercase, trimmed, one trailing dot removed; globally unique; plain ASCII DNS names only (no scheme/path/query/fragment/port/userinfo/wildcard/IP literal/IDN or punycode/Landflow-owned host).
+- Custom domains need both `manage_domains` and the typed `custom_domain` entitlement; no plan-name checks; deny by default (Free has no `custom_domain`).
+- SSL is always issued and renewed by Landflow infrastructure (Let's Encrypt over ACME HTTP-01 after routing is verified). Customers never upload certificates, keys or CSRs. The application stores lifecycle metadata only (status, issued/expiry dates, safe error) and calls a `SslProvisioner` adapter; certificates, private keys and ACME account keys never enter the database, logs or repository.
+- The Landflow subdomain is never removed. Without an active custom primary it is the primary address; with one, it and alternate hosts 301-redirect to the primary, preserving path and query.
+- Provisioning adapter contract (`CUSTOM_DOMAIN_SSL_DRIVER=command`): the app runs the executable at `CUSTOM_DOMAIN_SSL_COMMAND` with the validated hostname as its only argument (argument vector, no shell), bounded by `CUSTOM_DOMAIN_SSL_TIMEOUT`. Exit 0 = certificate installed (optional stdout line `expires_at=<ISO-8601>`), exit 75 = temporary failure, any other exit = permanent failure. Output is never logged. Automatic retries back off (15, 30 min) for at most 3 attempts; afterwards, and after a permanent failure, only a manual retry (4 per hour per domain) restarts provisioning — inside the CA limit of 5 failed authorizations per hostname per hour.
+
+### Resolved By
+
+Owner approval in the Phase 7 autopilot instruction (2026-10-06); P7-001…P7-004.
+
+---
+
+## D-112 — Landflow Branding Is Resolved at Request Time
+
+**Status:** APPROVED
+
+### Decision
+
+- The published-site footer «Создано на Landflow» is shown unless the Site's Workspace currently has the typed `remove_branding` entitlement. No plan-name checks.
+- It is decided per request by the public runtime and rendered by the page shell outside the stored publish-time HTML. It is never part of the Published Version manifest, rendered HTML or hydration payload, so upgrades and downgrades apply immediately without republishing.
+- Preview does not show the footer.
+
+### Resolved By
+
+Owner instruction in the Phase 7 autopilot (2026-10-06); P7-005. Versions published before P7-005 keep their old frozen footer in stored HTML until the next publish.
 
 ---
 

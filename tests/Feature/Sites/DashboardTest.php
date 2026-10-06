@@ -41,11 +41,13 @@ class DashboardTest extends TestCase
                 'public_id' => $active->public_id,
                 'name' => 'Активный сайт',
                 'status' => 'active',
+                'address' => null,
             ])
             ->where('sites.1', [
                 'public_id' => $archived->public_id,
                 'name' => 'Архивный сайт',
                 'status' => 'archived',
+                'address' => null,
             ])
             ->missing('sites.0.id')
             ->missing('sites.0.workspace_id'));

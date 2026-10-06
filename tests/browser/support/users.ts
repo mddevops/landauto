@@ -103,6 +103,28 @@ export const users = {
         email: 'lifecycle-admin@landflow.test',
         password: 'e2e-password',
     },
+    // Workspace / Site navigation: starts with one Workspace and one Site.
+    navigator: {
+        name: 'Нина Навигаторова',
+        email: 'navigator@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автодом Навигатор',
+        site: 'Сайт навигации',
+    },
+    // Custom domains + branding on `domains-e2e`; the plan has `custom_domain`.
+    domains: {
+        name: 'Дмитрий Доменов',
+        email: 'domains@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Домен',
+        site: 'Сайт с доменом',
+        publicUrl: 'http://domains-e2e.localhost:8200',
+    },
+    domainsDesigner: {
+        name: 'Диана Доменная',
+        email: 'domains-designer@landflow.test',
+        password: 'e2e-password',
+    },
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

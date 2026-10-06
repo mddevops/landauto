@@ -175,5 +175,5 @@ export default function PopupsIndex({
 }
 
 PopupsIndex.layout = {
-    breadcrumbs: [{ title: 'Панель управления', href: dashboard() }],
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
 };

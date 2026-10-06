@@ -72,9 +72,11 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`).
 
-Phase 7 — Paid Site Features: NOT_STARTED.
+Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Next ready task: `P7-001 — Custom Domain Schema`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 8 — Team / Collaboration: NOT_STARTED.
+
+Next ready task: `P8-001 — Workspace Invitations`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -2986,57 +2988,130 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-001 — Custom Domain Schema
 
-**Status:** NOT_STARTED  
-**Dependencies:** P6-015
+**Status:** DONE
+**Dependencies:** P6-015, X-022
+**Decision:** D-111
+
+### Result
+
+- `site_domains` (ULID `public_id`, Site FK, globally unique normalized `hostname`, per-hostname `verification_token`, independent `verification_status` / `routing_status` / `ssl_status`, `is_primary`, lifecycle timestamps, safe last error). No certificate or key columns.
+- `CustomHostname` normalization (trim, lowercase, one trailing dot) and validation (scheme, path, query, fragment, port, userinfo, wildcard, empty/oversized labels, control chars, IP literals, IDN/punycode with a clear Russian message, Landflow-owned hosts).
+- `CustomDomainAccess`: `manage_domains` AND `custom_domain` entitlement, separately checked; Free denied by default.
+- «Домены» (`/sites/{site}/domains`) in the Site shell: Landflow address, add domain, per-domain state (ожидает проверки, DNS настроен не полностью, DNS настроен, выпуск сертификата, активен, ошибка), exact TXT / CNAME / A / AAAA instructions from `config/domains.php`, delete with confirmation. Safe log events `custom_domain.added` / `custom_domain.removed`.
+- Tests: create, Free denied, entitlement without permission, Admin allowed, foreign Site/domain, case-insensitive duplicate, trailing dot, invalid hostname matrix, IDN message, removal.
 
 ---
 
 ## P7-002 — Domain Validation / Verification
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-001
+**Decision:** D-111
+
+### Result
+
+- `DnsResolver` abstraction: `SystemDnsResolver` (`dns_get_record`, bounded answers) and `FakeDnsResolver` (cache-backed; bound only when `CUSTOM_DOMAIN_DNS_DRIVER=fake` in the testing/e2e environments). No HTTP fetch of the customer host.
+- `DomainVerifier`: ownership by exact TXT match on `_landflow-verification.<host>` (sticky once verified); routing re-evaluated every check — CNAME chain (≤5 hops) reaching `CUSTOM_DOMAIN_CNAME_TARGET`, or all A answers equal to `CUSTOM_DOMAIN_IPV4` and AAAA empty or equal to `CUSTOM_DOMAIN_IPV6`. Independent states, safe error codes and Russian messages only; log events `custom_domain.ownership_verified` / `custom_domain.routing_verified`.
+- Manual «Проверить DNS» (`POST /sites/{site}/domains/{domain}/check`), server-side, rate-limited per Site (`domain-checks`, `CUSTOM_DOMAIN_CHECK_PER_MINUTE`).
+- `domains:reconcile` scheduled every 5 minutes (`withoutOverlapping`): pending domains after `reconcile_after_minutes`, ready domains daily; skips Workspaces without `custom_domain`. `domains:fake-dns` E2E helper refuses without the fake driver.
+- Tests: TXT correct/wrong/missing, A ingress, CNAME chain, wrong routing, AAAA mismatch/normalization, missing ingress config, sticky ownership + routing regression, no HTTP, logs, rate limit, permission, reconcile scope, fake command guard.
 
 ---
 
 ## P7-003 — SSL Provisioning Integration
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-002
+**Decision:** D-111
+
+### Result
+
+- Verified against Let's Encrypt documentation (challenge types, rate limits): HTTP-01 on port 80 after routing is verified; works for hosts CNAMEd to the ingress; no wildcard.
+- `SslProvisioner` contract with drivers `none` (default; safe «не настроен» message), `command` (configured executable, hostname as a discrete argument via Laravel/Symfony Process, hostname re-validated, timeout, exit-code contract, bounded output parsing, nothing logged) and `fake` (testing/e2e only; success, temporary and permanent failure).
+- `DomainSsl`: eligibility (active Site, verified ownership + routing, `custom_domain` entitlement, hostname not active for another Site; initiator `manage_domains` + entitlement checked by the controller), atomic claim to `provisioning`, queued `ProvisionDomainSsl` re-checks eligibility, statuses pending / provisioning / active / failed, bounded backoff (`ssl_attempts`, `ssl_retry_at`), stale-provisioning recovery, safe log events. DB stores metadata only (issued / expiry dates).
+- DNS check that completes DNS requests the certificate; `domains:reconcile` requests due certificates; manual «Выпустить сертификат» (`POST /sites/{site}/domains/{domain}/ssl`, 4/hour per domain).
+- Tests: before DNS ready, fake success / temporary backoff → failed / permanent → manual retry, job re-checks eligibility, lost entitlement, none driver, stale recovery, command argv + timeout + expiry parsing, exit-code mapping, invalid hostname / missing script refusal, no key columns, endpoint permission + rate limit, DNS check → SSL, reconcile.
 
 ---
 
 ## P7-004 — Primary Domain / Redirects
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-003
+**Decision:** D-111
+
+### Result
+
+- Public runtime has a second host group for custom hostnames (`PublicSiteResolver::customHostPattern()`: dotted names except the app host, `localhost`, the public domain and its subdomains, IPv4 literals). Custom domains resolve first, then Landflow subdomains; unknown hosts and application paths on customer hosts are safe 404s.
+- A custom domain is served only while fully active (ownership + routing + SSL), the Site is active and the Workspace keeps `custom_domain`. Effective primary = `is_primary` + active + entitled; otherwise the Landflow subdomain.
+- 301 to the primary host with path and query preserved: Landflow subdomain → custom primary; alternate custom hosts → primary (or → Landflow subdomain when no custom primary). The primary host never redirects, so no loops.
+- «Сделать основным» (`POST /sites/{site}/domains/{domain}/primary`, active only, one primary per Site under a Site row lock), «Сделать основным адрес Landflow» (`DELETE /sites/{site}/domains/primary`); removing the primary falls back to the subdomain.
+- Canonical / `og:url`, sitemap, robots, dashboard and Site overview addresses and integration payload Site URL use the primary address; the Publishing page keeps managing the Landflow subdomain.
+- Tests: primary serving + canonical / sitemap / robots, subdomain → primary 301 with query, alternate 301, no-primary alternate → subdomain, no-SSL not served / not primary, lost entitlement fallback, removal fallback, reset, single primary + permission + foreign, unknown host / app paths 404, app hosts never custom, archived Site. Browser: `tests/browser/domains.spec.ts` (fake DNS + fake SSL → active → primary → publish → 301 + canonical + sitemap + robots on `dealer.e2e.test`, Designer has no access, 375px). Chromium maps `*.e2e.test` to the local server and ignores system proxies.
+- Follow-ups (not blocking): an unverified hostname row blocks the real owner until removed (no expiry of unverified claims yet); certificates of removed domains are not deprovisioned by the app (infrastructure cleanup); an app reachable under extra dotted hostnames besides `APP_URL` would see them as customer hosts.
 
 ---
 
 ## P7-005 — Landflow Branding Entitlement
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P1-009, P5-007
+**Decision:** D-112
+
+### Result
+
+- `branding` removed from the Published Version manifest, hydration payload and React runtime; the public page shell renders «Создано на Landflow» (`data-testid="landflow-branding"`) outside `#lf-root` unless the Workspace currently has `remove_branding`.
+- Tests: footer for Workspaces without the entitlement, grant → absent / revoke or plan change → visible again on the same version, nothing stored in rendered HTML / hydration / manifest. Browser: footer visible on the custom primary domain, entitlement granted → absent after reload.
 
 ---
 
 ## P7-006 — Advanced SEO
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-009
+
+### Result
+
+- Audit: page `seo_title` / `seo_description` / `seo_noindex` (P5-009) are frozen into the Published Version; title, description, `og:title` / `og:description` / `og:url` / `og:site_name` come only from real Site / Page data (no invented image or texts); noindex pages render `noindex, follow` and are excluded from the sitemap; canonical, `og:url`, sitemap URLs and the robots `Sitemap:` line use the effective primary address (P7-004); preview stays noindex.
+- Site section «SEO» (`GET /sites/{site}/seo`, Контент group in the Site sidebar) lists every page with its address, title / description counters and the noindex switch, plus primary / sitemap / robots addresses. Saving reuses the Page SEO endpoint (`return=seo` brings the user back); `edit_seo_basic` edits title / description only, noindex needs `edit_seo`; Designer has no access.
+- Tests: `tests/Feature/Sites/SiteSeoPageTest.php` (owner props + primary-domain addresses, save + return, Content Editor without noindex, Designer 403, foreign 404). Browser: owner edits page SEO on the custom-domain Site; navigation lists «SEO».
 
 ---
 
 ## P7-007 — Plan Limit Enforcement Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-004, P7-005
+
+### Result
+
+- `max_sites` (D-099): enforced in `CreateSite` under a Workspace row lock, counting active Sites only; it is the only path that creates an active Site (no archived → active restore exists yet; when added it must re-check the limit). Dashboard / Sites list / create page show the backend-derived limit. Lowering the limit below the active count keeps existing Sites live and published and blocks new ones.
+- `custom_domain` (D-111): required (together with `manage_domains`) to add / verify / issue SSL / make primary, and at request time to serve a custom host or treat it as primary; the reconciler skips unentitled Workspaces; losing it falls back to the Landflow subdomain without deleting rows.
+- `remove_branding` (D-112): read per public request; nothing frozen into Published Versions.
+- `max_members`: defined in the typed registry, no enforcement point because member invitations are not implemented (P8-001 must enforce it when members are added; the Owner added by `CreateWorkspace` is not limited).
+- D-100 preserved: Free = `max_sites = 2` only; every other entitlement resolves deny-by-default; an inactive plan denies every entitlement; no logic branches on plan keys or names (guarded by `DefaultFreePlanTest`).
+- Account-level limit / anti-abuse policy for number of Free Workspaces is an open product/billing follow-up.
+- Tests: `tests/Feature/Publishing/PlanLimitEnforcementTest.php` (paid plan unlocks everything, inactive plan denies everything without breaking the live subdomain site, lowered `max_sites` keeps Sites live but blocks creation).
 
 ---
 
 ## P7-008 — Billing Provider ADR
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-007
+**Decision:** D-078 APPROVED — `docs/architecture/decisions/ADR-007-billing-provider-yookassa.md`
+
+### Result
+
+- YooKassa (ЮKassa) selected by the owner as the initial billing provider, behind a provider-abstracted `BillingProvider` contract.
+- Workspace is the billing customer; Free Workspaces need no Subscription; billing actions require `manage_billing`.
+- Landflow owns the subscription lifecycle (Subscription is source of truth, entitlements still flow through the Workspace Plan); YooKassa handles payment execution only.
+- Saved payment methods for recurring: initial checkout with `save_payment_method = true`, only the `payment_method_id` reference stored (sensitive, server-side); Landflow-scheduled renewals with stable `Idempotence-Key`s and bounded retries.
+- Webhook verification requires authoritative API reconciliation: known events only, IP check, re-fetch of the payment, amount / currency / metadata match, idempotent processing; browser return is UX only.
+- Paid entitlement lifecycle: activate on provider-confirmed payment, extend on renewal, `past_due` keeps paid access until period end, downgrade to Free at period end without deleting content.
+- Cancellation at period end (`cancel_at_period_end`); refunds / immediate cancellation not defined.
+- 54-FZ adapter boundary: fiscal configuration left to business / accounting, configuration-driven receipt payload adapter point.
+- Documentation only (no code, migrations or config). Real subscription integration remains deferred (`P7-009`); production needs autopayments enabled on the merchant account.
 
 ---
 
@@ -3049,8 +3124,15 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-010 — Phase 7 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-007
+
+### Result
+
+- Phase 7 work is DONE: X-022, P7-001 … P7-008 and this review (P7-010). P7-008 resolved D-078 (APPROVED via ADR-007, YooKassa selected). P7-009 — Real Subscription Integration is DEFERRED by plan.
+- Review (no regressions found): custom domains are Site-owned, unique across Workspaces, managed only with `manage_domains` + `custom_domain`, served only while ownership + routing + SSL are verified, the Site is active and the Workspace is entitled; DNS checks use a DNS resolver only (no HTTP fetch of customer hosts); SSL runs through a configured server command (no private keys or ACME material in the DB, repo, React props or logs) with bounded automatic retries and rate limits; app hosts can never become customer hosts; primary-domain 301s cannot loop; branding and custom-domain serving follow the live entitlements; SEO output is consistent on the primary address; no logic branches on plan keys.
+- Open follow-ups (not blocking): expiry of unverified hostname claims; certificate deprovisioning for removed domains; hardening against extra dotted app hostnames; Published Versions from before P7-005 keep the old frozen footer until republished; `max_members` enforcement with invitations (P8-001); account-level limit / anti-abuse policy for number of Free Workspaces; root cause of the flaky tablet run of `tests/browser/auth.spec.ts` (verification resend stalled > 5 s only in full local runs) — the raised assertion timeout (`54e9895`) is only a mitigation, not a fix.
+- Phase 7 status: COMPLETED for planned scope. Phase 8 NOT_STARTED. Next task: `P8-001 — Workspace Invitations`.
 
 ---
 
@@ -3788,6 +3870,26 @@ Result:
 - Admin has `edit_popups`; «Защита форм» and the Site blacklist require `edit_forms`; the Workspace blacklist keeps `edit_workspace`.
 - Tests: phone cases (trunk 8, «+8», foreign 13 digits, 10 digits), preview permission/foreign Form/mode marking/list separation, preview not counted as a public duplicate, updated permission matrices; interactive E2E reads preview leads from the test tab.
 - D-094 stays open; no Submission export.
+
+---
+
+## X-022 — Workspace / Site Dashboard Navigation
+
+**Status:** DONE
+**Trigger:** before P7-001
+**Decision:** D-110
+
+Separate the Workspace context from the Site context and prepare the navigation structure for Phase 7 domain, SEO and publishing settings: default «Моё пространство» name for new accounts, an always-interactive Workspace switcher, Workspace creation and management, a Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and a Site shell with grouped Site sections.
+
+### Result
+
+- `CreateWorkspace` action (one transaction: Workspace on the `DefaultWorkspacePlan` Free plan + active Owner membership) is shared by `CreateNewAccount` (email/password and Yandex) and the new `GET /workspaces/create` + `POST /workspaces` (verified users, throttled, name required/trimmed/≤120/plain text). New accounts get «Моё пространство»; existing Workspaces are untouched. The created Workspace becomes current. No workspace cap.
+- `GET|PATCH /workspace/settings` renames the current Workspace (`edit_workspace`; others get 403; no IDs exposed).
+- Workspace switcher is always a menu: Workspaces with a selected mark, «Создать пространство», «Управление пространством» (with `edit_workspace`). Switching lands on the dashboard.
+- Workspace shell: «Все сайты», «Интеграции» (`view_integrations`), «Настройки пространства» (`edit_workspace`), platform catalog only with a platform permission. Dashboard heading «Все сайты»; Site cards have «Открыть» (Site context), status and the public address once published.
+- Site shell (`SiteLayout` for `sites/*` pages): «← Все сайты», Site name, groups Общее (Общее, Дизайнер, Предпросмотр), Контент (Автомобили, Формы, Попапы), Заявки (Заявки, Доставка заявок), Настройки (Интеграции, Защита форм, Публикация). Visibility comes from a backend-computed `siteContext` shared prop (Site policy abilities, current Workspace only); pages still authorize themselves.
+- `GET /sites/{site}` «Общее»: name, status, subdomain, publish state, active address; `PATCH /sites/{site}` renames with `edit_site_settings`.
+- Tests: default names (registration, Yandex, no backfill), switcher props, Workspace creation (Free plan, Owner, current, validation, unverified), foreign Workspace, rename permission, Site shell abilities for Owner/Admin/Designer, foreign Site 404, Site rename permission; E2E switcher (one and many), create + rename Workspace, Site context and back, Designer/Admin navigation, tablet/375px.
 
 ---
 

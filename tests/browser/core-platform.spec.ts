@@ -18,9 +18,9 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
     await page.getByRole('button', { name: 'Войти', exact: true }).click();
 
     await expect(page).toHaveURL('/dashboard');
-    await expect(
-        page.getByRole('heading', { level: 1, name: creator.workspaces[0] }),
-    ).toBeVisible();
+    await expect(page.getByTestId('dashboard-workspace')).toHaveText(
+        `Пространство: ${creator.workspaces[0]}`,
+    );
 
     await page.getByRole('link', { name: 'Создать сайт' }).click();
 
@@ -44,7 +44,7 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
     await expect(page.getByRole('alert')).toContainText('Сайт создан');
     await expect(page.getByRole('alert')).toContainText(siteName);
     await expect(
-        page.getByRole('heading', { level: 3, name: siteName }),
+        page.getByRole('heading', { level: 2, name: siteName }),
     ).toBeVisible();
 
     await page
@@ -70,9 +70,9 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
 
     await page.getByRole('link', { name: 'Назад к сайтам' }).click();
     await expect(page).toHaveURL('/dashboard');
-    await expect(
-        page.getByRole('heading', { level: 1, name: creator.workspaces[0] }),
-    ).toBeVisible();
+    await expect(page.getByTestId('dashboard-workspace')).toHaveText(
+        `Пространство: ${creator.workspaces[0]}`,
+    );
 
     await page
         .getByRole('button', {
@@ -84,16 +84,16 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
         .getByRole('menuitem', { name: creator.workspaces[1] })
         .click();
 
-    await expect(
-        page.getByRole('heading', { level: 1, name: creator.workspaces[1] }),
-    ).toBeVisible();
+    await expect(page.getByTestId('dashboard-workspace')).toHaveText(
+        `Пространство: ${creator.workspaces[1]}`,
+    );
     await expect(page.getByRole('heading', { name: siteName })).toHaveCount(0);
 
     // A known Site public ID from another Workspace must not reveal or confirm that Site.
     await page.goto(`/dashboard?site=${createdSiteId}`);
-    await expect(
-        page.getByRole('heading', { level: 1, name: creator.workspaces[1] }),
-    ).toBeVisible();
+    await expect(page.getByTestId('dashboard-workspace')).toHaveText(
+        `Пространство: ${creator.workspaces[1]}`,
+    );
     await expect(page.getByText(siteName)).toHaveCount(0);
     await expect(page.getByText('Сайт создан')).toHaveCount(0);
 });

@@ -9,3 +9,4 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('integrations:dispatch-due-deliveries')->everyMinute()->withoutOverlapping();
+Schedule::command('domains:reconcile')->everyFiveMinutes()->withoutOverlapping();

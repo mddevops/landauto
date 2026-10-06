@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: NOT_STARTED.** Next ready task per `BACKLOG.md`: `P7-001 — Custom Domain Schema`.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team: NOT_STARTED.** Next ready task per `BACKLOG.md`: `P8-001 — Workspace Invitations`.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -186,6 +186,17 @@ Current focus:
 - `P6-013` DONE: payload-free semantic events (form start / submit / validation error / success, popup open / close, vehicle form submit) in the published runtime, routed once to `ym(counter, "reachGoal", goal)`; no-op without a counter or with a blocked loader.
 - `P6-014` DONE: integrations browser lifecycle (`tests/browser/integrations.spec.ts`) over E2E-only fake DNS + CRM transport (`INTEGRATIONS_E2E_FAKE`, testing/e2e only; real SSRF policy) and a spec-driven `database` queue in E2E.
 - `P6-015` DONE: Phase 6 gate. Audit found no regressions (ownership, encrypted/masked secrets, persist-before-deliver, preview never delivered, bounded retries, idempotency, SSRF incl. DNS rebinding and redirects, safe logs, semantic permissions, Metrica frozen per version and absent from Preview). Final gate: `composer quality` PASS (728 tests), `npm run test:e2e` 44 passed. Phase 6 COMPLETED; Phase 7 NOT_STARTED.
+- Phase 7 (COMPLETED for planned scope, branch `autopilot/phase7-2026-10-06`):
+- `X-022` DONE (D-110): shared `CreateWorkspace` action; new accounts get «Моё пространство»; always-interactive switcher with «Создать пространство» / «Управление пространством»; `/workspaces/create` (Free plan, Owner, becomes current, no cap) and `/workspace/settings` rename (`edit_workspace`); Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and Site shell (`SiteLayout`, backend `siteContext` abilities, grouped Site sections, «← Все сайты»); `/sites/{site}` «Общее» with rename under `edit_site_settings`.
+- `P7-001` DONE (D-111): `site_domains` (normalized globally unique hostname, TXT token, independent verification/routing/SSL states, no key material), `CustomHostname` validation, `CustomDomainAccess` (`manage_domains` + `custom_domain`), «Домены» page with DNS instructions from `config/domains.php`.
+- `P7-002` DONE: `DnsResolver` (system / fake, fake only in testing/e2e), `DomainVerifier` (exact TXT ownership, sticky; routing via CNAME chain or A/AAAA vs configured ingress, re-checked every time; safe error codes), rate-limited «Проверить DNS», `domains:reconcile` every 5 minutes, `domains:fake-dns` E2E helper. No HTTP fetch.
+- `P7-003` DONE: `SslProvisioner` (none / command / fake), `DomainSsl` lifecycle (eligibility, atomic claim, queued `ProvisionDomainSsl`, bounded backoff, manual retry 4/hour, stale recovery), metadata-only storage; provisioning-script contract recorded in D-111.
+- `P7-004` DONE: custom-host route group (custom domains first, then Landflow subdomains, unknown → 404), effective primary (active + entitled), 301 to primary preserving path/query (no loops), «Сделать основным» / back to Landflow, removal fallback; canonical, sitemap, robots and app addresses use the primary; browser domain flow `tests/browser/domains.spec.ts`.
+- `P7-005` DONE (D-112): «Создано на Landflow» footer decided per request from the live `remove_branding` entitlement, rendered by the page shell; no longer frozen in manifest / HTML / hydration.
+- `P7-006` DONE: SEO audit (canonical / sitemap / robots / `og:url` on the primary address, OG only from real data, noindex excluded from sitemap); Site section «SEO» (`/sites/{site}/seo`) edits every page's SEO via the Page SEO endpoint with `edit_seo` / `edit_seo_basic`.
+- `P7-007` DONE: entitlement review — `max_sites` (create only, locked, active Sites), `custom_domain` (manage + serve + reconcile), `remove_branding` (per request) enforced; `max_members` has no enforcement point until invitations (P8-001); D-100 preserved; inactive plan denies all. Account-level limit / anti-abuse policy for number of Free Workspaces is an open product/billing follow-up.
+- `P7-008` DONE (D-078 APPROVED, ADR-007): YooKassa; Workspace = billing customer; Landflow-owned Subscription with entitlements still via the Workspace Plan; saved `payment_method_id` + Landflow-scheduled idempotent renewals; webhooks verified by authoritative API re-fetch; `past_due` keeps paid access until period end, then downgrade to Free; cancellation at period end; 54-FZ receipt adapter point. Docs only; `P7-009` DEFERRED.
+- `P7-010` DONE: Phase 7 review, no regressions (domain ownership / DNS-only verification / SSL via server command without private keys in app / no app-host capture / loop-free 301s / live entitlements / consistent SEO). Phase 8 NOT_STARTED. Open follow-ups: unverified hostname claim expiry, certificate deprovisioning on domain removal, extra dotted app hostname hardening, `max_members` enforcement in P8-001, Free Workspace anti-abuse / account-level limit, pre-P7-005 Published Versions keep the frozen footer until republished, flaky tablet `auth.spec.ts` resend root cause (timeout increase `54e9895` is not a fix).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1182,7 +1193,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P7-001 — Custom Domain Schema`** (Phase 7 — Paid Site Features, NOT_STARTED; Phase 6 COMPLETED) per `BACKLOG.md`.
+**Next: `P8-001 — Workspace Invitations`** (Phase 8 — Team / Collaboration, NOT_STARTED; Phase 7 COMPLETED for planned scope, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1475,7 +1486,7 @@ Phase 3 — Automotive Foundation: COMPLETED (gate P3-017)
 Phase 4 — Forms & Interactive Components: COMPLETED
 Phase 5 — Publishing: COMPLETED (gate P5-012)
 Phase 6 — Integrations & Analytics: COMPLETED (gate P6-015)
-Phase 7 — Paid Features: NOT_STARTED
+Phase 7 — Paid Features: COMPLETED for planned scope (P7-008 ADR-007; P7-009 DEFERRED)
 Phase 8 — Team: NOT_STARTED
 Phase 9 — Developer Platform: NOT_STARTED
 Phase 10 — Marketplace: NOT_STARTED
@@ -1740,7 +1751,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P7-001 — Custom Domain Schema`**. Phases 0–6 are COMPLETED (P0-027, P1-017, P2-018, P3-017, P4-014, P5-012, P6-015 DONE); Phase 7 is NOT_STARTED.
+**`P8-001 — Workspace Invitations`**. Phases 0–7 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED); Phase 8 is NOT_STARTED.
 
 ---
 
@@ -1796,5 +1807,5 @@ Production deployment:        NOT_CONFIGURED
 Core Landflow implementation: IN_PROGRESS (Phases 0–6 COMPLETED)
 ```
 
-**Current phase: Phase 7 — Paid Site Features (NOT_STARTED; Phases 0–6 COMPLETED).
-Next: `P7-001 — Custom Domain Schema` per `BACKLOG.md`.**
+**Current phase: Phase 8 — Team / Collaboration (NOT_STARTED; Phases 0–7 COMPLETED, P7-009 DEFERRED).
+Next: `P8-001 — Workspace Invitations` per `BACKLOG.md`.**
