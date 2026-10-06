@@ -3078,15 +3078,26 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-007 — Plan Limit Enforcement Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-004, P7-005
+
+### Result
+
+- `max_sites` (D-099): enforced in `CreateSite` under a Workspace row lock, counting active Sites only; it is the only path that creates an active Site (no archived → active restore exists yet; when added it must re-check the limit). Dashboard / Sites list / create page show the backend-derived limit. Lowering the limit below the active count keeps existing Sites live and published and blocks new ones.
+- `custom_domain` (D-111): required (together with `manage_domains`) to add / verify / issue SSL / make primary, and at request time to serve a custom host or treat it as primary; the reconciler skips unentitled Workspaces; losing it falls back to the Landflow subdomain without deleting rows.
+- `remove_branding` (D-112): read per public request; nothing frozen into Published Versions.
+- `max_members`: defined in the typed registry, no enforcement point because member invitations are not implemented (P8-001 must enforce it when members are added; the Owner added by `CreateWorkspace` is not limited).
+- D-100 preserved: Free = `max_sites = 2` only; every other entitlement resolves deny-by-default; an inactive plan denies every entitlement; no logic branches on plan keys or names (guarded by `DefaultFreePlanTest`).
+- Account-level limit / anti-abuse policy for number of Free Workspaces is an open product/billing follow-up.
+- Tests: `tests/Feature/Publishing/PlanLimitEnforcementTest.php` (paid plan unlocks everything, inactive plan denies everything without breaking the live subdomain site, lowered `max_sites` keeps Sites live but blocks creation).
 
 ---
 
 ## P7-008 — Billing Provider ADR
 
-**Status:** NOT_STARTED  
+**Status:** BLOCKED
 **Dependencies:** P7-007
+**Blocked by:** OWNER_DECISION — D-078 Billing Provider is `ADR_REQUIRED`; agents do not choose a provider.
 
 ---
 

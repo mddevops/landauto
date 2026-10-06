@@ -194,6 +194,8 @@ Current focus:
 - `P7-004` DONE: custom-host route group (custom domains first, then Landflow subdomains, unknown → 404), effective primary (active + entitled), 301 to primary preserving path/query (no loops), «Сделать основным» / back to Landflow, removal fallback; canonical, sitemap, robots and app addresses use the primary; browser domain flow `tests/browser/domains.spec.ts`.
 - `P7-005` DONE (D-112): «Создано на Landflow» footer decided per request from the live `remove_branding` entitlement, rendered by the page shell; no longer frozen in manifest / HTML / hydration.
 - `P7-006` DONE: SEO audit (canonical / sitemap / robots / `og:url` on the primary address, OG only from real data, noindex excluded from sitemap); Site section «SEO» (`/sites/{site}/seo`) edits every page's SEO via the Page SEO endpoint with `edit_seo` / `edit_seo_basic`.
+- `P7-007` DONE: entitlement review — `max_sites` (create only, locked, active Sites), `custom_domain` (manage + serve + reconcile), `remove_branding` (per request) enforced; `max_members` has no enforcement point until invitations (P8-001); D-100 preserved; inactive plan denies all. Account-level limit / anti-abuse policy for number of Free Workspaces is an open product/billing follow-up.
+- `P7-008` BLOCKED (OWNER_DECISION): Billing Provider ADR (D-078) needs the owner; no provider chosen. `P7-009` DEFERRED.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
