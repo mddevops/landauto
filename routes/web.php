@@ -42,6 +42,7 @@ use App\Http\Controllers\Team\WorkspaceMemberController;
 use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
+use App\Http\Controllers\Vehicles\SiteVehicleImportController;
 use App\Http\Controllers\Vehicles\WorkspaceVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
@@ -229,6 +230,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
+            Route::get('vehicles/import', [SiteVehicleImportController::class, 'create'])->name('vehicles.imports.create');
+            Route::post('vehicles/import', [SiteVehicleImportController::class, 'store'])->middleware('throttle:20,1')->name('vehicles.imports.store');
             Route::post('vehicles', [SiteVehicleController::class, 'store'])->name('vehicles.store');
             Route::get('vehicles/{vehicle}', [SiteVehicleController::class, 'show'])->whereUlid('vehicle')->name('vehicles.show');
             Route::patch('vehicles/{vehicle}', [SiteVehicleController::class, 'update'])->whereUlid('vehicle')->name('vehicles.update');

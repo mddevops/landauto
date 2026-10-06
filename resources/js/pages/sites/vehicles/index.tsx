@@ -1,10 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
-import { Car, Plus, TriangleAlert } from 'lucide-react';
+import { Car, Copy, Plus, TriangleAlert } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
 import { dashboard } from '@/routes';
 import { create, show } from '@/routes/sites/vehicles';
+import { create as importVehicles } from '@/routes/sites/vehicles/imports';
 import type { VehicleCatalogTitle } from '@/types/catalog';
 
 type VehicleSummary = {
@@ -21,7 +22,7 @@ type VehicleSummary = {
 type VehiclesIndexProps = {
     site: { public_id: string; name: string };
     vehicles: VehicleSummary[];
-    can: { editVehicles: boolean };
+    can: { editVehicles: boolean; importVehicles: boolean };
 };
 
 export default function VehiclesIndex({
@@ -46,14 +47,24 @@ export default function VehiclesIndex({
                             ценами.
                         </p>
                     </div>
-                    {can.editVehicles && (
-                        <Button asChild>
-                            <Link href={create(site.public_id)}>
-                                <Plus aria-hidden="true" />
-                                Добавить автомобиль
-                            </Link>
-                        </Button>
-                    )}
+                    <div className="flex flex-wrap gap-2">
+                        {can.importVehicles && (
+                            <Button variant="outline" asChild>
+                                <Link href={importVehicles(site.public_id)}>
+                                    <Copy aria-hidden="true" />
+                                    Импортировать с другого сайта
+                                </Link>
+                            </Button>
+                        )}
+                        {can.editVehicles && (
+                            <Button asChild>
+                                <Link href={create(site.public_id)}>
+                                    <Plus aria-hidden="true" />
+                                    Добавить автомобиль
+                                </Link>
+                            </Button>
+                        )}
+                    </div>
                 </header>
 
                 {vehicles.length === 0 ? (

@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-005 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-006 DONE.
 
-Next ready task: `P8-006 — Site-to-Site Vehicle Copy`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-007 — Copy Conflict Resolution`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3220,8 +3220,14 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-006 — Site-to-Site Vehicle Copy
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-005
+
+### Result
+
+- «Импортировать с другого сайта» (`/sites/{site}/vehicles/import`): choose a source Site of the same Workspace and vehicles; destination = current Site.
+- Authorization: source Site access + vehicle view rights; destination Site access + `import_vehicles` + `edit_vehicles`; offers (price / RRP / availability / badge) need `edit_prices`, benefits need `edit_benefits` (and offers). Cross-Workspace sources are never listed or resolved.
+- `SiteVehicleCopier` copies Series, name, description, status, active media sets, offers and benefits into new destination rows (new public IDs, exact integer money, no live references), one transaction per vehicle; deterministic per-vehicle results copied / skipped / conflict / failed. An existing destination Series is a conflict and is left untouched (resolution in P8-007).
 
 ---
 

@@ -63,7 +63,10 @@ class SiteVehicleController extends Controller
                 'catalog' => isset($series[$vehicle->catalog_series_public_id]) ? $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]) : null,
                 'catalog_available' => isset($available[$vehicle->catalog_series_public_id]),
             ])->values()->all(),
-            'can' => ['editVehicles' => Gate::allows('editVehicles', $site)],
+            'can' => [
+                'editVehicles' => Gate::allows('editVehicles', $site),
+                'importVehicles' => Gate::allows('editVehicles', $site) && Gate::allows('importVehicles', $site),
+            ],
         ]);
     }
 
