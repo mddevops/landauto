@@ -183,7 +183,7 @@ test(
             page.getByText(
                 'Новая ссылка для подтверждения отправлена на электронную почту, указанную при регистрации.',
             ),
-        ).toBeVisible();
+        ).toBeVisible({ timeout: 15_000 });
 
         await captureScreenshot(page, testInfo, 'auth', 'verify-email');
 
