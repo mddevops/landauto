@@ -74,9 +74,11 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 DONE.
+Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Next ready task: `P8-011 — Phase 8 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 9 — Developer Platform: NOT_STARTED.
+
+Next ready task: `P9-001 — Developer Profile`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3288,8 +3290,30 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-011 — Phase 8 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-010
+
+### Result
+
+- Phase 8 work is DONE: P8-001 … P8-010 and this review. D-088 → D-114 (role + `all_sites` / `selected_sites`), D-083 → D-115 (library = explicit copy source), D-087 → D-116 (Workspace Asset → new Site Asset copy), D-113 (invitations / seats).
+- Review (no regressions found):
+  - Tenancy: Workspace stays the tenant. Invitations, Site assignment, Workspace Vehicles / Assets and Site-to-Site copy are bound to the backend-resolved Workspace (foreign IDs 404). Route IDs are public ULIDs only.
+  - Authorization: active membership is required (suspended / removed lose access on the next request). Site access applies to the whole `sites/{site}` group. Permissions stay role-driven with no per-permission Site overrides. Entitlements are separate; there is no self-escalation, the Owner is protected and Admin cannot grant Owner-only authority.
+  - Team limits: `max_members` is enforced under a Workspace lock. Pending unexpired invitations and suspended members reserve seats; expired or cancelled invitations do not. Lowering a plan removes no one. Free plan values and plan-name logic are unchanged.
+  - Automotive: Catalog V2 is untouched (main-DB migrations only). Workspace Vehicles are Series-level with no Workspace prices; Site Offers are Equipment-level. Copies create destination-owned rows with new public IDs and no sync. Commercial overwrite needs explicit selection plus `edit_prices` / `edit_benefits`, and the default is skip.
+  - Assets: Workspace and Site Assets are immutable. Use on a Site creates an independent Site Asset. Published Versions are unaffected, and no object store was chosen (D-076).
+  - Publishing: Published Versions stay immutable. Notes are plain text and escaped. Restore is Draft-only and audited. Publisher cannot restore, and production changes only on Publish.
+- Open follow-ups (not blocking):
+  - Published blocks do not render Site Vehicle `custom_description`.
+  - The draft snapshot omits Site Vehicle custom name / description, so restore keeps the current values.
+  - Platform Series media sets used by the Workspace library cannot be deleted (restrict).
+  - When the destination has several offers for the same Equipment, the copy updates the first by order.
+  - The unpublished-changes indicator appears only on the Publishing page.
+  - Restores are audited in `site_version_restores` but not written to the app log.
+  - Local `MAIL_MAILER=log` writes invitation emails, including the one-time link, to the local log. Production needs a real mailer (X-013).
+  - The flaky tablet `auth.spec.ts` root cause is still unknown.
+- Unchanged / open: D-076, D-077, D-089, D-090, D-091, D-093, D-094, X-013; X-017 open (scope now also counts Workspace Assets).
+- Phase 8 status: COMPLETED. Phase 9 NOT_STARTED. Next task: `P9-001 — Developer Profile`.
 
 ---
 
