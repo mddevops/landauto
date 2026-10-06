@@ -9,6 +9,24 @@ import { dashboard } from '@/routes';
 import { index } from '@/routes/sites/vehicles';
 import { create, store } from '@/routes/sites/vehicles/imports';
 
+type ConflictPreview = {
+    public_id: string;
+    title: string;
+    text_differs: boolean;
+    media_differs: boolean;
+    status_differs: boolean;
+    offers: {
+        matched: number;
+        missing: number;
+        destination_only: number;
+        price_changes: {
+            equipment: string;
+            source: string;
+            destination: string;
+        }[];
+    };
+};
+
 type SourceVehicle = {
     public_id: string;
     title: string;
@@ -17,13 +35,18 @@ type SourceVehicle = {
     offers_count: number;
     benefits_count: number;
     conflict: boolean;
+    existing: ConflictPreview | null;
 };
 
 type CopyResult = {
     vehicle: string;
     title: string;
-    result: 'copied' | 'skipped' | 'conflict' | 'failed';
+    result: 'copied' | 'updated' | 'skipped' | 'conflict' | 'failed';
 };
+
+type ConflictField = 'text' | 'media' | 'status' | 'offers' | 'benefits';
+
+type ConflictChoice = { mode: 'skip' | 'update'; fields: ConflictField[] };
 
 type ImportProps = {
     site: { public_id: string; name: string };
@@ -36,12 +59,148 @@ type ImportProps = {
 
 const resultLabels: Record<CopyResult['result'], string> = {
     copied: 'Скопирован',
+    updated: 'Обновлён',
     skipped: 'Пропущен',
-    conflict: 'Уже есть на сайте — пропущен',
+    conflict: 'Конфликт не решён — пропущен',
     failed: 'Ошибка, ничего не изменено',
 };
 
 const checkboxClass = 'size-4 shrink-0 accent-primary';
+
+function ConflictPanel({
+    vehicle,
+    preview,
+    choice,
+    error,
+    can,
+    onChange,
+}: {
+    vehicle: SourceVehicle;
+    preview: ConflictPreview;
+    choice: ConflictChoice;
+    error?: string;
+    can: ImportProps['can'];
+    onChange: (choice: ConflictChoice) => void;
+}) {
+    const name = `conflict-${vehicle.public_id}`;
+    const fields: {
+        value: ConflictField;
+        label: string;
+        hint: string | null;
+        allowed: boolean;
+    }[] = [
+        {
+            value: 'text',
+            label: 'Название и описание',
+            hint: preview.text_differs ? 'отличаются' : 'совпадают',
+            allowed: true,
+        },
+        {
+            value: 'media',
+            label: 'Выбор цветов',
+            hint: preview.media_differs ? 'отличается' : 'совпадает',
+            allowed: true,
+        },
+        {
+            value: 'status',
+            label: 'Показ на сайте',
+            hint: preview.status_differs ? 'отличается' : 'совпадает',
+            allowed: true,
+        },
+        {
+            value: 'offers',
+            label: 'Цены, наличие и бейджи предложений',
+            hint: `совпадает комплектаций: ${preview.offers.matched}, будет добавлено: ${preview.offers.missing}`,
+            allowed: can.copyPrices,
+        },
+        {
+            value: 'benefits',
+            label: 'Выгоды предложений',
+            hint: null,
+            allowed: can.copyBenefits,
+        },
+    ];
+
+    function toggleField(field: ConflictField) {
+        onChange({
+            mode: 'update',
+            fields: choice.fields.includes(field)
+                ? choice.fields.filter((value) => value !== field)
+                : [...choice.fields, field],
+        });
+    }
+
+    return (
+        <div className="space-y-3 border-t px-3 pt-3 pb-3 text-sm">
+            <p>
+                {`На этом сайте уже есть «${preview.title}». `}
+                {preview.offers.destination_only > 0 &&
+                    `Его предложения без пары (${preview.offers.destination_only}) сохранятся. `}
+                По умолчанию автомобиль пропускается.
+            </p>
+            {preview.offers.price_changes.length > 0 && (
+                <ul className="space-y-0.5 text-muted-foreground">
+                    {preview.offers.price_changes.map((change) => (
+                        <li key={change.equipment}>
+                            {`${change.equipment}: здесь ${change.destination}, на источнике ${change.source}`}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            <div className="flex flex-wrap gap-4" role="radiogroup">
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name={name}
+                        className={checkboxClass}
+                        checked={choice.mode === 'skip'}
+                        onChange={() => onChange({ mode: 'skip', fields: [] })}
+                    />
+                    Пропустить
+                </label>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name={name}
+                        className={checkboxClass}
+                        checked={choice.mode === 'update'}
+                        onChange={() =>
+                            onChange({ mode: 'update', fields: choice.fields })
+                        }
+                    />
+                    Обновить выбранное
+                </label>
+            </div>
+            {choice.mode === 'update' && (
+                <div className="space-y-2">
+                    {fields.map((field) => (
+                        <label
+                            key={field.value}
+                            className="flex items-start gap-2 has-[:disabled]:opacity-60"
+                        >
+                            <input
+                                type="checkbox"
+                                className={`${checkboxClass} mt-0.5`}
+                                checked={choice.fields.includes(field.value)}
+                                onChange={() => toggleField(field.value)}
+                                disabled={!field.allowed}
+                            />
+                            <span>
+                                {field.label}
+                                {field.hint && (
+                                    <span className="text-muted-foreground">
+                                        {` — ${field.hint}`}
+                                    </span>
+                                )}
+                            </span>
+                        </label>
+                    ))}
+                </div>
+            )}
+            <InputError message={error} />
+        </div>
+    );
+}
 
 export default function ImportVehicles({
     site,
@@ -56,8 +215,10 @@ export default function ImportVehicles({
         vehicles: [] as string[],
         include_offers: false,
         include_benefits: false,
+        conflicts: {} as Record<string, ConflictChoice>,
     });
     const copyable = vehicles.filter((vehicle) => !vehicle.conflict);
+    const errors = form.errors as Record<string, string | undefined>;
 
     function toggle(publicId: string) {
         form.setData(
@@ -124,9 +285,23 @@ export default function ImportVehicles({
                         className="flex flex-col gap-6"
                         onSubmit={(event) => {
                             event.preventDefault();
+                            form.transform((data) => ({
+                                ...data,
+                                conflicts: Object.fromEntries(
+                                    Object.entries(data.conflicts).filter(
+                                        ([publicId]) =>
+                                            data.vehicles.includes(publicId),
+                                    ),
+                                ),
+                            }));
                             form.post(store.url(site.public_id), {
                                 preserveScroll: true,
-                                onSuccess: () => form.setData('vehicles', []),
+                                onSuccess: () =>
+                                    form.setData((data) => ({
+                                        ...data,
+                                        vehicles: [],
+                                        conflicts: {},
+                                    })),
                             });
                         }}
                     >
@@ -172,8 +347,11 @@ export default function ImportVehicles({
                                     ) : (
                                         <ul className="grid gap-2 lg:grid-cols-2">
                                             {vehicles.map((vehicle) => (
-                                                <li key={vehicle.public_id}>
-                                                    <label className="flex min-w-0 items-start gap-3 rounded-lg border bg-card p-3 has-[:disabled]:opacity-70">
+                                                <li
+                                                    key={vehicle.public_id}
+                                                    className="min-w-0 rounded-lg border bg-card"
+                                                >
+                                                    <label className="flex min-w-0 items-start gap-3 p-3">
                                                         <input
                                                             type="checkbox"
                                                             className={`${checkboxClass} mt-0.5`}
@@ -184,9 +362,6 @@ export default function ImportVehicles({
                                                                 toggle(
                                                                     vehicle.public_id,
                                                                 )
-                                                            }
-                                                            disabled={
-                                                                vehicle.conflict
                                                             }
                                                         />
                                                         <span className="min-w-0 flex-1 space-y-1">
@@ -211,6 +386,49 @@ export default function ImportVehicles({
                                                             </Badge>
                                                         )}
                                                     </label>
+                                                    {vehicle.existing &&
+                                                        form.data.vehicles.includes(
+                                                            vehicle.public_id,
+                                                        ) && (
+                                                            <ConflictPanel
+                                                                vehicle={
+                                                                    vehicle
+                                                                }
+                                                                preview={
+                                                                    vehicle.existing
+                                                                }
+                                                                choice={
+                                                                    form.data
+                                                                        .conflicts[
+                                                                        vehicle
+                                                                            .public_id
+                                                                    ] ?? {
+                                                                        mode: 'skip',
+                                                                        fields: [],
+                                                                    }
+                                                                }
+                                                                error={
+                                                                    errors[
+                                                                        `conflicts.${vehicle.public_id}.fields`
+                                                                    ]
+                                                                }
+                                                                can={can}
+                                                                onChange={(
+                                                                    choice,
+                                                                ) =>
+                                                                    form.setData(
+                                                                        'conflicts',
+                                                                        {
+                                                                            ...form
+                                                                                .data
+                                                                                .conflicts,
+                                                                            [vehicle.public_id]:
+                                                                                choice,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            />
+                                                        )}
                                                 </li>
                                             ))}
                                         </ul>
@@ -223,11 +441,14 @@ export default function ImportVehicles({
                                 {copyable.length > 0 && (
                                     <fieldset className="space-y-2">
                                         <legend className="mb-2 font-semibold">
-                                            Что копировать
+                                            Что копировать в новые автомобили
                                         </legend>
                                         <p className="text-sm text-muted-foreground">
                                             Серия, название, описание, показ и
                                             выбранные цвета копируются всегда.
+                                            Для автомобилей, которые уже есть на
+                                            сайте, действуют настройки
+                                            конфликта.
                                         </p>
                                         <label className="flex items-center gap-2 text-sm has-[:disabled]:opacity-60">
                                             <input

@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-006 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-007 DONE.
 
-Next ready task: `P8-007 — Copy Conflict Resolution`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-008 — Shared Workspace Assets`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3233,8 +3233,15 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-007 — Copy Conflict Resolution
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-006
+
+### Result
+
+- Conflict identity: destination Site + catalog Series (never display name). Default is skip; nothing changes before an explicit choice.
+- Read-only preview on the import page: existing destination vehicle, whether text / media / status differ, matched / missing / destination-only offers and up to 10 price differences.
+- Per conflict «Пропустить» or «Обновить выбранное» with fields: text, media selection, status, offers (price / RRP / availability / badge — `edit_prices`), benefits (`edit_benefits`); commercial fields unchecked by default. Offers match by catalog Equipment: matching offers get only the selected fields, missing offers are created, unrelated destination offers are never deleted; repeated runs create no duplicates.
+- Summary: Скопировано / Обновлено / Пропущено / Конфликтов не решено (+ errors). No copy-history table (not needed).
 
 ---
 

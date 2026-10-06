@@ -21,6 +21,7 @@ use App\Models\WorkspaceMember;
 use App\Support\WorkspaceContext;
 use App\Support\WorkspacePermissionResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
@@ -41,6 +42,10 @@ class SiteVehicleCopyTest extends TestCase
 
     private SeriesMediaSet $white;
 
+    private AutoModification $modification;
+
+    private AutoEquipment $comfort;
+
     /** @var array<string, list<WorkspacePermission>> */
     private array $grants = [];
 
@@ -55,8 +60,8 @@ class SiteVehicleCopyTest extends TestCase
         $this->destination = Site::factory()->for($this->workspace)->create(['name' => 'Сайт Б']);
 
         $series = AutoSeries::factory()->create();
-        $modification = AutoModification::factory()->for($series, 'series')->create();
-        $comfort = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Comfort']);
+        $this->modification = $modification = AutoModification::factory()->for($series, 'series')->create();
+        $this->comfort = $comfort = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Comfort']);
         $prestige = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Prestige']);
         $this->white = SeriesMediaSet::factory()->forSeries($series)->create();
 
@@ -100,7 +105,7 @@ class SiteVehicleCopyTest extends TestCase
             ])
             ->assertRedirect(route('sites.vehicles.imports.create', ['site' => $this->destination, 'source' => $this->source->public_id]))
             ->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'copied']])
-            ->assertInertiaFlash('toast.message', 'Скопировано: 1 · Пропущено: 0 · Конфликтов: 0 · Ошибок: 0');
+            ->assertInertiaFlash('toast.message', 'Скопировано: 1 · Обновлено: 0 · Пропущено: 0 · Конфликтов не решено: 0');
 
         $copy = $this->destination->vehicles()->sole();
         $this->assertNotSame($this->vehicle->public_id, $copy->public_id);
@@ -261,6 +266,151 @@ class SiteVehicleCopyTest extends TestCase
         $copy = $this->destination->vehicles()->sole();
         $this->assertSame(2, $copy->offers()->count());
         $this->assertSame(0, SiteOfferBenefit::query()->whereIn('site_offer_id', $copy->offers()->pluck('id'))->count());
+    }
+
+    public function test_conflict_preview_and_default_skip_change_nothing(): void
+    {
+        $target = $this->conflictingVehicle();
+        $before = $this->snapshot($target);
+        $sourceBefore = $this->snapshot($this->vehicle);
+
+        $this->as($this->owner)
+            ->get(route('sites.vehicles.imports.create', ['site' => $this->destination, 'source' => $this->source->public_id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('vehicles.0.conflict', true)
+                ->where('vehicles.0.existing.public_id', $target->public_id)
+                ->where('vehicles.0.existing.title', 'Своё имя')
+                ->where('vehicles.0.existing.text_differs', true)
+                ->where('vehicles.0.existing.media_differs', true)
+                ->where('vehicles.0.existing.offers.matched', 1)
+                ->where('vehicles.0.existing.offers.missing', 1)
+                ->where('vehicles.0.existing.offers.destination_only', 1)
+                ->where('vehicles.0.existing.offers.price_changes.0.equipment', 'Comfort')
+                ->missing('vehicles.0.existing.id'));
+
+        foreach ([[], ['mode' => 'skip', 'fields' => ['text', 'offers']]] as $choice) {
+            $this->as($this->owner)
+                ->post(route('sites.vehicles.imports.store', $this->destination), [
+                    'source' => $this->source->public_id,
+                    'vehicles' => [$this->vehicle->public_id],
+                    'include_offers' => true,
+                    'conflicts' => $choice === [] ? [] : [$this->vehicle->public_id => $choice],
+                ])
+                ->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'conflict']])
+                ->assertInertiaFlash('toast.message', 'Скопировано: 0 · Обновлено: 0 · Пропущено: 0 · Конфликтов не решено: 1');
+        }
+
+        $this->as($this->owner)
+            ->post(route('sites.vehicles.imports.store', $this->destination), [
+                'source' => $this->source->public_id,
+                'vehicles' => [$this->vehicle->public_id],
+                'conflicts' => [$this->vehicle->public_id => ['mode' => 'update', 'fields' => []]],
+            ])
+            ->assertSessionHasErrors("conflicts.{$this->vehicle->public_id}.fields");
+
+        $this->assertSame($before, $this->snapshot($target->fresh() ?? $target));
+        $this->assertSame($sourceBefore, $this->snapshot($this->vehicle->fresh() ?? $this->vehicle));
+        $this->assertSame(1, $this->destination->vehicles()->count());
+    }
+
+    public function test_updating_text_or_media_only_leaves_offers_and_prices_unchanged(): void
+    {
+        $target = $this->conflictingVehicle();
+        $offersBefore = $this->snapshot($target)['offers'];
+
+        $this->resolve(['text'])->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'updated']]);
+        $target->refresh();
+        $this->assertSame(['Rio А', 'Описание А', true], [$target->custom_name, $target->custom_description, $target->status]);
+        $this->assertSame([], $target->mediaSets()->pluck('series_media_sets.public_id')->all());
+        $this->assertSame($offersBefore, $this->snapshot($target)['offers']);
+
+        $this->resolve(['media', 'status']);
+        $target->refresh();
+        $this->assertSame([$this->white->public_id], $target->mediaSets()->pluck('series_media_sets.public_id')->all());
+        $this->assertFalse($target->status);
+        $this->assertSame($offersBefore, $this->snapshot($target)['offers']);
+    }
+
+    public function test_updating_offers_matches_equipment_creates_missing_and_keeps_unrelated_offers(): void
+    {
+        $target = $this->conflictingVehicle();
+        $sourceBefore = $this->snapshot($this->vehicle);
+
+        $this->resolve(['offers'])->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'updated']]);
+
+        $offers = $target->offers()->with('benefits')->get()->keyBy('catalog_equipment_public_id');
+        $this->assertCount(3, $offers);
+        $comfort = $offers[$this->comfort->public_id];
+        $this->assertSame([123_456_789, 130_000_001, OfferAvailability::InTransit, 'Хит'], [$comfort->price_minor, $comfort->rrp_minor, $comfort->availability, $comfort->badge]);
+        $this->assertSame([5], [$comfort->sort_order]);
+        $this->assertSame([['discount', 777]], $comfort->benefits->map(fn (SiteOfferBenefit $benefit): array => [$benefit->type->value, $benefit->amount_minor])->all());
+        $this->assertSame('Своё имя', $target->fresh()?->custom_name);
+        $this->assertSame(99_000_000, SiteOffer::query()->where('badge', 'Только здесь')->value('price_minor'));
+
+        // Repeating the same update creates no duplicates.
+        $this->resolve(['offers', 'benefits']);
+        $this->assertSame(3, $target->offers()->count());
+        $this->assertSame(
+            [['trade_in', 5_000_099], ['credit', 1_000_000]],
+            $target->offers()->where('catalog_equipment_public_id', $this->comfort->public_id)->sole()->benefits->map(fn (SiteOfferBenefit $benefit): array => [$benefit->type->value, $benefit->amount_minor])->all(),
+        );
+
+        $this->assertSame($sourceBefore, $this->snapshot($this->vehicle->fresh() ?? $this->vehicle));
+    }
+
+    public function test_conflict_updates_of_prices_and_benefits_need_the_commercial_permissions(): void
+    {
+        $target = $this->conflictingVehicle();
+        $before = $this->snapshot($target);
+        $base = [WorkspacePermission::ViewSite, WorkspacePermission::ViewVehicles, WorkspacePermission::EditVehicles, WorkspacePermission::ImportVehicles];
+
+        $this->grant(WorkspaceRole::Designer, $base);
+        $member = $this->member(WorkspaceRole::Designer);
+        $this->resolve(['text', 'offers'], $member->user)->assertForbidden();
+
+        $this->grant(WorkspaceRole::Designer, [...$base, WorkspacePermission::EditPrices]);
+        $this->resolve(['benefits'], $member->user)->assertForbidden();
+        $this->assertSame($before, $this->snapshot($target->fresh() ?? $target));
+
+        $this->resolve(['text'], $member->user)->assertSessionHasNoErrors();
+        $this->assertSame('Rio А', $target->fresh()?->custom_name);
+    }
+
+    /**
+     * Destination vehicle of the same Series: a differently priced Comfort offer with its own
+     * benefit and an offer for equipment the source does not have.
+     */
+    private function conflictingVehicle(): SiteVehicle
+    {
+        $target = SiteVehicle::factory()->for($this->destination)->forSeries(AutoSeries::query()->where('public_id', $this->vehicle->catalog_series_public_id)->sole())->create([
+            'custom_name' => 'Своё имя',
+            'status' => true,
+        ]);
+        $comfort = SiteOffer::factory()->for($target, 'vehicle')->create([
+            'catalog_equipment_public_id' => $this->comfort->public_id,
+            'price_minor' => 200_000_000,
+            'sort_order' => 5,
+        ]);
+        $comfort->replaceBenefits([['type' => BenefitType::Discount, 'amount_minor' => 777]]);
+        SiteOffer::factory()->for($target, 'vehicle')->create([
+            'catalog_equipment_public_id' => AutoEquipment::factory()->for($this->modification, 'modification')->create(['name' => 'Luxe'])->public_id,
+            'price_minor' => 99_000_000,
+            'badge' => 'Только здесь',
+        ]);
+
+        return $target;
+    }
+
+    /**
+     * @param  list<string>  $fields
+     */
+    private function resolve(array $fields, ?User $actor = null): TestResponse
+    {
+        return $this->as($actor ?? $this->owner)->post(route('sites.vehicles.imports.store', $this->destination), [
+            'source' => $this->source->public_id,
+            'vehicles' => [$this->vehicle->public_id],
+            'conflicts' => [$this->vehicle->public_id => ['mode' => 'update', 'fields' => $fields]],
+        ]);
     }
 
     /**
