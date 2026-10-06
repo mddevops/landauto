@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001, P8-002 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-003 DONE.
 
-Next ready task: `P8-003 — Site-Level Access`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-004 — Expanded System Roles`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3171,8 +3171,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-003 — Site-Level Access
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-001
+**Decision:** D-088 resolved for Phase 8 by D-114
+
+### Result
+
+- `workspace_members.site_access_mode` (`all_sites` default for existing members / `selected_sites`) + internal `site_member_access` (unique member + Site, cascade); invitations store the scope in `workspace_invitation_sites` and copy it on acceptance.
+- Central `SiteAccessResolver` (Owner / Admin forced `all_sites`) used by every `SitePolicy` ability (`WorkspaceAuthorization::allowsForSite`), `DesignerScope`, the new `EnsureSiteAccess` guard on the whole `sites/{site}` route group (all 68 routes) and the dashboard Site list.
+- Unassigned Site → 404 for the Site and every nested resource URL (regression sweep over all Site routes with real nested resources + structural test that every `sites/{site}` route carries the guard).
+- «Команда»: «Доступ к сайтам» dialog (Все сайты / Выбранные сайты) and the same choice in the invite dialog; zero selected Sites, foreign Sites and forced roles rejected. Logs `workspace.site_access_changed`.
 
 ---
 

@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SiteAccessMode;
 use App\Enums\WorkspaceRole;
 use App\Models\Concerns\HasImmutablePublicId;
 use Carbon\CarbonImmutable;
@@ -11,6 +12,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 
 /**
  * Pending access to a Workspace for an email address. Only a SHA-256 hash of the one-time token
@@ -22,6 +24,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
  * @property int|null $invited_by_member_id
  * @property string $email
  * @property WorkspaceRole $role
+ * @property SiteAccessMode $site_access_mode
  * @property string $token_hash
  * @property CarbonImmutable $expires_at
  * @property CarbonImmutable|null $accepted_at
@@ -36,12 +39,20 @@ class WorkspaceInvitation extends Model
     use HasFactory, HasImmutablePublicId;
 
     /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = [
+        'site_access_mode' => SiteAccessMode::AllSites->value,
+    ];
+
+    /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
         return [
             'role' => WorkspaceRole::class,
+            'site_access_mode' => SiteAccessMode::class,
             'expires_at' => 'immutable_datetime',
             'accepted_at' => 'immutable_datetime',
             'cancelled_at' => 'immutable_datetime',
@@ -59,6 +70,16 @@ class WorkspaceInvitation extends Model
     public function workspace(): BelongsTo
     {
         return $this->belongsTo(Workspace::class);
+    }
+
+    /**
+     * Sites granted on acceptance in `selected_sites` mode.
+     *
+     * @return BelongsToMany<Site, $this>
+     */
+    public function sites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'workspace_invitation_sites')->withTimestamps();
     }
 
     /**

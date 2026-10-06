@@ -2,11 +2,14 @@
 
 namespace App\Http\Controllers\Team;
 
+use App\Enums\SiteAccessMode;
 use App\Enums\WorkspacePermission;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Team\UpdateMemberSiteAccessRequest;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use App\Support\WorkspaceContext;
+use App\Team\MemberSiteAccess;
 use App\Team\WorkspaceMembers;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\Gate;
@@ -30,6 +33,24 @@ class WorkspaceMemberController extends Controller
         $this->members->reactivate($workspace, $actor, $member);
 
         return $this->done('Доступ участника восстановлен.');
+    }
+
+    public function updateSiteAccess(
+        UpdateMemberSiteAccessRequest $request,
+        string $member,
+        WorkspaceContext $workspaceContext,
+        MemberSiteAccess $siteAccess,
+    ): RedirectResponse {
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $siteAccess->update(
+            $workspace,
+            $actor,
+            $member,
+            SiteAccessMode::from($request->string('site_access_mode')->toString()),
+            $request->sitePublicIds(),
+        );
+
+        return $this->done('Доступ к сайтам сохранён.');
     }
 
     public function destroy(string $member, WorkspaceContext $workspaceContext): RedirectResponse

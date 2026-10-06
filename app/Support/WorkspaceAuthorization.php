@@ -3,6 +3,7 @@
 namespace App\Support;
 
 use App\Enums\WorkspacePermission;
+use App\Models\Site;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
@@ -12,6 +13,7 @@ final class WorkspaceAuthorization
     public function __construct(
         private WorkspaceContext $context,
         private WorkspacePermissionResolver $permissions,
+        private SiteAccessResolver $siteAccess,
     ) {}
 
     public function allows(User $user, WorkspacePermission $permission): bool
@@ -30,6 +32,16 @@ final class WorkspaceAuthorization
     ): bool {
         return $this->context->current()?->is($workspace) === true
             && $this->allows($user, $permission);
+    }
+
+    /**
+     * Membership → role permission → Site access (D-088). Every Site-scoped check goes here.
+     */
+    public function allowsForSite(User $user, Site $site, WorkspacePermission $permission): bool
+    {
+        return $this->context->current()?->getKey() === $site->workspace_id
+            && $this->allows($user, $permission)
+            && $this->siteAccess->canAccess($this->context->membership(), $site);
     }
 
     /**

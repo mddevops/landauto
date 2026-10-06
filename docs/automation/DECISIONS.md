@@ -1668,9 +1668,9 @@ BACKLOG `X-010 — ADR: Media Ownership and Asset Versioning` (together with D-0
 
 ## D-088 — Site-Specific Permission Override Model
 
-**Status:** OPEN
+**Status:** APPROVED for Phase 8 MVP — resolved by D-114 (Workspace role + Site access scope `all_sites` / `selected_sites`; no per-permission overrides, no custom Site roles). Site-specific roles or overrides need a new decision.
 
-### Current Direction
+### Original Direction
 
 Workspace role provides baseline.
 
@@ -2053,6 +2053,25 @@ Owner instruction in the Phase 7 autopilot (2026-10-06); P7-005. Versions publis
 ### Resolved By
 
 Owner instruction in the Phase 8 autopilot (2026-10-06); P8-001.
+
+---
+
+## D-114 — Site Access Scope for Workspace Members (resolves D-088 for Phase 8)
+
+**Status:** APPROVED
+
+### Decision
+
+- The Workspace system role remains the only permission source. Site access answers only "may this member enter this Site?". Resolution: active membership → role permissions → Site access → entitlement → business invariant.
+- Modes: `all_sites` (default; existing members) and `selected_sites` with explicit internal `site_member_access` rows. `selected_sites` with zero Sites is invalid. Selected Sites must belong to the member's Workspace.
+- Owner, Admin and Integrations Manager are always `all_sites` (Workspace-scoped resources); Designer, Content Editor, Pricing Manager, Lead Manager and Publisher may use either mode.
+- No per-permission allow / deny overrides and no custom Site roles.
+- A central `SiteAccessResolver` is used by `SitePolicy`, `DesignerScope`, the `sites/{site}` route guard and Site lists; an unassigned Site behaves like a missing tenant resource (404, omitted from lists).
+- Invitations carry the same scope (`workspace_invitation_sites`) and copy it to the membership on acceptance.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-003.
 
 ---
 

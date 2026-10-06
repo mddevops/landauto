@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\SiteAccessMode;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Exceptions\LastWorkspaceOwnerException;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -24,6 +26,7 @@ use LogicException;
  * @property int $user_id
  * @property WorkspaceRole $role
  * @property WorkspaceMemberStatus $status
+ * @property SiteAccessMode $site_access_mode
  * @property Carbon|null $joined_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -40,6 +43,7 @@ class WorkspaceMember extends Model
      */
     protected $attributes = [
         'status' => WorkspaceMemberStatus::Active->value,
+        'site_access_mode' => SiteAccessMode::AllSites->value,
     ];
 
     /**
@@ -50,8 +54,19 @@ class WorkspaceMember extends Model
         return [
             'role' => WorkspaceRole::class,
             'status' => WorkspaceMemberStatus::class,
+            'site_access_mode' => SiteAccessMode::class,
             'joined_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Explicit Site assignments; only consulted in `selected_sites` mode.
+     *
+     * @return BelongsToMany<Site, $this>
+     */
+    public function sites(): BelongsToMany
+    {
+        return $this->belongsToMany(Site::class, 'site_member_access')->withTimestamps();
     }
 
     /**

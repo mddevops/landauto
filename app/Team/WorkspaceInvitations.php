@@ -2,6 +2,7 @@
 
 namespace App\Team;
 
+use App\Enums\SiteAccessMode;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Enums\WorkspaceStatus;
@@ -32,6 +33,7 @@ final class WorkspaceInvitations
     public function __construct(
         private WorkspaceSeats $seats,
         private TeamAuthority $authority,
+        private MemberSiteAccess $siteAccess,
     ) {}
 
     public static function normalizeEmail(string $email): string
@@ -45,17 +47,24 @@ final class WorkspaceInvitations
     }
 
     /**
+     * @param  list<string>  $sitePublicIds
      * @return array{invitation: WorkspaceInvitation, mailed: bool}
      */
-    public function invite(Workspace $workspace, WorkspaceMember $actor, string $email, WorkspaceRole $role): array
-    {
+    public function invite(
+        Workspace $workspace,
+        WorkspaceMember $actor,
+        string $email,
+        WorkspaceRole $role,
+        SiteAccessMode $siteAccessMode = SiteAccessMode::AllSites,
+        array $sitePublicIds = [],
+    ): array {
         $email = self::normalizeEmail($email);
 
         if (! $this->authority->canAssign($actor->role, $role)) {
             throw ValidationException::withMessages(['role' => 'Эту роль нельзя назначить приглашением.']);
         }
 
-        [$invitation, $token] = DB::transaction(function () use ($workspace, $actor, $email, $role): array {
+        [$invitation, $token] = DB::transaction(function () use ($workspace, $actor, $email, $role, $siteAccessMode, $sitePublicIds): array {
             $locked = $this->lockWorkspace($workspace);
             $this->ensureNotMember($locked, $email, 'email');
 
@@ -67,6 +76,7 @@ final class WorkspaceInvitations
                 ]);
             }
 
+            $siteIds = $this->siteAccess->resolveSites($locked, $role, $siteAccessMode, $sitePublicIds);
             $this->ensureFreeSeat($locked, null, 'email');
 
             $token = self::newToken();
@@ -76,9 +86,11 @@ final class WorkspaceInvitations
                 'invited_by_member_id' => $actor->id,
                 'email' => $email,
                 'role' => $role,
+                'site_access_mode' => $siteIds === [] ? SiteAccessMode::AllSites : SiteAccessMode::SelectedSites,
                 'token_hash' => WorkspaceInvitation::hashToken($token),
                 'expires_at' => now()->addHours(self::ttlHours()),
             ])->save();
+            $invitation->sites()->sync($siteIds);
 
             return [$invitation, $token];
         });
@@ -181,7 +193,17 @@ final class WorkspaceInvitations
                 throw self::invalid('В пространстве нет свободных мест для участников. Обратитесь к администратору пространства.');
             }
 
+            $siteIds = array_values(array_map(
+                'intval',
+                $invitation->sites()->where('sites.workspace_id', $locked->id)->pluck('sites.id')->all(),
+            ));
+
+            if ($invitation->site_access_mode === SiteAccessMode::SelectedSites && $siteIds === []) {
+                throw self::invalid('Сайты из приглашения больше недоступны. Попросите отправить новое приглашение.');
+            }
+
             $member = $locked->addMember($user, $invitation->role);
+            $this->siteAccess->apply($member, $invitation->site_access_mode, $siteIds);
             $invitation->forceFill(['accepted_at' => now()])->save();
 
             return [$locked, $member];

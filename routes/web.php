@@ -46,6 +46,7 @@ use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceSettingsController;
 use App\Http\Middleware\EnsurePlatformPermission;
+use App\Http\Middleware\EnsureSiteAccess;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
 
@@ -110,6 +111,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('members/{member}/reactivate', [WorkspaceMemberController::class, 'reactivate'])
                 ->whereUlid('member')
                 ->name('members.reactivate');
+            Route::put('members/{member}/site-access', [WorkspaceMemberController::class, 'updateSiteAccess'])
+                ->whereUlid('member')
+                ->name('members.site-access');
             Route::delete('members/{member}', [WorkspaceMemberController::class, 'destroy'])
                 ->whereUlid('member')
                 ->name('members.destroy');
@@ -135,7 +139,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('{profile}/test', IntegrationTestConnectionController::class)->whereUlid('profile')->name('test');
         });
 
-    Route::middleware(RequireWorkspaceContext::class)
+    Route::middleware([RequireWorkspaceContext::class, EnsureSiteAccess::class])
         ->prefix('sites/{site}')
         ->whereUlid(['site', 'page'])
         ->name('sites.')

@@ -27,6 +27,7 @@ use App\Policies\SitePolicy;
 use App\Publishing\Rendering\NodePageRenderer;
 use App\Publishing\Rendering\PageRenderer;
 use App\Support\PlatformAuthorization;
+use App\Support\SiteAccessResolver;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use Carbon\CarbonImmutable;
@@ -51,6 +52,7 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->app->scoped(WorkspaceContext::class);
         $this->app->scoped(WorkspaceAuthorization::class);
+        $this->app->scoped(SiteAccessResolver::class);
         $this->app->bind(PageRenderer::class, NodePageRenderer::class);
         $this->app->singleton(CaptchaVerifier::class, function (Application $app): CaptchaVerifier {
             if (config('forms.captcha_driver') === 'fake' && $app->environment(['testing', 'e2e'])) {

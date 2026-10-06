@@ -4,6 +4,11 @@ import { useState } from 'react';
 import type { FormEvent } from 'react';
 import type { Choice } from '@/components/platform/form-fields';
 import { SelectField, TextField } from '@/components/platform/form-fields';
+import type {
+    SiteAccessMode,
+    TeamSite,
+} from '@/components/team/site-access-fields';
+import { SiteAccessFields } from '@/components/team/site-access-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
@@ -30,6 +35,7 @@ import { destroy, resend, store } from '@/routes/workspace/team/invitations';
 import {
     destroy as removeMember,
     reactivate as reactivateMember,
+    siteAccess as updateSiteAccess,
     suspend as suspendMember,
 } from '@/routes/workspace/team/members';
 
@@ -43,6 +49,8 @@ type MemberRow = {
     joined_at: string | null;
     is_self: boolean;
     can_manage: boolean;
+    site_access_mode: SiteAccessMode;
+    sites: string[];
 };
 
 type InvitationRow = {
@@ -53,21 +61,123 @@ type InvitationRow = {
     state: 'pending' | 'expired';
     expires_at: string;
     can_manage: boolean;
+    site_access_mode: SiteAccessMode;
+    site_count: number;
 };
 
 type TeamProps = {
     members: MemberRow[];
     invitations: InvitationRow[];
+    sites: TeamSite[];
     seats: { limit: number; reserved: number };
     assignableRoles: Choice[];
+    allSitesRoles: string[];
     invitationTtlHours: number;
 };
+
+function siteAccessSummary(mode: SiteAccessMode, count: number): string {
+    return mode === 'all_sites' ? 'Все сайты' : `Выбранные сайты: ${count}`;
+}
 
 const memberStatusLabels: Record<string, string> = {
     active: 'Активен',
     suspended: 'Приостановлен',
     invited: 'Приглашён',
 };
+
+function firstNestedError(
+    errors: Partial<Record<string, string>>,
+    prefix: string,
+): string | undefined {
+    const key = Object.keys(errors).find((name) => name.startsWith(prefix));
+
+    return key ? errors[key] : undefined;
+}
+
+function SiteAccessDialog({
+    member,
+    sites,
+}: {
+    member: MemberRow;
+    sites: TeamSite[];
+}) {
+    const [open, setOpen] = useState(false);
+    const form = useForm<{ site_access_mode: SiteAccessMode; sites: string[] }>(
+        { site_access_mode: member.site_access_mode, sites: member.sites },
+    );
+
+    function submit(event: FormEvent) {
+        event.preventDefault();
+        form.submit(updateSiteAccess(member.public_id), {
+            preserveScroll: true,
+            onSuccess: () => setOpen(false),
+        });
+    }
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+                form.clearErrors();
+
+                if (next) {
+                    form.setData({
+                        site_access_mode: member.site_access_mode,
+                        sites: member.sites,
+                    });
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                <Button type="button" size="sm" variant="outline">
+                    Доступ к сайтам
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Доступ к сайтам</DialogTitle>
+                    <DialogDescription>
+                        {member.name || member.email} — {member.role_label}.
+                        Роль определяет действия, а доступ — на каких сайтах их
+                        можно выполнять.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={submit} className="grid gap-4">
+                    <SiteAccessFields
+                        idPrefix={`member-${member.public_id}`}
+                        sites={sites}
+                        mode={form.data.site_access_mode}
+                        selected={form.data.sites}
+                        onModeChange={(mode) =>
+                            form.setData('site_access_mode', mode)
+                        }
+                        onSelectedChange={(selected) =>
+                            form.setData('sites', selected)
+                        }
+                        error={
+                            form.errors.sites ??
+                            form.errors.site_access_mode ??
+                            firstNestedError(form.errors, 'sites.')
+                        }
+                        forcedAllSites={false}
+                    />
+                    <DialogFooter className="gap-2">
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Отмена
+                            </Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={form.processing}>
+                            {form.processing && <Spinner />}
+                            Сохранить
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
 
 function formatDate(value: string): string {
     return new Date(value).toLocaleString('ru-RU', {
@@ -78,15 +188,29 @@ function formatDate(value: string): string {
 
 function InviteDialog({
     roles,
+    sites,
+    allSitesRoles,
     disabled,
     ttlHours,
 }: {
     roles: Choice[];
+    sites: TeamSite[];
+    allSitesRoles: string[];
     disabled: boolean;
     ttlHours: number;
 }) {
     const [open, setOpen] = useState(false);
-    const form = useForm({ email: '', role: roles[0]?.value ?? '' });
+    const form = useForm<{
+        email: string;
+        role: string;
+        site_access_mode: SiteAccessMode;
+        sites: string[];
+    }>({
+        email: '',
+        role: roles[0]?.value ?? '',
+        site_access_mode: 'all_sites',
+        sites: [],
+    });
 
     function submit(event: FormEvent) {
         event.preventDefault();
@@ -152,6 +276,24 @@ function InviteDialog({
                         }
                         required
                         error={form.errors.role}
+                    />
+                    <SiteAccessFields
+                        idPrefix="invite"
+                        sites={sites}
+                        mode={form.data.site_access_mode}
+                        selected={form.data.sites}
+                        onModeChange={(mode) =>
+                            form.setData('site_access_mode', mode)
+                        }
+                        onSelectedChange={(selected) =>
+                            form.setData('sites', selected)
+                        }
+                        error={
+                            form.errors.sites ??
+                            form.errors.site_access_mode ??
+                            firstNestedError(form.errors, 'sites.')
+                        }
+                        forcedAllSites={allSitesRoles.includes(form.data.role)}
                     />
                     <DialogFooter className="gap-2">
                         <DialogClose asChild>
@@ -229,7 +371,15 @@ function InvitationActions({ invitation }: { invitation: InvitationRow }) {
     );
 }
 
-function MemberActions({ member }: { member: MemberRow }) {
+function MemberActions({
+    member,
+    sites,
+    allSitesRoles,
+}: {
+    member: MemberRow;
+    sites: TeamSite[];
+    allSitesRoles: string[];
+}) {
     const [confirmRemove, setConfirmRemove] = useState(false);
     const [processing, setProcessing] = useState(false);
     const options = {
@@ -247,6 +397,9 @@ function MemberActions({ member }: { member: MemberRow }) {
 
     return (
         <div className="flex flex-wrap gap-2">
+            {!allSitesRoles.includes(member.role) && (
+                <SiteAccessDialog member={member} sites={sites} />
+            )}
             {member.status === 'suspended' ? (
                 <Button
                     type="button"
@@ -313,8 +466,10 @@ function MemberActions({ member }: { member: MemberRow }) {
 export default function WorkspaceTeam({
     members,
     invitations,
+    sites,
     seats,
     assignableRoles,
+    allSitesRoles,
     invitationTtlHours,
 }: TeamProps) {
     const unavailable = seats.limit === 0;
@@ -335,6 +490,8 @@ export default function WorkspaceTeam({
                     </div>
                     <InviteDialog
                         roles={assignableRoles}
+                        sites={sites}
+                        allSitesRoles={allSitesRoles}
                         disabled={
                             unavailable || full || assignableRoles.length === 0
                         }
@@ -393,7 +550,17 @@ export default function WorkspaceTeam({
                                                 member.status
                                             ] ?? member.status}
                                         </Badge>
-                                        <MemberActions member={member} />
+                                        <Badge variant="outline">
+                                            {siteAccessSummary(
+                                                member.site_access_mode,
+                                                member.sites.length,
+                                            )}
+                                        </Badge>
+                                        <MemberActions
+                                            member={member}
+                                            sites={sites}
+                                            allSitesRoles={allSitesRoles}
+                                        />
                                     </div>
                                 </li>
                             ))}
@@ -429,6 +596,12 @@ export default function WorkspaceTeam({
                                             <div className="flex flex-wrap items-center gap-2 text-sm text-muted-foreground">
                                                 <Badge variant="secondary">
                                                     {invitation.role_label}
+                                                </Badge>
+                                                <Badge variant="outline">
+                                                    {siteAccessSummary(
+                                                        invitation.site_access_mode,
+                                                        invitation.site_count,
+                                                    )}
                                                 </Badge>
                                                 {invitation.state ===
                                                 'expired' ? (

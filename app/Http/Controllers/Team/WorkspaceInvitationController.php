@@ -29,6 +29,8 @@ class WorkspaceInvitationController extends Controller
             $actor,
             $request->string('email')->toString(),
             WorkspaceRole::from($request->string('role')->toString()),
+            $request->siteAccessMode(),
+            $request->sitePublicIds(),
         );
 
         Inertia::flash('toast', $result['mailed']

@@ -4,13 +4,12 @@ namespace App\Http\Requests\Team;
 
 use App\Enums\SiteAccessMode;
 use App\Enums\WorkspacePermission;
-use App\Enums\WorkspaceRole;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 
-class StoreWorkspaceInvitationRequest extends FormRequest
+class UpdateMemberSiteAccessRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -23,17 +22,10 @@ class StoreWorkspaceInvitationRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'email' => ['required', 'string', 'email', 'max:255'],
-            'role' => ['required', 'string', Rule::enum(WorkspaceRole::class)],
-            'site_access_mode' => ['nullable', 'string', Rule::enum(SiteAccessMode::class)],
+            'site_access_mode' => ['required', 'string', Rule::enum(SiteAccessMode::class)],
             'sites' => ['array', 'max:500'],
             'sites.*' => ['string', 'ulid'],
         ];
-    }
-
-    public function siteAccessMode(): SiteAccessMode
-    {
-        return SiteAccessMode::tryFrom($this->string('site_access_mode')->toString()) ?? SiteAccessMode::AllSites;
     }
 
     /**
@@ -49,6 +41,6 @@ class StoreWorkspaceInvitationRequest extends FormRequest
      */
     public function attributes(): array
     {
-        return ['role' => 'роль', 'site_access_mode' => 'доступ к сайтам', 'sites' => 'сайты', 'sites.*' => 'сайт'];
+        return ['site_access_mode' => 'доступ к сайтам', 'sites' => 'сайты', 'sites.*' => 'сайт'];
     }
 }
