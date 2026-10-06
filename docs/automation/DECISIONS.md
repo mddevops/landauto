@@ -1435,23 +1435,28 @@ Adopt only if measured/real need appears.
 
 ## D-078 — Billing Provider
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — ADR-007: YooKassa (ЮKassa) is the initial billing / payment provider behind a provider-abstracted `BillingProvider` contract.
 
-### Decision Needed
+### Decision
 
-Choose subscription/payment provider.
+- Billing customer = Workspace (never User, Site or member). Free Workspaces need no Subscription; each Workspace has independent billing state. Billing actions require `manage_billing`.
+- Landflow owns the Subscription (plan, period, status) as source of truth; YooKassa only executes payments. `provider_subscription_id` stays nullable. Entitlements keep flowing through `workspaces.plan_id` → `WorkspaceEntitlements`; billing only switches the Workspace Plan.
+- Initial checkout creates a payment with `save_payment_method = true`; only `payment_method_id` (encrypted, server-side, never in React / public output / logs) and a masked display are stored, never PAN / CVV / full card data.
+- Renewals: Landflow-scheduled server-side job charges the saved method with a stable unique `Idempotence-Key` per BillingPayment; bounded, idempotent retries (cadence finalized in P7-009); no Redis requirement.
+- Lifecycle: initial success → paid Plan + period; renewal success → period extended; renewal failure during a paid period → `past_due`, paid entitlements kept until `current_period_end`; period end without renewal → downgrade to Free without deleting Workspaces, Sites or content (Phase 7 fallbacks apply). Cancellation = `cancel_at_period_end`, access kept until period end; refunds and immediate cancellation not defined.
+- Immutable Landflow billing history (Workspace, Plan, amount in minor units per ADR-004, `RUB`, period, provider payment ID, status, timestamps); prices are Plan configuration, not hardcoded. Fiscal receipt ≠ Landflow invoice record.
+- Webhook `POST /billing/webhooks/yookassa`: public but provider-verified — HTTPS, known events only (`payment.succeeded`, `payment.canceled`), sender IP check against current official ranges, authoritative re-fetch of the payment from the YooKassa API, amount / currency / metadata match, idempotent processing. Browser return is UX only.
+- Merchant credentials (`YOOKASSA_SHOP_ID`, `YOOKASSA_SECRET_KEY`, `BILLING_PROVIDER`) are platform secrets in env / config only; HTTP Basic Auth; no OAuth Partner API.
+- 54-FZ: YooKassa supports fiscalization; VAT, tax system, `payment_subject` and receipt texts depend on the legal entity and are not decided; the architecture keeps a configuration-driven receipt payload adapter point.
+- Production prerequisite: autopayments must be enabled for the production merchant account before real subscription launch.
 
-### Must Define
+### Resolved By
 
-- customer;
-- subscription;
-- invoices;
-- webhook verification;
-- entitlement lifecycle.
+P7-008 Billing Provider ADR + owner approval (2026-10-06); `docs/architecture/decisions/ADR-007-billing-provider-yookassa.md`.
 
-### Blocking
+### Still Blocks
 
-Real paid subscription implementation.
+Nothing in planned scope. Real subscription integration is `P7-009` (DEFERRED).
 
 ---
 

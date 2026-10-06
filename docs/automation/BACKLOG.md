@@ -72,11 +72,11 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`).
 
-Phase 7 — Paid Site Features: PARTIAL / BLOCKED (branch `autopilot/phase7-2026-10-06`). X-022 and P7-001 … P7-007 DONE, review `P7-010` DONE; `P7-008 — Billing Provider ADR` is BLOCKED on an owner decision (D-078); `P7-009` DEFERRED.
+Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: NOT_STARTED (depends on P7-010; do not start without owner instruction).
+Phase 8 — Team / Collaboration: NOT_STARTED.
 
-Next task: `P7-008 — Billing Provider ADR` (OWNER_DECISION). Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-001 — Workspace Invitations`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3097,9 +3097,21 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-008 — Billing Provider ADR
 
-**Status:** BLOCKED
+**Status:** DONE
 **Dependencies:** P7-007
-**Blocked by:** OWNER_DECISION — D-078 Billing Provider is `ADR_REQUIRED`; agents do not choose a provider.
+**Decision:** D-078 APPROVED — `docs/architecture/decisions/ADR-007-billing-provider-yookassa.md`
+
+### Result
+
+- YooKassa (ЮKassa) selected by the owner as the initial billing provider, behind a provider-abstracted `BillingProvider` contract.
+- Workspace is the billing customer; Free Workspaces need no Subscription; billing actions require `manage_billing`.
+- Landflow owns the subscription lifecycle (Subscription is source of truth, entitlements still flow through the Workspace Plan); YooKassa handles payment execution only.
+- Saved payment methods for recurring: initial checkout with `save_payment_method = true`, only the `payment_method_id` reference stored (sensitive, server-side); Landflow-scheduled renewals with stable `Idempotence-Key`s and bounded retries.
+- Webhook verification requires authoritative API reconciliation: known events only, IP check, re-fetch of the payment, amount / currency / metadata match, idempotent processing; browser return is UX only.
+- Paid entitlement lifecycle: activate on provider-confirmed payment, extend on renewal, `past_due` keeps paid access until period end, downgrade to Free at period end without deleting content.
+- Cancellation at period end (`cancel_at_period_end`); refunds / immediate cancellation not defined.
+- 54-FZ adapter boundary: fiscal configuration left to business / accounting, configuration-driven receipt payload adapter point.
+- Documentation only (no code, migrations or config). Real subscription integration remains deferred (`P7-009`); production needs autopayments enabled on the merchant account.
 
 ---
 
@@ -3121,6 +3133,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - Review (no regressions found): custom domains are Site-owned, unique across Workspaces, managed only with `manage_domains` + `custom_domain`, served only while ownership + routing + SSL are verified, the Site is active and the Workspace is entitled; DNS checks use a DNS resolver only (no HTTP fetch of customer hosts); SSL runs through a configured server command (no private keys or ACME material in the DB, repo, React props or logs) with bounded automatic retries and rate limits; app hosts can never become customer hosts; primary-domain 301s cannot loop; branding and custom-domain serving follow the live entitlements; SEO output is consistent on the primary address; no logic branches on plan keys.
 - Open follow-ups (not blocking): expiry of unverified hostname claims, certificate deprovisioning for removed domains, extra dotted app hostnames, Published Versions from before P7-005 keep the old frozen footer until republished, `max_members` enforcement with invitations (P8-001), account-level limit / anti-abuse policy for number of Free Workspaces.
 - Phase 7 status: PARTIAL / BLOCKED (owner decision D-078). Phase 8 NOT_STARTED. Next task: `P7-008 — Billing Provider ADR`.
+- Update after P7-008 (2026-10-06): D-078 approved (YooKassa, ADR-007), so Phase 7 is COMPLETED for planned scope; P7-009 DEFERRED by plan. Additional open follow-up: root cause of the flaky tablet run of `tests/browser/auth.spec.ts` (verification resend stalled > 5 s only in full local runs); the raised assertion timeout (`54e9895`) is not a root-cause fix.
 
 ---
 
