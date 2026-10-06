@@ -5,6 +5,7 @@ import {
     Plus,
     RefreshCw,
     ShieldCheck,
+    Star,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
@@ -31,7 +32,14 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
-import { check, destroy, ssl, store } from '@/routes/sites/domains';
+import {
+    check,
+    destroy,
+    primary,
+    resetPrimary,
+    ssl,
+    store,
+} from '@/routes/sites/domains';
 
 type DomainState =
     | 'pending'
@@ -61,6 +69,8 @@ export type SiteDomainRow = {
 type DomainsProps = {
     site: { public_id: string; name: string };
     landflowAddress: string | null;
+    primaryAddress: string | null;
+    hasPrimaryDomain: boolean;
     domains: SiteDomainRow[];
     dns: {
         cname_target: string | null;
@@ -139,14 +149,15 @@ function DomainCard({
 }) {
     const [confirming, setConfirming] = useState(false);
     const [removing, setRemoving] = useState(false);
-    const [busy, setBusy] = useState<'check' | 'ssl' | null>(null);
+    const [busy, setBusy] = useState<'check' | 'ssl' | 'primary' | null>(null);
     const dnsConfigured = Boolean(dns.cname_target || dns.ipv4);
     const ids = { site: site.public_id, domain: domain.public_id };
+    const actions = { check, ssl, primary };
 
-    function post(action: 'check' | 'ssl') {
+    function post(action: 'check' | 'ssl' | 'primary') {
         setBusy(action);
         router.post(
-            action === 'check' ? check.url(ids) : ssl.url(ids),
+            actions[action].url(ids),
             {},
             { preserveScroll: true, onFinish: () => setBusy(null) },
         );
@@ -272,8 +283,36 @@ function DomainCard({
                     </section>
                 )}
 
+                {domain.state === 'active' && (
+                    <p className="text-sm">
+                        <a
+                            href={domain.url}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="break-all underline underline-offset-4"
+                        >
+                            {domain.url}
+                        </a>
+                    </p>
+                )}
+
                 {canManage && (
                     <div className="flex flex-wrap gap-2">
+                        {domain.state === 'active' && !domain.is_primary && (
+                            <Button
+                                type="button"
+                                disabled={busy !== null}
+                                onClick={() => post('primary')}
+                                aria-label={`Сделать основным домен ${domain.hostname}`}
+                            >
+                                {busy === 'primary' ? (
+                                    <Spinner />
+                                ) : (
+                                    <Star aria-hidden="true" />
+                                )}
+                                Сделать основным
+                            </Button>
+                        )}
                         <Button
                             type="button"
                             variant="outline"
@@ -356,7 +395,19 @@ export default function Domains({
     dns,
     can,
     entitled,
+    primaryAddress,
+    hasPrimaryDomain,
 }: DomainsProps) {
+    const [resetting, setResetting] = useState(false);
+
+    function makeLandflowPrimary() {
+        setResetting(true);
+        router.delete(resetPrimary.url(site.public_id), {
+            preserveScroll: true,
+            onFinish: () => setResetting(false),
+        });
+    }
+
     return (
         <>
             <Head title={`Домены — ${site.name}`} />
@@ -396,8 +447,8 @@ export default function Domains({
                             посетители автоматически перейдут на него.
                         </CardDescription>
                     </CardHeader>
-                    <CardContent>
-                        <p className="flex min-w-0 items-center gap-2 text-sm">
+                    <CardContent className="space-y-3">
+                        <p className="flex min-w-0 flex-wrap items-center gap-2 text-sm">
                             <Globe
                                 className="size-4 shrink-0"
                                 aria-hidden="true"
@@ -408,7 +459,29 @@ export default function Domains({
                             >
                                 {landflowAddress ?? 'Адрес ещё не задан'}
                             </span>
+                            {primaryAddress === landflowAddress && (
+                                <Badge>Основной</Badge>
+                            )}
                         </p>
+                        {primaryAddress !== landflowAddress && (
+                            <p
+                                className="text-sm break-all text-muted-foreground"
+                                data-testid="primary-address"
+                            >
+                                {`Основной адрес: ${primaryAddress}`}
+                            </p>
+                        )}
+                        {can.manage && hasPrimaryDomain && (
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={resetting}
+                                onClick={makeLandflowPrimary}
+                            >
+                                {resetting && <Spinner />}
+                                Сделать основным адрес Landflow
+                            </Button>
+                        )}
                     </CardContent>
                 </Card>
 

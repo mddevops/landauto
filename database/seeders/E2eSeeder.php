@@ -111,6 +111,17 @@ class E2eSeeder extends Seeder
         $navigator = $this->createUser('Нина Навигаторова', 'navigator@landflow.test');
         $navigatorWorkspace = $this->createWorkspace($navigator, 'Автодом Навигатор', plan: $plan);
         app(CreateSite::class)->create($navigatorWorkspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт навигации');
+
+        // Custom domains + branding: a test-only plan with `custom_domain`, an Owner and a Designer.
+        $domainsPlan = Plan::factory()->create(['key' => 'e2e-domains', 'name' => 'E2E Domains']);
+        $domainsPlan->setEntitlement(Entitlement::MaxSites, 100);
+        $domainsPlan->setEntitlement(Entitlement::CustomDomain, true);
+        $domainsOwner = $this->createUser('Дмитрий Доменов', 'domains@landflow.test');
+        $domainsWorkspace = $this->createWorkspace($domainsOwner, 'Автосалон Домен', plan: $domainsPlan);
+        $domainsWorkspace->addMember($this->createUser('Диана Доменная', 'domains-designer@landflow.test'), WorkspaceRole::Designer);
+        $domainsSite = app(CreateSite::class)->create($domainsWorkspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт с доменом');
+        $domainsSite->forceFill(['subdomain' => 'domains-e2e'])->save();
+        $this->placeBlock($domainsSite->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Свой домен: главная']);
     }
 
     /**

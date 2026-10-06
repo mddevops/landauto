@@ -191,6 +191,7 @@ Current focus:
 - `P7-001` DONE (D-111): `site_domains` (normalized globally unique hostname, TXT token, independent verification/routing/SSL states, no key material), `CustomHostname` validation, `CustomDomainAccess` (`manage_domains` + `custom_domain`), «Домены» page with DNS instructions from `config/domains.php`.
 - `P7-002` DONE: `DnsResolver` (system / fake, fake only in testing/e2e), `DomainVerifier` (exact TXT ownership, sticky; routing via CNAME chain or A/AAAA vs configured ingress, re-checked every time; safe error codes), rate-limited «Проверить DNS», `domains:reconcile` every 5 minutes, `domains:fake-dns` E2E helper. No HTTP fetch.
 - `P7-003` DONE: `SslProvisioner` (none / command / fake), `DomainSsl` lifecycle (eligibility, atomic claim, queued `ProvisionDomainSsl`, bounded backoff, manual retry 4/hour, stale recovery), metadata-only storage; provisioning-script contract recorded in D-111.
+- `P7-004` DONE: custom-host route group (custom domains first, then Landflow subdomains, unknown → 404), effective primary (active + entitled), 301 to primary preserving path/query (no loops), «Сделать основным» / back to Landflow, removal fallback; canonical, sitemap, robots and app addresses use the primary; browser domain flow `tests/browser/domains.spec.ts`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

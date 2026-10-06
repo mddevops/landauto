@@ -39,6 +39,8 @@ class SiteDomainController extends Controller
         return Inertia::render('sites/domains', [
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
             'landflowAddress' => PublicSiteResolver::url($site),
+            'primaryAddress' => PublicSiteResolver::primaryUrl($site),
+            'hasPrimaryDomain' => $site->domains()->where('is_primary', true)->exists(),
             'domains' => $site->domains()
                 ->orderByDesc('is_primary')
                 ->orderBy('hostname')
@@ -97,6 +99,29 @@ class SiteDomainController extends Controller
         return to_route('sites.domains.index', $site);
     }
 
+    public function makePrimary(Request $request, Site $site, SiteDomain $domain): RedirectResponse
+    {
+        $this->authorizeDomain($request, $site, $domain);
+
+        $this->domains->makePrimary($site, $domain);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Основной адрес сайта — {$domain->hostname}."]);
+
+        return to_route('sites.domains.index', $site);
+    }
+
+    public function resetPrimary(Request $request, Site $site): RedirectResponse
+    {
+        $this->scope->site($site);
+        abort_unless($this->access->canManage($request->user(), $site), 403);
+
+        $this->domains->resetPrimary($site);
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Основной адрес сайта — адрес Landflow.']);
+
+        return to_route('sites.domains.index', $site);
+    }
+
     public function destroy(Request $request, Site $site, SiteDomain $domain): RedirectResponse
     {
         $this->authorizeDomain($request, $site, $domain);
@@ -137,7 +162,7 @@ class SiteDomainController extends Controller
                 'name' => $domain->verificationRecordName(),
                 'value' => $domain->verificationRecordValue(),
             ],
-            'url' => PublicSiteResolver::scheme().'://'.$domain->hostname.PublicSiteResolver::portSuffix(),
+            'url' => PublicSiteResolver::hostUrl($domain->hostname),
         ];
     }
 }

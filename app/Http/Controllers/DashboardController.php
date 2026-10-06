@@ -44,13 +44,14 @@ class DashboardController extends Controller
             'sites' => $canViewSites
                 ? $workspace->sites()
                     ->orderBy('name')
-                    ->get(['id', 'public_id', 'name', 'status', 'subdomain', 'active_published_version_id'])
+                    ->get(['id', 'workspace_id', 'public_id', 'name', 'status', 'subdomain', 'active_published_version_id'])
+                    ->each(fn (Site $site) => $site->setRelation('workspace', $workspace))
                     ->map(fn (Site $site): array => [
                         'public_id' => $site->public_id,
                         'name' => $site->name,
                         'status' => $site->status->value,
                         'address' => $site->active_published_version_id !== null && $site->status === SiteStatus::Active
-                            ? PublicSiteResolver::url($site)
+                            ? PublicSiteResolver::primaryUrl($site)
                             : null,
                     ])
                     ->values()

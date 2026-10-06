@@ -100,7 +100,7 @@ class SiteController extends Controller
                 'name' => $site->name,
                 'status' => $site->status->value,
                 'subdomain' => $site->subdomain,
-                'address' => PublicSiteResolver::url($site),
+                'address' => PublicSiteResolver::primaryUrl($site),
                 'created_at' => $site->created_at?->toIso8601String(),
             ],
             'production' => $active === null ? null : [

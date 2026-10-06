@@ -241,6 +241,7 @@ test('admin site navigation includes leads and settings but not workspace settin
         'Интеграции',
         'Защита форм',
         'Публикация',
+        'Домены',
     ]);
 
     await admin.context().close();

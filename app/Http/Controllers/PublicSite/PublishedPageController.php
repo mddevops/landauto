@@ -40,7 +40,7 @@ class PublishedPageController extends Controller
         return response()->view('published.page', [
             'title' => is_string($seo['title'] ?? null) ? $seo['title'] : $artifact['title'],
             'description' => $description,
-            'canonical' => PublicSiteResolver::url($site, $artifact['path']),
+            'canonical' => PublicSiteResolver::primaryUrl($site, $artifact['path']),
             'robots' => ($seo['indexable'] ?? true) === true ? 'index, follow' : 'noindex, follow',
             'siteName' => is_object($payload) && is_object($payload->site ?? null) && is_string($payload->site->name ?? null) ? $payload->site->name : null,
             'html' => $artifact['html'],

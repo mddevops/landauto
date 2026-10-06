@@ -49,6 +49,36 @@ final class SiteDomains
     }
 
     /**
+     * Only a fully active domain (ownership, routing, SSL) can become primary; at most one per Site.
+     */
+    public function makePrimary(Site $site, SiteDomain $domain): void
+    {
+        if (! $domain->isActive()) {
+            throw ValidationException::withMessages([
+                'domain' => 'Основным можно сделать только активный домен: подтверждённый, направленный на Landflow и с SSL-сертификатом.',
+            ]);
+        }
+
+        DB::transaction(function () use ($site, $domain): void {
+            Site::query()->whereKey($site->id)->lockForUpdate()->first();
+            $site->domains()->whereKeyNot($domain->id)->where('is_primary', true)->update(['is_primary' => false, 'updated_at' => now()]);
+            $domain->forceFill(['is_primary' => true])->save();
+        });
+
+        Log::info('custom_domain.primary_set', $this->context($site, $domain));
+    }
+
+    /**
+     * Makes the Landflow subdomain the primary address again.
+     */
+    public function resetPrimary(Site $site): void
+    {
+        $site->domains()->where('is_primary', true)->update(['is_primary' => false, 'updated_at' => now()]);
+
+        Log::info('custom_domain.primary_reset', ['site' => $site->public_id]);
+    }
+
+    /**
      * @return array<string, string>
      */
     public function context(Site $site, SiteDomain $domain): array

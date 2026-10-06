@@ -3034,8 +3034,19 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-004 — Primary Domain / Redirects
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-003
+**Decision:** D-111
+
+### Result
+
+- Public runtime has a second host group for custom hostnames (`PublicSiteResolver::customHostPattern()`: dotted names except the app host, `localhost`, the public domain and its subdomains, IPv4 literals). Custom domains resolve first, then Landflow subdomains; unknown hosts and application paths on customer hosts are safe 404s.
+- A custom domain is served only while fully active (ownership + routing + SSL), the Site is active and the Workspace keeps `custom_domain`. Effective primary = `is_primary` + active + entitled; otherwise the Landflow subdomain.
+- 301 to the primary host with path and query preserved: Landflow subdomain → custom primary; alternate custom hosts → primary (or → Landflow subdomain when no custom primary). The primary host never redirects, so no loops.
+- «Сделать основным» (`POST /sites/{site}/domains/{domain}/primary`, active only, one primary per Site under a Site row lock), «Сделать основным адрес Landflow» (`DELETE /sites/{site}/domains/primary`); removing the primary falls back to the subdomain.
+- Canonical / `og:url`, sitemap, robots, dashboard and Site overview addresses and integration payload Site URL use the primary address; the Publishing page keeps managing the Landflow subdomain.
+- Tests: primary serving + canonical / sitemap / robots, subdomain → primary 301 with query, alternate 301, no-primary alternate → subdomain, no-SSL not served / not primary, lost entitlement fallback, removal fallback, reset, single primary + permission + foreign, unknown host / app paths 404, app hosts never custom, archived Site. Browser: `tests/browser/domains.spec.ts` (fake DNS + fake SSL → active → primary → publish → 301 + canonical + sitemap + robots on `dealer.e2e.test`, Designer has no access, 375px). Chromium maps `*.e2e.test` to the local server and ignores system proxies.
+- Follow-ups (not blocking): an unverified hostname row blocks the real owner until removed (no expiry of unverified claims yet); certificates of removed domains are not deprovisioned by the app (infrastructure cleanup); an app reachable under extra dotted hostnames besides `APP_URL` would see them as customer hosts.
 
 ---
 

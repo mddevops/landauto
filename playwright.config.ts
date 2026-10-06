@@ -44,6 +44,14 @@ export default defineConfig({
         contextOptions: {
             reducedMotion: 'reduce',
         },
+        // Custom-domain specs use *.e2e.test hostnames; Chromium sends them to the local
+        // E2E server instead of real DNS, bypassing any system proxy.
+        launchOptions: {
+            args: [
+                '--host-resolver-rules=MAP *.e2e.test 127.0.0.1',
+                '--proxy-server=direct://',
+            ],
+        },
     },
     projects: [
         {
