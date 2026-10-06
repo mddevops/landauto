@@ -16,6 +16,8 @@ use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
+use App\Models\SiteVersionRestore;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -24,7 +26,8 @@ use Illuminate\Support\Facades\DB;
  * (ADR-006 §8). Production, Published Versions, Submissions, blacklists, form security, the
  * subdomain, Site Assets, the catalog and platform media are never touched. Public IDs are kept;
  * Forms are deactivated rather than deleted because Submissions reference them. Vehicles or
- * Offers whose catalog entries no longer exist are skipped and counted.
+ * Offers whose catalog entries no longer exist are skipped and counted. Every successful restore
+ * leaves a `SiteVersionRestore` audit record in the same transaction.
  *
  * @phpstan-type RestoreSummary array{skipped_vehicles: int, skipped_offers: int}
  */
@@ -39,7 +42,7 @@ final class RestoreVersion
     /**
      * @return RestoreSummary
      */
-    public function handle(Site $site, PublishedVersion $version): array
+    public function handle(Site $site, PublishedVersion $version, User $actor): array
     {
         if ($version->site_id !== $site->id || $version->status !== PublishedVersionStatus::Ready) {
             throw new RestoreFailed('Эту версию нельзя восстановить.');
@@ -54,7 +57,7 @@ final class RestoreVersion
         $this->skippedVehicles = 0;
         $this->skippedOffers = 0;
 
-        DB::transaction(function () use ($site, $snapshot): void {
+        DB::transaction(function () use ($site, $version, $actor, $snapshot): void {
             $site = Site::query()->whereKey($site->id)->lockForUpdate()->firstOrFail();
 
             $this->restoreSite($site, self::map($snapshot['site'] ?? []));
@@ -62,6 +65,13 @@ final class RestoreVersion
             $this->restorePopups($site, self::list($snapshot['popups'] ?? []));
             $this->restoreVehicles($site, self::list($snapshot['vehicles'] ?? []));
             $this->restorePages($site, self::list($snapshot['pages'] ?? []));
+
+            SiteVersionRestore::query()->create([
+                'site_id' => $site->id,
+                'published_version_id' => $version->id,
+                'actor_user_id' => $actor->id,
+                'restored_at' => now(),
+            ]);
         });
 
         return ['skipped_vehicles' => $this->skippedVehicles, 'skipped_offers' => $this->skippedOffers];

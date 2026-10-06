@@ -29,9 +29,12 @@ final class PublishSite
         private PublishedArtifactBuilder $artifacts,
     ) {}
 
-    public function handle(Site $site, User $actor): PublishOutcome
+    /**
+     * @param  string|null  $note  already validated plain text (≤ 500 characters); stored on the attempt
+     */
+    public function handle(Site $site, User $actor, ?string $note = null): PublishOutcome
     {
-        $publication = $this->start($site, $actor);
+        $publication = $this->start($site, $actor, $note);
 
         if ($publication->status === PublicationStatus::Failed) {
             return new PublishOutcome($publication);
@@ -68,9 +71,9 @@ final class PublishSite
      * Creates the attempt under the Site lock. A second attempt while one is still running is
      * recorded as a failed conflict; an attempt stuck longer than the stale limit is abandoned.
      */
-    private function start(Site $site, User $actor): Publication
+    private function start(Site $site, User $actor, ?string $note): Publication
     {
-        return DB::transaction(function () use ($site, $actor): Publication {
+        return DB::transaction(function () use ($site, $actor, $note): Publication {
             Site::query()->whereKey($site->id)->lockForUpdate()->firstOrFail();
             $staleBefore = now()->subMinutes((int) config('publishing.stale_after_minutes'));
             $running = false;
@@ -95,6 +98,7 @@ final class PublishSite
             $publication = Publication::query()->create([
                 'site_id' => $site->id,
                 'actor_user_id' => $actor->id,
+                'note' => $note,
                 'started_at' => now(),
             ]);
 

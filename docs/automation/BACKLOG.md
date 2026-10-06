@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-008 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-009 DONE.
 
-Next ready task: `P8-009 — Richer Version History`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-010 — Team E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3260,8 +3260,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-009 — Richer Version History
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-010
+
+### Result
+
+- Optional «Комментарий к публикации» (plain text, ≤ 500 characters, control characters stripped, trimmed, rendered escaped) stored on the immutable `Publication` attempt and exposed through `PublishedVersion::publication()`; Published Versions are never mutated.
+- History: number, status, «На сайте» marker, date, actor, note, restore count + last restore (time, actor); real pagination (20 per page, ordered by version number); «Последнее восстановление» summary.
+- Restore audit `site_version_restores` (Site, source version, actor, time) written in the restore transaction; restore still only replaces the Draft. Publisher can view/publish but not restore; Owner restores.
+- Unpublished changes indicator «Опубликовано» / «Есть неопубликованные изменения»: deterministic public manifest hash of the current Draft vs the active version's `manifest_hash` (no timestamp heuristics). It reflects what visitors would see: hidden-block edits do not count, catalog / analytics changes that alter the public manifest do. Shown on the Publishing page only.
+- Follow-up: the private draft snapshot does not include Site Vehicle `custom_name` / `custom_description` (P8-005), so restore keeps the current values for those fields.
 
 ---
 

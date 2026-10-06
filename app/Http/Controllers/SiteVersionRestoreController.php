@@ -8,6 +8,7 @@ use App\Publishing\RestoreFailed;
 use App\Publishing\RestoreVersion;
 use App\Support\DesignerScope;
 use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 
@@ -17,14 +18,14 @@ use Inertia\Inertia;
  */
 class SiteVersionRestoreController extends Controller
 {
-    public function __invoke(Site $site, PublishedVersion $version, DesignerScope $scope, RestoreVersion $restore): RedirectResponse
+    public function __invoke(Request $request, Site $site, PublishedVersion $version, DesignerScope $scope, RestoreVersion $restore): RedirectResponse
     {
         $scope->site($site);
         abort_unless($version->site_id === $site->id, 404);
         Gate::authorize('restoreVersion', $site);
 
         try {
-            $summary = $restore->handle($site, $version);
+            $summary = $restore->handle($site, $version, $request->user());
         } catch (RestoreFailed $exception) {
             Inertia::flash('toast', ['type' => 'error', 'message' => $exception->getMessage()]);
 

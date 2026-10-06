@@ -168,6 +168,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteVersionRestore, $this>
+     */
+    public function versionRestores(): HasMany
+    {
+        return $this->hasMany(SiteVersionRestore::class);
+    }
+
+    /**
      * @return HasMany<SiteDomain, $this>
      */
     public function domains(): HasMany
