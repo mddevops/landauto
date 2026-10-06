@@ -45,6 +45,7 @@ class SiteShellTest extends TestCase
                     'editForms' => true,
                     'publish' => true,
                     'manageDomains' => true,
+                    'editSeo' => true,
                 ]));
     }
 
@@ -79,6 +80,7 @@ class SiteShellTest extends TestCase
                     'editForms' => false,
                     'publish' => false,
                     'manageDomains' => false,
+                    'editSeo' => false,
                 ]));
     }
 
@@ -101,6 +103,7 @@ class SiteShellTest extends TestCase
                     'editForms' => true,
                     'publish' => true,
                     'manageDomains' => true,
+                    'editSeo' => true,
                 ]));
     }
 

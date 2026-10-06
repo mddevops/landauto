@@ -55,6 +55,7 @@ export type SiteContext = {
         editForms: boolean;
         publish: boolean;
         manageDomains: boolean;
+        editSeo: boolean;
     };
 };
 

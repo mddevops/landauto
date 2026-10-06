@@ -3065,8 +3065,14 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-006 — Advanced SEO
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-009
+
+### Result
+
+- Audit: page `seo_title` / `seo_description` / `seo_noindex` (P5-009) are frozen into the Published Version; title, description, `og:title` / `og:description` / `og:url` / `og:site_name` come only from real Site / Page data (no invented image or texts); noindex pages render `noindex, follow` and are excluded from the sitemap; canonical, `og:url`, sitemap URLs and the robots `Sitemap:` line use the effective primary address (P7-004); preview stays noindex.
+- Site section «SEO» (`GET /sites/{site}/seo`, Контент group in the Site sidebar) lists every page with its address, title / description counters and the noindex switch, plus primary / sitemap / robots addresses. Saving reuses the Page SEO endpoint (`return=seo` brings the user back); `edit_seo_basic` edits title / description only, noindex needs `edit_seo`; Designer has no access.
+- Tests: `tests/Feature/Sites/SiteSeoPageTest.php` (owner props + primary-domain addresses, save + return, Content Editor without noindex, Designer 403, foreign 404). Browser: owner edits page SEO on the custom-domain Site; navigation lists «SEO».
 
 ---
 

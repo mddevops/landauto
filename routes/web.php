@@ -33,6 +33,7 @@ use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\SitePublishingController;
+use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
@@ -128,6 +129,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('pages/{page}', [SitePageController::class, 'update'])->name('pages.update');
             Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
             Route::patch('pages/{page}/seo', [PageSeoController::class, 'update'])->name('pages.seo.update');
+            Route::get('seo', SiteSeoController::class)->name('seo.index');
 
             Route::post('pages/{page}/blocks', [PageBlockController::class, 'store'])->name('blocks.store');
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');

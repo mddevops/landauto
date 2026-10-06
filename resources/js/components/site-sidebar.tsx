@@ -10,6 +10,7 @@ import {
     PencilRuler,
     Plug,
     Rocket,
+    Search,
     Send,
     ShieldCheck,
     SquareStack,
@@ -34,6 +35,7 @@ import { index as forms } from '@/routes/sites/forms';
 import { index as integrations } from '@/routes/sites/integrations';
 import { index as popups } from '@/routes/sites/popups';
 import { show as publishing } from '@/routes/sites/publishing';
+import { index as seo } from '@/routes/sites/seo';
 import { index as submissions } from '@/routes/sites/submissions';
 import { index as vehicles } from '@/routes/sites/vehicles';
 import type { NavItem, SiteContext } from '@/types';
@@ -61,6 +63,7 @@ export function SiteSidebar({ site }: { site: SiteContext }) {
         },
         { title: 'Формы', href: forms(id), icon: FileText, matchPrefix: true },
         { title: 'Попапы', href: popups(id), icon: SquareStack },
+        can.editSeo && { title: 'SEO', href: seo(id), icon: Search },
     ]);
 
     const leads = visible([

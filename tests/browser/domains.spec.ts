@@ -198,6 +198,36 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
     await visitor.context().close();
 });
 
+test('owner edits page SEO in the Site SEO section', async ({ browser }) => {
+    const page = await signedIn(browser, owner.email, owner.password);
+
+    await openSite(page);
+    await openSiteSection(page, 'SEO');
+    await expect(
+        page.getByRole('heading', { level: 1, name: 'SEO' }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('link', { name: `${customUrl}/`, exact: true }),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('link', { name: `${customUrl}/sitemap.xml` }),
+    ).toBeVisible();
+
+    const home = page.getByTestId('seo-page').filter({ hasText: 'Главная' });
+    await home
+        .getByLabel('Заголовок для поисковиков')
+        .fill('Автосалон Домен — новые автомобили');
+    await home
+        .getByRole('button', { name: 'Сохранить SEO страницы «Главная»' })
+        .click();
+    await expect(page.getByText('SEO страницы сохранено.')).toBeVisible();
+    await expect(page).toHaveURL(/\/seo$/);
+    await expect(home.getByLabel('Заголовок для поисковиков')).toHaveValue(
+        'Автосалон Домен — новые автомобили',
+    );
+    await page.context().close();
+});
+
 test('designer cannot manage domains @responsive', async ({ browser }) => {
     const designer = await signedIn(
         browser,

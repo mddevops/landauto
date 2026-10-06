@@ -27,6 +27,8 @@ class PageSeoController extends Controller
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'SEO страницы сохранено.']);
 
-        return to_route('sites.designer', ['site' => $site, 'page' => $page->public_id]);
+        return $request->validated('return') === 'seo'
+            ? to_route('sites.seo.index', $site)
+            : to_route('sites.designer', ['site' => $site, 'page' => $page->public_id]);
     }
 }
