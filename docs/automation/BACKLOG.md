@@ -72,9 +72,11 @@ Phase 5 — Publishing: COMPLETED (gate `P5-012` DONE, branch `autopilot/phase5-
 
 Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`).
 
-Phase 7 — Paid Site Features: NOT_STARTED. Cross-cutting `X-022 — Workspace / Site Dashboard Navigation` runs before P7-001.
+Phase 7 — Paid Site Features: PARTIAL / BLOCKED (branch `autopilot/phase7-2026-10-06`). X-022 and P7-001 … P7-007 DONE, review `P7-010` DONE; `P7-008 — Billing Provider ADR` is BLOCKED on an owner decision (D-078); `P7-009` DEFERRED.
 
-Next ready task: `P7-001 — Custom Domain Schema`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 8 — Team / Collaboration: NOT_STARTED (depends on P7-010; do not start without owner instruction).
+
+Next task: `P7-008 — Billing Provider ADR` (OWNER_DECISION). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3110,8 +3112,15 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-010 — Phase 7 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-007
+
+### Result
+
+- Executable Phase 7 work is DONE: X-022, P7-001 … P7-007. P7-008 is BLOCKED on the owner (D-078 Billing Provider ADR); P7-009 stays DEFERRED behind it.
+- Review (no regressions found): custom domains are Site-owned, unique across Workspaces, managed only with `manage_domains` + `custom_domain`, served only while ownership + routing + SSL are verified, the Site is active and the Workspace is entitled; DNS checks use a DNS resolver only (no HTTP fetch of customer hosts); SSL runs through a configured server command (no private keys or ACME material in the DB, repo, React props or logs) with bounded automatic retries and rate limits; app hosts can never become customer hosts; primary-domain 301s cannot loop; branding and custom-domain serving follow the live entitlements; SEO output is consistent on the primary address; no logic branches on plan keys.
+- Open follow-ups (not blocking): expiry of unverified hostname claims, certificate deprovisioning for removed domains, extra dotted app hostnames, Published Versions from before P7-005 keep the old frozen footer until republished, `max_members` enforcement with invitations (P8-001), account-level limit / anti-abuse policy for number of Free Workspaces.
+- Phase 7 status: PARTIAL / BLOCKED (owner decision D-078). Phase 8 NOT_STARTED. Next task: `P7-008 — Billing Provider ADR`.
 
 ---
 
