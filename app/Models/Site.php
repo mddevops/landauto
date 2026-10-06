@@ -168,6 +168,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteDomain, $this>
+     */
+    public function domains(): HasMany
+    {
+        return $this->hasMany(SiteDomain::class);
+    }
+
+    /**
      * The production pointer; changed only by the atomic Publish activation (ADR-006 §5).
      *
      * @return BelongsTo<PublishedVersion, $this>

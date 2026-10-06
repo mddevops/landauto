@@ -28,6 +28,7 @@ import {
 import { dashboard } from '@/routes';
 import { designer, preview, show } from '@/routes/sites';
 import { index as deliveries } from '@/routes/sites/deliveries';
+import { index as domains } from '@/routes/sites/domains';
 import { show as formSecurity } from '@/routes/sites/form-security';
 import { index as forms } from '@/routes/sites/forms';
 import { index as integrations } from '@/routes/sites/integrations';
@@ -90,6 +91,11 @@ export function SiteSidebar({ site }: { site: SiteContext }) {
             title: 'Публикация',
             href: publishing(id),
             icon: Rocket,
+        },
+        can.manageDomains && {
+            title: 'Домены',
+            href: domains(id),
+            icon: Globe,
         },
     ]);
 

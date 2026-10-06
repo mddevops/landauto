@@ -56,9 +56,18 @@ final class PublicSiteResolver
             return null;
         }
 
+        return self::scheme().'://'.$site->subdomain.'.'.config('publishing.public_domain').self::portSuffix().$path;
+    }
+
+    public static function scheme(): string
+    {
+        return (string) config('publishing.public_scheme');
+    }
+
+    public static function portSuffix(): string
+    {
         $port = config('publishing.public_port');
 
-        return config('publishing.public_scheme').'://'.$site->subdomain.'.'.config('publishing.public_domain')
-            .(filled($port) ? ':'.$port : '').$path;
+        return filled($port) ? ':'.$port : '';
     }
 }

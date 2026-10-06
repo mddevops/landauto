@@ -2986,8 +2986,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P7-001 — Custom Domain Schema
 
-**Status:** NOT_STARTED  
-**Dependencies:** P6-015
+**Status:** DONE  
+**Dependencies:** P6-015, X-022  
+**Decision:** D-111
+
+### Result
+
+- `site_domains` (ULID `public_id`, Site FK, globally unique normalized `hostname`, per-hostname `verification_token`, independent `verification_status` / `routing_status` / `ssl_status`, `is_primary`, lifecycle timestamps, safe last error). No certificate or key columns.
+- `CustomHostname` normalization (trim, lowercase, one trailing dot) and validation (scheme, path, query, fragment, port, userinfo, wildcard, empty/oversized labels, control chars, IP literals, IDN/punycode with a clear Russian message, Landflow-owned hosts).
+- `CustomDomainAccess`: `manage_domains` AND `custom_domain` entitlement, separately checked; Free denied by default.
+- «Домены» (`/sites/{site}/domains`) in the Site shell: Landflow address, add domain, per-domain state (ожидает проверки, DNS настроен не полностью, DNS настроен, выпуск сертификата, активен, ошибка), exact TXT / CNAME / A / AAAA instructions from `config/domains.php`, delete with confirmation. Safe log events `custom_domain.added` / `custom_domain.removed`.
+- Tests: create, Free denied, entitlement without permission, Admin allowed, foreign Site/domain, case-insensitive duplicate, trailing dot, invalid hostname matrix, IDN message, removal.
 
 ---
 

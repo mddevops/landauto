@@ -1995,6 +1995,28 @@ Owner approval in the Phase 7 autopilot instruction (2026-10-06); X-022.
 
 ---
 
+## D-111 — Custom Domain Connection and Managed SSL
+
+**Status:** APPROVED
+
+### Decision
+
+- Customers keep their registrar and DNS provider; Landflow never asks to change NS records. They add only the records shown in «Домены».
+- All custom hostnames reach one shared ingress (no dedicated IP per customer). The Site is identified by the normalized request Host.
+- Ownership: a per-hostname random token published as TXT at `_landflow-verification.<hostname>` with the exact value `landflow-site-verification=<token>`. No HTTP fetch is used for ownership.
+- Routing: the hostname must ultimately resolve to the configured ingress — A/AAAA to `CUSTOM_DOMAIN_IPV4` / `CUSTOM_DOMAIN_IPV6` (apex without CNAME flattening) or CNAME to `CUSTOM_DOMAIN_CNAME_TARGET` (www and other subdomains). No public-suffix heuristic: apex and subdomains are verified alike. Production IPs are never hardcoded.
+- Ownership, routing and SSL are independent states. Only a domain with verified ownership, verified routing and active SSL can become primary.
+- Hostnames: lowercase, trimmed, one trailing dot removed; globally unique; plain ASCII DNS names only (no scheme/path/query/fragment/port/userinfo/wildcard/IP literal/IDN or punycode/Landflow-owned host).
+- Custom domains need both `manage_domains` and the typed `custom_domain` entitlement; no plan-name checks; deny by default (Free has no `custom_domain`).
+- SSL is always issued and renewed by Landflow infrastructure (Let's Encrypt over ACME HTTP-01 after routing is verified). Customers never upload certificates, keys or CSRs. The application stores lifecycle metadata only (status, issued/expiry dates, safe error) and calls a `SslProvisioner` adapter; certificates, private keys and ACME account keys never enter the database, logs or repository.
+- The Landflow subdomain is never removed. Without an active custom primary it is the primary address; with one, it and alternate hosts 301-redirect to the primary, preserving path and query.
+
+### Resolved By
+
+Owner approval in the Phase 7 autopilot instruction (2026-10-06); P7-001…P7-004.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

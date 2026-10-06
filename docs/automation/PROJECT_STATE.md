@@ -188,6 +188,7 @@ Current focus:
 - `P6-015` DONE: Phase 6 gate. Audit found no regressions (ownership, encrypted/masked secrets, persist-before-deliver, preview never delivered, bounded retries, idempotency, SSRF incl. DNS rebinding and redirects, safe logs, semantic permissions, Metrica frozen per version and absent from Preview). Final gate: `composer quality` PASS (728 tests), `npm run test:e2e` 44 passed. Phase 6 COMPLETED; Phase 7 NOT_STARTED.
 - Phase 7 (in progress on `autopilot/phase7-2026-10-06`):
 - `X-022` DONE (D-110): shared `CreateWorkspace` action; new accounts get «Моё пространство»; always-interactive switcher with «Создать пространство» / «Управление пространством»; `/workspaces/create` (Free plan, Owner, becomes current, no cap) and `/workspace/settings` rename (`edit_workspace`); Workspace shell («Все сайты», «Интеграции», «Настройки пространства») and Site shell (`SiteLayout`, backend `siteContext` abilities, grouped Site sections, «← Все сайты»); `/sites/{site}` «Общее» with rename under `edit_site_settings`.
+- `P7-001` DONE (D-111): `site_domains` (normalized globally unique hostname, TXT token, independent verification/routing/SSL states, no key material), `CustomHostname` validation, `CustomDomainAccess` (`manage_domains` + `custom_domain`), «Домены» page with DNS instructions from `config/domains.php`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 

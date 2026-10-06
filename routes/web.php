@@ -4,6 +4,7 @@ use App\Catalog\CatalogLevel;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormRouteController;
 use App\Http\Controllers\Forms\PreviewSubmissionController;
@@ -107,6 +108,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');
             Route::post('publishing', [SitePublishingController::class, 'store'])->middleware('throttle:10,1')->name('publishing.store');
             Route::put('subdomain', [SiteSubdomainController::class, 'update'])->name('subdomain.update');
+            Route::get('domains', [SiteDomainController::class, 'index'])->name('domains.index');
+            Route::post('domains', [SiteDomainController::class, 'store'])->middleware('throttle:20,1')->name('domains.store');
+            Route::delete('domains/{domain}', [SiteDomainController::class, 'destroy'])->whereUlid('domain')->name('domains.destroy');
             Route::post('versions/{version}/restore', SiteVersionRestoreController::class)->whereUlid('version')->middleware('throttle:10,1')->name('versions.restore');
             Route::post('preview/forms/{form}/submissions', [PreviewSubmissionController::class, 'store'])
                 ->whereUlid('form')
