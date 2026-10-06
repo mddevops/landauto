@@ -6,12 +6,12 @@ use App\Enums\DomainRoutingStatus;
 use App\Enums\DomainSslStatus;
 use App\Enums\DomainVerificationStatus;
 use App\Models\Concerns\HasImmutablePublicId;
+use Carbon\CarbonImmutable;
 use Database\Factories\SiteDomainFactory;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Carbon\CarbonImmutable;
 use Illuminate\Support\Str;
 
 /**
