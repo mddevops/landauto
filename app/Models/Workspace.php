@@ -71,6 +71,14 @@ class Workspace extends Model
     }
 
     /**
+     * @return HasMany<WorkspaceVehicle, $this>
+     */
+    public function vehicleLibrary(): HasMany
+    {
+        return $this->hasMany(WorkspaceVehicle::class);
+    }
+
+    /**
      * @return HasMany<Site, $this>
      */
     public function sites(): HasMany

@@ -10,7 +10,8 @@ use Illuminate\Support\Collection;
 
 /**
  * Resolves which prepared media a SiteVehicle shows (P3-011):
- * Site selection → Workspace library (not implemented in Phase 3) → Global active Series media sets.
+ * Site selection → Global active Series media sets. The Workspace library is never a runtime
+ * fallback: its selection is copied into the Site explicitly (D-083).
  * Only active sets that have at least one image are returned; files are referenced, never copied.
  */
 final class VehicleMediaResolver

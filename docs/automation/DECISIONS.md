@@ -1537,7 +1537,7 @@ Do not allow arbitrary cross-Site Form references as a shortcut.
 
 ## D-083 — Workspace Vehicle Live Fallback Behavior
 
-**Status:** OPEN
+**Status:** APPROVED for Phase 8 MVP — resolved by D-115 (explicit copy, no live fallback / sync).
 
 ### Question
 
@@ -2072,6 +2072,23 @@ Owner instruction in the Phase 8 autopilot (2026-10-06); P8-001.
 ### Resolved By
 
 Owner instruction in the Phase 8 autopilot (2026-10-06); P8-003.
+
+---
+
+## D-115 — Workspace Vehicle Library Is an Explicit Copy Source (resolves D-083 for MVP)
+
+**Status:** APPROVED
+
+### Decision
+
+- `WorkspaceVehicle` (`workspace_vehicles`, one per Workspace + catalog Series) owns only reusable content: Series reference, `custom_name`, `custom_description` and a selection of active platform media sets of the same Series (`workspace_vehicle_media_sets`, references only). It owns no prices, RRP, benefits, availability, badges, CTA, domain or form data.
+- «Добавить на сайт» creates an independent `SiteVehicle` copy (new public ID, no offers) with nullable `source_workspace_vehicle_id` as provenance only. Requires `manage_workspace_vehicle_library` + Site access + `import_vehicles` on the destination Site of the same Workspace.
+- No live fallback, sync or price sync: library edits / deletion never change Site copies; deleting the library entry nulls the provenance. The published runtime never reads the library.
+- «Сохранить в библиотеку» copies the same reusable content (never commercial data) and never silently overwrites an existing entry for the Series; explicit confirmation is required.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-005.
 
 ---
 

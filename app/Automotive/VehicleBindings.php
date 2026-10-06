@@ -90,6 +90,7 @@ final class VehicleBindings
 
         foreach ($vehicles as $vehicle) {
             $title = $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]);
+            $title['title'] = $vehicle->custom_name ?? $title['title'];
             $visibleOffers = $vehicle->offers->filter(fn (SiteOffer $offer): bool => $equipments->has($offer->catalog_equipment_public_id))->values();
             $cheapest = $visibleOffers->sortBy('price_minor')->first();
             $bestBenefit = $visibleOffers->map(fn (SiteOffer $offer): int => (int) $offer->benefits->sum('amount_minor'))->max();

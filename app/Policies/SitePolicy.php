@@ -143,6 +143,11 @@ final class SitePolicy
         return $this->can($user, $site, WorkspacePermission::EditVehicles);
     }
 
+    public function importVehicles(User $user, Site $site): bool
+    {
+        return $this->can($user, $site, WorkspacePermission::ImportVehicles);
+    }
+
     public function editPrices(User $user, Site $site): bool
     {
         return $this->can($user, $site, WorkspacePermission::EditPrices);

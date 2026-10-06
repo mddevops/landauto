@@ -11,6 +11,7 @@ type VehicleSummary = {
     public_id: string;
     status: boolean;
     sort_order: number;
+    custom_name: string | null;
     offers_count: number;
     media_sets_count: number;
     catalog: VehicleCatalogTitle | null;
@@ -85,7 +86,8 @@ export default function VehiclesIndex({
                                         />
                                         <div className="min-w-0 flex-1">
                                             <h2 className="font-semibold break-words">
-                                                {vehicle.catalog?.title ??
+                                                {vehicle.custom_name ??
+                                                    vehicle.catalog?.title ??
                                                     'Модель недоступна'}
                                             </h2>
                                             {vehicle.catalog && (

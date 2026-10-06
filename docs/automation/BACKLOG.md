@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-004 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-005 DONE.
 
-Next ready task: `P8-005 — Workspace Vehicle Library`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-006 — Site-to-Site Vehicle Copy`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3206,8 +3206,15 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-005 — Workspace Vehicle Library
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-010, P8-003
+
+### Result
+
+- `workspace_vehicles` (one per Workspace + catalog Series, application-validated, no cross-DB FK) with reusable `custom_name` / `custom_description` / status and `workspace_vehicle_media_sets` (active platform sets of the same Series only); no commercial fields (D-115 resolves D-083).
+- «Библиотека автомобилей» `/workspace/vehicles` (`manage_workspace_vehicle_library`, Owner): list + search, add from catalog, edit name / description, choose media sets, archive / restore, delete.
+- «Добавить на сайт» (library permission + Site access + `import_vehicles`) creates an independent `SiteVehicle` (new public ID, no offers, `source_workspace_vehicle_id` provenance only, nulled on library deletion). «Сохранить в библиотеку» on the Site vehicle page copies name / description / media only and requires explicit confirmation to update an existing entry.
+- `site_vehicles.custom_name` / `custom_description` editable on the Site; `custom_name` overrides the vehicle title in bindings. Rendering `custom_description` in published blocks is a follow-up.
 
 ---
 

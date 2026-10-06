@@ -5,40 +5,36 @@ import { Button } from '@/components/ui/button';
 import type { PickerLevel } from '@/components/vehicles/series-picker';
 import { SeriesPicker } from '@/components/vehicles/series-picker';
 import { dashboard } from '@/routes';
-import { create, index, store } from '@/routes/sites/vehicles';
+import { create, index, store } from '@/routes/workspace/vehicles';
 
-type CreateVehicleProps = {
-    site: { public_id: string; name: string };
+export default function CreateWorkspaceVehicle({
+    levels,
+}: {
     levels: PickerLevel[];
-};
-
-export default function CreateVehicle({ site, levels }: CreateVehicleProps) {
+}) {
     return (
         <>
-            <Head title={`Добавить автомобиль — ${site.name}`} />
+            <Head title="Добавить в библиотеку" />
             <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
                 <header className="space-y-1">
-                    <p className="truncate text-sm text-muted-foreground">
-                        {site.name}
+                    <p className="text-sm text-muted-foreground">
+                        Библиотека автомобилей
                     </p>
                     <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                        Добавить автомобиль
+                        Добавить в библиотеку
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Выберите марку, модель, поколение и серию. Предложения с
-                        комплектациями и ценами добавляются на следующем шаге.
+                        Выберите марку, модель, поколение и серию из каталога
+                        платформы. Цены задаются отдельно на каждом сайте.
                     </p>
                 </header>
 
                 <SeriesPicker
                     levels={levels}
-                    href={(query) => create(site.public_id, { query })}
-                    addedLabel="Уже на сайте"
+                    href={(query) => create({ query })}
+                    addedLabel="Уже в библиотеке"
                     renderAdd={(item) => (
-                        <Form
-                            {...store.form(site.public_id)}
-                            disableWhileProcessing
-                        >
+                        <Form {...store.form()} disableWhileProcessing>
                             {({ errors }) => (
                                 <>
                                     <input
@@ -63,9 +59,7 @@ export default function CreateVehicle({ site, levels }: CreateVehicleProps) {
 
                 <div>
                     <Button variant="outline" asChild>
-                        <Link href={index(site.public_id)}>
-                            Вернуться к автомобилям
-                        </Link>
+                        <Link href={index()}>Вернуться к библиотеке</Link>
                     </Button>
                 </div>
             </main>
@@ -73,6 +67,9 @@ export default function CreateVehicle({ site, levels }: CreateVehicleProps) {
     );
 }
 
-CreateVehicle.layout = {
-    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
+CreateWorkspaceVehicle.layout = {
+    breadcrumbs: [
+        { title: 'Все сайты', href: dashboard() },
+        { title: 'Библиотека автомобилей', href: index() },
+    ],
 };

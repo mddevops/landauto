@@ -42,6 +42,7 @@ use App\Http\Controllers\Team\WorkspaceMemberController;
 use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
+use App\Http\Controllers\Vehicles\WorkspaceVehicleController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceSettingsController;
@@ -92,6 +93,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(RequireWorkspaceContext::class)->group(function () {
         Route::get('workspace/settings', [WorkspaceSettingsController::class, 'edit'])->name('workspace.settings.edit');
         Route::patch('workspace/settings', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
+
+        Route::prefix('workspace/vehicles')->name('workspace.vehicles.')->group(function () {
+            Route::get('/', [WorkspaceVehicleController::class, 'index'])->name('index');
+            Route::get('create', [WorkspaceVehicleController::class, 'create'])->name('create');
+            Route::post('/', [WorkspaceVehicleController::class, 'store'])->name('store');
+            Route::get('{vehicle}', [WorkspaceVehicleController::class, 'show'])->whereUlid('vehicle')->name('show');
+            Route::patch('{vehicle}', [WorkspaceVehicleController::class, 'update'])->whereUlid('vehicle')->name('update');
+            Route::put('{vehicle}/media', [WorkspaceVehicleController::class, 'media'])->whereUlid('vehicle')->name('media');
+            Route::delete('{vehicle}', [WorkspaceVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('destroy');
+            Route::post('{vehicle}/sites', [WorkspaceVehicleController::class, 'copyToSite'])->whereUlid('vehicle')->name('copy');
+        });
 
         Route::prefix('workspace/team')->name('workspace.team.')->group(function () {
             Route::get('/', [WorkspaceTeamController::class, 'index'])->name('index');
@@ -222,6 +234,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('vehicles/{vehicle}', [SiteVehicleController::class, 'update'])->whereUlid('vehicle')->name('vehicles.update');
             Route::put('vehicles/{vehicle}/media', [SiteVehicleController::class, 'media'])->whereUlid('vehicle')->name('vehicles.media');
             Route::delete('vehicles/{vehicle}', [SiteVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('vehicles.destroy');
+            Route::post('vehicles/{vehicle}/library', [SiteVehicleController::class, 'saveToLibrary'])->whereUlid('vehicle')->name('vehicles.library');
             Route::post('vehicles/{vehicle}/offers', [SiteOfferController::class, 'store'])->whereUlid('vehicle')->name('offers.store');
             Route::patch('offers/{offer}', [SiteOfferController::class, 'update'])->whereUlid('offer')->name('offers.update');
             Route::delete('offers/{offer}', [SiteOfferController::class, 'destroy'])->whereUlid('offer')->name('offers.destroy');

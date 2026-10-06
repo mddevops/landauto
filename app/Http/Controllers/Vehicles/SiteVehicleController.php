@@ -2,18 +2,19 @@
 
 namespace App\Http\Controllers\Vehicles;
 
+use App\Automotive\SeriesPicker;
 use App\Automotive\VehicleCatalog;
-use App\Catalog\CatalogLevel;
+use App\Automotive\WorkspaceVehicleLibrary;
 use App\Catalog\CatalogReferences;
 use App\Enums\BenefitType;
 use App\Enums\MediaAngle;
 use App\Enums\OfferAvailability;
+use App\Enums\WorkspacePermission;
 use App\Exceptions\InvalidCatalogDataException;
 use App\Http\Controllers\Controller;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoModification;
 use App\Models\Catalog\AutoSeries;
-use App\Models\Catalog\CatalogModel;
 use App\Models\SeriesMediaImage;
 use App\Models\SeriesMediaSet;
 use App\Models\Site;
@@ -35,8 +36,6 @@ use Inertia\Response;
  */
 class SiteVehicleController extends Controller
 {
-    private const PICKER_LEVELS = [CatalogLevel::Marks, CatalogLevel::Models, CatalogLevel::Generations, CatalogLevel::Series];
-
     public function __construct(
         private DesignerScope $scope,
         private VehicleCatalog $catalog,
@@ -58,6 +57,7 @@ class SiteVehicleController extends Controller
                 'public_id' => $vehicle->public_id,
                 'status' => $vehicle->status,
                 'sort_order' => $vehicle->sort_order,
+                'custom_name' => $vehicle->custom_name,
                 'offers_count' => (int) $vehicle->getAttribute('offers_count'),
                 'media_sets_count' => (int) $vehicle->getAttribute('media_sets_count'),
                 'catalog' => isset($series[$vehicle->catalog_series_public_id]) ? $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]) : null,
@@ -67,50 +67,14 @@ class SiteVehicleController extends Controller
         ]);
     }
 
-    public function create(Request $request, Site $site): Response
+    public function create(Request $request, Site $site, SeriesPicker $picker): Response
     {
         $this->scope->site($site);
         Gate::authorize('editVehicles', $site);
 
-        $added = $site->vehicles()->pluck('catalog_series_public_id')->flip();
-        $levels = [];
-        $parent = null;
-
-        foreach (self::PICKER_LEVELS as $level) {
-            if ($level->parent() !== null && $parent === null) {
-                break;
-            }
-
-            $query = $level->modelClass()::query()->scopes(['available'])->ordered();
-
-            if ($parent !== null) {
-                $query->where((string) $level->parentKey(), $parent->getKey());
-            }
-
-            $items = $query->get();
-            $requested = $request->query($level->selectionKey());
-            $selected = is_string($requested)
-                ? $items->first(fn (CatalogModel $item): bool => $item->public_id === $requested)
-                : null;
-
-            $levels[] = [
-                'key' => $level->value,
-                'label' => $level->label(),
-                'selectionKey' => $level->selectionKey(),
-                'selected' => $selected?->public_id,
-                'items' => $items->map(fn (CatalogModel $item): array => [
-                    'public_id' => $item->public_id,
-                    'name' => (string) $item->getAttribute('name'),
-                    'added' => $level === CatalogLevel::Series && isset($added[$item->public_id]),
-                ])->values()->all(),
-            ];
-
-            $parent = $level === CatalogLevel::Series ? null : $selected;
-        }
-
         return Inertia::render('sites/vehicles/create', [
             'site' => $this->site($site),
-            'levels' => $levels,
+            'levels' => $picker->levels($request, $site->vehicles()->pluck('catalog_series_public_id')->flip()->all()),
         ]);
     }
 
@@ -143,13 +107,20 @@ class SiteVehicleController extends Controller
         $offers = $vehicle->offers()->ordered()->with('benefits')->get();
         $equipments = $this->catalog->equipments($offers->map(fn (SiteOffer $offer): string => $offer->catalog_equipment_public_id)->values()->all());
 
+        $canManageLibrary = Gate::allows(WorkspacePermission::ManageWorkspaceVehicleLibrary->value);
+
         return Inertia::render('sites/vehicles/show', [
             'site' => $this->site($site),
             'vehicle' => [
                 'public_id' => $vehicle->public_id,
                 'status' => $vehicle->status,
                 'sort_order' => $vehicle->sort_order,
+                'custom_name' => $vehicle->custom_name,
+                'custom_description' => $vehicle->custom_description,
                 'catalog' => $series === null ? null : $this->catalog->seriesTitle($series),
+                'in_library' => $canManageLibrary && $site->workspace->vehicleLibrary()
+                    ->where('catalog_series_public_id', $vehicle->catalog_series_public_id)
+                    ->exists(),
             ],
             'mediaSets' => SeriesMediaSet::query()
                 ->where('catalog_series_public_id', $vehicle->catalog_series_public_id)
@@ -213,6 +184,7 @@ class SiteVehicleController extends Controller
                 'editVehicles' => Gate::allows('editVehicles', $site),
                 'editPrices' => Gate::allows('editPrices', $site),
                 'editBenefits' => Gate::allows('editBenefits', $site),
+                'manageLibrary' => $canManageLibrary,
             ],
         ]);
     }
@@ -225,7 +197,34 @@ class SiteVehicleController extends Controller
         $vehicle->update($request->validate([
             'status' => ['required', 'boolean'],
             'sort_order' => ['required', 'integer', 'min:0', 'max:4294967295'],
-        ], [], ['status' => 'Показ на сайте', 'sort_order' => 'Сортировка']));
+            'custom_name' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'custom_description' => ['sometimes', 'nullable', 'string', 'max:2000'],
+        ], [], [
+            'status' => 'Показ на сайте',
+            'sort_order' => 'Сортировка',
+            'custom_name' => 'Название',
+            'custom_description' => 'Описание',
+        ]));
+
+        return back();
+    }
+
+    /**
+     * «Сохранить в библиотеку»: copies the Series, name, description and media selection, never
+     * offers or prices. An existing library entry is only updated with explicit confirmation.
+     */
+    public function saveToLibrary(Request $request, Site $site, SiteVehicle $vehicle, WorkspaceVehicleLibrary $library): RedirectResponse
+    {
+        $this->scope->vehicle($site, $vehicle);
+        Gate::authorize('viewVehicles', $site);
+        Gate::authorize(WorkspacePermission::ManageWorkspaceVehicleLibrary->value);
+
+        $result = $library->saveFromSite($vehicle, $site->workspace, $request->boolean('overwrite'));
+
+        Inertia::flash('toast', [
+            'type' => 'success',
+            'message' => $result['created'] ? 'Автомобиль сохранён в библиотеку.' : 'Автомобиль в библиотеке обновлён.',
+        ]);
 
         return back();
     }
