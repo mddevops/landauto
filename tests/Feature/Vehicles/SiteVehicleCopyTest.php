@@ -19,16 +19,16 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use App\Support\WorkspaceContext;
-use App\Support\WorkspacePermissionResolver;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\GrantsRolePermissions;
 use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
 
 class SiteVehicleCopyTest extends TestCase
 {
-    use RefreshCatalogDatabase, RefreshDatabase;
+    use GrantsRolePermissions, RefreshCatalogDatabase, RefreshDatabase;
 
     private Workspace $workspace;
 
@@ -45,9 +45,6 @@ class SiteVehicleCopyTest extends TestCase
     private AutoModification $modification;
 
     private AutoEquipment $comfort;
-
-    /** @var array<string, list<WorkspacePermission>> */
-    private array $grants = [];
 
     protected function setUp(): void
     {
@@ -411,28 +408,6 @@ class SiteVehicleCopyTest extends TestCase
             'vehicles' => [$this->vehicle->public_id],
             'conflicts' => [$this->vehicle->public_id => ['mode' => 'update', 'fields' => $fields]],
         ]);
-    }
-
-    /**
-     * @param  list<WorkspacePermission>  $permissions
-     */
-    private function grant(WorkspaceRole $role, array $permissions): void
-    {
-        $this->grants[$role->value] = $permissions;
-
-        $this->app->instance(WorkspacePermissionResolver::class, new class($this->grants) extends WorkspacePermissionResolver
-        {
-            /**
-             * @param  array<string, list<WorkspacePermission>>  $grants
-             */
-            public function __construct(private array $grants) {}
-
-            public function forRole(WorkspaceRole $role): array
-            {
-                return $this->grants[$role->value] ?? parent::forRole($role);
-            }
-        });
-        $this->app->forgetScopedInstances();
     }
 
     /**

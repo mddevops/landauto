@@ -1644,7 +1644,7 @@ BACKLOG `X-009 — ADR: Characteristic Value Schema` (trigger: before P3-001).
 
 ## D-087 — Site Asset / Workspace Asset Relationship
 
-**Status:** APPROVED for Phase 2 scope — ADR-003: direct Site-owned assets (owner instruction "P2 Site assets are customer Site assets"); a Workspace Media Library is deferred and needs its own decision.
+**Status:** APPROVED for Phase 2 scope — ADR-003: direct Site-owned assets (owner instruction "P2 Site assets are customer Site assets"); the Phase 8 Workspace Media Library is resolved by D-116 (copy into a new SiteAsset, never live references).
 
 ### Question
 
@@ -2089,6 +2089,23 @@ Owner instruction in the Phase 8 autopilot (2026-10-06); P8-003.
 ### Resolved By
 
 Owner instruction in the Phase 8 autopilot (2026-10-06); P8-005.
+
+---
+
+## D-116 — Workspace Assets Are Copied into Site Assets (resolves D-087 for Phase 8)
+
+**Status:** APPROVED
+
+### Decision
+
+- `WorkspaceAsset` (`workspace_assets`) is the shared source library of a Workspace with the same immutable file semantics as `SiteAsset` (server-generated private path, shared `ImageUpload` validation, replacement = new upload). Managed in «Медиатека» with the new `manage_workspace_assets` permission (Owner only by default).
+- «Копировать на сайт» creates a new immutable `SiteAsset` with its own file copy; it requires `manage_workspace_assets` + destination Site access + `manage_assets`. No browser-supplied paths.
+- Sites and Published Versions never reference Workspace Assets; deleting a Workspace Asset never touches SiteAsset copies or their files.
+- D-076 (object storage) stays open; storage quota (X-017) must count both asset kinds.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-008.
 
 ---
 

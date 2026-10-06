@@ -44,6 +44,7 @@ use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\Vehicles\SiteVehicleImportController;
 use App\Http\Controllers\Vehicles\WorkspaceVehicleController;
+use App\Http\Controllers\WorkspaceAssetController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceSettingsController;
@@ -104,6 +105,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('{vehicle}/media', [WorkspaceVehicleController::class, 'media'])->whereUlid('vehicle')->name('media');
             Route::delete('{vehicle}', [WorkspaceVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('destroy');
             Route::post('{vehicle}/sites', [WorkspaceVehicleController::class, 'copyToSite'])->whereUlid('vehicle')->name('copy');
+        });
+
+        Route::prefix('workspace/assets')->name('workspace.assets.')->group(function () {
+            Route::get('/', [WorkspaceAssetController::class, 'index'])->name('index');
+            Route::post('/', [WorkspaceAssetController::class, 'store'])->middleware('throttle:60,1')->name('store');
+            Route::get('{asset}', [WorkspaceAssetController::class, 'show'])->whereUlid('asset')->name('show');
+            Route::delete('{asset}', [WorkspaceAssetController::class, 'destroy'])->whereUlid('asset')->name('destroy');
+            Route::post('{asset}/sites', [WorkspaceAssetController::class, 'copyToSite'])->whereUlid('asset')->middleware('throttle:60,1')->name('copy');
         });
 
         Route::prefix('workspace/team')->name('workspace.team.')->group(function () {

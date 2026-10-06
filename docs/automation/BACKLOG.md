@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-007 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-008 DONE.
 
-Next ready task: `P8-008 — Shared Workspace Assets`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-009 — Richer Version History`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3247,8 +3247,14 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-008 — Shared Workspace Assets
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-013, P8-003
+
+### Result
+
+- `workspace_assets` mirroring `site_assets` (immutable file fields, private local disk, server-generated `workspace-assets/{workspace}/{asset}.{ext}` path, restrict on Workspace delete) and new permission `manage_workspace_assets` (Owner only) — D-116 resolves D-087 for Phase 8.
+- «Медиатека» `/workspace/assets`: upload (shared `ImageUpload` rules: JPEG / PNG / WebP, 10 MB, decoded-type match, side limit), grid with private preview, delete, «Копировать на сайт».
+- Copy to Site (library permission + Site access + `manage_assets`) creates a new `SiteAsset` with its own file copy; deleting the Workspace Asset never touches Site copies. X-017 scope now includes Workspace Assets.
 
 ---
 
@@ -3846,6 +3852,8 @@ Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/
 **Decision:** D-106
 
 Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage limit) aggregating Site Assets owned by the Workspace's Sites, enforced on upload. No plan-name checks; numeric plan values require owner approval. Not a Phase 3 blocker.
+
+Scope update (P8-008): the cumulative quota must count Site Assets **and** Workspace Assets (`workspace_assets`), and be enforced on Workspace Asset upload and on copy-to-Site (each copy is a separate file). No numeric value is defined yet.
 
 ---
 

@@ -1,5 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Car, CarFront, LayoutGrid, Plug, Settings, Users } from 'lucide-react';
+import {
+    Car,
+    CarFront,
+    Images,
+    LayoutGrid,
+    Plug,
+    Settings,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -16,6 +24,7 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as integrationsIndex } from '@/routes/integrations';
+import { index as assetsIndex } from '@/routes/workspace/assets';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
@@ -48,6 +57,9 @@ export function AppSidebar() {
                       matchPrefix: true,
                   },
               ]
+            : []),
+        ...(permissions.includes('manage_workspace_assets')
+            ? [{ title: 'Медиатека', href: assetsIndex(), icon: Images }]
             : []),
         ...(permissions.includes('manage_members')
             ? [{ title: 'Команда', href: teamIndex(), icon: Users }]
