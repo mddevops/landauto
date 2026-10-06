@@ -43,6 +43,7 @@ class WorkspaceTeamController extends Controller
                 'status' => $member->status->value,
                 'joined_at' => $member->joined_at?->toIso8601String(),
                 'is_self' => $member->is($actor),
+                'can_manage' => $authority->canManageMember($actor, $member),
             ])
             ->values();
 

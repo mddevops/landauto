@@ -227,8 +227,8 @@ class WorkspaceInvitationTest extends TestCase
         $adminInvite = WorkspaceInvitation::factory()->for($this->workspace)->create(['role' => WorkspaceRole::Admin]);
         $foreign = WorkspaceInvitation::factory()->create();
 
-        $this->actingAs($admin->user)->post(route('workspace.team.invitations.resend', $adminInvite->public_id))->assertNotFound();
-        $this->actingAs($admin->user)->delete(route('workspace.team.invitations.destroy', $adminInvite->public_id))->assertNotFound();
+        $this->actingAs($admin->user)->post(route('workspace.team.invitations.resend', $adminInvite->public_id))->assertForbidden();
+        $this->actingAs($admin->user)->delete(route('workspace.team.invitations.destroy', $adminInvite->public_id))->assertForbidden();
         $this->actingAs($this->owner)->post(route('workspace.team.invitations.resend', $foreign->public_id))->assertNotFound();
         $this->actingAs($this->owner)->delete(route('workspace.team.invitations.destroy', $foreign->public_id))->assertNotFound();
 

@@ -15,6 +15,7 @@ use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Mail;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
+use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 use Throwable;
 
@@ -220,8 +221,12 @@ final class WorkspaceInvitations
             ->lockForUpdate()
             ->first();
 
-        if ($invitation === null || ! $this->authority->canAssign($actor->role, $invitation->role)) {
+        if ($invitation === null) {
             throw new NotFoundHttpException;
+        }
+
+        if (! $this->authority->canAssign($actor->role, $invitation->role)) {
+            throw new AccessDeniedHttpException;
         }
 
         return $invitation;

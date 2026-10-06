@@ -27,6 +27,11 @@ import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import { index as teamIndex } from '@/routes/workspace/team';
 import { destroy, resend, store } from '@/routes/workspace/team/invitations';
+import {
+    destroy as removeMember,
+    reactivate as reactivateMember,
+    suspend as suspendMember,
+} from '@/routes/workspace/team/members';
 
 type MemberRow = {
     public_id: string;
@@ -37,6 +42,7 @@ type MemberRow = {
     status: string;
     joined_at: string | null;
     is_self: boolean;
+    can_manage: boolean;
 };
 
 type InvitationRow = {
@@ -223,6 +229,87 @@ function InvitationActions({ invitation }: { invitation: InvitationRow }) {
     );
 }
 
+function MemberActions({ member }: { member: MemberRow }) {
+    const [confirmRemove, setConfirmRemove] = useState(false);
+    const [processing, setProcessing] = useState(false);
+    const options = {
+        preserveScroll: true,
+        onStart: () => setProcessing(true),
+        onFinish: () => {
+            setProcessing(false);
+            setConfirmRemove(false);
+        },
+    };
+
+    if (!member.can_manage) {
+        return null;
+    }
+
+    return (
+        <div className="flex flex-wrap gap-2">
+            {member.status === 'suspended' ? (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={processing}
+                    onClick={() =>
+                        router.post(
+                            reactivateMember.url(member.public_id),
+                            {},
+                            options,
+                        )
+                    }
+                >
+                    Восстановить доступ
+                </Button>
+            ) : (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    disabled={processing}
+                    onClick={() =>
+                        router.post(
+                            suspendMember.url(member.public_id),
+                            {},
+                            options,
+                        )
+                    }
+                >
+                    Приостановить
+                </Button>
+            )}
+            {confirmRemove ? (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="destructive"
+                    disabled={processing}
+                    onClick={() =>
+                        router.delete(
+                            removeMember.url(member.public_id),
+                            options,
+                        )
+                    }
+                >
+                    Подтвердить удаление
+                </Button>
+            ) : (
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="ghost"
+                    disabled={processing}
+                    onClick={() => setConfirmRemove(true)}
+                >
+                    Удалить из пространства
+                </Button>
+            )}
+        </div>
+    );
+}
+
 export default function WorkspaceTeam({
     members,
     invitations,
@@ -275,7 +362,7 @@ export default function WorkspaceTeam({
                             {members.map((member) => (
                                 <li
                                     key={member.public_id}
-                                    className="flex flex-col gap-2 py-3 sm:flex-row sm:items-center sm:justify-between"
+                                    className="flex flex-col gap-3 py-3 lg:flex-row lg:items-center lg:justify-between"
                                 >
                                     <div className="min-w-0">
                                         <p className="font-medium break-words">
@@ -306,6 +393,7 @@ export default function WorkspaceTeam({
                                                 member.status
                                             ] ?? member.status}
                                         </Badge>
+                                        <MemberActions member={member} />
                                     </div>
                                 </li>
                             ))}

@@ -74,9 +74,9 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001 DONE.
+Phase 8 — Team / Collaboration: IN_PROGRESS (branch `autopilot/phase8-2026-10-06`). P8-001, P8-002 DONE.
 
-Next ready task: `P8-002 — Member Suspension / Removal`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P8-003 — Site-Level Access`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3158,8 +3158,14 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-002 — Member Suspension / Removal
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-001
+
+### Result
+
+- «Команда»: Приостановить / Восстановить доступ / Удалить из пространства per member (`manage_members` + central `TeamAuthority::canManageMember`: never self, never an Owner; Admin only below Admin). Not-manageable members of the same Workspace → 403, foreign members → 404.
+- Suspension keeps the seat; reactivation needs no new seat and requires an active Workspace. Removal deletes only the `WorkspaceMember` row (User and other memberships untouched) and frees the seat; the person may be invited again.
+- Access is re-resolved from active memberships on every request, so the session falls back to another Workspace (or onboarding) on the next request; no stale access. Logs `workspace.member_suspended` / `_reactivated` / `_removed` with public IDs.
 
 ---
 

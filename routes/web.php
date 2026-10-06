@@ -38,6 +38,7 @@ use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Team\InvitationAcceptanceController;
 use App\Http\Controllers\Team\WorkspaceInvitationController;
+use App\Http\Controllers\Team\WorkspaceMemberController;
 use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
@@ -103,6 +104,15 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('invitations/{invitation}', [WorkspaceInvitationController::class, 'destroy'])
                 ->whereUlid('invitation')
                 ->name('invitations.destroy');
+            Route::post('members/{member}/suspend', [WorkspaceMemberController::class, 'suspend'])
+                ->whereUlid('member')
+                ->name('members.suspend');
+            Route::post('members/{member}/reactivate', [WorkspaceMemberController::class, 'reactivate'])
+                ->whereUlid('member')
+                ->name('members.reactivate');
+            Route::delete('members/{member}', [WorkspaceMemberController::class, 'destroy'])
+                ->whereUlid('member')
+                ->name('members.destroy');
         });
     });
 

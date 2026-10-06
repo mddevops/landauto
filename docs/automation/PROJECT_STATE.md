@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team: IN_PROGRESS** (branch `autopilot/phase8-2026-10-06`; P8-001 DONE). Next ready task per `BACKLOG.md`: `P8-002 — Member Suspension / Removal`.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team: IN_PROGRESS** (branch `autopilot/phase8-2026-10-06`; P8-001, P8-002 DONE). Next ready task per `BACKLOG.md`: `P8-003 — Site-Level Access`.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -198,6 +198,7 @@ Current focus:
 - `P7-008` DONE (D-078 APPROVED, ADR-007): YooKassa; Workspace = billing customer; Landflow-owned Subscription with entitlements still via the Workspace Plan; saved `payment_method_id` + Landflow-scheduled idempotent renewals; webhooks verified by authoritative API re-fetch; `past_due` keeps paid access until period end, then downgrade to Free; cancellation at period end; 54-FZ receipt adapter point. Docs only; `P7-009` DEFERRED.
 - `P7-010` DONE: Phase 7 review, no regressions (domain ownership / DNS-only verification / SSL via server command without private keys in app / no app-host capture / loop-free 301s / live entitlements / consistent SEO). Phase 8 NOT_STARTED. Open follow-ups: unverified hostname claim expiry, certificate deprovisioning on domain removal, extra dotted app hostname hardening, `max_members` enforcement in P8-001, Free Workspace anti-abuse / account-level limit, pre-P7-005 Published Versions keep the frozen footer until republished, flaky tablet `auth.spec.ts` resend root cause (timeout increase `54e9895` is not a fix).
 - `P8-001` DONE: Workspace invitations — separate `workspace_invitations` (hashed single-use token, TTL `WORKSPACE_INVITATION_TTL_HOURS`, rotation on resend), «Команда» `/workspace/team` (`manage_members`), `max_members` enforced as reserved seats (members + pending invitations) under a Workspace row lock, central `TeamAuthority` (Owner never invitable, Admin below Admin only), token-free session landing `/invitation` with `Referrer-Policy: no-referrer`, acceptance only by the verified User with the matching email.
+- `P8-002` DONE: member lifecycle — suspend / reactivate / remove via central `TeamAuthority` (never self or Owner; Admin below Admin only); suspension keeps the seat, removal deletes only the membership and frees it; access re-resolved per request so sessions lose the Workspace immediately.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1194,7 +1195,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P8-002 — Member Suspension / Removal`** (Phase 8 — Team / Collaboration, IN_PROGRESS; P8-001 DONE; Phase 7 COMPLETED for planned scope, P7-009 DEFERRED) per `BACKLOG.md`.
+**Next: `P8-003 — Site-Level Access`** (Phase 8 — Team / Collaboration, IN_PROGRESS; P8-001, P8-002 DONE; Phase 7 COMPLETED for planned scope, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1752,7 +1753,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P8-002 — Member Suspension / Removal`**. Phases 0–7 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED); Phase 8 is IN_PROGRESS (P8-001 DONE).
+**`P8-003 — Site-Level Access`**. Phases 0–7 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED); Phase 8 is IN_PROGRESS (P8-001, P8-002 DONE).
 
 ---
 
@@ -1809,4 +1810,4 @@ Core Landflow implementation: IN_PROGRESS (Phases 0–6 COMPLETED)
 ```
 
 **Current phase: Phase 8 — Team / Collaboration (IN_PROGRESS; Phases 0–7 COMPLETED, P7-009 DEFERRED).
-Next: `P8-002 — Member Suspension / Removal` per `BACKLOG.md`.**
+Next: `P8-003 — Site-Level Access` per `BACKLOG.md`.**
