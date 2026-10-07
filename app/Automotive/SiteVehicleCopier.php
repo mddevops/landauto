@@ -20,7 +20,9 @@ use Throwable;
  *
  * Conflict identity is destination Site + catalog Series. A conflict is skipped unless the caller
  * passes explicit update fields for it; offers are matched by catalog Equipment, missing offers
- * are created and unrelated destination offers are never deleted.
+ * are created and unrelated destination offers are never deleted. When the destination holds
+ * several offers for an Equipment the update would touch, the whole vehicle update is refused
+ * as ambiguous and nothing on it changes.
  */
 final class SiteVehicleCopier
 {
@@ -31,6 +33,8 @@ final class SiteVehicleCopier
     public const SKIPPED = 'skipped';
 
     public const CONFLICT = 'conflict';
+
+    public const AMBIGUOUS = 'ambiguous';
 
     public const FAILED = 'failed';
 
@@ -127,6 +131,11 @@ final class SiteVehicleCopier
     private function updateVehicle(SiteVehicle $source, SiteVehicle $target, array $fields): string
     {
         $site = $target->site;
+        $touchesOffers = in_array(self::FIELD_OFFERS, $fields, true) || in_array(self::FIELD_BENEFITS, $fields, true);
+
+        if ($touchesOffers && $this->hasDuplicateTargetOffers($source, $target)) {
+            return self::AMBIGUOUS;
+        }
 
         return $this->atomically($source, $site, self::UPDATED, function () use ($source, $target, $fields): void {
             if (in_array(self::FIELD_TEXT, $fields, true)) {
@@ -150,9 +159,7 @@ final class SiteVehicleCopier
                 return;
             }
 
-            $matches = $target->offers()->ordered()->get()
-                ->groupBy('catalog_equipment_public_id')
-                ->map(fn ($offers) => $offers->first());
+            $matches = $target->offers()->get()->keyBy('catalog_equipment_public_id');
 
             foreach ($source->offers as $offer) {
                 /** @var SiteOffer|null $match */
@@ -175,6 +182,18 @@ final class SiteVehicleCopier
                 }
             }
         });
+    }
+
+    private function hasDuplicateTargetOffers(SiteVehicle $source, SiteVehicle $target): bool
+    {
+        $equipment = $source->offers->pluck('catalog_equipment_public_id')->unique()->values()->all();
+
+        return $target->offers()
+            ->whereIn('catalog_equipment_public_id', $equipment)
+            ->selectRaw('catalog_equipment_public_id, count(*) as offers_count')
+            ->groupBy('catalog_equipment_public_id')
+            ->havingRaw('count(*) > 1')
+            ->exists();
     }
 
     private function copyOffer(SiteOffer $source, SiteVehicle $vehicle, bool $withBenefits): void

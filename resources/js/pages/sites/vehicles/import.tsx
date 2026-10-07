@@ -18,6 +18,7 @@ type ConflictPreview = {
     offers: {
         matched: number;
         missing: number;
+        duplicate_equipment: number;
         destination_only: number;
         price_changes: {
             equipment: string;
@@ -41,8 +42,17 @@ type SourceVehicle = {
 type CopyResult = {
     vehicle: string;
     title: string;
-    result: 'copied' | 'updated' | 'skipped' | 'conflict' | 'failed';
+    result:
+        | 'copied'
+        | 'updated'
+        | 'skipped'
+        | 'conflict'
+        | 'ambiguous'
+        | 'failed';
 };
+
+const duplicateOffersMessage =
+    'В целевом сайте найдено несколько предложений для одной комплектации. Разрешите дубликаты вручную перед обновлением.';
 
 type ConflictField = 'text' | 'media' | 'status' | 'offers' | 'benefits';
 
@@ -62,6 +72,7 @@ const resultLabels: Record<CopyResult['result'], string> = {
     updated: 'Обновлён',
     skipped: 'Пропущен',
     conflict: 'Конфликт не решён — пропущен',
+    ambiguous: `Не обновлён, ничего не изменено. ${duplicateOffersMessage}`,
     failed: 'Ошибка, ничего не изменено',
 };
 
@@ -138,6 +149,11 @@ function ConflictPanel({
                     `Его предложения без пары (${preview.offers.destination_only}) сохранятся. `}
                 По умолчанию автомобиль пропускается.
             </p>
+            {preview.offers.duplicate_equipment > 0 && (
+                <p role="alert" className="text-destructive">
+                    {`${duplicateOffersMessage} Обновление цен и выгод для этого автомобиля будет отклонено.`}
+                </p>
+            )}
             {preview.offers.price_changes.length > 0 && (
                 <ul className="space-y-0.5 text-muted-foreground">
                     {preview.offers.price_changes.map((change) => (

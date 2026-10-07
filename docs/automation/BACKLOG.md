@@ -3216,7 +3216,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - `workspace_vehicles` (one per Workspace + catalog Series, application-validated, no cross-DB FK) with reusable `custom_name` / `custom_description` / status and `workspace_vehicle_media_sets` (active platform sets of the same Series only); no commercial fields (D-115 resolves D-083).
 - «Библиотека автомобилей» `/workspace/vehicles` (`manage_workspace_vehicle_library`, Owner): list + search, add from catalog, edit name / description, choose media sets, archive / restore, delete.
 - «Добавить на сайт» (library permission + Site access + `import_vehicles`) creates an independent `SiteVehicle` (new public ID, no offers, `source_workspace_vehicle_id` provenance only, nulled on library deletion). «Сохранить в библиотеку» on the Site vehicle page copies name / description / media only and requires explicit confirmation to update an existing entry.
-- `site_vehicles.custom_name` / `custom_description` editable on the Site; `custom_name` overrides the vehicle title in bindings. Rendering `custom_description` in published blocks is a follow-up.
+- `site_vehicles.custom_name` / `custom_description` editable on the Site; `custom_name` overrides the vehicle title in bindings. Rendering `custom_description` in published blocks is a follow-up (the binding exposes it as `description` since the Phase 8 correctness pass).
 
 ---
 
@@ -3271,7 +3271,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - History: number, status, «На сайте» marker, date, actor, note, restore count + last restore (time, actor); real pagination (20 per page, ordered by version number); «Последнее восстановление» summary.
 - Restore audit `site_version_restores` (Site, source version, actor, time) written in the restore transaction; restore still only replaces the Draft. Publisher can view/publish but not restore; Owner restores.
 - Unpublished changes indicator «Опубликовано» / «Есть неопубликованные изменения»: deterministic public manifest hash of the current Draft vs the active version's `manifest_hash` (no timestamp heuristics). It reflects what visitors would see: hidden-block edits do not count, catalog / analytics changes that alter the public manifest do. Shown on the Publishing page only.
-- Follow-up: the private draft snapshot does not include Site Vehicle `custom_name` / `custom_description` (P8-005), so restore keeps the current values for those fields.
+- Follow-up resolved in the Phase 8 correctness pass: the private draft snapshot now includes Site Vehicle `custom_name` / `custom_description` (P8-005), and restore brings them back.
 
 ---
 
@@ -3303,14 +3303,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
   - Automotive: Catalog V2 is untouched (main-DB migrations only). Workspace Vehicles are Series-level with no Workspace prices; Site Offers are Equipment-level. Copies create destination-owned rows with new public IDs and no sync. Commercial overwrite needs explicit selection plus `edit_prices` / `edit_benefits`, and the default is skip.
   - Assets: Workspace and Site Assets are immutable. Use on a Site creates an independent Site Asset. Published Versions are unaffected, and no object store was chosen (D-076).
   - Publishing: Published Versions stay immutable. Notes are plain text and escaped. Restore is Draft-only and audited. Publisher cannot restore, and production changes only on Publish.
+- Correctness pass after the review (resolved):
+  - The draft snapshot carries Site Vehicle `custom_name` / `custom_description`, so restore brings back their historical values. Snapshots from before these keys keep the current values.
+  - The public vehicle binding and the Published manifest expose nullable `description` (from `custom_description`). It changes the manifest hash and the unpublished-changes indicator.
+  - When the destination holds several offers for one of the source's Equipment, a conflict update that touches offers or benefits is refused as ambiguous. Nothing on that vehicle changes, and the import page explains the duplicates.
 - Open follow-ups (not blocking):
-  - Published blocks do not render Site Vehicle `custom_description`.
-  - The draft snapshot omits Site Vehicle custom name / description, so restore keeps the current values.
   - Platform Series media sets used by the Workspace library cannot be deleted (restrict).
-  - When the destination has several offers for the same Equipment, the copy updates the first by order.
+  - No shipped Block renders the vehicle `description` binding yet.
   - The unpublished-changes indicator appears only on the Publishing page.
   - Restores are audited in `site_version_restores` but not written to the app log.
-  - Local `MAIL_MAILER=log` writes invitation emails, including the one-time link, to the local log. Production needs a real mailer (X-013).
+  - Invitation tokens: application logging never records them, the DB stores only the hash, and normal Inertia / HTML never carries them. The local `MAIL_MAILER=log` transport writes the rendered email, including the invitation URL, to the local log by definition. Production must use a real mail transport (X-013).
   - The flaky tablet `auth.spec.ts` root cause is still unknown.
 - Unchanged / open: D-076, D-077, D-089, D-090, D-091, D-093, D-094, X-013; X-017 open (scope now also counts Workspace Assets).
 - Phase 8 status: COMPLETED. Phase 9 NOT_STARTED. Next task: `P9-001 — Developer Profile`.

@@ -107,6 +107,45 @@ class RestoreVersionTest extends TestCase
         $this->assertSame(PublishedVersionStatus::Ready, $this->v2->fresh()?->status);
     }
 
+    public function test_restore_brings_back_the_historical_site_vehicle_name_and_description(): void
+    {
+        $this->vehicle->forceFill(['custom_name' => 'Имя A', 'custom_description' => 'Описание A'])->save();
+        $versionA = $this->publish();
+        $this->vehicle->forceFill(['custom_name' => 'Имя B', 'custom_description' => 'Описание B'])->save();
+        $versionB = $this->publish();
+        $this->vehicle->forceFill(['custom_name' => null, 'custom_description' => 'Черновик C'])->save();
+
+        $this->assertSame('Имя A', $versionA->draft_snapshot_json['vehicles'][0]['custom_name']);
+        $this->assertSame('Описание A', $versionA->draft_snapshot_json['vehicles'][0]['custom_description']);
+
+        $this->restore($this->owner, $versionA)->assertInertiaFlash('toast.type', 'success');
+
+        $vehicle = $this->vehicle->fresh();
+        $this->assertSame(['Имя A', 'Описание A'], [$vehicle?->custom_name, $vehicle?->custom_description]);
+        $this->assertSame($versionB->id, $this->site->fresh()?->active_published_version_id);
+        $this->assertSame('Описание B', $this->site->fresh()?->activePublishedVersion?->public_manifest_json['vehicles'][0]['description']);
+
+        // Null is history too: a version without custom text restores nulls.
+        $this->restore($this->owner, $this->v1)->assertInertiaFlash('toast.type', 'success');
+        $vehicle = $this->vehicle->fresh();
+        $this->assertSame([null, null], [$vehicle?->custom_name, $vehicle?->custom_description]);
+    }
+
+    public function test_snapshots_without_custom_vehicle_text_keep_the_current_values(): void
+    {
+        $legacy = $this->v1->draft_snapshot_json;
+        unset($legacy['vehicles'][0]['custom_name'], $legacy['vehicles'][0]['custom_description']);
+        $old = PublishedVersion::factory()->for($this->site)->create(['version_number' => 9, 'draft_snapshot_json' => $legacy]);
+        $old->update(['status' => PublishedVersionStatus::Ready]);
+        $this->vehicle->forceFill(['custom_name' => 'Текущее имя', 'custom_description' => 'Текущее описание'])->save();
+
+        $this->restore($this->owner, $old)->assertInertiaFlash('toast.type', 'success');
+
+        $vehicle = $this->vehicle->fresh();
+        $this->assertSame(['Текущее имя', 'Текущее описание'], [$vehicle?->custom_name, $vehicle?->custom_description]);
+        $this->assertSame(210_000_000, $this->offer->fresh()?->price_minor);
+    }
+
     public function test_restore_requires_restore_version_permission(): void
     {
         foreach ([WorkspaceRole::Admin, WorkspaceRole::Designer, WorkspaceRole::ContentEditor] as $role) {

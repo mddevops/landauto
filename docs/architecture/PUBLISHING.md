@@ -410,7 +410,7 @@ Possible state:
 
 Exact diff implementation may be simple initially.
 
-Implemented in P8-009 on the Publishing page: the current Draft's deterministic public manifest hash is compared with the active Published Version's `manifest_hash` («Опубликовано» / «Есть неопубликованные изменения»). It answers "would publishing now change what visitors see"; edits to hidden blocks do not count. Dashboard / Designer placement is a follow-up.
+Implemented in P8-009 on the Publishing page: the current Draft's deterministic public manifest hash is compared with the active Published Version's `manifest_hash` («Опубликовано» / «Есть неопубликованные изменения»). It answers "would publishing now change what visitors see"; edits to hidden blocks do not count. Dashboard / Designer placement is a follow-up. Site Vehicle `custom_name` / `custom_description` are in the draft snapshot (restored with the version; snapshots without these keys keep the current values) and reach the manifest through the vehicle binding (`title`, `description`).
 
 ---
 

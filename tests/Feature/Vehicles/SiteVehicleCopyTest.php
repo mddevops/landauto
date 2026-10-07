@@ -355,6 +355,43 @@ class SiteVehicleCopyTest extends TestCase
         $this->assertSame($sourceBefore, $this->snapshot($this->vehicle->fresh() ?? $this->vehicle));
     }
 
+    public function test_duplicate_destination_offers_for_one_equipment_refuse_the_whole_update(): void
+    {
+        $target = $this->conflictingVehicle();
+        SiteOffer::factory()->for($target, 'vehicle')->create([
+            'catalog_equipment_public_id' => $this->comfort->public_id,
+            'price_minor' => 210_000_000,
+            'sort_order' => 6,
+        ]);
+        $before = $this->snapshot($target);
+        $sourceBefore = $this->snapshot($this->vehicle);
+
+        $this->as($this->owner)
+            ->get(route('sites.vehicles.imports.create', ['site' => $this->destination, 'source' => $this->source->public_id]))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('vehicles.0.existing.offers.duplicate_equipment', 1)
+                ->where('vehicles.0.existing.offers.matched', 0)
+                ->where('vehicles.0.existing.offers.missing', 1)
+                ->where('vehicles.0.existing.offers.price_changes', []));
+
+        foreach ([['text', 'offers'], ['benefits'], ['text', 'media', 'status', 'offers', 'benefits']] as $fields) {
+            $this->resolve($fields)
+                ->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'ambiguous']])
+                ->assertInertiaFlash('toast.type', 'warning')
+                ->assertInertiaFlash('toast.message', 'Скопировано: 0 · Обновлено: 0 · Пропущено: 0 · Конфликтов не решено: 0 · Не обновлено из-за дубликатов предложений: 1');
+        }
+
+        // Neither duplicate, nor the vehicle's text / media / status, changed; nothing was added.
+        $this->assertSame($before, $this->snapshot($target->fresh() ?? $target));
+        $this->assertSame(3, $target->offers()->count());
+        $this->assertSame($sourceBefore, $this->snapshot($this->vehicle->fresh() ?? $this->vehicle));
+
+        // Updates that do not touch offers stay possible.
+        $this->resolve(['text'])->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'updated']]);
+        $this->assertSame('Rio А', $target->fresh()?->custom_name);
+        $this->assertSame($before['offers'], $this->snapshot($target)['offers']);
+    }
+
     public function test_conflict_updates_of_prices_and_benefits_need_the_commercial_permissions(): void
     {
         $target = $this->conflictingVehicle();

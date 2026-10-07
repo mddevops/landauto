@@ -65,6 +65,20 @@ class PublishedSnapshotBuilderTest extends TestCase
         $this->assertNotSame($first->manifestHash, $this->builder()->build($this->site)->manifestHash);
     }
 
+    public function test_site_vehicle_description_is_published_and_changes_the_manifest_hash(): void
+    {
+        $before = $this->builder()->build($this->site);
+        $this->assertNull($before->publicManifest['vehicles'][0]['description']);
+
+        $this->vehicle->update(['custom_description' => 'Описание для сайта']);
+        $after = $this->builder()->build($this->site);
+
+        $this->assertSame('Описание для сайта', $after->publicManifest['vehicles'][0]['description']);
+        $this->assertSame('Описание для сайта', $after->draftSnapshot['vehicles'][0]['custom_description']);
+        $this->assertNotSame($before->manifestHash, $after->manifestHash);
+        $this->assertSame($after->manifestHash, $this->builder()->build($this->site)->manifestHash);
+    }
+
     public function test_snapshots_contain_no_secrets_operational_data_or_numeric_ids(): void
     {
         config(['services.yandex_smartcaptcha.server_key' => 'server-secret-value']);

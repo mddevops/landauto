@@ -197,7 +197,16 @@ final class RestoreVersion
                 ]);
             }
 
-            $vehicle->forceFill(['status' => (bool) $data['status'], 'sort_order' => (int) $data['sort_order']])->save();
+            $vehicle->forceFill(['status' => (bool) $data['status'], 'sort_order' => (int) $data['sort_order']]);
+
+            // Snapshots from before P8-005 have no custom text keys; the current values are kept then.
+            foreach (['custom_name', 'custom_description'] as $key) {
+                if (array_key_exists($key, $data)) {
+                    $vehicle->setAttribute($key, is_string($data[$key]) ? $data[$key] : null);
+                }
+            }
+
+            $vehicle->save();
 
             $available = SeriesMediaSet::query()
                 ->where('catalog_series_public_id', $vehicle->catalog_series_public_id)

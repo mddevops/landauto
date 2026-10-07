@@ -106,17 +106,19 @@ class SiteVehicleImportController extends Controller
         $results = $copier->copy($source, $site, $vehicles, $withOffers, $withBenefits, $updates);
         $counts = array_count_values(array_column($results, 'result'));
         $failed = $counts[SiteVehicleCopier::FAILED] ?? 0;
+        $ambiguous = $counts[SiteVehicleCopier::AMBIGUOUS] ?? 0;
 
         $request->session()->flash('vehicle_import', $results);
         Inertia::flash('toast', [
-            'type' => $failed > 0 ? 'warning' : 'success',
+            'type' => $failed + $ambiguous > 0 ? 'warning' : 'success',
             'message' => sprintf(
                 'Скопировано: %d · Обновлено: %d · Пропущено: %d · Конфликтов не решено: %d',
                 $counts[SiteVehicleCopier::COPIED] ?? 0,
                 $counts[SiteVehicleCopier::UPDATED] ?? 0,
                 $counts[SiteVehicleCopier::SKIPPED] ?? 0,
                 $counts[SiteVehicleCopier::CONFLICT] ?? 0,
-            ).($failed > 0 ? " · Ошибок: {$failed}" : ''),
+            ).($ambiguous > 0 ? " · Не обновлено из-за дубликатов предложений: {$ambiguous}" : '')
+                .($failed > 0 ? " · Ошибок: {$failed}" : ''),
         ]);
 
         return to_route('sites.vehicles.imports.create', ['site' => $site, 'source' => $source->public_id]);
@@ -218,9 +220,11 @@ class SiteVehicleImportController extends Controller
      */
     private function conflictPreview(SiteVehicle $source, SiteVehicle $target, string $catalogTitle, Collection $equipments): array
     {
-        $targetOffers = $target->offers->groupBy('catalog_equipment_public_id')->map(fn ($offers) => $offers->first());
-        $matched = $source->offers->filter(fn (SiteOffer $offer): bool => $targetOffers->has($offer->catalog_equipment_public_id));
+        $grouped = $target->offers->groupBy('catalog_equipment_public_id');
+        $targetOffers = $grouped->filter(fn ($offers): bool => $offers->count() === 1)->map(fn ($offers) => $offers->first());
         $sourceEquipment = $source->offers->pluck('catalog_equipment_public_id')->flip();
+        $duplicates = $grouped->filter(fn ($offers, $equipment): bool => $offers->count() > 1 && $sourceEquipment->has($equipment))->count();
+        $matched = $source->offers->filter(fn (SiteOffer $offer): bool => $targetOffers->has($offer->catalog_equipment_public_id));
 
         return [
             'public_id' => $target->public_id,
@@ -230,7 +234,8 @@ class SiteVehicleImportController extends Controller
             'status_differs' => $source->status !== $target->status,
             'offers' => [
                 'matched' => $matched->count(),
-                'missing' => $source->offers->count() - $matched->count(),
+                'missing' => $source->offers->filter(fn (SiteOffer $offer): bool => ! $grouped->has($offer->catalog_equipment_public_id))->count(),
+                'duplicate_equipment' => $duplicates,
                 'destination_only' => $target->offers->filter(fn (SiteOffer $offer): bool => ! $sourceEquipment->has($offer->catalog_equipment_public_id))->count(),
                 'price_changes' => array_values($matched
                     ->filter(fn (SiteOffer $offer): bool => $offer->price_minor !== $targetOffers[$offer->catalog_equipment_public_id]->price_minor)

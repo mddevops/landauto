@@ -113,6 +113,10 @@ class VersionHistoryTest extends TestCase
         // Hidden blocks are not part of what visitors see.
         $this->place('cta', ['title' => 'Скрытый блок'], hidden: true);
         $this->assertDraftChanged(false);
+
+        // Site Vehicle custom text is public automotive data.
+        $this->vehicle->update(['custom_description' => 'Новое описание']);
+        $this->assertDraftChanged(true);
     }
 
     public function test_publisher_can_publish_and_view_history_but_cannot_restore(): void
