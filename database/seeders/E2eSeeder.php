@@ -180,6 +180,11 @@ class E2eSeeder extends Seeder
         $licenseAdmin = $this->createUser('Ольга Лицензиарова', 'licenses-admin@landflow.test');
         $this->createWorkspace($licenseAdmin, 'Workspace Ольги');
         PlatformRoleAssignment::query()->create(['user_id' => $licenseAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);
+
+        // Template Builder (P9-007): a Developer with `create_templates` and no Templates yet.
+        $templateAuthor = $this->createUser('Тимур Шаблонов', 'template-developer@landflow.test');
+        $this->createWorkspace($templateAuthor, 'Workspace Тимура');
+        $this->createDeveloperProfile($templateAuthor, 'Студия шаблонов E2E', 'e2e-template-studio');
     }
 
     private function createGrantOnlyDeveloperBlock(DeveloperProfile $profile): void

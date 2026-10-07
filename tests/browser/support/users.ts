@@ -209,6 +209,13 @@ export const users = {
         email: 'licenses-admin@landflow.test',
         password: 'e2e-password',
     },
+    // Template Builder: Developer Profile with `create_templates`, no Templates yet.
+    templateDeveloper: {
+        name: 'Тимур Шаблонов',
+        email: 'template-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия шаблонов E2E',
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).

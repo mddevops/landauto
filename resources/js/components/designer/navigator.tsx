@@ -12,6 +12,7 @@ import {
 import { useState } from 'react';
 import type {
     DesignerBlock,
+    DesignerBlockRoutes,
     DesignerLibraryBlock,
     ReferenceIssue,
 } from '@/components/designer/types';
@@ -25,16 +26,9 @@ import {
     DialogTitle,
 } from '@/components/ui/dialog';
 import { cn } from '@/lib/utils';
-import {
-    destroy,
-    duplicate,
-    move,
-    store,
-    visibility,
-} from '@/routes/sites/blocks';
 
 type NavigatorProps = {
-    siteId: string;
+    routes: DesignerBlockRoutes;
     pageId: string;
     blocks: DesignerBlock[];
     referenceIssues: Record<string, ReferenceIssue[]>;
@@ -103,7 +97,7 @@ function CatalogCard({
 }
 
 export function Navigator({
-    siteId,
+    routes,
     pageId,
     blocks,
     referenceIssues,
@@ -115,18 +109,10 @@ export function Navigator({
     const [pendingDelete, setPendingDelete] = useState<DesignerBlock | null>(
         null,
     );
-    const args = (block: DesignerBlock) => ({
-        site: siteId,
-        block: block.public_id,
-    });
     const errors = usePage().props.errors as Record<string, string> | undefined;
     const libraryError = errors?.block;
     const add = (item: DesignerLibraryBlock) =>
-        router.post(
-            store.url({ site: siteId, page: pageId }),
-            { block: item.slug },
-            visit,
-        );
+        router.post(routes.add(pageId), { block: item.slug }, visit);
 
     return (
         <div className="flex flex-col gap-5">
@@ -195,7 +181,9 @@ export function Navigator({
                                             disabled={index === 0}
                                             onClick={() =>
                                                 router.post(
-                                                    move.url(args(block)),
+                                                    routes.move(
+                                                        block.public_id,
+                                                    ),
                                                     { direction: 'up' },
                                                     visit,
                                                 )
@@ -210,7 +198,9 @@ export function Navigator({
                                             }
                                             onClick={() =>
                                                 router.post(
-                                                    move.url(args(block)),
+                                                    routes.move(
+                                                        block.public_id,
+                                                    ),
                                                     { direction: 'down' },
                                                     visit,
                                                 )
@@ -222,7 +212,9 @@ export function Navigator({
                                             label={`Дублировать «${block.name}»`}
                                             onClick={() =>
                                                 router.post(
-                                                    duplicate.url(args(block)),
+                                                    routes.duplicate(
+                                                        block.public_id,
+                                                    ),
                                                     {},
                                                     visit,
                                                 )
@@ -238,7 +230,9 @@ export function Navigator({
                                             }
                                             onClick={() =>
                                                 router.patch(
-                                                    visibility.url(args(block)),
+                                                    routes.visibility(
+                                                        block.public_id,
+                                                    ),
                                                     {
                                                         hidden: !block.is_hidden,
                                                     },
@@ -348,7 +342,7 @@ export function Navigator({
                             onClick={() => {
                                 if (pendingDelete) {
                                     router.delete(
-                                        destroy.url(args(pendingDelete)),
+                                        routes.destroy(pendingDelete.public_id),
                                         visit,
                                     );
                                 }

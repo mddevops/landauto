@@ -7,6 +7,7 @@ import {
     Images,
     KeyRound,
     LayoutGrid,
+    LayoutTemplate,
     Plug,
     Settings,
     Users,
@@ -32,6 +33,7 @@ import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
 import { index as licensesIndex } from '@/routes/platform/licenses';
+import { index as platformTemplatesIndex } from '@/routes/platform/templates';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
 import { index as teamIndex } from '@/routes/workspace/team';
@@ -111,6 +113,12 @@ export function AppSidebar() {
                       title: 'Блоки',
                       href: platformBlocksIndex(),
                       icon: Blocks,
+                      matchPrefix: true,
+                  },
+                  {
+                      title: 'Шаблоны',
+                      href: platformTemplatesIndex(),
+                      icon: LayoutTemplate,
                       matchPrefix: true,
                   },
               ]

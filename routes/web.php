@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Developer\DeveloperBlockController;
 use App\Http\Controllers\Developer\DeveloperDashboardController;
+use App\Http\Controllers\Developer\DeveloperTemplateController;
 use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormRouteController;
@@ -28,6 +29,7 @@ use App\Http\Controllers\Platform\CatalogEntryController;
 use App\Http\Controllers\Platform\CatalogEquipmentController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
+use App\Http\Controllers\Platform\PlatformTemplateController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
 use App\Http\Controllers\Platform\SiteLicenseController;
@@ -42,6 +44,10 @@ use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
+use App\Http\Controllers\Studio\TemplateBlockController;
+use App\Http\Controllers\Studio\TemplateController;
+use App\Http\Controllers\Studio\TemplateDesignerController;
+use App\Http\Controllers\Studio\TemplatePageController;
 use App\Http\Controllers\Team\InvitationAcceptanceController;
 use App\Http\Controllers\Team\WorkspaceInvitationController;
 use App\Http\Controllers\Team\WorkspaceMemberController;
@@ -325,6 +331,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('{block}/access', [PlatformBlockController::class, 'access'])->whereUlid('block')->name('access');
         });
 
+    // Official platform-owned Templates (P9-007); editing happens in the shared Template Builder routes.
+    Route::prefix('platform/templates')
+        ->name('platform.templates.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManagePlatformContent->value)
+        ->group(function () {
+            Route::get('/', [PlatformTemplateController::class, 'index'])->name('index');
+            Route::get('create', [PlatformTemplateController::class, 'create'])->name('create');
+            Route::post('/', [PlatformTemplateController::class, 'store'])->middleware('throttle:30,1')->name('store');
+        });
+
     // Site licenses for catalog items (D-079): Super Admin grants and revokes; purchases are P10-005.
     Route::prefix('platform/licenses')
         ->name('platform.licenses.')
@@ -355,6 +371,37 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
                     Route::put('{block}/access', [DeveloperBlockController::class, 'access'])->whereUlid('block')->name('access');
                 });
+
+            Route::prefix('templates')
+                ->name('templates.')
+                ->middleware(EnsureDeveloperPermission::class.':'.DeveloperPermission::CreateTemplates->value)
+                ->group(function () {
+                    Route::get('/', [DeveloperTemplateController::class, 'index'])->name('index');
+                    Route::get('create', [DeveloperTemplateController::class, 'create'])->name('create');
+                    Route::post('/', [DeveloperTemplateController::class, 'store'])->middleware('throttle:30,1')->name('store');
+                });
+        });
+
+    // Template Builder (P9-007): one Template of its platform or Developer author; others are 404.
+    Route::prefix('studio/templates/{template}')
+        ->name('studio.templates.')
+        ->whereUlid('template')
+        ->group(function () {
+            Route::get('/', [TemplateController::class, 'show'])->name('show');
+            Route::patch('/', [TemplateController::class, 'update'])->name('update');
+            Route::post('publish', [TemplateController::class, 'publish'])->middleware('throttle:30,1')->name('publish');
+            Route::get('designer', [TemplateDesignerController::class, 'designer'])->name('designer');
+            Route::get('preview', [TemplateDesignerController::class, 'preview'])->name('preview');
+            Route::get('preview/frame', [TemplateDesignerController::class, 'frame'])->name('preview.frame');
+            Route::post('pages', [TemplatePageController::class, 'store'])->name('pages.store');
+            Route::patch('pages/{page}', [TemplatePageController::class, 'update'])->whereUlid('page')->name('pages.update');
+            Route::delete('pages/{page}', [TemplatePageController::class, 'destroy'])->whereUlid('page')->name('pages.destroy');
+            Route::post('pages/{page}/blocks', [TemplateBlockController::class, 'store'])->whereUlid('page')->name('blocks.store');
+            Route::patch('blocks/{block}/state', [TemplateBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');
+            Route::post('blocks/{block}/move', [TemplateBlockController::class, 'move'])->whereUlid('block')->name('blocks.move');
+            Route::post('blocks/{block}/duplicate', [TemplateBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
+            Route::patch('blocks/{block}/visibility', [TemplateBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
+            Route::delete('blocks/{block}', [TemplateBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
         });
 });
 

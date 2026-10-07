@@ -3413,7 +3413,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - `block_definitions.category` (`BlockCategory`, chosen at creation, editable in «Настройки»); `block_drafts` (`BlockStudio`, `BlockDraft`); `PUT …/blocks/{block}/draft` (developer + platform, throttle 120/min) with P9-003 404 / 403 rules, byte limits, `revision` conflict → «Черновик уже изменён…», sources stored verbatim (trim exclusion), never a Block Version.
 - Studio UI: «Код» (file list + monospace editor + size counter), «Конструктор схемы» (add / edit / reorder / delete, nested group / repeater, options, defaults, limits), «Предпросмотр» placeholder until P9-005, «Настройки» (metadata / ownership); debounced autosave + «Сохранить черновик»; «Проверка схемы» panel with paths.
 - Canonical `number` field type (schema + state validators, Properties Editor).
-- Template Builder section «Шаблоны» stays a placeholder until P9-007.
+- Template Builder section «Шаблоны» stayed a placeholder until P9-007 (now DONE).
 - Checks: `BlockStudioDraftTest`, authoring tests (draft 404 / 403 / suspended), validator unit tests, PHPStan, vp check; Playwright `block-authoring.spec.ts` incl. Studio flow (desktop / tablet / mobile).
 
 ### Acceptance Criteria
@@ -3541,8 +3541,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-007 — Template Builder
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-009, P9-013
+
+### Result
+
+- `templates` gain explicit ownership (`owner_scope` platform | developer + `developer_profile_id`, immutable like D-117) and `created_by` / `updated_by`; Draft content lives in `template_pages` / `template_blocks` (ULID `public_id`, pinned Block Versions, state validated by the Block Schema with Template-scoped references). No hidden workshop Site.
+- Creation: «Шаблоны Landflow» (`/platform/templates`, `manage_platform_content`) and Developer «Студия → Шаблоны» (`/developer/templates`, `create_templates`, own profile only). Editing: shared `studio/templates/{template}` routes; anyone other than the owner (incl. other Developers, Super Admin on Developer Templates, customers) gets 404.
+- The existing Designer is reused (Navigator / PagesPanel / PropertiesPanel / canvas now take route adapters); library = catalog Blocks with a published version; preview page with «Компьютер / Планшет / Телефон» renders the Draft in an iframe frame page.
+- Publishing (`studio/templates/{template}/publish`) runs automated checks only (site types, at least one Block, catalog availability, schema state, `BlockSourceChecker`) and creates an immutable `template_versions` row with a `content_json` snapshot (`1.0.0`, then minor bumps; unchanged Draft is refused). A new Template is not offered for Site creation (`is_official = false`) — installation and access are P9-015.
+- Checks: `TemplateBuilderTest` (10), developer route inventory, `E2eSeederTest`; Playwright `template-builder.spec.ts` (create → add / edit Block → device preview → publish → «Изменений нет»).
+- Limitations: Template Drafts cannot reference images, vehicles or Popups (customer-owned; chosen on the Site); Template access modes / licenses are P9-015.
 
 ### Acceptance Criteria
 
@@ -4316,8 +4325,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`.
-- Next: `P9-007 — Template Builder`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`.
+- Next: `P9-015 — Template Installation and Access`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

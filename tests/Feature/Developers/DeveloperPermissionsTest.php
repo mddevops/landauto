@@ -236,7 +236,7 @@ class DeveloperPermissionsTest extends TestCase
         $this->actingAs($this->superAdmin)->post(route('platform.developers.suspend', $profile));
         $this->actingAs($developer)->get(route('developer.dashboard'))->assertForbidden();
 
-        // Only the dashboard and Block authoring (Draft, publishing) exist; no Template routes yet.
+        // Dashboard, Block authoring and own Template lists; Template editing lives under `studio/templates`.
         $developerRoutes = collect(Route::getRoutes()->getRoutes())
             ->filter(fn ($route): bool => $route->uri() === 'developer' || str_starts_with($route->uri(), 'developer/'))
             ->map(fn ($route): string => $route->uri())
@@ -244,7 +244,7 @@ class DeveloperPermissionsTest extends TestCase
             ->sort()
             ->values()
             ->all();
-        $this->assertSame(['developer', 'developer/blocks', 'developer/blocks/create', 'developer/blocks/{block}', 'developer/blocks/{block}/access', 'developer/blocks/{block}/draft', 'developer/blocks/{block}/publish'], $developerRoutes);
+        $this->assertSame(['developer', 'developer/blocks', 'developer/blocks/create', 'developer/blocks/{block}', 'developer/blocks/{block}/access', 'developer/blocks/{block}/draft', 'developer/blocks/{block}/publish', 'developer/templates', 'developer/templates/create'], $developerRoutes);
     }
 
     public function test_developer_permissions_grant_no_workspace_site_or_platform_access(): void

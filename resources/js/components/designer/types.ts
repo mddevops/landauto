@@ -2,6 +2,7 @@ import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockSchema } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
 import type { CatalogAccessCard } from '@/types/blocks';
+import type { RouteDefinition, RouteFormDefinition } from '@/wayfinder';
 
 export type DesignerSite = {
     public_id: string;
@@ -47,6 +48,25 @@ export type DesignerAsset = {
     url: string;
     width: number;
     height: number;
+};
+
+/** Block action URLs of one Designer: a Site Draft or a Template Draft. */
+export type DesignerBlockRoutes = {
+    add: (pageId: string) => string;
+    state: (blockId: string) => string;
+    move: (blockId: string) => string;
+    duplicate: (blockId: string) => string;
+    visibility: (blockId: string) => string;
+    destroy: (blockId: string) => string;
+};
+
+/** Page actions of one Designer; `seo` is null where Pages have no SEO (Template Drafts). */
+export type DesignerPageRoutes = {
+    href: (pageId: string) => string;
+    store: RouteFormDefinition<'post'>;
+    update: (pageId: string) => RouteFormDefinition<'post'>;
+    destroy: (pageId: string) => RouteFormDefinition<'post'>;
+    seo: ((pageId: string) => RouteDefinition<'patch'>) | null;
 };
 
 /** Customer catalog item (D-079); `available` is decided by the backend for this Site. */

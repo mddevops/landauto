@@ -589,6 +589,11 @@ Fields:
 
 Implemented so far: `public_id`, `name`, `slug`, `is_official`, timestamps and (P9-013, D-119) `site_types` — JSON list of compatible Site types; empty / null means the Template is not offered at Site creation (the legacy official `blank` Template).
 
+P9-007: `owner_scope` (`platform` | `developer`, default `platform`) + `developer_profile_id` (FK restrict, required iff developer), `created_by_user_id` / `updated_by_user_id` (FK null on delete). Ownership and slug are immutable. Draft content:
+
+- `template_pages`: `public_id`, `template_id` (cascade), `title`, `slug` (unique per Template), `sort_order`, `is_home` (TRUE / NULL, unique per Template).
+- `template_blocks`: `public_id`, `template_page_id` (cascade), `block_version_id` (restrict, never workspace-private), `sort_order`, `is_hidden`, `state_json` (validated by the Block Schema; references only to Pages / Blocks of the same Template).
+
 ## template_versions
 
 Potential fields:
@@ -611,6 +616,8 @@ Potential fields:
 - Popups.
 
 When instantiated, data must become Site-owned.
+
+Implemented (P9-007): `template_id`, `version` (`1.0.0`, then minor bumps), `content_json` (snapshot `{pages: [{key, title, slug, is_home, blocks: [{key, block_version_id, is_hidden, state}]}]}`), `published_by_user_id`, timestamps. Rows are immutable (update / delete throw).
 
 ---
 

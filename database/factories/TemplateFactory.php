@@ -3,6 +3,8 @@
 namespace Database\Factories;
 
 use App\Enums\SiteType;
+use App\Enums\TemplateOwnerScope;
+use App\Models\DeveloperProfile;
 use App\Models\Template;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
@@ -16,6 +18,8 @@ class TemplateFactory extends Factory
         return [
             'name' => fake()->company(),
             'slug' => fake()->unique()->slug(),
+            'owner_scope' => TemplateOwnerScope::Platform,
+            'developer_profile_id' => null,
             'site_types' => [SiteType::MultiPage->value, SiteType::Landing->value],
             'is_official' => true,
         ];
@@ -24,5 +28,14 @@ class TemplateFactory extends Factory
     public function forSiteTypes(SiteType ...$types): static
     {
         return $this->state(['site_types' => array_map(fn (SiteType $type): string => $type->value, $types)]);
+    }
+
+    public function developer(?DeveloperProfile $profile = null): static
+    {
+        return $this->state([
+            'owner_scope' => TemplateOwnerScope::Developer,
+            'developer_profile_id' => $profile ?? DeveloperProfile::factory(),
+            'is_official' => false,
+        ]);
     }
 }

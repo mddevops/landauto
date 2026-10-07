@@ -4,7 +4,9 @@ import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes/developer';
 import { index as blocksIndex } from '@/routes/developer/blocks';
+import { index as templatesIndex } from '@/routes/developer/templates';
 import type { DeveloperPermission } from '@/types/platform';
+import type { RouteDefinition } from '@/wayfinder';
 
 type DeveloperDashboardProps = {
     profile: {
@@ -21,17 +23,15 @@ function ToolPlaceholder({
     title,
     icon: Icon,
     text,
-    allowed = false,
 }: {
     title: string;
     icon: LucideIcon;
     text: string;
-    allowed?: boolean;
 }) {
     return (
         <section
             aria-label={title}
-            data-allowed={allowed}
+            data-allowed="false"
             className="space-y-2 rounded-xl border border-dashed p-4 text-muted-foreground"
         >
             <h2 className="flex items-center gap-2 font-semibold text-foreground">
@@ -40,6 +40,36 @@ function ToolPlaceholder({
             </h2>
             <p className="text-sm">{text}</p>
         </section>
+    );
+}
+
+function ToolLink({
+    title,
+    icon: Icon,
+    href,
+    text,
+}: {
+    title: string;
+    icon: LucideIcon;
+    href: RouteDefinition<'get'>;
+    text: string;
+}) {
+    return (
+        <Link
+            href={href}
+            data-allowed="true"
+            className="group space-y-2 rounded-xl border bg-card p-4 shadow-sm transition-colors outline-none hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+        >
+            <h2 className="flex items-center gap-2 font-semibold">
+                <Icon aria-hidden="true" className="size-4" />
+                {title}
+                <ArrowRight
+                    aria-hidden="true"
+                    className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
+                />
+            </h2>
+            <p className="text-sm text-muted-foreground">{text}</p>
+        </Link>
     );
 }
 
@@ -111,24 +141,12 @@ export default function DeveloperDashboard({
 
                 <div className="grid gap-4 sm:grid-cols-2">
                     {capabilities.create_blocks ? (
-                        <Link
+                        <ToolLink
+                            title="Блоки"
+                            icon={Blocks}
                             href={blocksIndex()}
-                            data-allowed="true"
-                            className="group space-y-2 rounded-xl border bg-card p-4 shadow-sm transition-colors outline-none hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
-                        >
-                            <h2 className="flex items-center gap-2 font-semibold">
-                                <Blocks aria-hidden="true" className="size-4" />
-                                Блоки
-                                <ArrowRight
-                                    aria-hidden="true"
-                                    className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
-                                />
-                            </h2>
-                            <p className="text-sm text-muted-foreground">
-                                Пишите код блоков, собирайте схему настроек и
-                                сохраняйте черновики.
-                            </p>
-                        </Link>
+                            text="Пишите код блоков, собирайте схему настроек и сохраняйте черновики."
+                        />
                     ) : (
                         <ToolPlaceholder
                             title="Блоки"
@@ -136,16 +154,20 @@ export default function DeveloperDashboard({
                             text="Нет разрешения на создание блоков."
                         />
                     )}
-                    <ToolPlaceholder
-                        title="Шаблоны"
-                        icon={LayoutTemplate}
-                        text={
-                            capabilities.create_templates
-                                ? 'Доступ разрешён. Инструмент появится на следующем этапе.'
-                                : 'Нет разрешения на создание шаблонов.'
-                        }
-                        allowed={capabilities.create_templates}
-                    />
+                    {capabilities.create_templates ? (
+                        <ToolLink
+                            title="Шаблоны"
+                            icon={LayoutTemplate}
+                            href={templatesIndex()}
+                            text="Собирайте страницы из опубликованных блоков и публикуйте версии шаблонов."
+                        />
+                    ) : (
+                        <ToolPlaceholder
+                            title="Шаблоны"
+                            icon={LayoutTemplate}
+                            text="Нет разрешения на создание шаблонов."
+                        />
+                    )}
                 </div>
             </main>
         </>
