@@ -236,13 +236,15 @@ class DeveloperPermissionsTest extends TestCase
         $this->actingAs($this->superAdmin)->post(route('platform.developers.suspend', $profile));
         $this->actingAs($developer)->get(route('developer.dashboard'))->assertForbidden();
 
-        // The Developer Platform exposes no authoring routes yet.
+        // Only the dashboard and Block Definition authoring exist (no Template, schema, preview or publish routes).
         $developerRoutes = collect(Route::getRoutes()->getRoutes())
             ->filter(fn ($route): bool => $route->uri() === 'developer' || str_starts_with($route->uri(), 'developer/'))
             ->map(fn ($route): string => $route->uri())
+            ->unique()
+            ->sort()
             ->values()
             ->all();
-        $this->assertSame(['developer'], $developerRoutes);
+        $this->assertSame(['developer', 'developer/blocks', 'developer/blocks/create', 'developer/blocks/{block}'], $developerRoutes);
     }
 
     public function test_developer_permissions_grant_no_workspace_site_or_platform_access(): void

@@ -1061,6 +1061,8 @@ Implemented (D-118, P9-002). Three domains stay separate and never grant each ot
 - **Platform permissions**: `manage_developers` (Super Admin) grants / suspends profiles and edits their creator permissions; `manage_platform_content` (Super Admin only) is reserved for official platform-owned Blocks / Templates and needs no Developer Profile.
 - **Workspace permissions** remain customer tenant authority; no Developer role exists in any domain.
 
+Block authoring (P9-003) applies this through `App\Blocks\BlockAuthoringAuthorization`: `/developer/blocks` requires the active profile plus `create_blocks` and only reaches that profile's Blocks; `/platform/blocks` requires `manage_platform_content`.
+
 A creator permission never authorizes content owned by another Developer Profile. `submit_marketplace_item` only submits own content to review (P9-008): no approval, publication, pricing, payouts or licenses.
 
 Later candidates (not implemented): `view_sales`, Developer self-edit of the profile.

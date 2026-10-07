@@ -90,19 +90,23 @@ Created for one Workspace and private by default.
 
 Scope must always be explicit.
 
-Approved ownership (D-093, D-117) — target model, not implemented yet; the authoring tasks add it:
+Implemented Block Definition ownership (D-093, D-117; P9-003). `block_definitions.owner_scope` (`App\Enums\BlockOwnerScope`) is the only ownership source; `is_official` was removed and every pre-existing definition was backfilled as `platform`:
 
-- `platform`: official Landflow content, owned by the platform; the Super Admin creator / editor is audit identity only and needs no Developer Profile;
-- `developer`: public Developer content, owned by a Developer Profile;
-- `workspace_private`: owned by one Workspace.
+- `platform`: official Landflow content, owned by the platform (`developer_profile_id` and `workspace_id` empty); the Super Admin creator / editor is audit identity only and needs no Developer Profile;
+- `developer`: owned by exactly one Developer Profile (`developer_profile_id` set, `workspace_id` empty);
+- `workspace_private`: owned by exactly one Workspace (`workspace_id` set, `developer_profile_id` empty). The scope exists in the ownership model, but there is no Workspace-private authoring UI yet.
 
-Today `block_definitions` only has `is_official`; Block / Template authoring does not exist yet.
+The model rejects any other combination. Ownership, the slug and `created_by_user_id` never change after creation; `created_by_user_id` / `updated_by_user_id` are audit identity, never ownership. The slug stays globally unique across all scopes because the trusted official runtime uses it as a stable identifier.
 
-Authoring authorization (D-118; boundary defined in P9-002, used by the authoring tasks):
+Authoring authorization (D-118), centralized in `App\Blocks\BlockAuthoringAuthorization` and enforced by `App\Blocks\BlockAuthoring`:
 
-- `platform` content: authenticated User with platform permission `manage_platform_content` (Super Admin); no Developer Profile needed.
-- `developer` content: the User's own active Developer Profile plus `DeveloperPermission::CreateBlocks` / `CreateTemplates`, checked through `DeveloperAuthorization`; never another profile's content.
-- `workspace_private` content: a future, separate Workspace-authorized path.
+- `platform` Blocks: «Блоки Landflow» (`/platform/blocks`), platform permission `manage_platform_content` (Super Admin); no Developer Profile needed.
+- `developer` Blocks: «Мои блоки» (`/developer/blocks`), the User's own active Developer Profile plus `create_blocks`; ownership is derived on the server, and another profile's Block returns 404.
+- `workspace_private` Blocks: denied in authoring (future separate Workspace-authorized path).
+
+Authoring covers only name and slug; no delete, review status, schema editing, preview or version publishing exists yet (P9-004 … P9-008). A new definition has no Block Version.
+
+Developer Block runtime is NOT enabled: the customer Designer library, adding a Block to a Page, Block Instances, publishing and restore accept only platform-owned definitions that have a version, and official renderers stay in the trusted application registry. No third-party code (HTML / CSS / JS) is stored or executed (D-080, D-081 remain ADR_REQUIRED).
 
 ---
 

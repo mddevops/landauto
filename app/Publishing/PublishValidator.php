@@ -145,7 +145,7 @@ final class PublishValidator
             foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) as $block) {
                 $version = $block->version;
 
-                if (! $version->definition->is_official) {
+                if (! $version->definition->isPlatformOwned()) {
                     $this->error('block_version_unavailable', 'Блок недоступен для публикации.', page: $page->public_id, block: $block->public_id);
 
                     continue;

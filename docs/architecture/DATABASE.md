@@ -458,24 +458,26 @@ Dynamic SEO templates can be added later.
 
 Represents reusable Block types.
 
-Fields may include:
+Implemented fields (P2-002, ownership P9-003):
 
 - id
-- developer_id nullable
-- workspace_id nullable for private Workspace blocks
+- public_id ULID, unique, immutable
 - name
-- slug
-- source_type
-- status
-- is_official
-- current_version_id nullable
+- slug unique across all scopes, immutable (lowercase ASCII, digits, single inner hyphens, 3–60 for new authoring)
+- owner_scope (`platform` / `developer` / `workspace_private`), immutable
+- developer_profile_id nullable FK (restrict), immutable
+- workspace_id nullable FK (restrict), immutable
+- created_by_user_id nullable FK (null on User delete), immutable audit identity
+- updated_by_user_id nullable FK (null on User delete), audit identity
 - timestamps
 
-Scope rules:
+Scope rules (D-117), enforced by the model:
 
-- official/global block: workspace_id = null
-- Workspace-private block: workspace_id set
-- Marketplace block: global listing + version relationship
+- `platform`: developer_profile_id = null, workspace_id = null
+- `developer`: developer_profile_id set, workspace_id = null
+- `workspace_private`: workspace_id set, developer_profile_id = null
+
+`is_official` was removed; existing definitions were backfilled as `platform`. Later candidates (not implemented): status / review state, Marketplace listing relationship.
 
 ---
 

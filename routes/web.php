@@ -1,9 +1,11 @@
 <?php
 
 use App\Catalog\CatalogLevel;
+use App\Enums\DeveloperPermission;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Developer\DeveloperBlockController;
 use App\Http\Controllers\Developer\DeveloperDashboardController;
 use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
@@ -25,6 +27,7 @@ use App\Http\Controllers\Platform\CatalogDictionaryController;
 use App\Http\Controllers\Platform\CatalogEntryController;
 use App\Http\Controllers\Platform\CatalogEquipmentController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
+use App\Http\Controllers\Platform\PlatformBlockController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
 use App\Http\Controllers\Popups\SitePopupController;
@@ -51,6 +54,7 @@ use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceSettingsController;
 use App\Http\Middleware\EnsureActiveDeveloperProfile;
+use App\Http\Middleware\EnsureDeveloperPermission;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\EnsureSiteAccess;
 use App\Http\Middleware\RequireWorkspaceContext;
@@ -305,10 +309,36 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::put('{developer}/permissions', [DeveloperProfileController::class, 'updatePermissions'])->whereUlid('developer')->name('permissions.update');
         });
 
+    // Official platform-owned Blocks (D-117): platform permission only, no Developer Profile.
+    Route::prefix('platform/blocks')
+        ->name('platform.blocks.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManagePlatformContent->value)
+        ->group(function () {
+            Route::get('/', [PlatformBlockController::class, 'index'])->name('index');
+            Route::get('create', [PlatformBlockController::class, 'create'])->name('create');
+            Route::post('/', [PlatformBlockController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::get('{block}', [PlatformBlockController::class, 'show'])->whereUlid('block')->name('show');
+            Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
+        });
+
     // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).
-    Route::get('developer', DeveloperDashboardController::class)
+    Route::prefix('developer')
+        ->name('developer.')
         ->middleware(EnsureActiveDeveloperProfile::class)
-        ->name('developer.dashboard');
+        ->group(function () {
+            Route::get('/', DeveloperDashboardController::class)->name('dashboard');
+
+            Route::prefix('blocks')
+                ->name('blocks.')
+                ->middleware(EnsureDeveloperPermission::class.':'.DeveloperPermission::CreateBlocks->value)
+                ->group(function () {
+                    Route::get('/', [DeveloperBlockController::class, 'index'])->name('index');
+                    Route::get('create', [DeveloperBlockController::class, 'create'])->name('create');
+                    Route::post('/', [DeveloperBlockController::class, 'store'])->middleware('throttle:30,1')->name('store');
+                    Route::get('{block}', [DeveloperBlockController::class, 'show'])->whereUlid('block')->name('show');
+                    Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
+                });
+        });
 });
 
 require __DIR__.'/settings.php';

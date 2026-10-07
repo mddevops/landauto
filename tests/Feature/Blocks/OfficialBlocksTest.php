@@ -39,7 +39,9 @@ class OfficialBlocksTest extends TestCase
 
         $this->seed(OfficialBlockSeeder::class);
 
-        $this->assertSame(count(self::SLUGS), BlockDefinition::query()->where('is_official', true)->count());
+        $this->assertSame(count(self::SLUGS), BlockDefinition::query()->platformOwned()->count());
+        $this->assertSame(count(self::SLUGS), BlockDefinition::query()->count());
+        $this->assertSame(0, BlockDefinition::query()->whereNotNull('developer_profile_id')->orWhereNotNull('workspace_id')->count());
         $this->assertSame(count(self::SLUGS), BlockVersion::query()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->count());
         $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
         $this->assertSame(['1.0.0', '1.1.0', '1.2.0'], BlockVersion::query()->whereRelation('definition', 'slug', 'header')->orderBy('id')->pluck('version')->all());

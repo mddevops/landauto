@@ -76,9 +76,9 @@ Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118).
+Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE.
 
-Next ready task: `P9-003 — Block Authoring UI`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P9-004 — Schema Editor`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3357,8 +3357,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-003 — Block Authoring UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-003, P9-002
+
+### Result
+
+- D-117 Block ownership implemented: `block_definitions.owner_scope` (`platform` / `developer` / `workspace_private`) with `developer_profile_id` / `workspace_id` (restrict) and audit-only `created_by_user_id` / `updated_by_user_id` (null on delete). The model enforces exact scope ↔ owner combinations; ownership, slug and creator are immutable. `is_official` removed; existing definitions backfilled as `platform`; `OfficialBlockSeeder` stays idempotent and never takes over a non-platform slug.
+- Central `BlockAuthoringAuthorization` + `BlockAuthoring` service: platform Blocks need `manage_platform_content` (no Developer Profile); Developer Blocks need the own active profile + `create_blocks` and are server-owned; Workspace-private authoring denied. `platform.block_*` / `developer.block_*` logs with public IDs.
+- «Мои блоки» (`/developer/blocks`) and «Блоки Landflow» (`/platform/blocks`): list / create (name + globally unique slug) / editor shell (name editable, slug read-only, ownership, version count, disabled «Схема» / «Предпросмотр» / «Версии»). Another profile's Block or a non-platform Block on the platform surface → 404. No delete, review status, schema, preview or version creation.
+- Developer dashboard «Мои блоки» links to the list with `create_blocks`; platform sidebar «Блоки» for `manage_platform_content`.
+- Customer runtime unchanged: Designer library, adding Blocks, Block Instances, publishing and restore accept only platform-owned definitions with a version; the renderer registry is untouched. D-079, D-080, D-081 stay ADR_REQUIRED.
 
 ---
 
@@ -4114,8 +4122,8 @@ Task statuses and results live in the phase sections above; this section only po
 
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
-- Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001, P9-002 DONE; D-093, D-117, D-118 APPROVED).
-- Next: `P9-003 — Block Authoring UI`.
+- Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED).
+- Next: `P9-004 — Schema Editor`.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

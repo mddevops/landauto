@@ -1,7 +1,9 @@
-import { Head } from '@inertiajs/react';
-import { Blocks, LayoutTemplate } from 'lucide-react';
+import { Head, Link } from '@inertiajs/react';
+import { ArrowRight, Blocks, LayoutTemplate } from 'lucide-react';
+import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes/developer';
+import { index as blocksIndex } from '@/routes/developer/blocks';
 import type { DeveloperPermission } from '@/types/platform';
 
 type DeveloperDashboardProps = {
@@ -15,22 +17,31 @@ type DeveloperDashboardProps = {
     capabilities: Record<DeveloperPermission, boolean>;
 };
 
-const allowedText = 'Доступ разрешён. Инструмент появится на следующем этапе.';
-
-const tools = [
-    {
-        title: 'Мои блоки',
-        icon: Blocks,
-        permission: 'create_blocks',
-        deniedText: 'Нет разрешения на создание блоков.',
-    },
-    {
-        title: 'Мои шаблоны',
-        icon: LayoutTemplate,
-        permission: 'create_templates',
-        deniedText: 'Нет разрешения на создание шаблонов.',
-    },
-] as const;
+function ToolPlaceholder({
+    title,
+    icon: Icon,
+    text,
+    allowed = false,
+}: {
+    title: string;
+    icon: LucideIcon;
+    text: string;
+    allowed?: boolean;
+}) {
+    return (
+        <section
+            aria-label={title}
+            data-allowed={allowed}
+            className="space-y-2 rounded-xl border border-dashed p-4 text-muted-foreground"
+        >
+            <h2 className="flex items-center gap-2 font-semibold text-foreground">
+                <Icon aria-hidden="true" className="size-4" />
+                {title}
+            </h2>
+            <p className="text-sm">{text}</p>
+        </section>
+    );
+}
 
 export default function DeveloperDashboard({
     profile,
@@ -99,27 +110,42 @@ export default function DeveloperDashboard({
                 )}
 
                 <div className="grid gap-4 sm:grid-cols-2">
-                    {tools.map((tool) => (
-                        <section
-                            key={tool.title}
-                            aria-label={tool.title}
-                            data-allowed={capabilities[tool.permission]}
-                            className="space-y-2 rounded-xl border border-dashed p-4 text-muted-foreground"
+                    {capabilities.create_blocks ? (
+                        <Link
+                            href={blocksIndex()}
+                            data-allowed="true"
+                            className="group space-y-2 rounded-xl border bg-card p-4 shadow-sm transition-colors outline-none hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
                         >
-                            <h2 className="flex items-center gap-2 font-semibold text-foreground">
-                                <tool.icon
+                            <h2 className="flex items-center gap-2 font-semibold">
+                                <Blocks aria-hidden="true" className="size-4" />
+                                Мои блоки
+                                <ArrowRight
                                     aria-hidden="true"
-                                    className="size-4"
+                                    className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
                                 />
-                                {tool.title}
                             </h2>
-                            <p className="text-sm">
-                                {capabilities[tool.permission]
-                                    ? allowedText
-                                    : tool.deniedText}
+                            <p className="text-sm text-muted-foreground">
+                                Создавайте блоки и редактируйте их основные
+                                данные.
                             </p>
-                        </section>
-                    ))}
+                        </Link>
+                    ) : (
+                        <ToolPlaceholder
+                            title="Мои блоки"
+                            icon={Blocks}
+                            text="Нет разрешения на создание блоков."
+                        />
+                    )}
+                    <ToolPlaceholder
+                        title="Мои шаблоны"
+                        icon={LayoutTemplate}
+                        text={
+                            capabilities.create_templates
+                                ? 'Доступ разрешён. Инструмент появится на следующем этапе.'
+                                : 'Нет разрешения на создание шаблонов.'
+                        }
+                        allowed={capabilities.create_templates}
+                    />
                 </div>
             </main>
         </>

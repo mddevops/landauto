@@ -87,7 +87,7 @@ class SiteDesignerController extends Controller
             'referenceIssues' => (object) $references->inspectPage($page, $blocks),
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
             'library' => BlockDefinition::query()
-                ->where('is_official', true)
+                ->platformOwned()
                 ->whereHas('versions')
                 ->orderBy('id')
                 ->get(['slug', 'name'])

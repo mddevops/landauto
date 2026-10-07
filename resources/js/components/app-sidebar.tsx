@@ -1,5 +1,6 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Blocks,
     Car,
     CarFront,
     Code,
@@ -26,6 +27,7 @@ import {
 import { dashboard } from '@/routes';
 import { index as integrationsIndex } from '@/routes/integrations';
 import { index as assetsIndex } from '@/routes/workspace/assets';
+import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
 import { edit as editProfile } from '@/routes/profile';
@@ -85,6 +87,16 @@ export function AppSidebar() {
                       title: 'Каталог автомобилей',
                       href: catalogIndex(),
                       icon: Car,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_platform_content')
+            ? [
+                  {
+                      title: 'Блоки',
+                      href: platformBlocksIndex(),
+                      icon: Blocks,
                       matchPrefix: true,
                   },
               ]

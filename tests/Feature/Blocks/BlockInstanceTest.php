@@ -87,14 +87,18 @@ class BlockInstanceTest extends TestCase
         $instance->refresh()->forceFill(['page_id' => Page::factory()->create()->id])->save();
     }
 
-    public function test_only_official_blocks_can_be_placed(): void
+    public function test_only_platform_owned_blocks_can_be_placed(): void
     {
-        $definition = BlockDefinition::factory()->create(['is_official' => false]);
-        $version = BlockVersion::factory()->for($definition, 'definition')->create();
+        foreach ([BlockDefinition::factory()->developer(), BlockDefinition::factory()->workspacePrivate()] as $factory) {
+            $version = BlockVersion::factory()->for($factory->create(), 'definition')->create();
 
-        $this->expectException(LogicException::class);
-
-        BlockInstance::factory()->for($version, 'version')->create();
+            try {
+                BlockInstance::factory()->for($version, 'version')->create();
+                $this->fail('Only platform-owned Blocks can be placed.');
+            } catch (LogicException) {
+                $this->assertSame(0, BlockInstance::query()->where('block_version_id', $version->id)->count());
+            }
+        }
     }
 
     public function test_used_page_and_block_version_cannot_be_hard_deleted(): void

@@ -28,11 +28,14 @@ class PageBlockController extends Controller
     {
         $this->scope->page($site, $page);
         Gate::authorize('editDesign', $site);
-        $validated = $request->validate([
-            'block' => ['required', 'string', Rule::exists('block_definitions', 'slug')->where('is_official', true)],
-        ]);
+        $validated = $request->validate(['block' => ['required', 'string', 'max:'.BlockDefinition::SLUG_MAX]]);
 
-        $definition = BlockDefinition::query()->where('slug', $validated['block'])->sole();
+        // Same set as the Designer library: platform-owned Blocks that have a version.
+        $definition = BlockDefinition::query()
+            ->platformOwned()
+            ->whereHas('versions')
+            ->where('slug', $validated['block'])
+            ->first() ?? throw ValidationException::withMessages(['block' => 'Этот блок недоступен.']);
         $version = $definition->versions()->latest('id')->firstOrFail();
 
         $block = DB::transaction(function () use ($page, $version, $defaults): BlockInstance {

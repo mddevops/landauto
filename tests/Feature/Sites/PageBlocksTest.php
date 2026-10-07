@@ -68,10 +68,15 @@ class PageBlocksTest extends TestCase
 
     public function test_only_existing_official_blocks_can_be_added(): void
     {
-        $private = BlockDefinition::factory()->create(['is_official' => false, 'slug' => 'private']);
-        BlockVersion::factory()->for($private, 'definition')->create();
+        $developerBlock = BlockDefinition::factory()->developer()->create(['slug' => 'developer-block']);
+        BlockVersion::factory()->for($developerBlock, 'definition')->create();
+        $privateBlock = BlockDefinition::factory()->workspacePrivate($this->workspace)->create(['slug' => 'private']);
+        BlockVersion::factory()->for($privateBlock, 'definition')->create();
+        BlockDefinition::factory()->platform()->create(['slug' => 'unversioned']);
 
+        $this->add('developer-block')->assertSessionHasErrors(['block' => 'Этот блок недоступен.']);
         $this->add('private')->assertSessionHasErrors('block');
+        $this->add('unversioned')->assertSessionHasErrors('block');
         $this->add('missing')->assertSessionHasErrors('block');
         $this->assertSame(0, BlockInstance::query()->count());
     }

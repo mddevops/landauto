@@ -18,10 +18,10 @@ class BlockFoundationTest extends TestCase
 
     public function test_block_tables_separate_definition_from_versioned_schema(): void
     {
-        $this->assertTrue(Schema::hasColumns('block_definitions', ['id', 'public_id', 'name', 'slug', 'is_official']));
+        $this->assertTrue(Schema::hasColumns('block_definitions', ['id', 'public_id', 'name', 'slug', 'owner_scope', 'developer_profile_id', 'workspace_id', 'created_by_user_id', 'updated_by_user_id']));
         $this->assertTrue(Schema::hasColumns('block_versions', ['id', 'block_definition_id', 'version', 'schema_json', 'created_at']));
         $this->assertFalse(Schema::hasColumn('block_versions', 'updated_at'));
-        $this->assertFalse(Schema::hasColumn('block_definitions', 'workspace_id'));
+        $this->assertFalse(Schema::hasColumn('block_definitions', 'is_official'));
     }
 
     public function test_definition_has_versions_and_serializes_safely(): void
@@ -32,7 +32,7 @@ class BlockFoundationTest extends TestCase
 
         $this->assertTrue(Str::isUlid($definition->public_id));
         $this->assertSame('public_id', $definition->getRouteKeyName());
-        $this->assertTrue($definition->is_official);
+        $this->assertTrue($definition->isPlatformOwned());
         $this->assertTrue($definition->versions()->sole()->is($version));
         $this->assertTrue($version->definition->is($definition));
         $this->assertSame($schema, $version->fresh()?->schema_json);

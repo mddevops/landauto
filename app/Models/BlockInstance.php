@@ -51,8 +51,8 @@ class BlockInstance extends Model
     protected static function booted(): void
     {
         static::creating(function (BlockInstance $instance): void {
-            if (! $instance->version->definition->is_official) {
-                throw new LogicException('Only official Blocks can be placed until other Block scopes are defined.');
+            if (! $instance->version->definition->isPlatformOwned()) {
+                throw new LogicException('Only platform-owned Blocks can be placed until a safe runtime exists for other scopes.');
             }
         });
 
