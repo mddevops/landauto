@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: IN_PROGRESS** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-013 and P9-014 … P9-017 and P9-011 DONE; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-079 / D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED, P9-018 BLOCKED_DECISION on D-094). Next ready task per `BACKLOG.md`: `P9-012 — Phase 9 Review` (P9-018 BLOCKED_DECISION, P9-010 DEFERRED).
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-079 / D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED, P9-018 BLOCKED_DECISION on D-094). Next ready task per `BACKLOG.md`: `P10-001 — Marketplace Listings` (not started).
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -224,6 +224,7 @@ Current focus:
 - `P9-016` DONE: official Block `quiz` (steps / options / result / lead button) and official Template «Квиз: подбор автомобиля» (`OfficialQuizTemplateSeeder`, `TemplatePublisher::publishOfficial`), installable only into `quiz` Sites; installation creates a Site-owned Form «Заявка с квиза» in a Popup wired to the quiz button (`ProvisionLeadPopup`). Visitor `context.answers` (option IDs) are resolved by the backend from the Draft Block / Published Version into `trusted.answers.items` (shown on «Заявки», mapping source `answers`).
 - `P9-017` DONE: official Block `chat-selection` (scripted questions as a conversation log, optional choice among the Site's vehicles, final message, lead button) and official Template «Чат: подбор автомобиля» (`OfficialChatTemplateSeeder`; quiz / chat seeders share `OfficialFormatTemplateSeeder`), installable only into `chat_selection` Sites; installation provisions the Site-owned Form «Заявка из чата» in a Popup. Answers resolve into `trusted.answers.items`, the chosen vehicle through the existing `vehicle` hint. No operator replies and no transcript storage (P9-018 BLOCKED_DECISION, D-094).
 - `P9-011` DONE: `developer-platform.spec.ts` runs the cross-actor path (Developer publishes in Block Studio → customer without the gating entitlement is refused with a Russian reason → customer with it adds the Block in its sandbox and edits it by schema; unpublished Draft edits never reach placed Instances); the BACKLOG result maps every Phase 9 browser requirement to its spec.
+- `P9-012` DONE: Phase 9 review (ownership, sandbox bridge, catalog access, props, public answers, immutability) found no regressions; open product questions are listed in `BACKLOG.md`.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -387,7 +388,7 @@ Implemented core domains (Phases 0–8 COMPLETED):
 
 The Global Automotive Catalog is implemented on the separate `catalog` connection.
 
-Phase 9 — Developer Platform is IN_PROGRESS: Developer Profiles (P9-001), Developer creator permissions (P9-002) and Block Definition ownership / metadata authoring (P9-003) exist; Block schema editing, preview, version publishing and Template authoring do not. Architecture documents also describe planned target models; agents must check the code to tell implemented from planned.
+Phase 9 — Developer Platform is COMPLETED for planned scope: Developer Profiles and creator permissions, Block Studio (Drafts, Schema Builder, sandboxed preview, automated checks, immutable versions), Site types, customer catalog access with Site licenses, Template Builder / installation and the quiz / chat formats exist; live operator chat (P9-018) is BLOCKED_DECISION and AI authoring (P9-010) DEFERRED. Architecture documents also describe planned target models; agents must check the code to tell implemented from planned.
 
 ---
 
@@ -1217,7 +1218,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P9-012 — Phase 9 Review`** (Phase 9 — Developer Platform IN_PROGRESS: P9-001 … P9-009, P9-013 and P9-014 … P9-017 and P9-011 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
+**Next: `P10-001 — Marketplace Listings`** (Phase 9 — Developer Platform COMPLETED for planned scope: P9-001 … P9-009, P9-011 … P9-017 DONE except P9-018 BLOCKED_DECISION and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1512,7 +1513,7 @@ Phase 5 — Publishing: COMPLETED (gate P5-012)
 Phase 6 — Integrations & Analytics: COMPLETED (gate P6-015)
 Phase 7 — Paid Features: COMPLETED for planned scope (P7-008 ADR-007; P7-009 DEFERRED)
 Phase 8 — Team: COMPLETED
-Phase 9 — Developer Platform: IN_PROGRESS
+Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 BLOCKED_DECISION, P9-010 DEFERRED)
 Phase 10 — Marketplace: NOT_STARTED
 Phase 11 — External Data Sources: NOT_STARTED
 ```
@@ -1775,7 +1776,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P9-012 — Phase 9 Review`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is IN_PROGRESS (P9-001 … P9-009, P9-013 and P9-014 … P9-017 and P9-011 DONE).
+**`P10-001 — Marketplace Listings`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is COMPLETED for planned scope (P9-001 … P9-009, P9-011 … P9-017 DONE; P9-018 BLOCKED_DECISION, P9-010 DEFERRED).
 
 ---
 
@@ -1828,8 +1829,8 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–8 COMPLETED, Phase 9 IN_PROGRESS; P7-009 DEFERRED; D-093, D-118 APPROVED; D-094, X-013, X-017 OPEN)
+Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; P7-009 and P9-010 DEFERRED, P9-018 BLOCKED_DECISION; D-093, D-118 APPROVED; D-094, X-013, X-017 OPEN)
 ```
 
-**Current phase: Phase 9 — Developer Platform (IN_PROGRESS; P9-001 … P9-009, P9-013 and P9-014 … P9-017 and P9-011 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED).
+**Current phase: Phase 9 — Developer Platform (COMPLETED for planned scope; P9-012 review DONE, P9-018 BLOCKED_DECISION, P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
 Next: `P9-017 — Chat Selection Site Flow` per `BACKLOG.md`.**

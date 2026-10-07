@@ -76,9 +76,9 @@ Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-079 / D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008); P9-018 BLOCKED_DECISION (D-094).
+Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/phase9-2026-10-07`; review `P9-012` DONE; P9-018 BLOCKED_DECISION, P9-010 DEFERRED). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-079 / D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008); P9-018 BLOCKED_DECISION (D-094).
 
-Next ready task: `P9-012 — Phase 9 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P10-001 — Marketplace Listings` (not started; outside the Creator Studio batch). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3666,8 +3666,21 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 
 ## P9-012 — Phase 9 Review
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-011
+
+### Result
+
+- Phase 9 planned scope is DONE: P9-001 … P9-009, P9-011, P9-013 … P9-017 and this review. P9-018 stays BLOCKED_DECISION (D-094 does not cover chat messages; no real-time transport in the stack), P9-010 DEFERRED (AI only after deterministic authoring). P9-008 was replaced by automated checks (D-120, no review queue).
+- Review (no regressions found):
+  - Ownership: Block Studio routes resolve only the current Developer Profile's Blocks (`ownedByDeveloper`) or platform Blocks for `manage_platform_content`; all 16 Template Studio actions go through `ResolvesEditableTemplates` (non-owner → 404), Template Pages / Blocks are scoped to that Template. Site licenses only with `manage_site_licenses`.
+  - Sandbox (ADR-008): authored HTML / CSS / JS runs only in `srcdoc` frames with `sandbox="allow-scripts"` (opaque origin, no `allow-same-origin`) and a CSP meta first; the parent accepts messages only from its own frame window with origin `null` and only `landflow:resize` / `landflow:action` (schema action keys) / `landflow:error` (truncated). No authored code in the app origin.
+  - Catalog access (D-079): checked by the backend when adding a Block Instance, installing a Template and publishing; entitlements are typed (`Entitlement::catalogGates`), no plan-name checks; paid / admin_grant need a Site license for that Site.
+  - Props: no numeric internal IDs added to Inertia props in Phase 9 (public ULIDs only); no secrets.
+  - Public submissions: quiz / chat `answers` are bounded by the Block's steps and resolved from server state (Draft Block or Published manifest); question / answer text never comes from the browser.
+  - Versions: Block and Template Versions are immutable; autosave writes Drafts only; installed Sites are independent copies.
+- Open product questions (no code change): paid / admin_grant Templates cannot start a new Site (a Site license needs an existing Site); behaviour of placed Blocks when their access is later restricted; Template Drafts cannot reference images, vehicles or popups; official quiz / chat Templates reach production only when their seeders run.
+- Gates: `composer quality` (PHPUnit 1092/1092, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (89/89) passed on 2026-10-07.
 
 ---
 
@@ -4360,9 +4373,9 @@ Task statuses and results live in the phase sections above; this section only po
 
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
-- Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`.
-- Next: `P9-012 — Phase 9 Review` (P9-018 BLOCKED_DECISION, P9-010 DEFERRED).
+- Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 BLOCKED_DECISION, P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
+- Next: `P10-001 — Marketplace Listings` per order (P9-018 BLOCKED_DECISION, P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---
