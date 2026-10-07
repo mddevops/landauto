@@ -244,7 +244,7 @@ class DeveloperPermissionsTest extends TestCase
             ->sort()
             ->values()
             ->all();
-        $this->assertSame(['developer', 'developer/blocks', 'developer/blocks/create', 'developer/blocks/{block}', 'developer/blocks/{block}/draft', 'developer/blocks/{block}/publish'], $developerRoutes);
+        $this->assertSame(['developer', 'developer/blocks', 'developer/blocks/create', 'developer/blocks/{block}', 'developer/blocks/{block}/access', 'developer/blocks/{block}/draft', 'developer/blocks/{block}/publish'], $developerRoutes);
     }
 
     public function test_developer_permissions_grant_no_workspace_site_or_platform_access(): void

@@ -87,17 +87,19 @@ class BlockInstanceTest extends TestCase
         $instance->refresh()->forceFill(['page_id' => Page::factory()->create()->id])->save();
     }
 
-    public function test_only_platform_owned_blocks_can_be_placed(): void
+    public function test_only_catalog_blocks_can_be_placed(): void
     {
-        foreach ([BlockDefinition::factory()->developer(), BlockDefinition::factory()->workspacePrivate()] as $factory) {
-            $version = BlockVersion::factory()->for($factory->create(), 'definition')->create();
+        $developerVersion = BlockVersion::factory()->for(BlockDefinition::factory()->developer()->create(), 'definition')->create();
+        BlockInstance::factory()->for($developerVersion, 'version')->create();
+        $this->assertSame(1, BlockInstance::query()->where('block_version_id', $developerVersion->id)->count());
 
-            try {
-                BlockInstance::factory()->for($version, 'version')->create();
-                $this->fail('Only platform-owned Blocks can be placed.');
-            } catch (LogicException) {
-                $this->assertSame(0, BlockInstance::query()->where('block_version_id', $version->id)->count());
-            }
+        $privateVersion = BlockVersion::factory()->for(BlockDefinition::factory()->workspacePrivate()->create(), 'definition')->create();
+
+        try {
+            BlockInstance::factory()->for($privateVersion, 'version')->create();
+            $this->fail('Workspace-private Blocks must not be placed before their policy exists.');
+        } catch (LogicException) {
+            $this->assertSame(0, BlockInstance::query()->where('block_version_id', $privateVersion->id)->count());
         }
     }
 

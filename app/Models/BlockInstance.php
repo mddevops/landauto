@@ -51,9 +51,9 @@ class BlockInstance extends Model
     protected static function booted(): void
     {
         static::creating(function (BlockInstance $instance): void {
-            // Developer Blocks become placeable only through catalog access (P9-014).
-            if (! $instance->version->definition->isPlatformOwned()) {
-                throw new LogicException('Only platform-owned Blocks can be placed until catalog access exists for other scopes.');
+            // Catalog access (D-079) is checked by the callers; workspace-private Blocks have no runtime.
+            if ($instance->version->definition->isWorkspacePrivate()) {
+                throw new LogicException('Workspace-private Blocks cannot be placed until they have a customer runtime.');
             }
         });
 

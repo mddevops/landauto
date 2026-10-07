@@ -63,18 +63,22 @@ class PageBlocksTest extends TestCase
                 ->where('selectedBlock', $hero->public_id)
                 ->where('blocks.1.is_hidden', false)
                 ->has('library', count(array_unique(array_column(OfficialBlockCatalog::blocks(), 'slug'))))
-                ->where('library.1', ['slug' => 'hero', 'name' => 'Первый экран']));
+                ->where('library.1', [
+                    'slug' => 'hero',
+                    'name' => 'Первый экран',
+                    'author' => null,
+                    'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
+                    'available' => true,
+                    'reason' => null,
+                ]));
     }
 
-    public function test_only_existing_official_blocks_can_be_added(): void
+    public function test_only_existing_catalog_blocks_can_be_added(): void
     {
-        $developerBlock = BlockDefinition::factory()->developer()->create(['slug' => 'developer-block']);
-        BlockVersion::factory()->for($developerBlock, 'definition')->create();
         $privateBlock = BlockDefinition::factory()->workspacePrivate($this->workspace)->create(['slug' => 'private']);
         BlockVersion::factory()->for($privateBlock, 'definition')->create();
         BlockDefinition::factory()->platform()->create(['slug' => 'unversioned']);
 
-        $this->add('developer-block')->assertSessionHasErrors(['block' => 'Этот блок недоступен.']);
         $this->add('private')->assertSessionHasErrors('block');
         $this->add('unversioned')->assertSessionHasErrors('block');
         $this->add('missing')->assertSessionHasErrors('block');

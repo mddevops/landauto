@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Designer\ArrangePageBlocks;
+use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
 use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
@@ -22,6 +23,7 @@ class PageBlockController extends Controller
     public function __construct(
         private DesignerScope $scope,
         private ArrangePageBlocks $arrange,
+        private BlockCatalogAccess $access,
     ) {}
 
     public function store(Request $request, Site $site, Page $page, BlockStateDefaults $defaults): RedirectResponse
@@ -30,12 +32,13 @@ class PageBlockController extends Controller
         Gate::authorize('editStructure', $site);
         $validated = $request->validate(['block' => ['required', 'string', 'max:'.BlockDefinition::SLUG_MAX]]);
 
-        // Same set as the Designer library: platform-owned Blocks that have a version.
+        // Same set as the Designer library: catalog Blocks that have a published version.
         $definition = BlockDefinition::query()
-            ->platformOwned()
+            ->inCatalog()
             ->whereHas('versions')
             ->where('slug', $validated['block'])
             ->first() ?? throw ValidationException::withMessages(['block' => 'Этот блок недоступен.']);
+        $this->authorizeAccess($site, $definition);
         $version = $definition->versions()->latest('id')->firstOrFail();
 
         $block = DB::transaction(function () use ($page, $version, $defaults): BlockInstance {
@@ -81,6 +84,7 @@ class PageBlockController extends Controller
     public function duplicate(Site $site, BlockInstance $block): RedirectResponse
     {
         $this->authorizeStructure($site, $block);
+        $this->authorizeAccess($site, $block->version->definition);
 
         $copy = DB::transaction(function () use ($block): BlockInstance {
             $copy = new BlockInstance(['state_json' => $block->state_json, 'sort_order' => $block->sort_order]);
@@ -113,6 +117,15 @@ class PageBlockController extends Controller
         $block->delete();
 
         return $this->backTo($site, $page);
+    }
+
+    private function authorizeAccess(Site $site, BlockDefinition $definition): void
+    {
+        $denial = $this->access->denial($site, $definition);
+
+        if ($denial !== null) {
+            throw ValidationException::withMessages(['block' => $denial]);
+        }
     }
 
     private function authorizeStructure(Site $site, BlockInstance $block): void

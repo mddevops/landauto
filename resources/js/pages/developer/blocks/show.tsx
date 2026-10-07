@@ -3,6 +3,7 @@ import { BlockStudio } from '@/components/block-studio/block-studio';
 import type { BlockStudioPageProps } from '@/components/block-studio/block-studio';
 import { dashboard } from '@/routes/developer';
 import {
+    access,
     draft as draftRoute,
     index,
     publish,
@@ -20,6 +21,7 @@ export default function DeveloperBlockStudio(props: BlockStudioPageProps) {
                 metadataAction={update.form(id)}
                 draftUrl={draftRoute.url(id)}
                 publishUrl={publish.url(id)}
+                accessUrl={access.url(id)}
             />
         </>
     );

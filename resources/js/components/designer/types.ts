@@ -1,6 +1,7 @@
 import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockSchema } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
+import type { CatalogAccessCard } from '@/types/blocks';
 
 export type DesignerSite = {
     public_id: string;
@@ -48,7 +49,12 @@ export type DesignerAsset = {
     height: number;
 };
 
+/** Customer catalog item (D-079); `available` is decided by the backend for this Site. */
 export type DesignerLibraryBlock = {
     slug: string;
     name: string;
+    author: string | null;
+    access: CatalogAccessCard;
+    available: boolean;
+    reason: string | null;
 };

@@ -24,7 +24,6 @@ use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Log;
 use Inertia\Testing\AssertableInertia as Assert;
-use LogicException;
 use Mockery;
 use Tests\TestCase;
 
@@ -197,7 +196,7 @@ class PlatformBlockAuthoringTest extends TestCase
         $this->assertSame(0, $developer->user->memberships()->count());
     }
 
-    public function test_new_blocks_stay_out_of_the_customer_designer_and_runtime(): void
+    public function test_blocks_enter_the_customer_catalog_only_with_a_published_version(): void
     {
         $user = User::factory()->create();
         $workspace = Workspace::factory()->create();
@@ -211,24 +210,27 @@ class PlatformBlockAuthoringTest extends TestCase
         $developerVersion = BlockVersion::factory()->for($developerVersioned, 'definition')->create();
         app(BlockAuthoring::class)->createPlatform($this->superAdmin, 'Новый официальный', 'new-official', BlockCategory::Other);
         $official = array_values(array_unique(array_column(OfficialBlockCatalog::blocks(), 'slug')));
+        $catalog = collect([...$official, 'developer-versioned'])->sort()->values()->all();
 
         $this->actingAs($user)->withSession($session)->get(route('sites.designer', $site))
             ->assertOk()
             ->assertInertia(fn (Assert $inertia) => $inertia->where(
                 'library',
-                fn ($library): bool => collect($library)->pluck('slug')->sort()->values()->all() === collect($official)->sort()->values()->all(),
+                fn ($library): bool => collect($library)->pluck('slug')->sort()->values()->all() === $catalog,
             ));
 
-        foreach (['developer-draft', 'developer-versioned', 'new-official'] as $slug) {
+        foreach (['developer-draft', 'new-official'] as $slug) {
             $this->actingAs($user)->withSession($session)
                 ->post(route('sites.blocks.store', [$site, $page]), ['block' => $slug])
                 ->assertSessionHasErrors('block');
         }
         $this->assertSame(0, BlockInstance::query()->count());
-
-        $this->expectException(LogicException::class);
-        BlockInstance::factory()->for($page)->for($developerVersion, 'version')->create();
         $this->assertSame(0, $developerDraft->versions()->count());
+
+        $this->actingAs($user)->withSession($session)
+            ->post(route('sites.blocks.store', [$site, $page]), ['block' => 'developer-versioned'])
+            ->assertSessionHasNoErrors();
+        $this->assertSame($developerVersion->id, BlockInstance::query()->sole()->block_version_id);
     }
 
     private function userWithRole(PlatformRole $role): User

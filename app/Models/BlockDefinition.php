@@ -4,7 +4,10 @@ namespace App\Models;
 
 use App\Enums\BlockCategory;
 use App\Enums\BlockOwnerScope;
+use App\Enums\CatalogAccessMode;
+use App\Enums\Entitlement;
 use App\Models\Concerns\HasImmutablePublicId;
+use App\Support\Money;
 use Database\Factories\BlockDefinitionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -28,6 +31,10 @@ use LogicException;
  * @property string $slug
  * @property BlockCategory $category
  * @property BlockOwnerScope $owner_scope
+ * @property CatalogAccessMode $access_mode
+ * @property Entitlement|null $access_entitlement
+ * @property int|null $price_minor
+ * @property string|null $price_currency
  * @property int|null $developer_profile_id
  * @property int|null $workspace_id
  * @property int|null $created_by_user_id
@@ -57,18 +64,25 @@ class BlockDefinition extends Model
      */
     protected function casts(): array
     {
-        return ['owner_scope' => BlockOwnerScope::class, 'category' => BlockCategory::class];
+        return [
+            'owner_scope' => BlockOwnerScope::class,
+            'category' => BlockCategory::class,
+            'access_mode' => CatalogAccessMode::class,
+            'access_entitlement' => Entitlement::class,
+            'price_minor' => 'integer',
+        ];
     }
 
     /**
      * @var array<string, mixed>
      */
-    protected $attributes = ['category' => 'other'];
+    protected $attributes = ['category' => 'other', 'access_mode' => CatalogAccessMode::Free->value];
 
     protected static function booted(): void
     {
         static::saving(function (BlockDefinition $definition): void {
             $definition->assertOwnershipIsConsistent();
+            $definition->assertAccessIsConsistent();
         });
 
         static::updating(function (BlockDefinition $definition): void {
@@ -103,6 +117,17 @@ class BlockDefinition extends Model
     public function scopePlatformOwned(Builder $query): void
     {
         $query->where('owner_scope', BlockOwnerScope::Platform->value);
+    }
+
+    /**
+     * Definitions customers may find in the catalog: platform and Developer Blocks. Workspace-private
+     * Blocks have no customer runtime yet.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeInCatalog(Builder $query): void
+    {
+        $query->whereIn('owner_scope', [BlockOwnerScope::Platform->value, BlockOwnerScope::Developer->value]);
     }
 
     /**
@@ -160,6 +185,40 @@ class BlockDefinition extends Model
     public function lastEditor(): BelongsTo
     {
         return $this->belongsTo(User::class, 'updated_by_user_id');
+    }
+
+    /**
+     * @return HasMany<SiteLicense, $this>
+     */
+    public function siteLicenses(): HasMany
+    {
+        return $this->hasMany(SiteLicense::class);
+    }
+
+    /**
+     * Exactly the fields of the access mode: a boolean entitlement for `entitlement`, a positive
+     * price in a supported currency for `paid`, nothing otherwise.
+     */
+    private function assertAccessIsConsistent(): void
+    {
+        $mode = $this->getAttribute('access_mode');
+        $entitlement = $this->getAttribute('access_entitlement');
+        $price = $this->price_minor;
+        $currency = $this->price_currency;
+
+        $valid = match ($mode instanceof CatalogAccessMode ? $mode : null) {
+            CatalogAccessMode::Entitlement => $entitlement instanceof Entitlement
+                && in_array($entitlement, Entitlement::catalogGates(), true)
+                && $price === null && $currency === null,
+            CatalogAccessMode::Paid => $entitlement === null && $price !== null && $price > 0
+                && $currency !== null && Money::supports($currency),
+            CatalogAccessMode::Free, CatalogAccessMode::AdminGrant => $entitlement === null && $price === null && $currency === null,
+            null => false,
+        };
+
+        if (! $valid) {
+            throw new LogicException('Block Definition access fields must match its access mode exactly.');
+        }
     }
 
     private function assertOwnershipIsConsistent(): void

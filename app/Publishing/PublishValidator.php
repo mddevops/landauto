@@ -3,6 +3,7 @@
 namespace App\Publishing;
 
 use App\Automotive\VehicleBindings;
+use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockReferenceResolver;
 use App\Blocks\BlockSourceChecker;
@@ -47,6 +48,7 @@ final class PublishValidator
     public function __construct(
         private BlockStateValidator $states,
         private BlockSourceChecker $sources,
+        private BlockCatalogAccess $access,
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
     ) {}
@@ -70,7 +72,7 @@ final class PublishValidator
 
         $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
         $this->validatePages($pages);
-        $referenced = $this->validateBlocks($pages);
+        $referenced = $this->validateBlocks($site, $pages);
         $this->validateReferences($site);
         $this->validateAssetFiles($site, $referenced['assets']);
         $this->validateVehicles($site, $referenced['vehicles']);
@@ -112,8 +114,9 @@ final class PublishValidator
      * @param  Collection<int, Page>  $pages
      * @return array{assets: array<string, true>, vehicles: array<string, true>}
      */
-    private function validateBlocks(Collection $pages): array
+    private function validateBlocks(Site $site, Collection $pages): array
     {
+        $licensed = $this->access->licensedBlockIds($site);
         $acceptAll = new class implements BlockReferenceResolver
         {
             public function existingAssets(array $ids): array
@@ -147,8 +150,16 @@ final class PublishValidator
             foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) as $block) {
                 $version = $block->version;
 
-                if (! $version->definition->isPlatformOwned()) {
+                if ($version->definition->isWorkspacePrivate()) {
                     $this->error('block_version_unavailable', 'Блок недоступен для публикации.', page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
+                $denial = $this->access->denial($site, $version->definition, $licensed);
+
+                if ($denial !== null) {
+                    $this->error('block_access_denied', "«{$version->definition->name}»: {$denial}", page: $page->public_id, block: $block->public_id);
 
                     continue;
                 }

@@ -1,4 +1,4 @@
-import { Form, router } from '@inertiajs/react';
+import { Form, router, useForm } from '@inertiajs/react';
 import { CircleCheck, FileCode2, TriangleAlert, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
@@ -26,6 +26,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type {
     AuthoringBlockDetail,
+    BlockAccessSettings,
     BlockCheckIssue,
     BlockDraft,
     DraftSourceKey,
@@ -74,6 +75,9 @@ export type BlockStudioPageProps = {
     draft: BlockDraft;
     versions: PublishedBlockVersion[];
     publishBlockedReason: string | null;
+    access: BlockAccessSettings;
+    accessModes: Choice[];
+    accessEntitlements: Choice[];
     categories: Choice[];
     sourceMaxBytes: number;
 };
@@ -82,6 +86,7 @@ type BlockStudioProps = BlockStudioPageProps & {
     metadataAction: RouteFormDefinition<'post'>;
     draftUrl: string;
     publishUrl: string;
+    accessUrl: string;
 };
 
 export function BlockStudio({
@@ -89,11 +94,15 @@ export function BlockStudio({
     draft,
     versions,
     publishBlockedReason,
+    access,
+    accessModes,
+    accessEntitlements,
     categories,
     sourceMaxBytes,
     metadataAction,
     draftUrl,
     publishUrl,
+    accessUrl,
 }: BlockStudioProps) {
     const autosave = useDraftAutosave(draftUrl, draft);
     const { sources, status, errors } = autosave;
@@ -340,6 +349,10 @@ export function BlockStudio({
                             block={block}
                             categories={categories}
                             action={metadataAction}
+                            access={access}
+                            accessModes={accessModes}
+                            accessEntitlements={accessEntitlements}
+                            accessUrl={accessUrl}
                         />
                     )}
                 </div>
@@ -566,10 +579,18 @@ function BlockSettings({
     block,
     categories,
     action,
+    access,
+    accessModes,
+    accessEntitlements,
+    accessUrl,
 }: {
     block: AuthoringBlockDetail;
     categories: Choice[];
     action: RouteFormDefinition<'post'>;
+    access: BlockAccessSettings;
+    accessModes: Choice[];
+    accessEntitlements: Choice[];
+    accessUrl: string;
 }) {
     return (
         <div className="grid gap-4 lg:grid-cols-2">
@@ -649,6 +670,108 @@ function BlockSettings({
                     <dd>{formatBlockDate(block.updated_at)}</dd>
                 </dl>
             </section>
+
+            <BlockAccessForm
+                access={access}
+                modes={accessModes}
+                entitlements={accessEntitlements}
+                url={accessUrl}
+            />
         </div>
+    );
+}
+
+function BlockAccessForm({
+    access,
+    modes,
+    entitlements,
+    url,
+}: {
+    access: BlockAccessSettings;
+    modes: Choice[];
+    entitlements: Choice[];
+    url: string;
+}) {
+    const form = useForm<{
+        mode: string;
+        entitlement: string;
+        price: string;
+    }>({
+        mode: access.mode,
+        entitlement: access.entitlement ?? '',
+        price: access.price,
+    });
+
+    return (
+        <section
+            aria-labelledby="block-access-title"
+            className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-6 lg:col-span-2"
+        >
+            <div className="space-y-1">
+                <h2 id="block-access-title" className="font-semibold">
+                    Доступ в каталоге
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Как клиенты могут добавлять опубликованный блок на свои
+                    сайты. Платный блок доступен сайту с лицензией; покупка
+                    лицензий в Landflow пока недоступна.
+                </p>
+            </div>
+            <form
+                className="grid gap-4 sm:grid-cols-3 sm:items-start"
+                onSubmit={(event) => {
+                    event.preventDefault();
+                    form.put(url, { preserveScroll: true });
+                }}
+            >
+                <SelectField
+                    id="block-access-mode"
+                    label="Режим доступа"
+                    choices={modes}
+                    value={form.data.mode}
+                    onChange={(event) =>
+                        form.setData('mode', event.target.value)
+                    }
+                    required
+                    error={form.errors.mode}
+                />
+                {form.data.mode === 'entitlement' && (
+                    <SelectField
+                        id="block-access-entitlement"
+                        label="Опция тарифа"
+                        choices={entitlements}
+                        emptyLabel="Выберите опцию"
+                        value={form.data.entitlement}
+                        onChange={(event) =>
+                            form.setData('entitlement', event.target.value)
+                        }
+                        required
+                        error={form.errors.entitlement}
+                    />
+                )}
+                {form.data.mode === 'paid' && (
+                    <TextField
+                        id="block-access-price"
+                        label="Цена за сайт, ₽"
+                        inputMode="decimal"
+                        value={form.data.price}
+                        onChange={(event) =>
+                            form.setData('price', event.target.value)
+                        }
+                        required
+                        maxLength={32}
+                        autoComplete="off"
+                        hint="Например, 1500 или 1500,50."
+                        error={form.errors.price}
+                    />
+                )}
+                <div className="flex justify-end sm:col-span-3">
+                    <Button type="submit" disabled={form.processing}>
+                        {form.processing && <Spinner />}
+                        Сохранить доступ
+                    </Button>
+                </div>
+            </form>
+        </section>
     );
 }

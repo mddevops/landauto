@@ -5,6 +5,7 @@ import {
     CarFront,
     Code,
     Images,
+    KeyRound,
     LayoutGrid,
     Plug,
     Settings,
@@ -30,6 +31,7 @@ import { index as assetsIndex } from '@/routes/workspace/assets';
 import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
+import { index as licensesIndex } from '@/routes/platform/licenses';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
 import { index as teamIndex } from '@/routes/workspace/team';
@@ -102,18 +104,27 @@ export function AppSidebar() {
             : []),
     ];
 
-    const studioItems: NavItem[] = platform.permissions.includes(
-        'manage_platform_content',
-    )
-        ? [
-              {
-                  title: 'Блоки',
-                  href: platformBlocksIndex(),
-                  icon: Blocks,
-                  matchPrefix: true,
-              },
-          ]
-        : [];
+    const studioItems: NavItem[] = [
+        ...(platform.permissions.includes('manage_platform_content')
+            ? [
+                  {
+                      title: 'Блоки',
+                      href: platformBlocksIndex(),
+                      icon: Blocks,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_site_licenses')
+            ? [
+                  {
+                      title: 'Лицензии сайтов',
+                      href: licensesIndex(),
+                      icon: KeyRound,
+                  },
+              ]
+            : []),
+    ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

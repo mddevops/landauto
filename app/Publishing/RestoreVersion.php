@@ -357,7 +357,7 @@ final class RestoreVersion
     {
         $found = BlockVersion::query()
             ->where('version', $version)
-            ->whereIn('block_definition_id', BlockDefinition::query()->platformOwned()->where('slug', $definition)->select('id'))
+            ->whereIn('block_definition_id', BlockDefinition::query()->inCatalog()->where('slug', $definition)->select('id'))
             ->first();
 
         if ($found === null) {

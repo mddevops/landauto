@@ -472,7 +472,23 @@ Implemented fields (P2-002, ownership P9-003):
 - created_by_user_id nullable FK (null on User delete), immutable audit identity
 - updated_by_user_id nullable FK (null on User delete), audit identity
 - category string(32), `App\Enums\BlockCategory`, default `other`, editable (P9-004; official Blocks backfilled)
+- access_mode string(16), `App\Enums\CatalogAccessMode` (`free` default / `entitlement` / `paid` / `admin_grant`), D-079 (P9-014)
+- access_entitlement string(64) nullable — boolean `App\Enums\Entitlement` key, set only for `entitlement`
+- price_minor unsigned bigint nullable + price_currency char(3) nullable — ADR-004, set only for `paid` (> 0, supported currency)
 - timestamps
+
+## site_licenses
+
+Site-scoped catalog license (D-079, P9-014): one Site may use one catalog item.
+
+- id
+- public_id ULID, unique
+- site_id FK (cascade)
+- block_definition_id FK (cascade)
+- source string(16), `App\Enums\SiteLicenseSource` (`purchase` / `admin_grant`); purchases are created only by the future billing flow (P10-005)
+- granted_by_user_id nullable FK (null on User delete), audit identity
+- timestamps
+- unique (site_id, block_definition_id); rows are never updated — revoke = delete
 
 ## block_drafts
 
@@ -514,7 +530,7 @@ Fields may include:
 - created_by_user_id nullable
 - created_at
 
-Implemented (P9-006, ADR-008): `runtime` string(16) (`App\Enums\BlockRuntime`: `official` default / backfill, `sandboxed`); `html`, `css`, `js` mediumText nullable — the immutable source snapshot, set for every `sandboxed` version and null for `official`; `published_by_user_id` nullable FK (null on User delete), audit identity. Sandboxed versions are created only by Studio publishing (`BlockPublisher`, semantic version auto-incremented); since P9-009 platform-owned sandboxed versions are placeable and their sources are copied into the Published Version manifest (`blocks[].sandbox`).
+Implemented (P9-006, ADR-008): `runtime` string(16) (`App\Enums\BlockRuntime`: `official` default / backfill, `sandboxed`); `html`, `css`, `js` mediumText nullable — the immutable source snapshot, set for every `sandboxed` version and null for `official`; `published_by_user_id` nullable FK (null on User delete), audit identity. Sandboxed versions are created only by Studio publishing (`BlockPublisher`, semantic version auto-incremented); since P9-009 platform-owned (and since P9-014 Developer-owned, subject to catalog access) sandboxed versions are placeable and their sources are copied into the Published Version manifest (`blocks[].sandbox`).
 
 Important:
 

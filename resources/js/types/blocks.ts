@@ -35,6 +35,21 @@ export type PublishedBlockVersion = {
     published_at: string | null;
 };
 
+/** Public access card of a catalog item (D-079); mode values come from the backend enum. */
+export type CatalogAccessCard = {
+    mode: string;
+    restricted: boolean;
+    label: string;
+    detail: string | null;
+};
+
+/** Catalog access settings of a Block; the price is a human decimal string. */
+export type BlockAccessSettings = {
+    mode: string;
+    entitlement: string | null;
+    price: string;
+};
+
 export type BlockDraft = {
     revision: number;
     sources: DraftSources;

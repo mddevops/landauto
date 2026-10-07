@@ -3,7 +3,8 @@ export type PlatformPermission =
     | 'edit_catalog'
     | 'manage_catalog_media'
     | 'manage_developers'
-    | 'manage_platform_content';
+    | 'manage_platform_content'
+    | 'manage_site_licenses';
 
 export type PlatformContext = {
     permissions: PlatformPermission[];

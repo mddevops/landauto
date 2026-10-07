@@ -5,6 +5,7 @@ namespace Database\Seeders;
 use App\Actions\Sites\CreateSite;
 use App\Blocks\BlockStateDefaults;
 use App\Enums\BlockCategory;
+use App\Enums\CatalogAccessMode;
 use App\Enums\DeveloperPermission;
 use App\Enums\DeveloperProfileStatus;
 use App\Enums\Entitlement;
@@ -167,6 +168,34 @@ class E2eSeeder extends Seeder
         $sandboxSite->forceFill(['subdomain' => 'sandbox-e2e'])->save();
         $sandboxForm = Form::factory()->for($sandboxSite)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($sandboxSite)->create(['name' => 'Обратный звонок'])->form()->associate($sandboxForm)->save();
+
+        // Customer catalog (D-079): a Developer Block that only a Super Admin grants per Site, a
+        // customer Site on `license-e2e` and a dedicated Super Admin with their own login throttle.
+        $catalogAuthor = $this->createUser('Артём Каталожный', 'catalog-author@landflow.test');
+        $this->createWorkspace($catalogAuthor, 'Workspace Артёма');
+        $this->createGrantOnlyDeveloperBlock($this->createDeveloperProfile($catalogAuthor, 'Студия каталога E2E', 'e2e-catalog-studio'));
+        $licensee = $this->createUser('Лиана Лицензиатова', 'licensee@landflow.test');
+        $licenseSite = app(CreateSite::class)->create($this->createWorkspace($licensee, 'Автосалон Лицензия', plan: $plan), 'Сайт по лицензии', SiteType::MultiPage);
+        $licenseSite->forceFill(['subdomain' => 'license-e2e'])->save();
+        $licenseAdmin = $this->createUser('Ольга Лицензиарова', 'licenses-admin@landflow.test');
+        $this->createWorkspace($licenseAdmin, 'Workspace Ольги');
+        PlatformRoleAssignment::query()->create(['user_id' => $licenseAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);
+    }
+
+    private function createGrantOnlyDeveloperBlock(DeveloperProfile $profile): void
+    {
+        $definition = BlockDefinition::factory()->developer($profile)->create([
+            'slug' => 'e2e-partner-showcase',
+            'name' => 'Витрина партнёра',
+            'category' => BlockCategory::Cta,
+            'access_mode' => CatalogAccessMode::AdminGrant,
+        ]);
+        BlockVersion::factory()
+            ->sandboxed('<section class="showcase"><h2>{{ title }}</h2></section>', '.showcase { padding: 24px; background: #e0f2fe; }')
+            ->for($definition, 'definition')
+            ->create(['schema_json' => ['fields' => [
+                ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'default' => 'Партнёрская витрина', 'max_length' => 80],
+            ]]]);
     }
 
     private function createSandboxedPlatformBlock(): void
@@ -186,7 +215,7 @@ class E2eSeeder extends Seeder
             ]]]);
     }
 
-    private function createDeveloperProfile(User $user, string $name, string $slug): void
+    private function createDeveloperProfile(User $user, string $name, string $slug): DeveloperProfile
     {
         $profile = new DeveloperProfile(['display_name' => $name, 'bio' => null]);
         $profile->slug = $slug;
@@ -196,6 +225,8 @@ class E2eSeeder extends Seeder
             fn (DeveloperPermission $permission): array => ['permission' => $permission->value],
             DeveloperPermission::defaults(),
         ));
+
+        return $profile;
     }
 
     /**

@@ -3519,8 +3519,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-014 — Customer Catalog, Access Modes and Site Licenses
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-009 (D-079)
+
+### Result
+
+- `block_definitions.access_mode` (`free` default, `entitlement`, `paid`, `admin_grant`) + `access_entitlement` (boolean catalog gates only: `custom_domain`, `remove_branding`, `multi_page_sites`) + `price_minor` / `price_currency` (ADR-004, RUB); the model refuses inconsistent combinations. Authors change access in Block Studio «Настройки → Доступ в каталоге» (`PUT {platform|developer}/blocks/{block}/access`, own Blocks only, logged `*.block_access_updated`).
+- `site_licenses` (ULID `public_id`, Site × Block Definition unique, source `purchase` | `admin_grant`, `granted_by_user_id`). Super Admin page «Лицензии сайтов» (`/platform/licenses`, new platform permission `manage_site_licenses`, Super Admin only) grants by subdomain or Site ID and revokes; grants / revokes are logged. Purchase creation stays DEFERRED (P10-005); no prices are charged.
+- Customer catalog = platform + Developer Blocks with a published version (workspace-private stays out). The Designer library shows author, Russian access card and the backend reason; `BlockCatalogAccess` decides on add, duplicate and publish (`block_access_denied`). A license grants only its own Site; an entitlement only unlocks `entitlement` mode, never paid / admin_grant.
+- Checks: `CatalogAccessTest` (11), updated Block / Designer / developer route-inventory tests, `E2eSeederTest`; Playwright `catalog-licenses.spec.ts` (denied → Super Admin grants → added → revoked → denied).
+- Open product question (not decided, not implemented): grandfathering when an author restricts a Block already placed on Sites. Current behaviour follows D-079 literally — live Published Versions stay untouched, the next publish needs access.
 
 ### Acceptance Criteria
 
@@ -4308,8 +4316,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`.
-- Next: `P9-014 — Customer Catalog, Access Modes and Site Licenses`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`.
+- Next: `P9-007 — Template Builder`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

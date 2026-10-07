@@ -17,4 +17,25 @@ enum Entitlement: string
             self::CustomDomain, self::RemoveBranding, self::MultiPageSites => EntitlementValueType::Boolean,
         };
     }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::MaxSites => 'Количество сайтов',
+            self::MaxMembers => 'Количество участников',
+            self::CustomDomain => 'Собственный домен',
+            self::RemoveBranding => 'Без брендинга Landflow',
+            self::MultiPageSites => 'Многостраничные сайты',
+        };
+    }
+
+    /**
+     * Boolean entitlements a catalog item may require in `entitlement` access mode (D-079).
+     *
+     * @return list<self>
+     */
+    public static function catalogGates(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $entitlement): bool => $entitlement->valueType() === EntitlementValueType::Boolean));
+    }
 }

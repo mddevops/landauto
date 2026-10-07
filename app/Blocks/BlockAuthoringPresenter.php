@@ -4,9 +4,12 @@ namespace App\Blocks;
 
 use App\Enums\BlockCategory;
 use App\Enums\BlockRuntime;
+use App\Enums\CatalogAccessMode;
+use App\Enums\Entitlement;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
 use App\Models\BlockVersion;
+use App\Support\Money;
 use stdClass;
 
 /**
@@ -68,6 +71,16 @@ final class BlockAuthoringPresenter
                 'published_at' => $version->created_at?->toIso8601String(),
             ])->values()->all(),
             'publishBlockedReason' => $official ? BlockPublisher::OFFICIAL_RUNTIME : null,
+            'access' => [
+                'mode' => $block->access_mode->value,
+                'entitlement' => $block->access_entitlement?->value,
+                'price' => $block->price_minor !== null ? Money::toInput($block->price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
+            ],
+            'accessModes' => CatalogAccessMode::options(),
+            'accessEntitlements' => array_map(
+                fn (Entitlement $entitlement): array => ['value' => $entitlement->value, 'label' => $entitlement->label()],
+                Entitlement::catalogGates(),
+            ),
             'categories' => BlockCategory::options(),
             'sourceMaxBytes' => BlockStudio::SOURCE_MAX_BYTES,
         ];

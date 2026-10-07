@@ -1,4 +1,4 @@
-import { router } from '@inertiajs/react';
+import { router, usePage } from '@inertiajs/react';
 import {
     ArrowDown,
     ArrowUp,
@@ -46,6 +46,62 @@ type NavigatorProps = {
 
 const visit = { preserveScroll: true, preserveState: true } as const;
 
+/** Official Landflow Blocks without access conditions stay compact buttons. */
+function isPlainOfficial(item: DesignerLibraryBlock): boolean {
+    return item.author === null && !item.access.restricted;
+}
+
+function CatalogCard({
+    item,
+    onAdd,
+}: {
+    item: DesignerLibraryBlock;
+    onAdd: () => void;
+}) {
+    const reasonId = `library-${item.slug}-reason`;
+
+    return (
+        <li
+            data-testid="catalog-block"
+            className="flex items-start gap-2 rounded-md border p-2"
+        >
+            <div className="min-w-0 flex-1 space-y-0.5">
+                <p className="text-sm font-medium break-words">{item.name}</p>
+                {item.author && (
+                    <p className="text-xs break-words text-muted-foreground">
+                        {`Автор: ${item.author}`}
+                    </p>
+                )}
+                <p className="text-xs text-muted-foreground">
+                    {[item.access.label, item.access.detail]
+                        .filter(Boolean)
+                        .join(' · ')}
+                </p>
+                {item.reason && (
+                    <p
+                        id={reasonId}
+                        className="text-xs text-amber-700 dark:text-amber-400"
+                    >
+                        {item.reason}
+                    </p>
+                )}
+            </div>
+            <Button
+                type="button"
+                variant="outline"
+                size="icon"
+                className="size-8 shrink-0"
+                aria-label={`Добавить блок «${item.name}»`}
+                aria-describedby={item.reason ? reasonId : undefined}
+                disabled={!item.available}
+                onClick={onAdd}
+            >
+                <Plus aria-hidden="true" />
+            </Button>
+        </li>
+    );
+}
+
 export function Navigator({
     siteId,
     pageId,
@@ -63,6 +119,14 @@ export function Navigator({
         site: siteId,
         block: block.public_id,
     });
+    const errors = usePage().props.errors as Record<string, string> | undefined;
+    const libraryError = errors?.block;
+    const add = (item: DesignerLibraryBlock) =>
+        router.post(
+            store.url({ site: siteId, page: pageId }),
+            { block: item.slug },
+            visit,
+        );
 
     return (
         <div className="flex flex-col gap-5">
@@ -212,8 +276,16 @@ export function Navigator({
                     <h2 id="library-heading" className="text-sm font-semibold">
                         Добавить блок
                     </h2>
+                    {libraryError && (
+                        <p
+                            role="alert"
+                            className="rounded-md border border-destructive/40 bg-destructive/5 px-2 py-1.5 text-xs text-destructive"
+                        >
+                            {libraryError}
+                        </p>
+                    )}
                     <ul className="grid grid-cols-2 gap-2">
-                        {library.map((item) => (
+                        {library.filter(isPlainOfficial).map((item) => (
                             <li key={item.slug}>
                                 <Button
                                     type="button"
@@ -221,16 +293,7 @@ export function Navigator({
                                     size="sm"
                                     className="w-full justify-start"
                                     aria-label={`Добавить блок «${item.name}»`}
-                                    onClick={() =>
-                                        router.post(
-                                            store.url({
-                                                site: siteId,
-                                                page: pageId,
-                                            }),
-                                            { block: item.slug },
-                                            visit,
-                                        )
-                                    }
+                                    onClick={() => add(item)}
                                 >
                                     <Plus aria-hidden="true" />
                                     <span className="truncate">
@@ -240,6 +303,22 @@ export function Navigator({
                             </li>
                         ))}
                     </ul>
+                    {library.some((item) => !isPlainOfficial(item)) && (
+                        <ul
+                            aria-label="Блоки с условиями доступа и блоки разработчиков"
+                            className="flex flex-col gap-2"
+                        >
+                            {library
+                                .filter((item) => !isPlainOfficial(item))
+                                .map((item) => (
+                                    <CatalogCard
+                                        key={item.slug}
+                                        item={item}
+                                        onAdd={() => add(item)}
+                                    />
+                                ))}
+                        </ul>
+                    )}
                 </section>
             )}
 

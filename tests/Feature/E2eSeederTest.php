@@ -3,8 +3,10 @@
 namespace Tests\Feature;
 
 use App\Blocks\BlockAuthoringAuthorization;
+use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockSourceChecker;
 use App\Enums\BlockRuntime;
+use App\Enums\CatalogAccessMode;
 use App\Enums\Entitlement;
 use App\Enums\PlatformPermission;
 use App\Enums\WorkspaceRole;
@@ -48,7 +50,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'formats@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'publisher@landflow.test', 'sandbox@landflow.test', 'studio-developer@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test'],
+            ['catalog-author@landflow.test', 'catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'formats@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'licensee@landflow.test', 'licenses-admin@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'publisher@landflow.test', 'sandbox@landflow.test', 'studio-developer@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -100,5 +102,14 @@ class E2eSeederTest extends TestCase
         $this->assertTrue($promo->definition->isPlatformOwned());
         $this->assertSame([], app(BlockSourceChecker::class)->checkVersion($promo));
         $this->assertTrue(Site::query()->where('subdomain', 'sandbox-e2e')->sole()->popups()->exists());
+
+        $showcase = BlockVersion::query()->whereRelation('definition', 'slug', 'e2e-partner-showcase')->sole();
+        $this->assertTrue($showcase->definition->isDeveloperOwned());
+        $this->assertSame(CatalogAccessMode::AdminGrant, $showcase->definition->access_mode);
+        $this->assertSame([], app(BlockSourceChecker::class)->checkVersion($showcase));
+        $licenseSite = Site::query()->where('subdomain', 'license-e2e')->sole();
+        $this->assertSame(0, $licenseSite->licenses()->count());
+        $this->assertNotNull(app(BlockCatalogAccess::class)->denial($licenseSite, $showcase->definition));
+        $this->assertTrue(Gate::forUser(User::query()->where('email', 'licenses-admin@landflow.test')->sole())->allows(PlatformPermission::ManageSiteLicenses->value));
     }
 }

@@ -53,16 +53,16 @@ class SandboxedBlockRuntimeTest extends TestCase
 
     public function test_platform_sandboxed_block_is_placed_from_the_library_with_its_published_source(): void
     {
-        $developer = BlockDefinition::factory()->developer()->create(['slug' => 'dev-card']);
-        BlockVersion::factory()->sandboxed()->for($developer, 'definition')->create();
+        $private = BlockDefinition::factory()->workspacePrivate()->create(['slug' => 'private-card']);
+        BlockVersion::factory()->sandboxed()->for($private, 'definition')->create();
 
         $this->as()->get(route('sites.designer', $this->site))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('library', fn ($library): bool => collect($library)->contains('slug', 'promo-card') && ! collect($library)->contains('slug', 'dev-card')));
+                ->where('library', fn ($library): bool => collect($library)->contains('slug', 'promo-card') && ! collect($library)->contains('slug', 'private-card')));
 
         $this->as()->post(route('sites.blocks.store', [$this->site, $this->home]), ['block' => 'promo-card'])->assertSessionHasNoErrors();
-        $this->as()->post(route('sites.blocks.store', [$this->site, $this->home]), ['block' => 'dev-card'])
-            ->assertSessionHasErrors(['block' => 'Этот блок недоступен.']);
+        $this->as()->post(route('sites.blocks.store', [$this->site, $this->home]), ['block' => 'private-card'])
+            ->assertSessionHasErrors('block');
 
         $block = BlockInstance::query()->latest('id')->firstOrFail();
         $this->assertSame($this->promo->id, $block->block_version_id);
@@ -81,10 +81,10 @@ class SandboxedBlockRuntimeTest extends TestCase
                 ->where('blocks.2.sandbox', $source));
     }
 
-    public function test_only_platform_sandboxed_versions_can_be_placed(): void
+    public function test_workspace_private_sandboxed_versions_cannot_be_placed(): void
     {
-        $developer = BlockDefinition::factory()->developer()->create();
-        $version = BlockVersion::factory()->sandboxed()->for($developer, 'definition')->create();
+        $private = BlockDefinition::factory()->workspacePrivate()->create();
+        $version = BlockVersion::factory()->sandboxed()->for($private, 'definition')->create();
 
         $this->expectException(LogicException::class);
         BlockInstance::factory()->create(['page_id' => $this->home->id, 'block_version_id' => $version->id]);

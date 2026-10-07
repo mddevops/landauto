@@ -30,6 +30,7 @@ use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
+use App\Http\Controllers\Platform\SiteLicenseController;
 use App\Http\Controllers\Popups\SitePopupController;
 use App\Http\Controllers\SiteAssetController;
 use App\Http\Controllers\SiteController;
@@ -321,6 +322,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
             Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:120,1')->name('draft');
             Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
+            Route::put('{block}/access', [PlatformBlockController::class, 'access'])->whereUlid('block')->name('access');
+        });
+
+    // Site licenses for catalog items (D-079): Super Admin grants and revokes; purchases are P10-005.
+    Route::prefix('platform/licenses')
+        ->name('platform.licenses.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageSiteLicenses->value)
+        ->group(function () {
+            Route::get('/', [SiteLicenseController::class, 'index'])->name('index');
+            Route::post('/', [SiteLicenseController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::delete('{license}', [SiteLicenseController::class, 'destroy'])->whereUlid('license')->name('destroy');
         });
 
     // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).
@@ -341,6 +353,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
                     Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:120,1')->name('draft');
                     Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
+                    Route::put('{block}/access', [DeveloperBlockController::class, 'access'])->whereUlid('block')->name('access');
                 });
         });
 });

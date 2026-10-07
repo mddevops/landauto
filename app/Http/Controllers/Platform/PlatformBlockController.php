@@ -13,6 +13,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\Blocks\PublishBlockRequest;
 use App\Http\Requests\Blocks\SaveBlockDraftRequest;
 use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
+use App\Http\Requests\Blocks\UpdateBlockAccessRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
 use App\Models\BlockDefinition;
 use App\Models\User;
@@ -90,6 +91,15 @@ class PlatformBlockController extends Controller
             $request->category(),
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Изменения сохранены.']);
+
+        return to_route('platform.blocks.show', $definition);
+    }
+
+    public function access(UpdateBlockAccessRequest $request, string $block): RedirectResponse
+    {
+        $definition = $this->find($block);
+        $this->authoring->updateAccess($this->actor($request), $definition, $request->mode(), $request->entitlement(), $request->priceMinor());
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Доступ в каталоге сохранён.']);
 
         return to_route('platform.blocks.show', $definition);
     }

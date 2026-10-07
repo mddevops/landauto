@@ -104,6 +104,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteLicense, $this>
+     */
+    public function licenses(): HasMany
+    {
+        return $this->hasMany(SiteLicense::class);
+    }
+
+    /**
      * @return HasMany<SiteVehicle, $this>
      */
     public function vehicles(): HasMany
