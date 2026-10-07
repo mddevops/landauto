@@ -68,7 +68,7 @@ class PublishedSnapshotBuilderTest extends TestCase
     public function test_site_vehicle_description_is_published_and_changes_the_manifest_hash(): void
     {
         $before = $this->builder()->build($this->site);
-        $this->assertNull($before->publicManifest['vehicles'][0]['description']);
+        $this->assertArrayNotHasKey('description', $before->publicManifest['vehicles'][0]);
 
         $this->vehicle->update(['custom_description' => 'Описание для сайта']);
         $after = $this->builder()->build($this->site);

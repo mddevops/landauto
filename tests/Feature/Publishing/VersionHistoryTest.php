@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Publishing;
 
+use App\Enums\PublishedVersionStatus;
 use App\Enums\SiteAccessMode;
 use App\Enums\WorkspaceRole;
 use App\Models\Publication;
@@ -9,6 +10,7 @@ use App\Models\PublishedVersion;
 use App\Models\Site;
 use App\Models\SiteVersionRestore;
 use App\Models\User;
+use App\Publishing\PublishedSnapshotBuilder;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -119,6 +121,40 @@ class VersionHistoryTest extends TestCase
         $this->assertDraftChanged(true);
     }
 
+    public function test_legacy_manifest_without_vehicle_description_does_not_report_changes(): void
+    {
+        $this->assertNull($this->vehicle->custom_description);
+        $draft = app(PublishedSnapshotBuilder::class)->build($this->site);
+        $legacy = $draft->publicManifest;
+
+        foreach (array_keys($legacy['vehicles']) as $index) {
+            unset($legacy['vehicles'][$index]['description']);
+        }
+
+        $this->activate($legacy);
+
+        $this->assertArrayNotHasKey('description', $draft->publicManifest['vehicles'][0]);
+        $this->assertSame(PublishedSnapshotBuilder::hash($legacy), $draft->manifestHash);
+        $this->assertDraftChanged(false);
+    }
+
+    public function test_a_new_vehicle_description_reports_changes_until_published(): void
+    {
+        $legacy = app(PublishedSnapshotBuilder::class)->build($this->site)->publicManifest;
+        $this->activate($legacy);
+
+        $this->vehicle->update(['custom_description' => 'Описание автомобиля']);
+        $draft = app(PublishedSnapshotBuilder::class)->build($this->site);
+
+        $this->assertSame('Описание автомобиля', $draft->publicManifest['vehicles'][0]['description']);
+        $this->assertNotSame(PublishedSnapshotBuilder::hash($legacy), $draft->manifestHash);
+        $this->assertDraftChanged(true);
+
+        $version = $this->publish();
+        $this->assertSame('Описание автомобиля', $version->public_manifest_json['vehicles'][0]['description']);
+        $this->assertDraftChanged(false);
+    }
+
     public function test_publisher_can_publish_and_view_history_but_cannot_restore(): void
     {
         $publisher = $this->member(WorkspaceRole::Publisher);
@@ -180,6 +216,21 @@ class VersionHistoryTest extends TestCase
     {
         $this->as($this->owner)->get(route('sites.publishing.show', $this->site))
             ->assertInertia(fn (Assert $page) => $page->where('production.has_unpublished_changes', $changed));
+    }
+
+    /**
+     * A Published Version written before the current code, made active without a Publish run.
+     *
+     * @param  array<string, mixed>  $manifest
+     */
+    private function activate(array $manifest): void
+    {
+        $version = PublishedVersion::factory()->for($this->site)->create([
+            'public_manifest_json' => $manifest,
+            'manifest_hash' => PublishedSnapshotBuilder::hash($manifest),
+        ]);
+        $version->update(['status' => PublishedVersionStatus::Ready, 'ready_at' => now()]);
+        $this->site->forceFill(['active_published_version_id' => $version->id])->save();
     }
 
     private function publish(): PublishedVersion

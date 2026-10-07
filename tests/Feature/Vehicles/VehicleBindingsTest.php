@@ -96,7 +96,7 @@ class VehicleBindingsTest extends TestCase
         $binding = $bindings[0];
         $this->assertSame($vehicle->public_id, $binding['public_id']);
         $this->assertSame(['Kia', 'Rio', 'IV Рестайлинг', 'Седан', 'Kia Rio'], [$binding['mark'], $binding['model'], $binding['generation'], $binding['series'], $binding['title']]);
-        $this->assertNull($binding['description']);
+        $this->assertArrayNotHasKey('description', $binding);
         $this->assertSame("1\u{00A0}500\u{00A0}000\u{00A0}₽", $binding['price_from_label']);
         $this->assertSame("100\u{00A0}000\u{00A0}₽", $binding['benefit_up_to_label']);
 

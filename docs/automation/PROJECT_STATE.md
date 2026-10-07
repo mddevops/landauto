@@ -208,7 +208,7 @@ Current focus:
 - `P8-009` DONE: publication note (≤ 500, plain text, on the immutable `Publication`), richer paginated history (note, actor, restore count / last restore), `site_version_restores` audit in the restore transaction, unpublished-changes indicator via deterministic manifest hash; Publisher cannot restore. Site Vehicle custom name / description are part of the draft snapshot (Phase 8 correctness pass).
 - `P8-010` DONE: Team E2E fixtures (test-only 10-seat plan, Site A / B, role accounts, foreign Workspace with fixed IDs), env-gated `team:e2e-invitation-url` (testing / e2e only, hash-only storage) and `tests/browser/team.spec.ts` covering invitation, site access, suspend / restore / remove, role limits, library / copy / conflicts, shared assets, version notes / restore, foreign-resource 404s and 375px layouts.
 - `P8-011` DONE: Phase 8 review, no regressions. Phase 8 COMPLETED, Phase 9 NOT_STARTED. Open follow-ups: platform Series media sets referenced by the Workspace library cannot be deleted (restrict); unpublished-changes indicator only on the Publishing page; restores are audited in `site_version_restores` but not written to the app log; no shipped Block renders the vehicle `description` binding yet; flaky tablet `auth.spec.ts` root cause still unknown. Invitation tokens: application logging never records them, the DB stores only the hash and normal Inertia / HTML never carries them; the local `MAIL_MAILER=log` transport writes the rendered email (including the invitation URL) to the local log by definition — production must use a real mail transport (X-013). Still open: D-076, D-077, D-089, D-090, D-091, D-093, D-094, X-013, X-017.
-- Phase 8 correctness pass (after P8-011): restore-to-Draft brings back historical Site Vehicle `custom_name` / `custom_description` (snapshots from before these keys keep the current values); the public vehicle binding / Published manifest exposes nullable `description` (= `custom_description`), so it changes the manifest hash and the unpublished-changes indicator; a Site-to-Site conflict update that would touch offers is refused as `ambiguous` (nothing on the vehicle changes) when the destination holds several offers for one of the source's Equipment.
+- Phase 8 correctness pass (after P8-011): restore-to-Draft brings back historical Site Vehicle `custom_name` / `custom_description` (snapshots from before these keys keep the current values); the public vehicle binding / Published manifest exposes optional `description` (= `custom_description`, present only when set, so vehicles without one keep their pre-Phase-8 manifest hash; a new description changes the hash and the unpublished-changes indicator); a Site-to-Site conflict update that would touch offers is refused as `ambiguous` (nothing on the vehicle changes) when the destination holds several offers for one of the source's Equipment.
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -357,25 +357,22 @@ APIs should be added only when required by:
 
 # 7. Current Model Baseline
 
-Known current business model state:
+Implemented core domains (Phases 0–8 COMPLETED):
 
-- `User` exists.
+- User / authentication (email + verification, Yandex OAuth);
+- Workspace, membership, roles / permissions, entitlements, team invitations and Site access;
+- Site;
+- Templates, Pages, Block Definitions / Versions / Instances;
+- automotive Site Vehicles / Site Offers and the Workspace Vehicle Library;
+- Forms, Popups, Submissions;
+- integrations, deliveries, analytics;
+- publishing and Published Versions;
+- custom domains;
+- Site Assets and Workspace Assets.
 
-Core Landflow business entities described in architecture documents are not assumed to exist yet.
+The Global Automotive Catalog is implemented on the separate `catalog` connection.
 
-Examples still to be implemented later:
-
-- Workspace
-- Site
-- Template
-- Block Definition
-- Global Automotive Catalog
-- Site Vehicle
-- Form
-- Integration Profile
-- Publication
-
-Agents must not confuse architecture specification with already-shipped code.
+Phase 9 — Developer Platform is NOT_STARTED. Architecture documents also describe planned target models; agents must check the code to tell implemented from planned.
 
 ---
 

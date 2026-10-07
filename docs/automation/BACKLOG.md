@@ -3305,7 +3305,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
   - Publishing: Published Versions stay immutable. Notes are plain text and escaped. Restore is Draft-only and audited. Publisher cannot restore, and production changes only on Publish.
 - Correctness pass after the review (resolved):
   - The draft snapshot carries Site Vehicle `custom_name` / `custom_description`, so restore brings back their historical values. Snapshots from before these keys keep the current values.
-  - The public vehicle binding and the Published manifest expose nullable `description` (from `custom_description`). It changes the manifest hash and the unpublished-changes indicator.
+  - The public vehicle binding and the Published manifest expose an optional `description` (from `custom_description`). It is present only when set, so vehicles without one keep their pre-Phase-8 manifest hash, while a new description changes the hash and the unpublished-changes indicator.
   - When the destination holds several offers for one of the source's Equipment, a conflict update that touches offers or benefits is refused as ambiguous. Nothing on that vehicle changes, and the import page explains the duplicates.
 - Open follow-ups (not blocking):
   - Platform Series media sets used by the Workspace library cannot be deleted (restrict).
@@ -4092,35 +4092,14 @@ This backlog cannot weaken those rules.
 
 # 12. Current Immediate Sequence
 
-Completed: P0-001 … P0-021 (documentation, rules, agents).
+Task statuses and results live in the phase sections above; this section only points at the current position.
 
-The remaining required sequence is:
-
-```text
-P0-021A Bootstrap Landflow Application                           DONE
-P0-021B Repository Initialization & Project State Reconciliation DONE
-P0-021C Russian Foundation UI                                    DONE
-P0-022  Quality Commands                                         DONE
-P0-023  Playwright                                               DONE
-P0-024  Browser QA Baseline                                      DONE
-P0-025  CI                                                       DONE
-P0-026  Autonomous Workflow                                      DONE
-P0-027  Phase 0 Validation                                       DONE
-```
-
-Phase 0 is COMPLETED. Phase 1 — Core Platform:
-
-```text
-P1-001  Audit Authentication Baseline                            DONE
-P1-002  Remove 2FA / Passkeys and Enforce Email Verification     DONE
-X-007   ADR: Primary Identifier Strategy (before P1-003)          DONE (ADR-001 accepted, Option B)
-P1-003  Create Workspace Schema                                  DONE
-P1-004  Workspace Domain Models                                  DONE
-P1-005  Create Default Personal Workspace                        DONE
-X-014   Decision: OAuth Account Linking and Yandex Client         DONE (ADR-002 accepted)
-P1-005A Yandex OAuth Authentication                               DONE
-X-011   Foundation Hygiene Follow-ups                             next
-```
+- Completed: Phases 0–8.
+- Special state: `P7-009 — Real Subscription Integration` DEFERRED.
+- Current: Phase 9 — Developer Platform NOT_STARTED.
+- Next: `P9-001 — Developer Profile`.
+- Open prerequisite for P9-001: D-093 — Developer Profile Ownership (OPEN).
+- Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---
 

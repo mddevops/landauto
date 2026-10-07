@@ -23,7 +23,7 @@ use App\Support\Money;
  *
  * @phpstan-type Spec array{label: string, value: string}
  * @phpstan-type Offer array{public_id: string, modification: array{name: string, summary: string, specs: list<Spec>}, equipment: array{name: string}, price_label: string, rrp_label: string|null, availability_label: string|null, badge: string|null, benefits: list<array{label: string, amount_label: string}>, characteristics: list<array{group: string, items: list<Spec>}>, options: list<array{group: string, items: list<array{name: string, availability: string}>}>}
- * @phpstan-type Vehicle array{public_id: string, mark: string, model: string, generation: string, series: string, title: string, description: string|null, price_from_label: string|null, benefit_up_to_label: string|null, media: array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, label: string, url: string, width: int, height: int}>}>}, offers: list<Offer>}
+ * @phpstan-type Vehicle array{public_id: string, mark: string, model: string, generation: string, series: string, title: string, description?: string, price_from_label: string|null, benefit_up_to_label: string|null, media: array{source: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, label: string, url: string, width: int, height: int}>}>}, offers: list<Offer>}
  */
 final class VehicleBindings
 {
@@ -104,7 +104,8 @@ final class VehicleBindings
             $bindings[] = [
                 'public_id' => $vehicle->public_id,
                 ...$title,
-                'description' => $vehicle->custom_description,
+                // Present only when set, so manifests of vehicles without one keep their pre-P8 hash.
+                ...($vehicle->custom_description === null ? [] : ['description' => $vehicle->custom_description]),
                 'price_from_label' => $cheapest === null ? null : Money::format($cheapest->price_minor, $cheapest->currency),
                 'benefit_up_to_label' => $cheapest === null || ! $bestBenefit ? null : Money::format($bestBenefit, $cheapest->currency),
                 'media' => [
