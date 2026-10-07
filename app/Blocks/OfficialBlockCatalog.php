@@ -15,6 +15,12 @@ final class OfficialBlockCatalog
     /** Quiz Block (P9-016): visitor answers are resolved against its `steps` state on submission. */
     public const QUIZ_SLUG = 'quiz';
 
+    /** Chat Selection Block (P9-017): scripted questions in a chat layout, same `steps` state. */
+    public const CHAT_SLUG = 'chat-selection';
+
+    /** Blocks whose `steps` answers may travel with a lead. */
+    public const ANSWER_SLUGS = [self::QUIZ_SLUG, self::CHAT_SLUG];
+
     public const QUIZ_MAX_STEPS = 10;
 
     /**
@@ -29,7 +35,7 @@ final class OfficialBlockCatalog
             $slug === 'cta' => BlockCategory::Cta,
             $slug === 'contacts' => BlockCategory::Contacts,
             $slug === 'footer' => BlockCategory::Footer,
-            $slug === self::QUIZ_SLUG => BlockCategory::Forms,
+            in_array($slug, self::ANSWER_SLUGS, true) => BlockCategory::Forms,
             str_starts_with($slug, 'vehicle-') => BlockCategory::Vehicles,
             default => BlockCategory::Other,
         };
@@ -197,17 +203,36 @@ final class OfficialBlockCatalog
             self::block(self::QUIZ_SLUG, 'Квиз', [
                 self::text('title', 'Заголовок', 120, 'Подберём автомобиль за минуту', required: true),
                 self::textarea('subtitle', 'Подзаголовок', 500),
-                self::repeater('steps', 'Вопросы', self::QUIZ_MAX_STEPS, [
-                    self::text('question', 'Вопрос', 160, required: true),
-                    self::repeater('options', 'Варианты ответа', 8, [
-                        self::text('label', 'Текст варианта', 80, required: true),
-                    ]),
-                ]),
+                self::steps(),
                 self::text('result_title', 'Заголовок результата', 120, 'Подборка готова'),
                 self::textarea('result_text', 'Текст результата', 500),
                 self::actionButton('button', 'Кнопка заявки', 'Получить подборку'),
             ]),
+            self::block(self::CHAT_SLUG, 'Чат-подбор', [
+                self::text('title', 'Заголовок', 120, 'Подбор автомобиля в чате', required: true),
+                self::text('intro', 'Первое сообщение', 255, 'Здравствуйте! Ответьте на несколько вопросов — подберём автомобиль и подготовим предложение.'),
+                self::steps(),
+                ['key' => 'show_vehicles', 'type' => 'boolean', 'label' => 'Предлагать выбрать автомобиль из наличия', 'default' => true],
+                [...self::text('vehicle_question', 'Вопрос про автомобиль', 160, 'Какой автомобиль из наличия вам интересен?'), 'visible_if' => ['field' => 'show_vehicles', 'equals' => true]],
+                self::text('final_message', 'Последнее сообщение', 255, 'Спасибо! Оставьте контакты — менеджер свяжется с вами и ответит на вопросы.'),
+                self::actionButton('button', 'Кнопка заявки', 'Оставить заявку'),
+            ]),
         ];
+    }
+
+    /**
+     * Questions with answer options shared by the quiz and chat Blocks.
+     *
+     * @return array<string, mixed>
+     */
+    private static function steps(): array
+    {
+        return self::repeater('steps', 'Вопросы', self::QUIZ_MAX_STEPS, [
+            self::text('question', 'Вопрос', 160, required: true),
+            self::repeater('options', 'Варианты ответа', 8, [
+                self::text('label', 'Текст варианта', 80, required: true),
+            ]),
+        ]);
     }
 
     /**

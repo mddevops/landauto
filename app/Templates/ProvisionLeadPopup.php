@@ -13,20 +13,22 @@ use App\Models\Popup;
 use App\Models\Site;
 
 /**
- * Lead form of a quiz Site (P9-016). Templates cannot own Forms or Popups, so after a quiz Template
- * is installed the new Site gets its own lead Form in a Popup, opened by every quiz Block whose
- * button has no action yet. Both stay ordinary Site-owned entities the customer may edit.
+ * Lead form of a quiz / chat Site (P9-016, P9-017). Templates cannot own Forms or Popups, so after
+ * such a Template is installed the new Site gets its own lead Form in a Popup, opened by every quiz
+ * or chat Block whose button has no action yet. Both stay ordinary Site-owned entities.
  */
-final class ProvisionQuizLead
+final class ProvisionLeadPopup
 {
-    public const FORM_NAME = 'Заявка с квиза';
+    public const QUIZ_FORM_NAME = 'Заявка с квиза';
 
-    public function provision(Site $site): void
+    public const CHAT_FORM_NAME = 'Заявка из чата';
+
+    public function provision(Site $site, string $formName): void
     {
         $blocks = BlockInstance::query()
             ->whereHas('page', fn ($query) => $query->where('site_id', $site->id))
             ->whereHas('version.definition', fn ($query) => $query
-                ->where('slug', OfficialBlockCatalog::QUIZ_SLUG)
+                ->whereIn('slug', OfficialBlockCatalog::ANSWER_SLUGS)
                 ->where('owner_scope', BlockOwnerScope::Platform->value))
             ->orderBy('id')
             ->get();
@@ -41,16 +43,16 @@ final class ProvisionQuizLead
                 continue;
             }
 
-            $popup ??= $this->createPopup($site);
+            $popup ??= $this->createPopup($site, $formName);
             $state['button'] = [...$button, 'action' => ['type' => BlockActionType::OpenPopup->value, 'popup' => $popup->public_id]];
             $block->update(['state_json' => $state]);
         }
     }
 
-    private function createPopup(Site $site): Popup
+    private function createPopup(Site $site, string $formName): Popup
     {
         $form = new Form([
-            'name' => self::FORM_NAME,
+            'name' => $formName,
             'status' => true,
             'submit_label' => 'Получить подборку',
             'success_message' => 'Спасибо! Менеджер свяжется с вами и пришлёт подборку.',
@@ -65,7 +67,7 @@ final class ProvisionQuizLead
         }
 
         $popup = new Popup([
-            'name' => self::FORM_NAME,
+            'name' => $formName,
             'status' => true,
             'title' => 'Получите подборку',
             'text' => 'Менеджер подберёт автомобили по вашим ответам.',

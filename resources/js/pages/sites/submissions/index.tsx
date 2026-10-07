@@ -24,7 +24,7 @@ type TrustedContext = {
     vehicle?: { title: string; series: string };
     offer?: { modification: string; equipment: string; price_label: string };
     media_set?: { name: string };
-    quiz?: { answers: { question: string; answer: string }[] };
+    answers?: { items: { question: string; answer: string }[] };
 };
 
 type SubmissionMode = 'public' | 'preview';
@@ -90,7 +90,7 @@ function contextRows({ trusted, visitor }: SubmissionRow['context']) {
         rows.push({ label: 'Попап', value: trusted.popup.name });
     }
 
-    for (const answer of trusted.quiz?.answers ?? []) {
+    for (const answer of trusted.answers?.items ?? []) {
         rows.push({ label: answer.question, value: answer.answer });
     }
 

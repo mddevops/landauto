@@ -18,7 +18,7 @@ use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
-use App\Templates\ProvisionQuizLead;
+use App\Templates\ProvisionLeadPopup;
 use Database\Seeders\OfficialBlockSeeder;
 use Database\Seeders\OfficialQuizTemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -93,13 +93,13 @@ class QuizSiteFlowTest extends TestCase
         $popup = Popup::query()->sole();
         $form = Form::query()->sole();
         $this->assertSame([$site->id, $site->id, $form->id], [$popup->site_id, $form->site_id, $popup->form_id]);
-        $this->assertSame(ProvisionQuizLead::FORM_NAME, $form->name);
+        $this->assertSame(ProvisionLeadPopup::QUIZ_FORM_NAME, $form->name);
         $this->assertSame(['name', 'phone'], $form->fields()->orderBy('sort_order')->pluck('key')->all());
         $this->assertSame(['type' => 'open_popup', 'popup' => $popup->public_id], $quiz->state_json['button']['action']);
         $this->assertSame('Какой автомобиль вы ищете?', $quiz->state_json['steps'][0]['question']);
         $this->assertNull($this->template->versions()->sole()->content_json['pages'][0]['blocks'][0]['state']['button']['action'] ?? null, 'the Template keeps no Site references');
 
-        app(ProvisionQuizLead::class)->provision($site);
+        app(ProvisionLeadPopup::class)->provision($site, ProvisionLeadPopup::QUIZ_FORM_NAME);
         $this->assertSame(1, Form::query()->count(), 'a configured quiz button is left alone');
     }
 
@@ -119,10 +119,10 @@ class QuizSiteFlowTest extends TestCase
             ['question' => 'Какой автомобиль вы ищете?', 'answer' => 'Кроссовер'],
             ['question' => 'Какой бюджет рассматриваете?', 'answer' => 'До 2 млн ₽'],
             ['question' => 'Когда планируете покупку?', 'answer' => 'Пока присматриваюсь'],
-        ], $submission->context['trusted']['quiz']['answers'] ?? null);
+        ], $submission->context['trusted']['answers']['items'] ?? null);
 
         $mapping = new MappingContext(fields: [], overrides: [], trusted: $submission->context['trusted'], visitor: [], submissionPublicId: $submission->public_id, submittedAt: '', formPublicId: $form->public_id, formName: $form->name, sitePublicId: $site->public_id, siteName: $site->name, siteUrl: '');
-        $this->assertSame("Какой автомобиль вы ищете?: Кроссовер\nКакой бюджет рассматриваете?: До 2 млн ₽\nКогда планируете покупку?: Пока присматриваюсь", MappingSources::resolve('quiz.answers', $mapping));
+        $this->assertSame("Какой автомобиль вы ищете?: Кроссовер\nКакой бюджет рассматриваете?: До 2 млн ₽\nКогда планируете покупку?: Пока присматриваюсь", MappingSources::resolve('answers', $mapping));
     }
 
     public function test_answers_that_do_not_match_the_quiz_are_rejected(): void
@@ -164,7 +164,7 @@ class QuizSiteFlowTest extends TestCase
             'context' => ['block' => $quiz->public_id, 'answers' => $answers],
         ]))->assertCreated();
 
-        $this->assertSame('Внедорожник', Submission::query()->sole()->context['trusted']['quiz']['answers'][0]['answer'] ?? null, 'labels come from the published version, not the Draft');
+        $this->assertSame('Внедорожник', Submission::query()->sole()->context['trusted']['answers']['items'][0]['answer'] ?? null, 'labels come from the published version, not the Draft');
     }
 
     /**

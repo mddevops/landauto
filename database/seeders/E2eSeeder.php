@@ -32,7 +32,6 @@ use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use App\Models\Submission;
-use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceAsset;
@@ -75,7 +74,7 @@ class E2eSeeder extends Seeder
 
         // Core platform flow: creates Sites, so it is isolated from the `member` assertions.
         // The generous test-only limit keeps repeated runs against one server passing.
-        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class, OfficialQuizTemplateSeeder::class]);
+        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class, OfficialQuizTemplateSeeder::class, OfficialChatTemplateSeeder::class]);
         $plan = Plan::factory()->create(['key' => 'e2e-sites', 'name' => 'E2E Sites']);
         $plan->setEntitlement(Entitlement::MaxSites, 100);
         $plan->setEntitlement(Entitlement::MultiPageSites, true);
@@ -138,18 +137,14 @@ class E2eSeeder extends Seeder
 
         $this->createTeamWorkspace();
 
-        // Site formats: a Free-like plan (many Sites, no `multi_page_sites`), the official quiz
-        // Template (OfficialQuizTemplateSeeder) and a content-less official Chat Selection Template.
+        // Site formats: a Free-like plan (many Sites, no `multi_page_sites`) with the official quiz
+        // and chat Templates (OfficialQuizTemplateSeeder / OfficialChatTemplateSeeder).
         $formatsPlan = Plan::factory()->create(['key' => 'e2e-formats', 'name' => 'E2E Formats']);
         $formatsPlan->setEntitlement(Entitlement::MaxSites, 100);
         $this->createWorkspace($this->createUser('Фёкла Форматова', 'formats@landflow.test'), 'Автосалон Формат', plan: $formatsPlan);
-        // Quiz flow (P9-016): its own login so the visitor walk-through never couples to formats.
+        // Quiz / chat flows (P9-016, P9-017): own logins so visitor walk-throughs never couple.
         $this->createWorkspace($this->createUser('Зоя Квизова', 'quiz@landflow.test'), 'Автосалон Квиз', plan: $formatsPlan);
-        foreach ([['e2e-chat', 'Чат: подбор автомобиля', SiteType::ChatSelection]] as [$slug, $name, $type]) {
-            $template = Template::query()->create(['slug' => $slug, 'name' => $name]);
-            $template->forceFill(['is_official' => true, 'site_types' => [$type->value]])->save();
-            $template->versions()->create(['version' => '1.0.0']);
-        }
+        $this->createWorkspace($this->createUser('Чеслав Чатов', 'chat@landflow.test'), 'Автосалон Чат', plan: $formatsPlan);
 
         // Block authoring: only an active Developer Profile with `create_blocks` grants access;
         // no platform role, and the personal Workspace grants no authoring.

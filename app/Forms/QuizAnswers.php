@@ -3,9 +3,9 @@
 namespace App\Forms;
 
 /**
- * Resolves quiz answers sent by a visitor (P9-016): one Repeater option ID per step, in step order,
- * looked up in the quiz Block state the page was rendered from. Questions and answers stored in
- * the Submission come from that state, never from the browser.
+ * Resolves answers sent by a visitor from a quiz or chat Block (P9-016, P9-017): one Repeater
+ * option ID per step, in step order, looked up in the Block state the page was rendered from.
+ * Questions and answers stored in the Submission come from that state, never from the browser.
  */
 final class QuizAnswers
 {

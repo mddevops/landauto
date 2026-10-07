@@ -20,7 +20,7 @@ class DatabaseSeeder extends Seeder
             throw new RuntimeException('DatabaseSeeder may only run in local or testing environments.');
         }
 
-        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class, OfficialQuizTemplateSeeder::class]);
+        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class, OfficialQuizTemplateSeeder::class, OfficialChatTemplateSeeder::class]);
 
         // User::factory(10)->create();
 

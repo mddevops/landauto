@@ -86,15 +86,15 @@ final class PublishedSubmissionContext
             ];
 
             if ($answers !== null) {
-                $quiz = $block['definition'] === OfficialBlockCatalog::QUIZ_SLUG
+                $resolved = in_array($block['definition'], OfficialBlockCatalog::ANSWER_SLUGS, true)
                     ? QuizAnswers::resolve($block['state'] ?? null, $answers)
                     : null;
 
-                if ($quiz === null) {
+                if ($resolved === null) {
                     return null;
                 }
 
-                $trusted['quiz'] = ['answers' => $quiz];
+                $trusted['answers'] = ['items' => $resolved];
             }
         } elseif ($answers !== null) {
             return null;

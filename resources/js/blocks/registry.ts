@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { ChatSelectionBlock } from '@/blocks/chat-selection-block';
 import {
     BenefitsBlock,
     ContactsBlock,
@@ -35,6 +36,7 @@ const officialBlockRenderers: Record<
     'vehicle-characteristics': VehicleCharacteristicsBlock,
     'vehicle-equipment': VehicleEquipmentBlock,
     quiz: QuizBlock,
+    'chat-selection': ChatSelectionBlock,
 };
 
 export function blockRenderer(

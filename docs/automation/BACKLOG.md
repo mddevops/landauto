@@ -78,7 +78,7 @@ Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06
 
 Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-079 / D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008); P9-018 BLOCKED_DECISION (D-094).
 
-Next ready task: `P9-004 — Schema Editor`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P9-011 — Developer Platform E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3592,8 +3592,8 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 - Official Block `quiz` («Квиз», category «Формы»): title / subtitle, `steps` (question + answer options, nested Repeaters), result title / text and «Кнопка заявки» (action button). Renderer shows one question at a time with «Назад», then the result with the answers and the lead button; the chosen option IDs travel as the `answers` trigger hint.
 - Official Template «Квиз: подбор автомобиля» (`OfficialQuizTemplateSeeder`, platform-owned, `site_types = [quiz]`, three car-selection questions) published through `TemplatePublisher::publishOfficial` (same automated checks, no actor); idempotent. Installable only into `quiz` Sites (type compatibility from P9-015).
-- Templates cannot own Forms / Popups, so installing into a quiz Site creates a Site-owned Form «Заявка с квиза» (Имя, Телефон) in a Popup and points every quiz button without an action at it (`ProvisionQuizLead`). The customer edits the quiz through its Block Schema fields only (structure stays locked, D-119).
-- Submission: `context.answers` (one option ID per step, in order) is valid only with a quiz `block`; the backend resolves question / answer labels from the Draft Block (preview) or the Published Version manifest (public) into `trusted.quiz.answers`, otherwise the lead is rejected. Shown on «Заявки», mapping source `quiz.answers` («Ответы квиза») for integrations.
+- Templates cannot own Forms / Popups, so installing into a quiz Site creates a Site-owned Form «Заявка с квиза» (Имя, Телефон) in a Popup and points every quiz button without an action at it (`ProvisionLeadPopup`). The customer edits the quiz through its Block Schema fields only (structure stays locked, D-119).
+- Submission: `context.answers` (one option ID per step, in order) is valid only with a quiz `block`; the backend resolves question / answer labels from the Draft Block (preview) or the Published Version manifest (public) into `trusted.answers.items`, otherwise the lead is rejected. Shown on «Заявки», mapping source `answers` («Ответы на вопросы») for integrations (names generalised in P9-017).
 - Checks: `QuizSiteFlowTest` (6), official block inventory tests, `E2eSeederTest`; Playwright `quiz-site.spec.ts` (create quiz Site → preview walk-through with «Назад» → popup lead → answers on «Заявки», desktop / tablet / mobile), `site-formats.spec.ts`.
 - Limitation: production gets the official Template only when `OfficialQuizTemplateSeeder` runs (like `OfficialBlockSeeder`).
 
@@ -3605,8 +3605,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-017 — Chat Selection Site Flow (without operator persistence)
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-015
+
+### Result
+
+- Official Block `chat-selection` («Чат-подбор», category «Формы»): title, intro, the same `steps` structure as the quiz, optional vehicle question (`show_vehicles`), final message and «Кнопка заявки». Renderer is a conversation log (`role="log"`): scripted site questions, the visitor's choices as replies, then the Site's vehicles (from the render context) with «Пока не определился», final message and the lead button. A visible note says the questions are automatic and a manager answers after the lead; there are no operator replies, nothing is stored outside the Submission.
+- Official Template «Чат: подбор автомобиля» (`OfficialChatTemplateSeeder`, `site_types = [chat_selection]`); quiz and chat seeders share `OfficialFormatTemplateSeeder`. Installing into a chat Site provisions the Site-owned Form «Заявка из чата» in a Popup (`ProvisionLeadPopup`, shared with the quiz).
+- Submission: answers from both Blocks resolve into `trusted.answers.items` (`OfficialBlockCatalog::ANSWER_SLUGS`); the chosen vehicle goes through the existing `vehicle` hint and must belong to the Site. Mapping source `answers`.
+- Checks: `ChatSelectionSiteFlowTest` (3), `QuizSiteFlowTest`, official block inventory, `E2eSeederTest`; Playwright `chat-selection.spec.ts` (create chat Site → preview conversation → popup lead → answers on «Заявки», desktop / tablet / mobile), `quiz-site`, `site-formats`.
+- Live operator replies and transcript storage stay in P9-018 (BLOCKED_DECISION, D-094).
 
 ### Acceptance Criteria
 
@@ -4343,8 +4351,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`.
-- Next: `P9-017 — Chat Selection Site Flow (without operator persistence)`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`.
+- Next: `P9-011 — Developer Platform E2E` (P9-018 BLOCKED_DECISION, P9-010 DEFERRED), then `P9-012`.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

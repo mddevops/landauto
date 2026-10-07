@@ -224,6 +224,14 @@ export const users = {
         workspace: 'Автосалон Квиз',
         template: 'Квиз: подбор автомобиля',
     },
+    // Chat flow: plan without `multi_page_sites`; the official chat Template is seeded.
+    chat: {
+        name: 'Чеслав Чатов',
+        email: 'chat@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Чат',
+        template: 'Чат: подбор автомобиля',
+    },
     // Template installation: Developer who publishes and a customer who creates Sites from it.
     templateInstaller: {
         name: 'Илья Установщиков',

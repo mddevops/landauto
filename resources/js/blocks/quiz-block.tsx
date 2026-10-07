@@ -4,13 +4,14 @@ import type { BlockRendererProps } from '@/blocks/state';
 import { group, items, text } from '@/blocks/state';
 import { TriggerScope } from '@/blocks/trigger-context';
 
-type QuizStep = {
+export type QuizStep = {
     id: string;
     question: string;
     options: { id: string; label: string }[];
 };
 
-function quizSteps(state: BlockRendererProps['state']): QuizStep[] {
+/** Answerable `steps` of a quiz or chat Block: a question with at least one option. */
+export function quizSteps(state: BlockRendererProps['state']): QuizStep[] {
     return items(state, 'steps').flatMap((step) => {
         const question = text(step, 'question');
         const options = items(step, 'options').flatMap((option) => {

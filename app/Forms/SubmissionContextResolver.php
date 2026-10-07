@@ -28,7 +28,7 @@ class SubmissionContextResolver
 {
     public const CONTEXT_KEYS = ['page', 'block', 'popup', 'vehicle', 'offer', 'media_set'];
 
-    /** Quiz option IDs (P9-016); valid only together with a quiz `block`. */
+    /** Option IDs of a quiz / chat Block (P9-016, P9-017); valid only together with that `block`. */
     public const ANSWERS_KEY = 'answers';
 
     public const URL_KEYS = ['page_url', 'referrer'];
@@ -102,15 +102,15 @@ class SubmissionContextResolver
             $trusted['block'] = ['public_id' => $block->public_id, 'name' => $block->version->definition->name];
 
             if ($answers !== null) {
-                $quiz = $block->version->definition->slug === OfficialBlockCatalog::QUIZ_SLUG
+                $resolved = in_array($block->version->definition->slug, OfficialBlockCatalog::ANSWER_SLUGS, true)
                     ? QuizAnswers::resolve($block->state_json, $answers)
                     : null;
 
-                if ($quiz === null) {
+                if ($resolved === null) {
                     return null;
                 }
 
-                $trusted['quiz'] = ['answers' => $quiz];
+                $trusted['answers'] = ['items' => $resolved];
             }
         } elseif ($answers !== null) {
             return null;
