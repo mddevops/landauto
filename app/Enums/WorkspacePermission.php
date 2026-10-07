@@ -33,6 +33,7 @@ enum WorkspacePermission: string
     case EditBenefits = 'edit_benefits';
     case ImportVehicles = 'import_vehicles';
     case ManageWorkspaceVehicleLibrary = 'manage_workspace_vehicle_library';
+    case ManageWorkspaceAssets = 'manage_workspace_assets';
     case ViewIntegrations = 'view_integrations';
     case ManageIntegrations = 'manage_integrations';
     case EditFormRoutes = 'edit_form_routes';

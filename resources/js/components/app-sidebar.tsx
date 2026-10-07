@@ -1,5 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
-import { Car, LayoutGrid, Plug, Settings } from 'lucide-react';
+import {
+    Car,
+    CarFront,
+    Images,
+    LayoutGrid,
+    Plug,
+    Settings,
+    Users,
+} from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -16,9 +24,12 @@ import {
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
 import { index as integrationsIndex } from '@/routes/integrations';
+import { index as assetsIndex } from '@/routes/workspace/assets';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
+import { index as teamIndex } from '@/routes/workspace/team';
+import { index as vehicleLibraryIndex } from '@/routes/workspace/vehicles';
 import type { NavItem } from '@/types';
 
 export function AppSidebar() {
@@ -36,6 +47,22 @@ export function AppSidebar() {
                       icon: Plug,
                   },
               ]
+            : []),
+        ...(permissions.includes('manage_workspace_vehicle_library')
+            ? [
+                  {
+                      title: 'Библиотека автомобилей',
+                      href: vehicleLibraryIndex(),
+                      icon: CarFront,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(permissions.includes('manage_workspace_assets')
+            ? [{ title: 'Медиатека', href: assetsIndex(), icon: Images }]
+            : []),
+        ...(permissions.includes('manage_members')
+            ? [{ title: 'Команда', href: teamIndex(), icon: Users }]
             : []),
     ];
 

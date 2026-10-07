@@ -248,6 +248,8 @@ final class PublishedSnapshotBuilder
                 'catalog_series_public_id' => $vehicle->catalog_series_public_id,
                 'status' => $vehicle->status,
                 'sort_order' => $vehicle->sort_order,
+                'custom_name' => $vehicle->custom_name,
+                'custom_description' => $vehicle->custom_description,
                 'media_sets' => array_values($vehicle->mediaSets->map(fn (SeriesMediaSet $set): string => $set->public_id)->all()),
                 'offers' => array_values($vehicle->offers->map(fn (SiteOffer $offer): array => [
                     'public_id' => $offer->public_id,

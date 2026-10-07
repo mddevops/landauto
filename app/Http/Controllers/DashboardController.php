@@ -8,6 +8,7 @@ use App\Enums\WorkspacePermission;
 use App\Models\Site;
 use App\Models\User;
 use App\Publishing\Runtime\PublicSiteResolver;
+use App\Support\SiteAccessResolver;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
 use App\Support\WorkspaceEntitlements;
@@ -23,8 +24,10 @@ class DashboardController extends Controller
         WorkspaceContext $workspaceContext,
         WorkspaceAuthorization $authorization,
         WorkspaceEntitlements $entitlements,
+        SiteAccessResolver $siteAccess,
     ): Response {
         $workspace = $workspaceContext->current();
+        $membership = $workspaceContext->membership();
         abort_if($workspace === null, 403);
         $user = $request->user();
         abort_unless($user instanceof User, 401);
@@ -41,8 +44,8 @@ class DashboardController extends Controller
                 'public_id' => $workspace->public_id,
                 'name' => $workspace->name,
             ],
-            'sites' => $canViewSites
-                ? $workspace->sites()
+            'sites' => $canViewSites && $membership !== null
+                ? $siteAccess->scopeAccessible(Site::query(), $membership)
                     ->orderBy('name')
                     ->get(['id', 'workspace_id', 'public_id', 'name', 'status', 'subdomain', 'active_published_version_id'])
                     ->each(fn (Site $site) => $site->setRelation('workspace', $workspace))

@@ -63,6 +63,30 @@ class Workspace extends Model
     }
 
     /**
+     * @return HasMany<WorkspaceInvitation, $this>
+     */
+    public function invitations(): HasMany
+    {
+        return $this->hasMany(WorkspaceInvitation::class);
+    }
+
+    /**
+     * @return HasMany<WorkspaceVehicle, $this>
+     */
+    public function vehicleLibrary(): HasMany
+    {
+        return $this->hasMany(WorkspaceVehicle::class);
+    }
+
+    /**
+     * @return HasMany<WorkspaceAsset, $this>
+     */
+    public function assets(): HasMany
+    {
+        return $this->hasMany(WorkspaceAsset::class);
+    }
+
+    /**
      * @return HasMany<Site, $this>
      */
     public function sites(): HasMany

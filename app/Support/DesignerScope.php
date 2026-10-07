@@ -12,16 +12,23 @@ use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 
 /**
- * Designer resources are addressed only inside the current Workspace; anything else is
- * reported as missing so foreign public IDs are never confirmed.
+ * Designer resources are addressed only inside the current Workspace and only on Sites the member
+ * may enter (D-088); anything else is reported as missing so foreign public IDs are never confirmed.
  */
 final class DesignerScope
 {
-    public function __construct(private WorkspaceContext $workspaceContext) {}
+    public function __construct(
+        private WorkspaceContext $workspaceContext,
+        private SiteAccessResolver $siteAccess,
+    ) {}
 
     public function site(Site $site): Site
     {
-        abort_unless($site->workspace_id === $this->workspaceContext->current()?->id, 404);
+        abort_unless(
+            $site->workspace_id === $this->workspaceContext->current()?->id
+                && $this->siteAccess->canAccess($this->workspaceContext->membership(), $site),
+            404,
+        );
 
         return $site;
     }

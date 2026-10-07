@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Catalog\CatalogReferences;
 use App\Exceptions\InvalidCatalogDataException;
 use App\Models\Concerns\HasImmutablePublicId;
+use App\Models\Concerns\SelectsSeriesMediaSets;
 use Database\Factories\SiteVehicleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -15,28 +16,31 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
-use Illuminate\Support\Facades\DB;
 use LogicException;
 
 /**
  * Site-owned vehicle page at catalog Series level (D-104). The catalog row lives in another
  * database, so the Series is referenced by public_id and validated by the application.
+ * source_workspace_vehicle_id is provenance only (D-083): the library never changes this copy.
  *
  * @property int $id
  * @property string $public_id
  * @property int $site_id
+ * @property int|null $source_workspace_vehicle_id
  * @property string $catalog_series_public_id
+ * @property string|null $custom_name
+ * @property string|null $custom_description
  * @property bool $status
  * @property int $sort_order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['status', 'sort_order'])]
-#[Hidden(['id', 'site_id'])]
+#[Fillable(['status', 'sort_order', 'custom_name', 'custom_description'])]
+#[Hidden(['id', 'site_id', 'source_workspace_vehicle_id'])]
 class SiteVehicle extends Model
 {
     /** @use HasFactory<SiteVehicleFactory> */
-    use HasFactory, HasImmutablePublicId;
+    use HasFactory, HasImmutablePublicId, SelectsSeriesMediaSets;
 
     /**
      * @return array<string, string>
@@ -68,6 +72,14 @@ class SiteVehicle extends Model
     }
 
     /**
+     * @return BelongsTo<WorkspaceVehicle, $this>
+     */
+    public function sourceWorkspaceVehicle(): BelongsTo
+    {
+        return $this->belongsTo(WorkspaceVehicle::class, 'source_workspace_vehicle_id');
+    }
+
+    /**
      * @return HasMany<SiteOffer, $this>
      */
     public function offers(): HasMany
@@ -87,33 +99,6 @@ class SiteVehicle extends Model
             ->withTimestamps()
             ->orderByPivot('sort_order')
             ->orderBy('series_media_sets.id');
-    }
-
-    /**
-     * Replace the selection with active media sets of this vehicle's Series, in the given order.
-     *
-     * @param  list<string>  $publicIds
-     */
-    public function selectMediaSets(array $publicIds): void
-    {
-        $publicIds = array_values(array_unique($publicIds));
-        $sets = SeriesMediaSet::query()
-            ->where('catalog_series_public_id', $this->catalog_series_public_id)
-            ->active()
-            ->whereIn('public_id', $publicIds)
-            ->pluck('id', 'public_id');
-
-        if ($sets->count() !== count($publicIds)) {
-            throw new InvalidCatalogDataException('Only active media sets of the vehicle Series can be selected.');
-        }
-
-        $selection = [];
-
-        foreach ($publicIds as $position => $publicId) {
-            $selection[$sets[$publicId]] = ['sort_order' => $position];
-        }
-
-        DB::transaction(fn () => $this->mediaSets()->sync($selection));
     }
 
     /**

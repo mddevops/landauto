@@ -125,6 +125,51 @@ export const users = {
         email: 'domains-designer@landflow.test',
         password: 'e2e-password',
     },
+    // Phase 8 team flows: Team plan (10 seats), Site A on `team-a-e2e` and Site B.
+    teamOwner: {
+        name: 'Тимур Командиров',
+        email: 'team-owner@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Команда',
+        siteA: 'Сайт команды А',
+        siteB: 'Сайт команды Б',
+        publicUrl: 'http://team-a-e2e.localhost:8200',
+    },
+    // Not a member yet: joins through the invitation flow.
+    teamDesigner: {
+        name: 'Дмитрий Макетов',
+        email: 'team-designer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Студия Макетова',
+    },
+    teamPricing: {
+        name: 'Полина Ценова',
+        email: 'team-pricing@landflow.test',
+        password: 'e2e-password',
+    },
+    teamPublisher: {
+        name: 'Пётр Выпускалов',
+        email: 'team-publisher@landflow.test',
+        password: 'e2e-password',
+    },
+    teamLeads: {
+        name: 'Лидия Заявкина',
+        email: 'team-leads@landflow.test',
+        password: 'e2e-password',
+    },
+    teamIntegrations: {
+        name: 'Иван Связев',
+        email: 'team-integrations@landflow.test',
+        password: 'e2e-password',
+    },
+} as const;
+
+// Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).
+export const foreignTeamIds = {
+    workspace: '01k0f0re0000000000000000w1',
+    member: '01k0f0re0000000000000000m1',
+    vehicle: '01k0f0re0000000000000000v1',
+    asset: '01k0f0re0000000000000000a1',
 } as const;
 
 export const memberStorageState = 'playwright/.auth/member.json';

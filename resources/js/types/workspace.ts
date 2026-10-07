@@ -29,6 +29,7 @@ export type WorkspacePermission =
     | 'edit_benefits'
     | 'import_vehicles'
     | 'manage_workspace_vehicle_library'
+    | 'manage_workspace_assets'
     | 'view_integrations'
     | 'manage_integrations'
     | 'edit_form_routes'

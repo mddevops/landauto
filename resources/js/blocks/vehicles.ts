@@ -41,6 +41,7 @@ export type VehicleBinding = {
     generation: string;
     series: string;
     title: string;
+    description?: string;
     price_from_label: string | null;
     benefit_up_to_label: string | null;
     media: { source: 'site' | 'global' | null; sets: VehicleMediaSet[] };

@@ -1537,7 +1537,7 @@ Do not allow arbitrary cross-Site Form references as a shortcut.
 
 ## D-083 — Workspace Vehicle Live Fallback Behavior
 
-**Status:** OPEN
+**Status:** APPROVED for Phase 8 MVP — resolved by D-115 (explicit copy, no live fallback / sync).
 
 ### Question
 
@@ -1644,7 +1644,7 @@ BACKLOG `X-009 — ADR: Characteristic Value Schema` (trigger: before P3-001).
 
 ## D-087 — Site Asset / Workspace Asset Relationship
 
-**Status:** APPROVED for Phase 2 scope — ADR-003: direct Site-owned assets (owner instruction "P2 Site assets are customer Site assets"); a Workspace Media Library is deferred and needs its own decision.
+**Status:** APPROVED for Phase 2 scope — ADR-003: direct Site-owned assets (owner instruction "P2 Site assets are customer Site assets"); the Phase 8 Workspace Media Library is resolved by D-116 (copy into a new SiteAsset, never live references).
 
 ### Question
 
@@ -1668,9 +1668,9 @@ BACKLOG `X-010 — ADR: Media Ownership and Asset Versioning` (together with D-0
 
 ## D-088 — Site-Specific Permission Override Model
 
-**Status:** OPEN
+**Status:** APPROVED for Phase 8 MVP — resolved by D-114 (Workspace role + Site access scope `all_sites` / `selected_sites`; no per-permission overrides, no custom Site roles). Site-specific roles or overrides need a new decision.
 
-### Current Direction
+### Original Direction
 
 Workspace role provides baseline.
 
@@ -2036,6 +2036,76 @@ Owner approval in the Phase 7 autopilot instruction (2026-10-06); P7-001…P7-00
 ### Resolved By
 
 Owner instruction in the Phase 7 autopilot (2026-10-06); P7-005. Versions published before P7-005 keep their old frozen footer in stored HTML until the next publish.
+
+---
+
+## D-113 — Workspace Invitations and Seat Accounting
+
+**Status:** APPROVED
+
+### Decision
+
+- Invitations are a separate `workspace_invitations` entity; no placeholder Users are created. Only a SHA-256 hash of a 32-byte random token is stored; resend rotates the token; TTL is `WORKSPACE_INVITATION_TTL_HOURS` (default 168). The raw token is mailed synchronously and never queued, logged or exposed in app props.
+- `max_members` counts reserved seats: active and suspended memberships plus pending, unexpired invitations. Removed members, cancelled and expired invitations do not count. The bootstrap Owner may exist with a limit of 0 (D-100 unchanged). A lowered limit never removes members; it blocks new invitations and acceptances only. Invite and accept lock the Workspace row.
+- Owner is never invitable. Owner invites any other role; Admin invites only roles below Admin.
+- Acceptance requires an authenticated, verified User whose normalized email equals the invitation email; registration and verification are never bypassed.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-001.
+
+---
+
+## D-114 — Site Access Scope for Workspace Members (resolves D-088 for Phase 8)
+
+**Status:** APPROVED
+
+### Decision
+
+- The Workspace system role remains the only permission source. Site access answers only "may this member enter this Site?". Resolution: active membership → role permissions → Site access → entitlement → business invariant.
+- Modes: `all_sites` (default; existing members) and `selected_sites` with explicit internal `site_member_access` rows. `selected_sites` with zero Sites is invalid. Selected Sites must belong to the member's Workspace.
+- Owner, Admin and Integrations Manager are always `all_sites` (Workspace-scoped resources); Designer, Content Editor, Pricing Manager, Lead Manager and Publisher may use either mode.
+- No per-permission allow / deny overrides and no custom Site roles.
+- A central `SiteAccessResolver` is used by `SitePolicy`, `DesignerScope`, the `sites/{site}` route guard and Site lists; an unassigned Site behaves like a missing tenant resource (404, omitted from lists).
+- Invitations carry the same scope (`workspace_invitation_sites`) and copy it to the membership on acceptance.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-003.
+
+---
+
+## D-115 — Workspace Vehicle Library Is an Explicit Copy Source (resolves D-083 for MVP)
+
+**Status:** APPROVED
+
+### Decision
+
+- `WorkspaceVehicle` (`workspace_vehicles`, one per Workspace + catalog Series) owns only reusable content: Series reference, `custom_name`, `custom_description` and a selection of active platform media sets of the same Series (`workspace_vehicle_media_sets`, references only). It owns no prices, RRP, benefits, availability, badges, CTA, domain or form data.
+- «Добавить на сайт» creates an independent `SiteVehicle` copy (new public ID, no offers) with nullable `source_workspace_vehicle_id` as provenance only. Requires `manage_workspace_vehicle_library` + Site access + `import_vehicles` on the destination Site of the same Workspace.
+- No live fallback, sync or price sync: library edits / deletion never change Site copies; deleting the library entry nulls the provenance. The published runtime never reads the library.
+- «Сохранить в библиотеку» copies the same reusable content (never commercial data) and never silently overwrites an existing entry for the Series; explicit confirmation is required.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-005.
+
+---
+
+## D-116 — Workspace Assets Are Copied into Site Assets (resolves D-087 for Phase 8)
+
+**Status:** APPROVED
+
+### Decision
+
+- `WorkspaceAsset` (`workspace_assets`) is the shared source library of a Workspace with the same immutable file semantics as `SiteAsset` (server-generated private path, shared `ImageUpload` validation, replacement = new upload). Managed in «Медиатека» with the new `manage_workspace_assets` permission (Owner only by default).
+- «Копировать на сайт» creates a new immutable `SiteAsset` with its own file copy; it requires `manage_workspace_assets` + destination Site access + `manage_assets`. No browser-supplied paths.
+- Sites and Published Versions never reference Workspace Assets; deleting a Workspace Asset never touches SiteAsset copies or their files.
+- D-076 (object storage) stays open; storage quota (X-017) must count both asset kinds.
+
+### Resolved By
+
+Owner instruction in the Phase 8 autopilot (2026-10-06); P8-008.
 
 ---
 

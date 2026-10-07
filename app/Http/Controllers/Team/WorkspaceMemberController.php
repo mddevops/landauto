@@ -1,0 +1,101 @@
+<?php
+
+namespace App\Http\Controllers\Team;
+
+use App\Enums\SiteAccessMode;
+use App\Enums\WorkspacePermission;
+use App\Enums\WorkspaceRole;
+use App\Http\Controllers\Controller;
+use App\Http\Requests\Team\UpdateMemberSiteAccessRequest;
+use App\Models\Workspace;
+use App\Models\WorkspaceMember;
+use App\Support\WorkspaceContext;
+use App\Team\MemberSiteAccess;
+use App\Team\WorkspaceMembers;
+use Illuminate\Http\RedirectResponse;
+use Illuminate\Http\Request;
+use Illuminate\Support\Facades\Gate;
+use Illuminate\Validation\Rule;
+use Inertia\Inertia;
+
+class WorkspaceMemberController extends Controller
+{
+    public function __construct(private WorkspaceMembers $members) {}
+
+    public function suspend(string $member, WorkspaceContext $workspaceContext): RedirectResponse
+    {
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $this->members->suspend($workspace, $actor, $member);
+
+        return $this->done('Участник приостановлен. Доступ к пространству закрыт, место остаётся занятым.');
+    }
+
+    public function reactivate(string $member, WorkspaceContext $workspaceContext): RedirectResponse
+    {
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $this->members->reactivate($workspace, $actor, $member);
+
+        return $this->done('Доступ участника восстановлен.');
+    }
+
+    public function updateSiteAccess(
+        UpdateMemberSiteAccessRequest $request,
+        string $member,
+        WorkspaceContext $workspaceContext,
+        MemberSiteAccess $siteAccess,
+    ): RedirectResponse {
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $siteAccess->update(
+            $workspace,
+            $actor,
+            $member,
+            SiteAccessMode::from($request->string('site_access_mode')->toString()),
+            $request->sitePublicIds(),
+        );
+
+        return $this->done('Доступ к сайтам сохранён.');
+    }
+
+    public function updateRole(Request $request, string $member, WorkspaceContext $workspaceContext): RedirectResponse
+    {
+        Gate::authorize(WorkspacePermission::ManageRoles->value);
+        $validated = $request->validate(
+            ['role' => ['required', 'string', Rule::enum(WorkspaceRole::class)]],
+            attributes: ['role' => 'роль'],
+        );
+
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $this->members->changeRole($workspace, $actor, $member, WorkspaceRole::from($validated['role']));
+
+        return $this->done('Роль участника изменена.');
+    }
+
+    public function destroy(string $member, WorkspaceContext $workspaceContext): RedirectResponse
+    {
+        [$workspace, $actor] = $this->context($workspaceContext);
+        $this->members->remove($workspace, $actor, $member);
+
+        return $this->done('Участник удалён из пространства. Его учётная запись и другие пространства не затронуты.');
+    }
+
+    /**
+     * @return array{Workspace, WorkspaceMember}
+     */
+    private function context(WorkspaceContext $workspaceContext): array
+    {
+        Gate::authorize(WorkspacePermission::ManageMembers->value);
+
+        $workspace = $workspaceContext->current();
+        $actor = $workspaceContext->membership();
+        abort_if($workspace === null || $actor === null, 403);
+
+        return [$workspace, $actor];
+    }
+
+    private function done(string $message): RedirectResponse
+    {
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return to_route('workspace.team.index');
+    }
+}

@@ -36,12 +36,20 @@ use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
+use App\Http\Controllers\Team\InvitationAcceptanceController;
+use App\Http\Controllers\Team\WorkspaceInvitationController;
+use App\Http\Controllers\Team\WorkspaceMemberController;
+use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
+use App\Http\Controllers\Vehicles\SiteVehicleImportController;
+use App\Http\Controllers\Vehicles\WorkspaceVehicleController;
+use App\Http\Controllers\WorkspaceAssetController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceSettingsController;
 use App\Http\Middleware\EnsurePlatformPermission;
+use App\Http\Middleware\EnsureSiteAccess;
 use App\Http\Middleware\RequireWorkspaceContext;
 use Illuminate\Support\Facades\Route;
 
@@ -59,7 +67,18 @@ Route::middleware(['guest', 'throttle:yandex-oauth'])->group(function () {
         ->name('auth.yandex.callback');
 });
 
+Route::middleware('throttle:30,1')->group(function () {
+    Route::get('invitations/{token}', [InvitationAcceptanceController::class, 'show'])
+        ->where('token', '[A-Za-z0-9]{1,128}')
+        ->name('invitations.show');
+    Route::get('invitation', [InvitationAcceptanceController::class, 'pending'])->name('invitations.pending');
+});
+
 Route::middleware(['auth', 'verified'])->group(function () {
+    Route::post('invitation/accept', [InvitationAcceptanceController::class, 'accept'])
+        ->middleware('throttle:10,1')
+        ->name('invitations.accept');
+
     Route::get('dashboard', DashboardController::class)
         ->middleware(RequireWorkspaceContext::class)
         ->name('dashboard');
@@ -76,6 +95,54 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(RequireWorkspaceContext::class)->group(function () {
         Route::get('workspace/settings', [WorkspaceSettingsController::class, 'edit'])->name('workspace.settings.edit');
         Route::patch('workspace/settings', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
+
+        Route::prefix('workspace/vehicles')->name('workspace.vehicles.')->group(function () {
+            Route::get('/', [WorkspaceVehicleController::class, 'index'])->name('index');
+            Route::get('create', [WorkspaceVehicleController::class, 'create'])->name('create');
+            Route::post('/', [WorkspaceVehicleController::class, 'store'])->name('store');
+            Route::get('{vehicle}', [WorkspaceVehicleController::class, 'show'])->whereUlid('vehicle')->name('show');
+            Route::patch('{vehicle}', [WorkspaceVehicleController::class, 'update'])->whereUlid('vehicle')->name('update');
+            Route::put('{vehicle}/media', [WorkspaceVehicleController::class, 'media'])->whereUlid('vehicle')->name('media');
+            Route::delete('{vehicle}', [WorkspaceVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('destroy');
+            Route::post('{vehicle}/sites', [WorkspaceVehicleController::class, 'copyToSite'])->whereUlid('vehicle')->name('copy');
+        });
+
+        Route::prefix('workspace/assets')->name('workspace.assets.')->group(function () {
+            Route::get('/', [WorkspaceAssetController::class, 'index'])->name('index');
+            Route::post('/', [WorkspaceAssetController::class, 'store'])->middleware('throttle:60,1')->name('store');
+            Route::get('{asset}', [WorkspaceAssetController::class, 'show'])->whereUlid('asset')->name('show');
+            Route::delete('{asset}', [WorkspaceAssetController::class, 'destroy'])->whereUlid('asset')->name('destroy');
+            Route::post('{asset}/sites', [WorkspaceAssetController::class, 'copyToSite'])->whereUlid('asset')->middleware('throttle:60,1')->name('copy');
+        });
+
+        Route::prefix('workspace/team')->name('workspace.team.')->group(function () {
+            Route::get('/', [WorkspaceTeamController::class, 'index'])->name('index');
+            Route::post('invitations', [WorkspaceInvitationController::class, 'store'])
+                ->middleware('throttle:20,1')
+                ->name('invitations.store');
+            Route::post('invitations/{invitation}/resend', [WorkspaceInvitationController::class, 'resend'])
+                ->whereUlid('invitation')
+                ->middleware('throttle:20,1')
+                ->name('invitations.resend');
+            Route::delete('invitations/{invitation}', [WorkspaceInvitationController::class, 'destroy'])
+                ->whereUlid('invitation')
+                ->name('invitations.destroy');
+            Route::post('members/{member}/suspend', [WorkspaceMemberController::class, 'suspend'])
+                ->whereUlid('member')
+                ->name('members.suspend');
+            Route::post('members/{member}/reactivate', [WorkspaceMemberController::class, 'reactivate'])
+                ->whereUlid('member')
+                ->name('members.reactivate');
+            Route::put('members/{member}/role', [WorkspaceMemberController::class, 'updateRole'])
+                ->whereUlid('member')
+                ->name('members.role');
+            Route::put('members/{member}/site-access', [WorkspaceMemberController::class, 'updateSiteAccess'])
+                ->whereUlid('member')
+                ->name('members.site-access');
+            Route::delete('members/{member}', [WorkspaceMemberController::class, 'destroy'])
+                ->whereUlid('member')
+                ->name('members.destroy');
+        });
     });
 
     Route::get('sites/create', [SiteController::class, 'create'])
@@ -97,7 +164,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('{profile}/test', IntegrationTestConnectionController::class)->whereUlid('profile')->name('test');
         });
 
-    Route::middleware(RequireWorkspaceContext::class)
+    Route::middleware([RequireWorkspaceContext::class, EnsureSiteAccess::class])
         ->prefix('sites/{site}')
         ->whereUlid(['site', 'page'])
         ->name('sites.')
@@ -172,11 +239,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
+            Route::get('vehicles/import', [SiteVehicleImportController::class, 'create'])->name('vehicles.imports.create');
+            Route::post('vehicles/import', [SiteVehicleImportController::class, 'store'])->middleware('throttle:20,1')->name('vehicles.imports.store');
             Route::post('vehicles', [SiteVehicleController::class, 'store'])->name('vehicles.store');
             Route::get('vehicles/{vehicle}', [SiteVehicleController::class, 'show'])->whereUlid('vehicle')->name('vehicles.show');
             Route::patch('vehicles/{vehicle}', [SiteVehicleController::class, 'update'])->whereUlid('vehicle')->name('vehicles.update');
             Route::put('vehicles/{vehicle}/media', [SiteVehicleController::class, 'media'])->whereUlid('vehicle')->name('vehicles.media');
             Route::delete('vehicles/{vehicle}', [SiteVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('vehicles.destroy');
+            Route::post('vehicles/{vehicle}/library', [SiteVehicleController::class, 'saveToLibrary'])->whereUlid('vehicle')->name('vehicles.library');
             Route::post('vehicles/{vehicle}/offers', [SiteOfferController::class, 'store'])->whereUlid('vehicle')->name('offers.store');
             Route::patch('offers/{offer}', [SiteOfferController::class, 'update'])->whereUlid('offer')->name('offers.update');
             Route::delete('offers/{offer}', [SiteOfferController::class, 'destroy'])->whereUlid('offer')->name('offers.destroy');

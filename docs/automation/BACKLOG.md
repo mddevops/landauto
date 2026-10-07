@@ -74,9 +74,11 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate `P6-015` DONE, branch `aut
 
 Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/phase7-2026-10-06`). X-022, P7-001 … P7-008 DONE (P7-008: YooKassa, ADR-007 / D-078), review `P7-010` DONE; `P7-009` DEFERRED by plan.
 
-Phase 8 — Team / Collaboration: NOT_STARTED.
+Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Next ready task: `P8-001 — Workspace Invitations`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 9 — Developer Platform: NOT_STARTED.
+
+Next ready task: `P9-001 — Developer Profile`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3142,28 +3144,51 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P8-001 — Workspace Invitations
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P7-010
+
+### Result
+
+- Separate `workspace_invitations` entity (ULID `public_id`, normalized email, role, SHA-256 `token_hash`, `expires_at`, `accepted_at`, `cancelled_at`); no placeholder Users. Raw token (32 random bytes) exists only in the synchronously sent Russian `WorkspaceInvitationMail`; resend rotates the token; TTL `WORKSPACE_INVITATION_TTL_HOURS` (default 168).
+- «Команда» (`/workspace/team`, `manage_members`): members and open invitations, Пригласить / Отправить повторно / Отменить приглашение, seat state («Добавление участников недоступно на текущем тарифе.» when the limit is 0).
+- `max_members` enforced as reserved seats (membership rows + pending unexpired invitations) under a Workspace row lock for invite, resend of an expired invitation and acceptance; a lowered limit blocks only new invitations / acceptances.
+- Central `TeamAuthority`: Owner is never invitable; Admin invites and manages invitations only for roles below Admin.
+- Landing `/invitations/{token}` stores only a session reference and redirects to `/invitation` (`Referrer-Policy: no-referrer`); login / registration / verification return via the intended URL. Acceptance requires an authenticated, verified User with the matching normalized email, creates an active membership and switches the context; other Workspaces untouched.
+- Logs `workspace.invitation_created` / `_resent` / `_cancelled` / `_accepted` with public IDs only.
 
 ---
 
 ## P8-002 — Member Suspension / Removal
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-001
+
+### Result
+
+- «Команда»: Приостановить / Восстановить доступ / Удалить из пространства per member (`manage_members` + central `TeamAuthority::canManageMember`: never self, never an Owner; Admin only below Admin). Not-manageable members of the same Workspace → 403, foreign members → 404.
+- Suspension keeps the seat; reactivation needs no new seat and requires an active Workspace. Removal deletes only the `WorkspaceMember` row (User and other memberships untouched) and frees the seat; the person may be invited again.
+- Access is re-resolved from active memberships on every request, so the session falls back to another Workspace (or onboarding) on the next request; no stale access. Logs `workspace.member_suspended` / `_reactivated` / `_removed` with public IDs.
 
 ---
 
 ## P8-003 — Site-Level Access
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-001
+**Decision:** D-088 resolved for Phase 8 by D-114
+
+### Result
+
+- `workspace_members.site_access_mode` (`all_sites` default for existing members / `selected_sites`) + internal `site_member_access` (unique member + Site, cascade); invitations store the scope in `workspace_invitation_sites` and copy it on acceptance.
+- Central `SiteAccessResolver` (Owner / Admin forced `all_sites`) used by every `SitePolicy` ability (`WorkspaceAuthorization::allowsForSite`), `DesignerScope`, the new `EnsureSiteAccess` guard on the whole `sites/{site}` route group (all 68 routes) and the dashboard Site list.
+- Unassigned Site → 404 for the Site and every nested resource URL (regression sweep over all Site routes with real nested resources + structural test that every `sites/{site}` route carries the guard).
+- «Команда»: «Доступ к сайтам» dialog (Все сайты / Выбранные сайты) and the same choice in the invite dialog; zero selected Sites, foreign Sites and forced roles rejected. Logs `workspace.site_access_changed`.
 
 ---
 
 ## P8-004 — Expanded System Roles
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-003
 
 ### Roles
@@ -3173,54 +3198,124 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - Integrations Manager
 - Publisher
 
+### Result
+
+- New system roles `pricing_manager` («Менеджер по ценам»), `lead_manager` («Менеджер по заявкам»), `integrations_manager` («Менеджер интеграций», always `all_sites`), `publisher` («Публикатор») with the exact approved permission lists; no `export_submissions` (D-094), no `view_submissions` for Integrations Manager, no `restore_version` for Publisher. Admin gains `import_vehicles` (no library / assets / billing / roles).
+- Role change («Изменить роль») requires `manage_roles` (Owner); Owner is never assignable; no self-change; changing to Admin / Integrations Manager forces `all_sites` and drops Site rows. Logs `workspace.member_role_changed`.
+- Exact matrix and per-role HTTP behavior covered by tests; `PERMISSIONS.md` notes the implemented matrix.
+
 ---
 
 ## P8-005 — Workspace Vehicle Library
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P3-010, P8-003
+
+### Result
+
+- `workspace_vehicles` (one per Workspace + catalog Series, application-validated, no cross-DB FK) with reusable `custom_name` / `custom_description` / status and `workspace_vehicle_media_sets` (active platform sets of the same Series only); no commercial fields (D-115 resolves D-083).
+- «Библиотека автомобилей» `/workspace/vehicles` (`manage_workspace_vehicle_library`, Owner): list + search, add from catalog, edit name / description, choose media sets, archive / restore, delete.
+- «Добавить на сайт» (library permission + Site access + `import_vehicles`) creates an independent `SiteVehicle` (new public ID, no offers, `source_workspace_vehicle_id` provenance only, nulled on library deletion). «Сохранить в библиотеку» on the Site vehicle page copies name / description / media only and requires explicit confirmation to update an existing entry.
+- `site_vehicles.custom_name` / `custom_description` editable on the Site; `custom_name` overrides the vehicle title in bindings. Rendering `custom_description` in published blocks is a follow-up (the binding exposes it as `description` since the Phase 8 correctness pass).
 
 ---
 
 ## P8-006 — Site-to-Site Vehicle Copy
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-005
+
+### Result
+
+- «Импортировать с другого сайта» (`/sites/{site}/vehicles/import`): choose a source Site of the same Workspace and vehicles; destination = current Site.
+- Authorization: source Site access + vehicle view rights; destination Site access + `import_vehicles` + `edit_vehicles`; offers (price / RRP / availability / badge) need `edit_prices`, benefits need `edit_benefits` (and offers). Cross-Workspace sources are never listed or resolved.
+- `SiteVehicleCopier` copies Series, name, description, status, active media sets, offers and benefits into new destination rows (new public IDs, exact integer money, no live references), one transaction per vehicle; deterministic per-vehicle results copied / skipped / conflict / failed. An existing destination Series is a conflict and is left untouched (resolution in P8-007).
 
 ---
 
 ## P8-007 — Copy Conflict Resolution
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-006
+
+### Result
+
+- Conflict identity: destination Site + catalog Series (never display name). Default is skip; nothing changes before an explicit choice.
+- Read-only preview on the import page: existing destination vehicle, whether text / media / status differ, matched / missing / destination-only offers and up to 10 price differences.
+- Per conflict «Пропустить» or «Обновить выбранное» with fields: text, media selection, status, offers (price / RRP / availability / badge — `edit_prices`), benefits (`edit_benefits`); commercial fields unchecked by default. Offers match by catalog Equipment: matching offers get only the selected fields, missing offers are created, unrelated destination offers are never deleted; repeated runs create no duplicates.
+- Summary: Скопировано / Обновлено / Пропущено / Конфликтов не решено (+ errors). No copy-history table (not needed).
 
 ---
 
 ## P8-008 — Shared Workspace Assets
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-013, P8-003
+
+### Result
+
+- `workspace_assets` mirroring `site_assets` (immutable file fields, private local disk, server-generated `workspace-assets/{workspace}/{asset}.{ext}` path, restrict on Workspace delete) and new permission `manage_workspace_assets` (Owner only) — D-116 resolves D-087 for Phase 8.
+- «Медиатека» `/workspace/assets`: upload (shared `ImageUpload` rules: JPEG / PNG / WebP, 10 MB, decoded-type match, side limit), grid with private preview, delete, «Копировать на сайт».
+- Copy to Site (library permission + Site access + `manage_assets`) creates a new `SiteAsset` with its own file copy; deleting the Workspace Asset never touches Site copies. X-017 scope now includes Workspace Assets.
 
 ---
 
 ## P8-009 — Richer Version History
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P5-010
+
+### Result
+
+- Optional «Комментарий к публикации» (plain text, ≤ 500 characters, control characters stripped, trimmed, rendered escaped) stored on the immutable `Publication` attempt and exposed through `PublishedVersion::publication()`; Published Versions are never mutated.
+- History: number, status, «На сайте» marker, date, actor, note, restore count + last restore (time, actor); real pagination (20 per page, ordered by version number); «Последнее восстановление» summary.
+- Restore audit `site_version_restores` (Site, source version, actor, time) written in the restore transaction; restore still only replaces the Draft. Publisher can view/publish but not restore; Owner restores.
+- Unpublished changes indicator «Опубликовано» / «Есть неопубликованные изменения»: deterministic public manifest hash of the current Draft vs the active version's `manifest_hash` (no timestamp heuristics). It reflects what visitors would see: hidden-block edits do not count, catalog / analytics changes that alter the public manifest do. Shown on the Publishing page only.
+- Follow-up resolved in the Phase 8 correctness pass: the private draft snapshot now includes Site Vehicle `custom_name` / `custom_description` (P8-005), and restore brings them back.
 
 ---
 
 ## P8-010 — Team E2E
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-001 through P8-009
+
+### Result
+
+- E2E fixtures (`E2eSeeder::createTeamWorkspace`): test-only `e2e-team` plan (10 seats), Owner «Автосалон Команда» with Site A (`team-a-e2e`, hero, Form + Submission, vehicle + offer) and Site B, Pricing / Publisher / Lead / Integrations members, a not-yet-member Designer and a foreign Workspace with fixed public IDs. Free plan untouched.
+- `team:e2e-invitation-url {email}`: refuses outside `testing` / `e2e`, rotates the open invitation's token, stores only the hash and prints the relative URL once (PHPUnit-covered).
+- `tests/browser/team.spec.ts`: invite → pending → accept → selected Site A only (Site B 404) → Designer edits design but not prices / Publish → suspend (access lost) → restore (switcher) → remove; specialised roles on Site A; Workspace library → Site A independent copy; Site A → B copy, default skip, explicit text-only update keeps the destination price, explicit offers update changes it; Workspace Asset copy survives source deletion; Publisher publishes with a note, Owner restores v1 into the Draft while production stays on v2; foreign vehicle / asset / member / Workspace switch 404; 375px checks for team dialogs, library, assets, conflict panel and history. No invitation token in Team HTML / props.
 
 ---
 
 ## P8-011 — Phase 8 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-010
+
+### Result
+
+- Phase 8 work is DONE: P8-001 … P8-010 and this review. D-088 → D-114 (role + `all_sites` / `selected_sites`), D-083 → D-115 (library = explicit copy source), D-087 → D-116 (Workspace Asset → new Site Asset copy), D-113 (invitations / seats).
+- Review (no regressions found):
+  - Tenancy: Workspace stays the tenant. Invitations, Site assignment, Workspace Vehicles / Assets and Site-to-Site copy are bound to the backend-resolved Workspace (foreign IDs 404). Route IDs are public ULIDs only.
+  - Authorization: active membership is required (suspended / removed lose access on the next request). Site access applies to the whole `sites/{site}` group. Permissions stay role-driven with no per-permission Site overrides. Entitlements are separate; there is no self-escalation, the Owner is protected and Admin cannot grant Owner-only authority.
+  - Team limits: `max_members` is enforced under a Workspace lock. Pending unexpired invitations and suspended members reserve seats; expired or cancelled invitations do not. Lowering a plan removes no one. Free plan values and plan-name logic are unchanged.
+  - Automotive: Catalog V2 is untouched (main-DB migrations only). Workspace Vehicles are Series-level with no Workspace prices; Site Offers are Equipment-level. Copies create destination-owned rows with new public IDs and no sync. Commercial overwrite needs explicit selection plus `edit_prices` / `edit_benefits`, and the default is skip.
+  - Assets: Workspace and Site Assets are immutable. Use on a Site creates an independent Site Asset. Published Versions are unaffected, and no object store was chosen (D-076).
+  - Publishing: Published Versions stay immutable. Notes are plain text and escaped. Restore is Draft-only and audited. Publisher cannot restore, and production changes only on Publish.
+- Correctness pass after the review (resolved):
+  - The draft snapshot carries Site Vehicle `custom_name` / `custom_description`, so restore brings back their historical values. Snapshots from before these keys keep the current values.
+  - The public vehicle binding and the Published manifest expose an optional `description` (from `custom_description`). It is present only when set, so vehicles without one keep their pre-Phase-8 manifest hash, while a new description changes the hash and the unpublished-changes indicator.
+  - When the destination holds several offers for one of the source's Equipment, a conflict update that touches offers or benefits is refused as ambiguous. Nothing on that vehicle changes, and the import page explains the duplicates.
+- Open follow-ups (not blocking):
+  - Platform Series media sets used by the Workspace library cannot be deleted (restrict).
+  - No shipped Block renders the vehicle `description` binding yet.
+  - The unpublished-changes indicator appears only on the Publishing page.
+  - Restores are audited in `site_version_restores` but not written to the app log.
+  - Invitation tokens: application logging never records them, the DB stores only the hash, and normal Inertia / HTML never carries them. The local `MAIL_MAILER=log` transport writes the rendered email, including the invitation URL, to the local log by definition. Production must use a real mail transport (X-013).
+  - The flaky tablet `auth.spec.ts` root cause is still unknown.
+- Unchanged / open: D-076, D-077, D-089, D-090, D-091, D-093, D-094, X-013; X-017 open (scope now also counts Workspace Assets).
+- Phase 8 status: COMPLETED. Phase 9 NOT_STARTED. Next task: `P9-001 — Developer Profile`.
 
 ---
 
@@ -3798,6 +3893,8 @@ Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/
 
 Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage limit) aggregating Site Assets owned by the Workspace's Sites, enforced on upload. No plan-name checks; numeric plan values require owner approval. Not a Phase 3 blocker.
 
+Scope update (P8-008): the cumulative quota must count Site Assets **and** Workspace Assets (`workspace_assets`), and be enforced on Workspace Asset upload and on copy-to-Site (each copy is a separate file). No numeric value is defined yet.
+
 ---
 
 ## X-018 — Designer Action Reference Integrity
@@ -3995,35 +4092,14 @@ This backlog cannot weaken those rules.
 
 # 12. Current Immediate Sequence
 
-Completed: P0-001 … P0-021 (documentation, rules, agents).
+Task statuses and results live in the phase sections above; this section only points at the current position.
 
-The remaining required sequence is:
-
-```text
-P0-021A Bootstrap Landflow Application                           DONE
-P0-021B Repository Initialization & Project State Reconciliation DONE
-P0-021C Russian Foundation UI                                    DONE
-P0-022  Quality Commands                                         DONE
-P0-023  Playwright                                               DONE
-P0-024  Browser QA Baseline                                      DONE
-P0-025  CI                                                       DONE
-P0-026  Autonomous Workflow                                      DONE
-P0-027  Phase 0 Validation                                       DONE
-```
-
-Phase 0 is COMPLETED. Phase 1 — Core Platform:
-
-```text
-P1-001  Audit Authentication Baseline                            DONE
-P1-002  Remove 2FA / Passkeys and Enforce Email Verification     DONE
-X-007   ADR: Primary Identifier Strategy (before P1-003)          DONE (ADR-001 accepted, Option B)
-P1-003  Create Workspace Schema                                  DONE
-P1-004  Workspace Domain Models                                  DONE
-P1-005  Create Default Personal Workspace                        DONE
-X-014   Decision: OAuth Account Linking and Yandex Client         DONE (ADR-002 accepted)
-P1-005A Yandex OAuth Authentication                               DONE
-X-011   Foundation Hygiene Follow-ups                             next
-```
+- Completed: Phases 0–8.
+- Special state: `P7-009 — Real Subscription Integration` DEFERRED.
+- Current: Phase 9 — Developer Platform NOT_STARTED.
+- Next: `P9-001 — Developer Profile`.
+- Open prerequisite for P9-001: D-093 — Developer Profile Ownership (OPEN).
+- Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---
 

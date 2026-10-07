@@ -1,0 +1,555 @@
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import { Copy } from 'lucide-react';
+import InputError from '@/components/input-error';
+import { Badge } from '@/components/ui/badge';
+import { Button } from '@/components/ui/button';
+import { Label } from '@/components/ui/label';
+import { Spinner } from '@/components/ui/spinner';
+import { dashboard } from '@/routes';
+import { index } from '@/routes/sites/vehicles';
+import { create, store } from '@/routes/sites/vehicles/imports';
+
+type ConflictPreview = {
+    public_id: string;
+    title: string;
+    text_differs: boolean;
+    media_differs: boolean;
+    status_differs: boolean;
+    offers: {
+        matched: number;
+        missing: number;
+        duplicate_equipment: number;
+        destination_only: number;
+        price_changes: {
+            equipment: string;
+            source: string;
+            destination: string;
+        }[];
+    };
+};
+
+type SourceVehicle = {
+    public_id: string;
+    title: string;
+    subtitle: string | null;
+    status: boolean;
+    offers_count: number;
+    benefits_count: number;
+    conflict: boolean;
+    existing: ConflictPreview | null;
+};
+
+type CopyResult = {
+    vehicle: string;
+    title: string;
+    result:
+        | 'copied'
+        | 'updated'
+        | 'skipped'
+        | 'conflict'
+        | 'ambiguous'
+        | 'failed';
+};
+
+const duplicateOffersMessage =
+    'В целевом сайте найдено несколько предложений для одной комплектации. Разрешите дубликаты вручную перед обновлением.';
+
+type ConflictField = 'text' | 'media' | 'status' | 'offers' | 'benefits';
+
+type ConflictChoice = { mode: 'skip' | 'update'; fields: ConflictField[] };
+
+type ImportProps = {
+    site: { public_id: string; name: string };
+    sources: { public_id: string; name: string }[];
+    source: string | null;
+    vehicles: SourceVehicle[];
+    can: { copyPrices: boolean; copyBenefits: boolean };
+    result: CopyResult[] | null;
+};
+
+const resultLabels: Record<CopyResult['result'], string> = {
+    copied: 'Скопирован',
+    updated: 'Обновлён',
+    skipped: 'Пропущен',
+    conflict: 'Конфликт не решён — пропущен',
+    ambiguous: `Не обновлён, ничего не изменено. ${duplicateOffersMessage}`,
+    failed: 'Ошибка, ничего не изменено',
+};
+
+const checkboxClass = 'size-4 shrink-0 accent-primary';
+
+function ConflictPanel({
+    vehicle,
+    preview,
+    choice,
+    error,
+    can,
+    onChange,
+}: {
+    vehicle: SourceVehicle;
+    preview: ConflictPreview;
+    choice: ConflictChoice;
+    error?: string;
+    can: ImportProps['can'];
+    onChange: (choice: ConflictChoice) => void;
+}) {
+    const name = `conflict-${vehicle.public_id}`;
+    const fields: {
+        value: ConflictField;
+        label: string;
+        hint: string | null;
+        allowed: boolean;
+    }[] = [
+        {
+            value: 'text',
+            label: 'Название и описание',
+            hint: preview.text_differs ? 'отличаются' : 'совпадают',
+            allowed: true,
+        },
+        {
+            value: 'media',
+            label: 'Выбор цветов',
+            hint: preview.media_differs ? 'отличается' : 'совпадает',
+            allowed: true,
+        },
+        {
+            value: 'status',
+            label: 'Показ на сайте',
+            hint: preview.status_differs ? 'отличается' : 'совпадает',
+            allowed: true,
+        },
+        {
+            value: 'offers',
+            label: 'Цены, наличие и бейджи предложений',
+            hint: `совпадает комплектаций: ${preview.offers.matched}, будет добавлено: ${preview.offers.missing}`,
+            allowed: can.copyPrices,
+        },
+        {
+            value: 'benefits',
+            label: 'Выгоды предложений',
+            hint: null,
+            allowed: can.copyBenefits,
+        },
+    ];
+
+    function toggleField(field: ConflictField) {
+        onChange({
+            mode: 'update',
+            fields: choice.fields.includes(field)
+                ? choice.fields.filter((value) => value !== field)
+                : [...choice.fields, field],
+        });
+    }
+
+    return (
+        <div className="space-y-3 border-t px-3 pt-3 pb-3 text-sm">
+            <p>
+                {`На этом сайте уже есть «${preview.title}». `}
+                {preview.offers.destination_only > 0 &&
+                    `Его предложения без пары (${preview.offers.destination_only}) сохранятся. `}
+                По умолчанию автомобиль пропускается.
+            </p>
+            {preview.offers.duplicate_equipment > 0 && (
+                <p role="alert" className="text-destructive">
+                    {`${duplicateOffersMessage} Обновление цен и выгод для этого автомобиля будет отклонено.`}
+                </p>
+            )}
+            {preview.offers.price_changes.length > 0 && (
+                <ul className="space-y-0.5 text-muted-foreground">
+                    {preview.offers.price_changes.map((change) => (
+                        <li key={change.equipment}>
+                            {`${change.equipment}: здесь ${change.destination}, на источнике ${change.source}`}
+                        </li>
+                    ))}
+                </ul>
+            )}
+            <div className="flex flex-wrap gap-4" role="radiogroup">
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name={name}
+                        className={checkboxClass}
+                        checked={choice.mode === 'skip'}
+                        onChange={() => onChange({ mode: 'skip', fields: [] })}
+                    />
+                    Пропустить
+                </label>
+                <label className="flex items-center gap-2">
+                    <input
+                        type="radio"
+                        name={name}
+                        className={checkboxClass}
+                        checked={choice.mode === 'update'}
+                        onChange={() =>
+                            onChange({ mode: 'update', fields: choice.fields })
+                        }
+                    />
+                    Обновить выбранное
+                </label>
+            </div>
+            {choice.mode === 'update' && (
+                <div className="space-y-2">
+                    {fields.map((field) => (
+                        <label
+                            key={field.value}
+                            className="flex items-start gap-2 has-[:disabled]:opacity-60"
+                        >
+                            <input
+                                type="checkbox"
+                                className={`${checkboxClass} mt-0.5`}
+                                checked={choice.fields.includes(field.value)}
+                                onChange={() => toggleField(field.value)}
+                                disabled={!field.allowed}
+                            />
+                            <span>
+                                {field.label}
+                                {field.hint && (
+                                    <span className="text-muted-foreground">
+                                        {` — ${field.hint}`}
+                                    </span>
+                                )}
+                            </span>
+                        </label>
+                    ))}
+                </div>
+            )}
+            <InputError message={error} />
+        </div>
+    );
+}
+
+export default function ImportVehicles({
+    site,
+    sources,
+    source,
+    vehicles,
+    can,
+    result,
+}: ImportProps) {
+    const form = useForm({
+        source: source ?? '',
+        vehicles: [] as string[],
+        include_offers: false,
+        include_benefits: false,
+        conflicts: {} as Record<string, ConflictChoice>,
+    });
+    const copyable = vehicles.filter((vehicle) => !vehicle.conflict);
+    const errors = form.errors as Record<string, string | undefined>;
+
+    function toggle(publicId: string) {
+        form.setData(
+            'vehicles',
+            form.data.vehicles.includes(publicId)
+                ? form.data.vehicles.filter((id) => id !== publicId)
+                : [...form.data.vehicles, publicId],
+        );
+    }
+
+    return (
+        <>
+            <Head title={`Импорт автомобилей — ${site.name}`} />
+            <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
+                <header className="space-y-1">
+                    <Link
+                        href={index(site.public_id)}
+                        className="text-sm text-muted-foreground hover:underline"
+                    >
+                        {`${site.name} · Автомобили`}
+                    </Link>
+                    <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
+                        Импортировать с другого сайта
+                    </h1>
+                    <p className="text-sm text-muted-foreground">
+                        На этот сайт создаются независимые копии. Изменения на
+                        сайте-источнике потом не переносятся.
+                    </p>
+                </header>
+
+                {result && result.length > 0 && (
+                    <section
+                        aria-labelledby="result-title"
+                        className="space-y-2 rounded-xl border bg-card p-4 shadow-sm"
+                    >
+                        <h2 id="result-title" className="font-semibold">
+                            Результат копирования
+                        </h2>
+                        <ul className="space-y-1 text-sm">
+                            {result.map((item) => (
+                                <li
+                                    key={item.vehicle}
+                                    className="flex flex-wrap gap-x-2"
+                                >
+                                    <span className="font-medium break-words">
+                                        {item.title}
+                                    </span>
+                                    <span className="text-muted-foreground">
+                                        {resultLabels[item.result]}
+                                    </span>
+                                </li>
+                            ))}
+                        </ul>
+                    </section>
+                )}
+
+                {sources.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                        Нет других сайтов, с которых вы можете копировать
+                        автомобили.
+                    </p>
+                ) : (
+                    <form
+                        className="flex flex-col gap-6"
+                        onSubmit={(event) => {
+                            event.preventDefault();
+                            form.transform((data) => ({
+                                ...data,
+                                conflicts: Object.fromEntries(
+                                    Object.entries(data.conflicts).filter(
+                                        ([publicId]) =>
+                                            data.vehicles.includes(publicId),
+                                    ),
+                                ),
+                            }));
+                            form.post(store.url(site.public_id), {
+                                preserveScroll: true,
+                                onSuccess: () =>
+                                    form.setData((data) => ({
+                                        ...data,
+                                        vehicles: [],
+                                        conflicts: {},
+                                    })),
+                            });
+                        }}
+                    >
+                        <div className="grid max-w-md gap-2">
+                            <Label htmlFor="import-source">Сайт-источник</Label>
+                            <select
+                                id="import-source"
+                                value={form.data.source}
+                                onChange={(event) =>
+                                    router.get(
+                                        create.url(site.public_id, {
+                                            query: {
+                                                source: event.target.value,
+                                            },
+                                        }),
+                                    )
+                                }
+                                className="h-9 w-full min-w-0 rounded-md border border-input bg-transparent px-3 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                            >
+                                <option value="">Выберите сайт</option>
+                                {sources.map((candidate) => (
+                                    <option
+                                        key={candidate.public_id}
+                                        value={candidate.public_id}
+                                    >
+                                        {candidate.name}
+                                    </option>
+                                ))}
+                            </select>
+                            <InputError message={form.errors.source} />
+                        </div>
+
+                        {source && (
+                            <>
+                                <fieldset className="space-y-3">
+                                    <legend className="mb-2 font-semibold">
+                                        Автомобили
+                                    </legend>
+                                    {vehicles.length === 0 ? (
+                                        <p className="text-sm text-muted-foreground">
+                                            На этом сайте нет автомобилей.
+                                        </p>
+                                    ) : (
+                                        <ul className="grid gap-2 lg:grid-cols-2">
+                                            {vehicles.map((vehicle) => (
+                                                <li
+                                                    key={vehicle.public_id}
+                                                    className="min-w-0 rounded-lg border bg-card"
+                                                >
+                                                    <label className="flex min-w-0 items-start gap-3 p-3">
+                                                        <input
+                                                            type="checkbox"
+                                                            className={`${checkboxClass} mt-0.5`}
+                                                            checked={form.data.vehicles.includes(
+                                                                vehicle.public_id,
+                                                            )}
+                                                            onChange={() =>
+                                                                toggle(
+                                                                    vehicle.public_id,
+                                                                )
+                                                            }
+                                                        />
+                                                        <span className="min-w-0 flex-1 space-y-1">
+                                                            <span className="block font-medium break-words">
+                                                                {vehicle.title}
+                                                            </span>
+                                                            {vehicle.subtitle && (
+                                                                <span className="block text-sm text-muted-foreground">
+                                                                    {
+                                                                        vehicle.subtitle
+                                                                    }
+                                                                </span>
+                                                            )}
+                                                            <span className="block text-xs text-muted-foreground">
+                                                                {`Предложений: ${vehicle.offers_count} · Выгод: ${vehicle.benefits_count}`}
+                                                            </span>
+                                                        </span>
+                                                        {vehicle.conflict && (
+                                                            <Badge variant="secondary">
+                                                                Уже есть на
+                                                                сайте
+                                                            </Badge>
+                                                        )}
+                                                    </label>
+                                                    {vehicle.existing &&
+                                                        form.data.vehicles.includes(
+                                                            vehicle.public_id,
+                                                        ) && (
+                                                            <ConflictPanel
+                                                                vehicle={
+                                                                    vehicle
+                                                                }
+                                                                preview={
+                                                                    vehicle.existing
+                                                                }
+                                                                choice={
+                                                                    form.data
+                                                                        .conflicts[
+                                                                        vehicle
+                                                                            .public_id
+                                                                    ] ?? {
+                                                                        mode: 'skip',
+                                                                        fields: [],
+                                                                    }
+                                                                }
+                                                                error={
+                                                                    errors[
+                                                                        `conflicts.${vehicle.public_id}.fields`
+                                                                    ]
+                                                                }
+                                                                can={can}
+                                                                onChange={(
+                                                                    choice,
+                                                                ) =>
+                                                                    form.setData(
+                                                                        'conflicts',
+                                                                        {
+                                                                            ...form
+                                                                                .data
+                                                                                .conflicts,
+                                                                            [vehicle.public_id]:
+                                                                                choice,
+                                                                        },
+                                                                    )
+                                                                }
+                                                            />
+                                                        )}
+                                                </li>
+                                            ))}
+                                        </ul>
+                                    )}
+                                    <InputError
+                                        message={form.errors.vehicles}
+                                    />
+                                </fieldset>
+
+                                {copyable.length > 0 && (
+                                    <fieldset className="space-y-2">
+                                        <legend className="mb-2 font-semibold">
+                                            Что копировать в новые автомобили
+                                        </legend>
+                                        <p className="text-sm text-muted-foreground">
+                                            Серия, название, описание, показ и
+                                            выбранные цвета копируются всегда.
+                                            Для автомобилей, которые уже есть на
+                                            сайте, действуют настройки
+                                            конфликта.
+                                        </p>
+                                        <label className="flex items-center gap-2 text-sm has-[:disabled]:opacity-60">
+                                            <input
+                                                type="checkbox"
+                                                className={checkboxClass}
+                                                checked={
+                                                    form.data.include_offers
+                                                }
+                                                onChange={(event) => {
+                                                    form.setData(
+                                                        'include_offers',
+                                                        event.target.checked,
+                                                    );
+
+                                                    if (!event.target.checked) {
+                                                        form.setData(
+                                                            'include_benefits',
+                                                            false,
+                                                        );
+                                                    }
+                                                }}
+                                                disabled={!can.copyPrices}
+                                            />
+                                            Предложения с ценами, наличием и
+                                            бейджами
+                                        </label>
+                                        <label className="flex items-center gap-2 text-sm has-[:disabled]:opacity-60">
+                                            <input
+                                                type="checkbox"
+                                                className={checkboxClass}
+                                                checked={
+                                                    form.data.include_benefits
+                                                }
+                                                onChange={(event) =>
+                                                    form.setData(
+                                                        'include_benefits',
+                                                        event.target.checked,
+                                                    )
+                                                }
+                                                disabled={
+                                                    !can.copyBenefits ||
+                                                    !form.data.include_offers
+                                                }
+                                            />
+                                            Выгоды предложений
+                                        </label>
+                                        {!can.copyPrices && (
+                                            <p className="text-xs text-muted-foreground">
+                                                Копирование цен недоступно для
+                                                вашей роли.
+                                            </p>
+                                        )}
+                                        <InputError
+                                            message={
+                                                form.errors.include_benefits
+                                            }
+                                        />
+                                    </fieldset>
+                                )}
+
+                                <div>
+                                    <Button
+                                        type="submit"
+                                        disabled={
+                                            form.processing ||
+                                            form.data.vehicles.length === 0
+                                        }
+                                    >
+                                        {form.processing ? (
+                                            <Spinner />
+                                        ) : (
+                                            <Copy aria-hidden="true" />
+                                        )}
+                                        Скопировать выбранные
+                                    </Button>
+                                </div>
+                            </>
+                        )}
+                    </form>
+                )}
+            </main>
+        </>
+    );
+}
+
+ImportVehicles.layout = {
+    breadcrumbs: [{ title: 'Все сайты', href: dashboard() }],
+};

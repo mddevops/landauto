@@ -1513,6 +1513,8 @@ Exact UX later.
 
 Do not silently overwrite destination prices.
 
+Implemented (P8-007): offers are matched by catalog Equipment. If the destination holds several offers for an Equipment the update would touch, the whole vehicle update is refused as ambiguous and nothing changes until the duplicates are resolved manually.
+
 ---
 
 # 76. No Silent Site Synchronization

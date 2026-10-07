@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -98,6 +99,32 @@ class PublishedVersion extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * The Publish attempt that built this version; its note is the version's publication note.
+     *
+     * @return HasOne<Publication, $this>
+     */
+    public function publication(): HasOne
+    {
+        return $this->hasOne(Publication::class, 'published_version_id');
+    }
+
+    /**
+     * @return HasMany<SiteVersionRestore, $this>
+     */
+    public function restores(): HasMany
+    {
+        return $this->hasMany(SiteVersionRestore::class);
+    }
+
+    /**
+     * @return HasOne<SiteVersionRestore, $this>
+     */
+    public function latestRestore(): HasOne
+    {
+        return $this->hasOne(SiteVersionRestore::class)->latestOfMany();
     }
 
     /**

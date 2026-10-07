@@ -96,8 +96,13 @@ class VehicleBindingsTest extends TestCase
         $binding = $bindings[0];
         $this->assertSame($vehicle->public_id, $binding['public_id']);
         $this->assertSame(['Kia', 'Rio', 'IV Рестайлинг', 'Седан', 'Kia Rio'], [$binding['mark'], $binding['model'], $binding['generation'], $binding['series'], $binding['title']]);
+        $this->assertArrayNotHasKey('description', $binding);
         $this->assertSame("1\u{00A0}500\u{00A0}000\u{00A0}₽", $binding['price_from_label']);
         $this->assertSame("100\u{00A0}000\u{00A0}₽", $binding['benefit_up_to_label']);
+
+        $vehicle->update(['custom_name' => 'Rio для города', 'custom_description' => "Экономичный седан.\nГотов к выдаче."]);
+        $binding = app(VehicleBindings::class)->forSite($this->site)[0];
+        $this->assertSame(['Rio для города', "Экономичный седан.\nГотов к выдаче."], [$binding['title'], $binding['description']]);
         $this->assertSame('global', $binding['media']['source']);
         $this->assertSame('#ffffff', $binding['media']['sets'][0]['swatch_hex']);
         $this->assertSame(MediaAngle::FrontThreeQuarter->label(), $binding['media']['sets'][0]['images'][0]['label']);

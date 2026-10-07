@@ -8,7 +8,7 @@ import {
     TriangleAlert,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { FormEvent } from 'react';
+import type { FormEvent, ReactNode } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -30,7 +30,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { designer, preview } from '@/routes/sites';
-import { store } from '@/routes/sites/publishing';
+import { show as showPublishing, store } from '@/routes/sites/publishing';
 import { update as updateSubdomain } from '@/routes/sites/subdomain';
 import { restore as restoreVersion } from '@/routes/sites/versions';
 
@@ -49,15 +49,24 @@ type PublishingProps = {
         version_number: number;
         published_at: string | null;
         publisher: string | null;
+        note: string | null;
+        has_unpublished_changes: boolean | null;
     } | null;
     lastAttempt: {
         status: string;
         status_label: string;
         started_at: string;
         actor: string | null;
+        note: string | null;
         error: string | null;
     } | null;
+    lastRestore: {
+        version_number: number;
+        restored_at: string;
+        actor: string | null;
+    } | null;
     versions: PublishedVersionRow[];
+    versionsPage: VersionsPage;
     check: { errors: PublishIssue[]; warnings: PublishIssue[] };
     can: {
         publish: boolean;
@@ -74,8 +83,20 @@ type PublishedVersionRow = {
     status_label: string;
     published_at: string | null;
     publisher: string | null;
+    note: string | null;
     is_production: boolean;
+    restores_count: number;
+    last_restore: { restored_at: string; actor: string | null } | null;
 };
+
+type VersionsPage = {
+    current: number;
+    last: number;
+    total: number;
+    per_page: number;
+};
+
+const NOTE_MAX = 500;
 
 const dateFormat = new Intl.DateTimeFormat('ru-RU', {
     dateStyle: 'medium',
@@ -91,15 +112,20 @@ export default function Publishing({
     address,
     production,
     lastAttempt,
+    lastRestore,
     versions,
+    versionsPage,
     check,
     can,
 }: PublishingProps) {
-    const form = useForm({});
+    const form = useForm({ note: '' });
     const blocked = check.errors.length > 0;
 
     function publish() {
-        form.submit(store(site.public_id), { preserveScroll: true });
+        form.submit(store(site.public_id), {
+            preserveScroll: true,
+            onSuccess: () => form.reset(),
+        });
     }
 
     return (
@@ -159,25 +185,54 @@ export default function Publishing({
                                     Сайт ещё не опубликован.
                                 </p>
                             ) : (
-                                <dl
-                                    className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"
-                                    data-testid="production-status"
-                                >
-                                    <dt className="text-muted-foreground">
-                                        Версия
-                                    </dt>
-                                    <dd>{`Версия ${production.version_number}`}</dd>
-                                    <dt className="text-muted-foreground">
-                                        Опубликована
-                                    </dt>
-                                    <dd>
-                                        {formatDate(production.published_at)}
-                                    </dd>
-                                    <dt className="text-muted-foreground">
-                                        Опубликовал
-                                    </dt>
-                                    <dd>{production.publisher ?? '—'}</dd>
-                                </dl>
+                                <div className="space-y-3">
+                                    <dl
+                                        className="grid grid-cols-[auto_1fr] gap-x-4 gap-y-2 text-sm"
+                                        data-testid="production-status"
+                                    >
+                                        <dt className="text-muted-foreground">
+                                            Версия
+                                        </dt>
+                                        <dd>{`Версия ${production.version_number}`}</dd>
+                                        <dt className="text-muted-foreground">
+                                            Опубликована
+                                        </dt>
+                                        <dd>
+                                            {formatDate(
+                                                production.published_at,
+                                            )}
+                                        </dd>
+                                        <dt className="text-muted-foreground">
+                                            Опубликовал
+                                        </dt>
+                                        <dd>{production.publisher ?? '—'}</dd>
+                                        {production.note && (
+                                            <>
+                                                <dt className="text-muted-foreground">
+                                                    Комментарий
+                                                </dt>
+                                                <dd className="break-words whitespace-pre-line">
+                                                    {production.note}
+                                                </dd>
+                                            </>
+                                        )}
+                                    </dl>
+                                    {production.has_unpublished_changes !==
+                                        null && (
+                                        <Badge
+                                            variant={
+                                                production.has_unpublished_changes
+                                                    ? 'outline'
+                                                    : 'secondary'
+                                            }
+                                            data-testid="draft-state"
+                                        >
+                                            {production.has_unpublished_changes
+                                                ? 'Есть неопубликованные изменения'
+                                                : 'Опубликовано'}
+                                        </Badge>
+                                    )}
+                                </div>
                             )}
                         </CardContent>
                     </Card>
@@ -216,10 +271,23 @@ export default function Publishing({
                                                 : ''}
                                         </span>
                                     </div>
+                                    {lastAttempt.note && (
+                                        <p className="break-words whitespace-pre-line text-muted-foreground">
+                                            {lastAttempt.note}
+                                        </p>
+                                    )}
                                     {lastAttempt.error && (
                                         <p role="status">{lastAttempt.error}</p>
                                     )}
                                 </>
+                            )}
+                            {lastRestore !== null && (
+                                <p
+                                    className="text-muted-foreground"
+                                    data-testid="last-restore"
+                                >
+                                    {`Последнее восстановление: версия ${lastRestore.version_number} · ${formatDate(lastRestore.restored_at)}${lastRestore.actor ? ` · ${lastRestore.actor}` : ''}`}
+                                </p>
                             )}
                         </CardContent>
                     </Card>
@@ -255,17 +323,49 @@ export default function Publishing({
                             testId="publish-warnings"
                         />
                         {can.publish ? (
-                            <Button
-                                onClick={publish}
-                                disabled={form.processing || blocked}
-                            >
-                                {form.processing ? (
-                                    <Spinner />
-                                ) : (
-                                    <Rocket aria-hidden="true" />
-                                )}
-                                Опубликовать
-                            </Button>
+                            <div className="space-y-4">
+                                <div className="space-y-2">
+                                    <Label htmlFor="publication-note">
+                                        Комментарий к публикации
+                                    </Label>
+                                    <textarea
+                                        id="publication-note"
+                                        name="note"
+                                        value={form.data.note}
+                                        onChange={(event) =>
+                                            form.setData(
+                                                'note',
+                                                event.target.value,
+                                            )
+                                        }
+                                        maxLength={NOTE_MAX}
+                                        rows={3}
+                                        aria-invalid={
+                                            form.errors.note ? true : undefined
+                                        }
+                                        aria-describedby="publication-note-help"
+                                        className="flex w-full min-w-0 rounded-md border border-input bg-transparent px-3 py-2 text-base shadow-xs outline-none placeholder:text-muted-foreground focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive md:text-sm"
+                                    />
+                                    <p
+                                        id="publication-note-help"
+                                        className="text-xs text-muted-foreground"
+                                    >
+                                        {`Необязательно. Видно в истории версий. ${form.data.note.length} / ${NOTE_MAX}`}
+                                    </p>
+                                    <InputError message={form.errors.note} />
+                                </div>
+                                <Button
+                                    onClick={publish}
+                                    disabled={form.processing || blocked}
+                                >
+                                    {form.processing ? (
+                                        <Spinner />
+                                    ) : (
+                                        <Rocket aria-hidden="true" />
+                                    )}
+                                    Опубликовать
+                                </Button>
+                            </div>
                         ) : (
                             <p className="text-sm text-muted-foreground">
                                 У вас нет права публиковать этот сайт.
@@ -277,6 +377,7 @@ export default function Publishing({
                 <VersionHistory
                     site={site}
                     versions={versions}
+                    pagination={versionsPage}
                     canRestore={can.restoreVersion}
                 />
             </main>
@@ -284,13 +385,27 @@ export default function Publishing({
     );
 }
 
+function restoreSummary(version: PublishedVersionRow): string | null {
+    if (version.last_restore === null) {
+        return null;
+    }
+
+    const actor = version.last_restore.actor
+        ? ` · ${version.last_restore.actor}`
+        : '';
+
+    return `Восстановлена в черновик: ${version.restores_count} раз(а), последний — ${formatDate(version.last_restore.restored_at)}${actor}`;
+}
+
 function VersionHistory({
     site,
     versions,
+    pagination,
     canRestore,
 }: {
     site: PublishingProps['site'];
     versions: PublishedVersionRow[];
+    pagination: VersionsPage;
     canRestore: boolean;
 }) {
     const [restoring, setRestoring] = useState<PublishedVersionRow | null>(
@@ -336,28 +451,40 @@ function VersionHistory({
                                 key={version.public_id}
                                 className="flex flex-col gap-2 p-3 text-sm sm:flex-row sm:items-center sm:justify-between"
                             >
-                                <div className="flex min-w-0 flex-wrap items-center gap-2">
-                                    <span className="font-medium">
-                                        {`Версия ${version.version_number}`}
-                                    </span>
-                                    {version.is_production && (
-                                        <Badge>На сайте</Badge>
+                                <div className="min-w-0 space-y-1">
+                                    <div className="flex min-w-0 flex-wrap items-center gap-2">
+                                        <span className="font-medium">
+                                            {`Версия ${version.version_number}`}
+                                        </span>
+                                        {version.is_production && (
+                                            <Badge>На сайте</Badge>
+                                        )}
+                                        <Badge
+                                            variant={
+                                                version.status === 'failed'
+                                                    ? 'destructive'
+                                                    : 'secondary'
+                                            }
+                                        >
+                                            {version.status_label}
+                                        </Badge>
+                                        <span className="text-muted-foreground">
+                                            {formatDate(version.published_at)}
+                                            {version.publisher
+                                                ? ` · ${version.publisher}`
+                                                : ''}
+                                        </span>
+                                    </div>
+                                    {version.note && (
+                                        <p className="break-words whitespace-pre-line">
+                                            {version.note}
+                                        </p>
                                     )}
-                                    <Badge
-                                        variant={
-                                            version.status === 'failed'
-                                                ? 'destructive'
-                                                : 'secondary'
-                                        }
-                                    >
-                                        {version.status_label}
-                                    </Badge>
-                                    <span className="text-muted-foreground">
-                                        {formatDate(version.published_at)}
-                                        {version.publisher
-                                            ? ` · ${version.publisher}`
-                                            : ''}
-                                    </span>
+                                    {restoreSummary(version) && (
+                                        <p className="text-xs text-muted-foreground">
+                                            {restoreSummary(version)}
+                                        </p>
+                                    )}
                                 </div>
                                 {canRestore && version.status === 'ready' && (
                                     <Button
@@ -374,6 +501,32 @@ function VersionHistory({
                             </li>
                         ))}
                     </ul>
+                )}
+                {pagination.last > 1 && (
+                    <nav
+                        aria-label="Страницы истории версий"
+                        className="mt-4 flex flex-wrap items-center justify-between gap-2 text-sm"
+                    >
+                        <span className="text-muted-foreground">
+                            {`Страница ${pagination.current} из ${pagination.last} · всего версий: ${pagination.total}`}
+                        </span>
+                        <div className="flex gap-2">
+                            <HistoryPageLink
+                                site={site}
+                                page={pagination.current - 1}
+                                disabled={pagination.current <= 1}
+                            >
+                                Новее
+                            </HistoryPageLink>
+                            <HistoryPageLink
+                                site={site}
+                                page={pagination.current + 1}
+                                disabled={pagination.current >= pagination.last}
+                            >
+                                Старее
+                            </HistoryPageLink>
+                        </div>
+                    </nav>
                 )}
             </CardContent>
 
@@ -414,6 +567,37 @@ function VersionHistory({
                 </DialogContent>
             </Dialog>
         </Card>
+    );
+}
+
+function HistoryPageLink({
+    site,
+    page,
+    disabled,
+    children,
+}: {
+    site: PublishingProps['site'];
+    page: number;
+    disabled: boolean;
+    children: ReactNode;
+}) {
+    if (disabled) {
+        return (
+            <Button variant="outline" size="sm" disabled>
+                {children}
+            </Button>
+        );
+    }
+
+    return (
+        <Button asChild variant="outline" size="sm">
+            <Link
+                href={showPublishing.url(site.public_id, { query: { page } })}
+                preserveScroll
+            >
+                {children}
+            </Link>
+        </Button>
     );
 }
 

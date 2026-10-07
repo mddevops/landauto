@@ -20,6 +20,7 @@ use LogicException;
  * @property int $site_id
  * @property int|null $published_version_id
  * @property int|null $actor_user_id
+ * @property string|null $note plain-text publication note, fixed at creation
  * @property PublicationStatus $status
  * @property Carbon $started_at
  * @property Carbon|null $completed_at
@@ -59,7 +60,7 @@ class Publication extends Model
     protected static function booted(): void
     {
         static::updating(function (Publication $publication): void {
-            if ($publication->isDirty(['site_id', 'actor_user_id', 'started_at'])) {
+            if ($publication->isDirty(['site_id', 'actor_user_id', 'note', 'started_at'])) {
                 throw new LogicException('Publication identity is immutable.');
             }
 
