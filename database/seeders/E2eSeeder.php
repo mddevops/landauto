@@ -4,6 +4,8 @@ namespace Database\Seeders;
 
 use App\Actions\Sites\CreateSite;
 use App\Blocks\BlockStateDefaults;
+use App\Enums\DeveloperPermission;
+use App\Enums\DeveloperProfileStatus;
 use App\Enums\Entitlement;
 use App\Enums\MediaAngle;
 use App\Enums\PlatformRole;
@@ -14,6 +16,7 @@ use App\Models\BlockVersion;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoMark;
 use App\Models\Catalog\AutoModification;
+use App\Models\DeveloperProfile;
 use App\Models\Form;
 use App\Models\Page;
 use App\Models\Plan;
@@ -128,6 +131,19 @@ class E2eSeeder extends Seeder
         $this->placeBlock($domainsSite->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Свой домен: главная']);
 
         $this->createTeamWorkspace();
+
+        // Block authoring: only an active Developer Profile with `create_blocks` grants access;
+        // no platform role, and the personal Workspace grants no authoring.
+        $developer = $this->createUser('Девелопер Блоков', 'developer@landflow.test');
+        $this->createWorkspace($developer, 'Workspace Девелопера');
+        $profile = new DeveloperProfile(['display_name' => 'Студия блоков E2E', 'bio' => null]);
+        $profile->slug = 'e2e-block-studio';
+        $profile->status = DeveloperProfileStatus::Active;
+        $profile->user()->associate($developer)->save();
+        $profile->permissions()->createMany(array_map(
+            fn (DeveloperPermission $permission): array => ['permission' => $permission->value],
+            DeveloperPermission::defaults(),
+        ));
     }
 
     /**

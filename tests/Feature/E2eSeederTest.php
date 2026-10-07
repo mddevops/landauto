@@ -2,10 +2,12 @@
 
 namespace Tests\Feature;
 
+use App\Blocks\BlockAuthoringAuthorization;
 use App\Enums\Entitlement;
 use App\Enums\PlatformPermission;
 use App\Enums\WorkspaceRole;
 use App\Models\Catalog\AutoSeries;
+use App\Models\PlatformRoleAssignment;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\Template;
@@ -43,7 +45,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'publisher@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test'],
+            ['catalog@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'publisher@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -82,5 +84,12 @@ class E2eSeederTest extends TestCase
         $this->assertSame(10, $entitlements->limit($teamSite->workspace, Entitlement::MaxMembers));
         $this->assertSame(5, $teamSite->workspace->members()->count());
         $this->assertFalse($teamSite->workspace->members()->whereRelation('user', 'email', 'team-designer@landflow.test')->exists());
+
+        $developer = User::query()->where('email', 'developer@landflow.test')->sole();
+        $blockAuthoring = app(BlockAuthoringAuthorization::class);
+        $this->assertNotNull($blockAuthoring->developerAuthor($developer));
+        $this->assertFalse($blockAuthoring->canAuthorPlatformBlocks($developer));
+        $this->assertFalse(PlatformRoleAssignment::query()->where('user_id', $developer->id)->exists());
+        $this->assertTrue($blockAuthoring->canAuthorPlatformBlocks($catalogAdmin));
     }
 }

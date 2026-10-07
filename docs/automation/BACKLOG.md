@@ -3362,11 +3362,12 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ### Result
 
-- D-117 Block ownership implemented: `block_definitions.owner_scope` (`platform` / `developer` / `workspace_private`) with `developer_profile_id` / `workspace_id` (restrict) and audit-only `created_by_user_id` / `updated_by_user_id` (null on delete). The model enforces exact scope ↔ owner combinations; ownership, slug and creator are immutable. `is_official` removed; existing definitions backfilled as `platform`; `OfficialBlockSeeder` stays idempotent and never takes over a non-platform slug.
+- D-117 Block ownership implemented: `block_definitions.owner_scope` (`platform` / `developer` / `workspace_private`) with `developer_profile_id` / `workspace_id` (restrict) and audit-only `created_by_user_id` / `updated_by_user_id` (null on delete). The model enforces exact scope ↔ owner combinations; ownership, slug and creator are immutable. `is_official` removed; existing definitions backfilled as `platform`. `OfficialBlockSeeder` stays idempotent: it creates missing platform definitions and appends missing immutable official versions, never overwrites existing definition metadata (a platform rename survives reseeding) and fails loudly on a non-platform slug collision.
 - Central `BlockAuthoringAuthorization` + `BlockAuthoring` service: platform Blocks need `manage_platform_content` (no Developer Profile); Developer Blocks need the own active profile + `create_blocks` and are server-owned; Workspace-private authoring denied. `platform.block_*` / `developer.block_*` logs with public IDs.
 - «Мои блоки» (`/developer/blocks`) and «Блоки Landflow» (`/platform/blocks`): list / create (name + globally unique slug) / editor shell (name editable, slug read-only, ownership, version count, disabled «Схема» / «Предпросмотр» / «Версии»). Another profile's Block or a non-platform Block on the platform surface → 404. No delete, review status, schema, preview or version creation.
 - Developer dashboard «Мои блоки» links to the list with `create_blocks`; platform sidebar «Блоки» for `manage_platform_content`.
 - Customer runtime unchanged: Designer library, adding Blocks, Block Instances, publishing and restore accept only platform-owned definitions with a version; the renderer registry is untouched. D-079, D-080, D-081 stay ADR_REQUIRED.
+- Browser coverage: `block-authoring.spec.ts` — Developer flow (`@responsive`, E2E user `developer@landflow.test` with an active profile + creator permissions, no platform role) and a desktop Super Admin Platform Block flow.
 
 ---
 

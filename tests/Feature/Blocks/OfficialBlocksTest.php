@@ -2,11 +2,15 @@
 
 namespace Tests\Feature\Blocks;
 
+use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockSchemaValidator;
 use App\Blocks\OfficialBlockCatalog;
+use App\Enums\PlatformRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
+use App\Models\PlatformRoleAssignment;
+use App\Models\User;
 use Database\Seeders\OfficialBlockSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -49,6 +53,46 @@ class OfficialBlocksTest extends TestCase
         $this->assertSame($publicId, BlockDefinition::query()->where('slug', 'hero')->value('public_id'));
         $this->assertTrue(Str::isUlid($publicId));
         $this->assertSame('Первый экран', $hero->definition->name);
+    }
+
+    public function test_super_admin_rename_survives_reseeding_and_versions_stay_immutable(): void
+    {
+        $this->seed(OfficialBlockSeeder::class);
+        $superAdmin = User::factory()->create();
+        PlatformRoleAssignment::query()->create(['user_id' => $superAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);
+        $hero = BlockDefinition::query()->platformOwned()->where('slug', 'hero')->sole();
+        $publicId = $hero->public_id;
+
+        app(BlockAuthoring::class)->updateMetadata($superAdmin, $hero, 'Главный Hero');
+        $this->assertSame('Главный Hero', $hero->fresh()?->name);
+        $versions = BlockVersion::query()->orderBy('id')->get(['id', 'block_definition_id', 'version', 'schema_json'])->toArray();
+
+        $this->seed(OfficialBlockSeeder::class);
+
+        $hero = BlockDefinition::query()->where('slug', 'hero')->sole();
+        $this->assertSame('Главный Hero', $hero->name);
+        $this->assertSame($publicId, $hero->public_id);
+        $this->assertTrue($hero->isPlatformOwned());
+        $this->assertSame($superAdmin->id, $hero->updated_by_user_id);
+        $this->assertSame($versions, BlockVersion::query()->orderBy('id')->get(['id', 'block_definition_id', 'version', 'schema_json'])->toArray());
+        $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
+        $this->assertSame('Шапка', BlockDefinition::query()->where('slug', 'header')->value('name'));
+    }
+
+    public function test_seeder_appends_missing_official_versions_without_touching_existing_metadata(): void
+    {
+        $this->seed(OfficialBlockSeeder::class);
+        $header = BlockDefinition::query()->where('slug', 'header')->sole();
+        $header->forceFill(['name' => 'Шапка (своя)'])->save();
+        $header->versions()->where('version', '!=', OfficialBlockCatalog::INITIAL_VERSION)->delete();
+        $initial = $header->versions()->sole()->only(['id', 'schema_json']);
+
+        $this->seed(OfficialBlockSeeder::class);
+
+        $header->refresh();
+        $this->assertSame('Шапка (своя)', $header->name);
+        $this->assertSame(['1.0.0', '1.1.0', '1.2.0'], $header->versions()->orderBy('id')->pluck('version')->all());
+        $this->assertSame($initial, $header->versions()->where('version', OfficialBlockCatalog::INITIAL_VERSION)->sole()->only(['id', 'schema_json']));
     }
 
     public function test_official_block_can_be_placed_with_draft_state(): void

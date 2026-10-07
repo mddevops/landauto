@@ -162,6 +162,13 @@ export const users = {
         email: 'team-integrations@landflow.test',
         password: 'e2e-password',
     },
+    // Block authoring: active Developer Profile with `create_blocks`, no platform role.
+    developer: {
+        name: 'Девелопер Блоков',
+        email: 'developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия блоков E2E',
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).

@@ -106,6 +106,8 @@ Authoring authorization (D-118), centralized in `App\Blocks\BlockAuthoringAuthor
 
 Authoring covers only name and slug; no delete, review status, schema editing, preview or version publishing exists yet (P9-004 … P9-008). A new definition has no Block Version.
 
+`OfficialBlockCatalog` only bootstraps official content: `OfficialBlockSeeder` creates missing platform definitions and appends missing immutable official versions, but never overwrites the metadata of an existing definition (names edited in «Блоки Landflow» survive reseeding). A catalog slug held by a non-platform Block makes the seeder fail instead of taking it over.
+
 Developer Block runtime is NOT enabled: the customer Designer library, adding a Block to a Page, Block Instances, publishing and restore accept only platform-owned definitions that have a version, and official renderers stay in the trusted application registry. No third-party code (HTML / CSS / JS) is stored or executed (D-080, D-081 remain ADR_REQUIRED).
 
 ---
