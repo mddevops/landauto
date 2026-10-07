@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Actions\Sites\CreateSite;
 use App\Blocks\BlockStateDefaults;
+use App\Enums\BlockCategory;
 use App\Enums\DeveloperPermission;
 use App\Enums\DeveloperProfileStatus;
 use App\Enums\Entitlement;
@@ -12,6 +13,7 @@ use App\Enums\PlatformRole;
 use App\Enums\SiteType;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Catalog\AutoEquipment;
@@ -156,6 +158,32 @@ class E2eSeeder extends Seeder
         $studioDeveloper = $this->createUser('Сергей Студийный', 'studio-developer@landflow.test');
         $this->createWorkspace($studioDeveloper, 'Workspace Студийного');
         $this->createDeveloperProfile($studioDeveloper, 'Студия кода E2E', 'e2e-code-studio');
+
+        // Sandboxed runtime: a platform Block published from Block Studio, placed and published on
+        // its own Site with a lead Popup.
+        $this->createSandboxedPlatformBlock();
+        $sandboxOwner = $this->createUser('Сабина Песочникова', 'sandbox@landflow.test');
+        $sandboxSite = app(CreateSite::class)->create($this->createWorkspace($sandboxOwner, 'Автосалон Песочница', plan: $plan), 'Сайт с блоком из студии', SiteType::MultiPage);
+        $sandboxSite->forceFill(['subdomain' => 'sandbox-e2e'])->save();
+        $sandboxForm = Form::factory()->for($sandboxSite)->withLeadFields()->create(['name' => 'Заявка с сайта']);
+        Popup::factory()->for($sandboxSite)->create(['name' => 'Обратный звонок'])->form()->associate($sandboxForm)->save();
+    }
+
+    private function createSandboxedPlatformBlock(): void
+    {
+        $definition = BlockDefinition::factory()->platform()->create(['slug' => 'e2e-studio-promo', 'name' => 'Промо из студии', 'category' => BlockCategory::Cta]);
+        BlockVersion::factory()
+            ->sandboxed(
+                '<section class="promo">{{#if photo}}<img src="{{ photo.url }}" alt="{{ photo.alt }}">{{/if}}<h2>{{ title }}</h2><button type="button" data-landflow-action="cta">Узнать цену</button></section>',
+                '.promo { padding: 24px; background: #fef3c7; } .promo img { width: 48px; height: 48px; }',
+                'landflow.root.setAttribute("data-ready", "yes");',
+            )
+            ->for($definition, 'definition')
+            ->create(['schema_json' => ['fields' => [
+                ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'default' => 'Спецпредложение', 'max_length' => 80],
+                ['key' => 'photo', 'type' => 'image', 'label' => 'Фото'],
+                ['key' => 'cta', 'type' => 'action', 'label' => 'Кнопка'],
+            ]]]);
     }
 
     private function createDeveloperProfile(User $user, string $name, string $slug): void

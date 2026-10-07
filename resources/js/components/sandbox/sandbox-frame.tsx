@@ -1,18 +1,36 @@
-import { useEffect, useMemo, useRef, useState } from 'react';
+import {
+    useEffect,
+    useMemo,
+    useRef,
+    useState,
+    useSyncExternalStore,
+} from 'react';
 import { buildSandboxDocument, SANDBOX_ATTRIBUTE } from '@/sandbox/document';
 import type { SandboxSources } from '@/sandbox/document';
 
 const MIN_HEIGHT = 40;
 const MAX_HEIGHT = 4000;
 
+const noSubscription = () => () => {};
+
+/** The host origin; unknown while rendering on the server, so no document is built there. */
+function useHostOrigin(): string | null {
+    return useSyncExternalStore(
+        noSubscription,
+        () => window.location.origin,
+        () => null,
+    );
+}
+
 type SandboxFrameProps = {
     title: string;
     sources: SandboxSources;
     props: Record<string, unknown>;
     actions: string[];
-    assetOrigin?: string;
+    /** Allow images from the host origin (public, cookie-free asset URLs of a published Site). */
+    hostImages?: boolean;
     onError?: (message: string) => void;
-    onAction?: (key: string) => void;
+    onAction?: (key: string, frame: HTMLIFrameElement) => void;
     className?: string;
 };
 
@@ -25,7 +43,7 @@ export function SandboxFrame({
     sources,
     props,
     actions,
-    assetOrigin,
+    hostImages = false,
     onError,
     onAction,
     className,
@@ -33,6 +51,7 @@ export function SandboxFrame({
     const frame = useRef<HTMLIFrameElement>(null);
     const [height, setHeight] = useState(160);
     const handlers = useRef({ onError, onAction, actions });
+    const origin = useHostOrigin();
 
     useEffect(() => {
         handlers.current = { onError, onAction, actions };
@@ -40,13 +59,15 @@ export function SandboxFrame({
 
     const srcDoc = useMemo(
         () =>
-            buildSandboxDocument(sources, {
-                props,
-                actions,
-                assetOrigin,
-                parentOrigin: window.location.origin,
-            }),
-        [sources, props, actions, assetOrigin],
+            origin === null
+                ? undefined
+                : buildSandboxDocument(sources, {
+                      props,
+                      actions,
+                      assetOrigin: hostImages ? origin : undefined,
+                      parentOrigin: origin,
+                  }),
+        [sources, props, actions, hostImages, origin],
     );
 
     useEffect(() => {
@@ -91,7 +112,7 @@ export function SandboxFrame({
                 typeof key === 'string' &&
                 current.actions.includes(key)
             ) {
-                current.onAction?.(key);
+                current.onAction?.(key, frame.current);
             } else if (type === 'landflow:error' && typeof text === 'string') {
                 current.onError?.(text.slice(0, 500));
             }

@@ -185,6 +185,15 @@ export const users = {
         password: 'e2e-password',
         profile: 'Студия кода E2E',
     },
+    // Sandboxed runtime: platform Block «Промо из студии» and a Site on `sandbox-e2e` with a Popup.
+    sandbox: {
+        name: 'Сабина Песочникова',
+        email: 'sandbox@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт с блоком из студии',
+        block: 'Промо из студии',
+        publicUrl: 'http://sandbox-e2e.localhost:8200',
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).

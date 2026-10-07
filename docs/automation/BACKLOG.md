@@ -3481,7 +3481,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 - Migration `2026_10_15_000001_add_sandboxed_block_versions`: `block_versions.runtime` (`BlockRuntime`, existing = `official`), `html` / `css` / `js` snapshot, `published_by_user_id`; model enforces sources ⇔ `sandboxed`, versions stay immutable.
 - `BlockPublisher` + `POST …/blocks/{block}/publish` (developer + platform, throttle 30/min, P9-003 404 / 403): saved Draft only, `revision` must match, `BlockSourceChecker` must pass, unchanged content refused («Изменений с версии … нет.»), never over an official renderer (ADR-008 §8); semantic version 1.0.0 → patch (sources) / minor (fields added) / major (field removed or retyped); logs `{platform|developer}.block_published`.
-- Until P9-009 sandboxed versions are excluded from the Designer library / placement (`officialRuntime` scope) and `BlockInstance` refuses them.
+- Sandboxed versions became placeable in P9-009 (platform-owned only).
 - Studio: «Опубликовать» (enabled only for a saved Draft without check issues) with hint and «Версия не опубликована» alert; tab «Версии» (version, «Код студии» / «Встроенный», date).
 - Checks: `BlockPublishingTest` (7), `DeveloperPermissionsTest` route inventory, PHPStan, Pint, vp check; Playwright `block-authoring.spec.ts` split into code / schema and preview / publish tests (desktop / tablet / mobile).
 
@@ -3496,8 +3496,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-009 — Sandboxed Block Runtime in Designer and Published Sites
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-006
+
+### Result
+
+- `BlockVersion::sandboxSource()` (`name`, `html`, `css`, `js`, `fields`) goes to Designer / draft preview props and, only for sandboxed blocks, into the Published Version manifest (`blocks[].sandbox`) and page payload; official-only manifests and hashes are unchanged.
+- Designer library / placement: platform-owned Blocks with any published version (latest wins); `BlockInstance` still refuses non-platform definitions (Developer Blocks via P9-014).
+- `SandboxedBlock` renders through the ADR-008 `SandboxFrame` in the Designer canvas, draft preview and published Site; props = Instance state limited to the published schema (`instanceProps`), images `{url, alt}`; `landflow:action` → that Instance's top-level `action` field → `actionPopupId` / `actionHref` (Popup, anchor, page, `tel:` / `mailto:`, http in a new tab).
+- `SandboxFrame` is SSR-safe: the stored publish-time HTML holds only an empty `sandbox="allow-scripts"` frame; `srcdoc` is built after hydration. Published Sites allow images only from the host origin (public cookie-free asset URLs); Designer / draft preview show the placeholder because draft assets need a session the opaque origin never has.
+- `PublishValidator` re-checks sandboxed sources (`BlockSourceChecker::checkVersion`, code `block_source_rejected`) besides the generic state / required / reference validation.
+- Checks: `SandboxedBlockRuntimeTest` (5), `NodePageRendererTest` (real SSR bundle), `E2eSeederTest`, block / publishing suites, PHPStan, Pint, vp check; Playwright `sandboxed-blocks.spec.ts` (Designer → preview Popup → publish → published render, host image, Popup) plus block-authoring / designer / publishing specs.
 
 ### Acceptance Criteria
 
@@ -4299,8 +4308,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`.
-- Next: `P9-009 — Sandboxed Block Runtime in Designer and Published Sites`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`.
+- Next: `P9-014 — Customer Catalog, Access Modes and Site Licenses`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

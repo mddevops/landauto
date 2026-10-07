@@ -4,7 +4,6 @@ namespace App\Models;
 
 use App\Blocks\BlockStateValidator;
 use App\Blocks\PageBlockReferences;
-use App\Enums\BlockRuntime;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\BlockInstanceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -52,12 +51,9 @@ class BlockInstance extends Model
     protected static function booted(): void
     {
         static::creating(function (BlockInstance $instance): void {
+            // Developer Blocks become placeable only through catalog access (P9-014).
             if (! $instance->version->definition->isPlatformOwned()) {
-                throw new LogicException('Only platform-owned Blocks can be placed until a safe runtime exists for other scopes.');
-            }
-
-            if ($instance->version->runtime !== BlockRuntime::Official) {
-                throw new LogicException('Sandboxed Block Versions cannot be placed until the sandboxed runtime exists (P9-009).');
+                throw new LogicException('Only platform-owned Blocks can be placed until catalog access exists for other scopes.');
             }
         });
 

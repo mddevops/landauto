@@ -65,6 +65,7 @@ class SiteDesignerController extends Controller
                     'version' => $block->version->version,
                     'is_hidden' => $block->is_hidden,
                     'schema' => $block->version->schema_json,
+                    'sandbox' => $block->version->sandboxSource(),
                     'state' => (object) $block->state_json,
                 ])
                 ->values()
@@ -88,7 +89,7 @@ class SiteDesignerController extends Controller
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
             'library' => BlockDefinition::query()
                 ->platformOwned()
-                ->whereHas('versions', fn ($versions) => $versions->officialRuntime())
+                ->whereHas('versions')
                 ->orderBy('id')
                 ->get(['slug', 'name'])
                 ->map(fn (BlockDefinition $definition): array => [

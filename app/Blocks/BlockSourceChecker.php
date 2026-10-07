@@ -3,6 +3,7 @@
 namespace App\Blocks;
 
 use App\Enums\BlockFieldType;
+use App\Models\BlockVersion;
 use JsonException;
 
 /**
@@ -21,6 +22,23 @@ final class BlockSourceChecker
         private BlockSchemaValidator $schemas,
         private BlockTemplateParser $templates,
     ) {}
+
+    /**
+     * Re-checks the sources of a published sandboxed version; official versions have none.
+     *
+     * @return list<array{source: string, line: int|null, path: string|null, message: string}>
+     */
+    public function checkVersion(BlockVersion $version): array
+    {
+        $source = $version->sandboxSource();
+
+        return $source === null ? [] : $this->check([
+            'html' => $source['html'],
+            'css' => $source['css'],
+            'js' => $source['js'],
+            'schema' => (string) json_encode($version->schema_json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
+        ]);
+    }
 
     /**
      * @param  array{html: string, css: string, js: string, schema: string}  $sources

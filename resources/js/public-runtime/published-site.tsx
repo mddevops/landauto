@@ -9,6 +9,8 @@ import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
 import type { BlockRenderContextValue } from '@/blocks/render-context';
+import { SandboxedBlock } from '@/blocks/sandboxed-block';
+import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { TriggerScope } from '@/blocks/trigger-context';
@@ -26,7 +28,12 @@ export type PublishedPagePayload = {
     page: { public_id: string; title: string };
     pages: { public_id: string; path: string }[];
     design: DesignTokens;
-    blocks: { public_id: string; slug: string; state: BlockState }[];
+    blocks: {
+        public_id: string;
+        slug: string;
+        state: BlockState;
+        sandbox?: SandboxSource;
+    }[];
     assets: { public_id: string; url: string }[];
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
@@ -96,7 +103,13 @@ export function PublishedSite({
                                     <TriggerScope
                                         value={{ block: block.public_id }}
                                     >
-                                        {Renderer ? (
+                                        {block.sandbox ? (
+                                            <SandboxedBlock
+                                                source={block.sandbox}
+                                                state={block.state}
+                                                hostImages
+                                            />
+                                        ) : Renderer ? (
                                             <Renderer state={block.state} />
                                         ) : null}
                                     </TriggerScope>

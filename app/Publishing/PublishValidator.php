@@ -5,6 +5,7 @@ namespace App\Publishing;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockReferenceResolver;
+use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockStateValidator;
 use App\Enums\SiteStatus;
 use App\Http\Requests\SavePageRequest;
@@ -45,6 +46,7 @@ final class PublishValidator
 
     public function __construct(
         private BlockStateValidator $states,
+        private BlockSourceChecker $sources,
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
     ) {}
@@ -147,6 +149,14 @@ final class PublishValidator
 
                 if (! $version->definition->isPlatformOwned()) {
                     $this->error('block_version_unavailable', 'Блок недоступен для публикации.', page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
+                // Studio code passed the checks when it was published; re-checked so a version that
+                // fails today's rules never reaches a new Published Version.
+                if ($this->sources->checkVersion($version) !== []) {
+                    $this->error('block_source_rejected', 'Код блока не проходит автоматические проверки. Обратитесь к автору блока.', page: $page->public_id, block: $block->public_id);
 
                     continue;
                 }

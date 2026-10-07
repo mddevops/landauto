@@ -73,6 +73,29 @@ class BlockVersion extends Model
     }
 
     /**
+     * What the ADR-008 wrapper needs to render a sandboxed version; null for official versions.
+     *
+     * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
+     */
+    public function sandboxSource(): ?array
+    {
+        if ($this->runtime !== BlockRuntime::Sandboxed) {
+            return null;
+        }
+
+        /** @var list<array<string, mixed>> $fields */
+        $fields = $this->schema_json['fields'] ?? [];
+
+        return [
+            'name' => $this->definition->name,
+            'html' => (string) $this->html,
+            'css' => (string) $this->css,
+            'js' => (string) $this->js,
+            'fields' => $fields,
+        ];
+    }
+
+    /**
      * Versions the trusted application registry can render.
      *
      * @param  Builder<static>  $query

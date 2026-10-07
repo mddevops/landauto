@@ -12,6 +12,7 @@ import type { DesignTokens } from '@/blocks/design';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
+import { SandboxedBlock } from '@/blocks/sandboxed-block';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { vehicleFullTitle } from '@/blocks/vehicles';
@@ -606,7 +607,9 @@ function CanvasBlock({
                 </span>
             )}
             <div inert className={cn(block.is_hidden && 'opacity-40')}>
-                {Renderer ? (
+                {block.sandbox ? (
+                    <SandboxedBlock source={block.sandbox} state={state} />
+                ) : Renderer ? (
                     <Renderer state={state} />
                 ) : (
                     <div className="p-6 text-sm text-neutral-500">

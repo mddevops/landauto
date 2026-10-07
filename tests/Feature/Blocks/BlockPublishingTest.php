@@ -187,21 +187,6 @@ class BlockPublishingTest extends TestCase
         $this->assertSame(1, $official->versions()->count());
     }
 
-    public function test_sandboxed_versions_stay_out_of_the_designer_until_their_runtime_exists(): void
-    {
-        $platform = BlockDefinition::factory()->platform()->create();
-        $version = new BlockVersion(['version' => '1.0.0', 'schema_json' => ['fields' => []]]);
-        $version->runtime = BlockRuntime::Sandboxed;
-        $version->html = '<p>x</p>';
-        $version->css = '';
-        $version->js = '';
-        $version->definition()->associate($platform);
-        $version->save();
-
-        $this->expectException(LogicException::class);
-        BlockInstance::factory()->create(['block_version_id' => $version->id]);
-    }
-
     public function test_version_sources_must_match_the_runtime(): void
     {
         $this->expectException(LogicException::class);

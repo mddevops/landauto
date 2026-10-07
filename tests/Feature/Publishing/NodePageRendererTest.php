@@ -37,6 +37,39 @@ class NodePageRendererTest extends TestCase
         $this->assertStringNotContainsString('Landflow', $page, 'Branding is added at request time, never stored.');
     }
 
+    public function test_sandboxed_blocks_render_only_an_empty_sandboxed_frame_on_the_server(): void
+    {
+        if (! is_file((string) config('publishing.renderer'))) {
+            $this->markTestSkipped('The publish renderer bundle has not been built.');
+        }
+
+        $html = (new NodePageRenderer)->render([[
+            'version' => '01JAAAAAAAAAAAAAAAAAAAAAAA',
+            'site' => ['name' => 'Дилер'],
+            'page' => ['public_id' => '01JBBBBBBBBBBBBBBBBBBBBBBB', 'title' => 'Главная'],
+            'pages' => [['public_id' => '01JBBBBBBBBBBBBBBBBBBBBBBB', 'path' => '/']],
+            'design' => ['primary_color' => '#171717', 'secondary_color' => '#525252', 'font_family' => 'sans', 'radius' => 'medium', 'container' => 'default', 'button_style' => 'solid'],
+            'blocks' => [['public_id' => '01JCCCCCCCCCCCCCCCCCCCCCCC', 'slug' => 'promo-card', 'state' => ['title' => 'Акция'], 'sandbox' => [
+                'name' => 'Промо-карточка',
+                'html' => '<h2 class="promo">{{ title }}</h2>',
+                'css' => '.promo { color: red; }',
+                'js' => 'landflow.resize();',
+                'fields' => [['key' => 'title', 'type' => 'text', 'label' => 'Заголовок']],
+            ]]],
+            'assets' => [],
+            'vehicles' => [],
+            'popups' => [],
+            'form_action' => '/_landflow/forms/01JAAAAAAAAAAAAAAAAAAAAAAA',
+        ]]);
+
+        $page = $html['01JBBBBBBBBBBBBBBBBBBBBBBB'];
+        $this->assertMatchesRegularExpression('/<iframe[^>]*title="Промо-карточка"[^>]*sandbox="allow-scripts"/u', $page);
+        $this->assertStringNotContainsString('srcdoc', strtolower($page));
+        foreach (['class="promo"', '.promo', 'landflow.resize', 'Акция'] as $source) {
+            $this->assertStringNotContainsString($source, $page, 'Block code and data never enter the host document.');
+        }
+    }
+
     public function test_missing_bundle_fails_safely(): void
     {
         config(['publishing.renderer' => base_path('bootstrap/ssr/missing.js')]);

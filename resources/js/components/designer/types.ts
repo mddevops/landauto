@@ -1,3 +1,4 @@
+import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockSchema } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
 
@@ -25,6 +26,8 @@ export type DesignerBlock = {
     version: string;
     is_hidden: boolean;
     schema: BlockSchema;
+    /** Present for sandboxed Block Versions (ADR-008); null for official renderers. */
+    sandbox: SandboxSource | null;
     state: BlockState;
 };
 

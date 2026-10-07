@@ -10,6 +10,8 @@ import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
+import { SandboxedBlock } from '@/blocks/sandboxed-block';
+import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { TriggerScope } from '@/blocks/trigger-context';
@@ -29,6 +31,7 @@ type PreviewProps = {
         public_id: string;
         slug: string;
         name: string;
+        sandbox: SandboxSource | null;
         state: BlockState;
     }[];
     assets: { public_id: string; url: string }[];
@@ -136,7 +139,12 @@ export default function Preview({
                                                     block: block.public_id,
                                                 }}
                                             >
-                                                {Renderer ? (
+                                                {block.sandbox ? (
+                                                    <SandboxedBlock
+                                                        source={block.sandbox}
+                                                        state={block.state}
+                                                    />
+                                                ) : Renderer ? (
                                                     <Renderer
                                                         state={block.state}
                                                     />
