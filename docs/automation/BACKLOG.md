@@ -3585,8 +3585,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-016 — Quiz Site Flow
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-015
+
+### Result
+
+- Official Block `quiz` («Квиз», category «Формы»): title / subtitle, `steps` (question + answer options, nested Repeaters), result title / text and «Кнопка заявки» (action button). Renderer shows one question at a time with «Назад», then the result with the answers and the lead button; the chosen option IDs travel as the `answers` trigger hint.
+- Official Template «Квиз: подбор автомобиля» (`OfficialQuizTemplateSeeder`, platform-owned, `site_types = [quiz]`, three car-selection questions) published through `TemplatePublisher::publishOfficial` (same automated checks, no actor); idempotent. Installable only into `quiz` Sites (type compatibility from P9-015).
+- Templates cannot own Forms / Popups, so installing into a quiz Site creates a Site-owned Form «Заявка с квиза» (Имя, Телефон) in a Popup and points every quiz button without an action at it (`ProvisionQuizLead`). The customer edits the quiz through its Block Schema fields only (structure stays locked, D-119).
+- Submission: `context.answers` (one option ID per step, in order) is valid only with a quiz `block`; the backend resolves question / answer labels from the Draft Block (preview) or the Published Version manifest (public) into `trusted.quiz.answers`, otherwise the lead is rejected. Shown on «Заявки», mapping source `quiz.answers` («Ответы квиза») for integrations.
+- Checks: `QuizSiteFlowTest` (6), official block inventory tests, `E2eSeederTest`; Playwright `quiz-site.spec.ts` (create quiz Site → preview walk-through with «Назад» → popup lead → answers on «Заявки», desktop / tablet / mobile), `site-formats.spec.ts`.
+- Limitation: production gets the official Template only when `OfficialQuizTemplateSeeder` runs (like `OfficialBlockSeeder`).
 
 ### Acceptance Criteria
 
@@ -4334,8 +4343,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`.
-- Next: `P9-016 — Quiz Site Flow`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`.
+- Next: `P9-017 — Chat Selection Site Flow (without operator persistence)`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

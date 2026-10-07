@@ -216,6 +216,14 @@ export const users = {
         password: 'e2e-password',
         profile: 'Студия шаблонов E2E',
     },
+    // Quiz flow: plan without `multi_page_sites`; the official quiz Template is seeded.
+    quiz: {
+        name: 'Зоя Квизова',
+        email: 'quiz@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Квиз',
+        template: 'Квиз: подбор автомобиля',
+    },
     // Template installation: Developer who publishes and a customer who creates Sites from it.
     templateInstaller: {
         name: 'Илья Установщиков',

@@ -21,7 +21,7 @@ class OfficialBlocksTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const SLUGS = ['header', 'hero', 'benefits', 'cta', 'contacts', 'footer', 'vehicle-card', 'vehicle-grid', 'vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment'];
+    public const SLUGS = ['header', 'hero', 'benefits', 'cta', 'contacts', 'footer', 'vehicle-card', 'vehicle-grid', 'vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment', 'quiz'];
 
     public function test_catalog_contains_initial_blocks_with_valid_schemas(): void
     {

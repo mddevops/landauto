@@ -50,7 +50,7 @@ class PlatformBlockAuthoringTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('platform/blocks/index')
-                ->has('blocks', 12)
+                ->has('blocks', count(OfficialBlocksTest::SLUGS))
                 ->where('blocks', fn ($blocks): bool => collect($blocks)->pluck('slug')->doesntContain('developer-only'))
                 ->missing('blocks.0.id'));
         $this->actingAs($this->superAdmin)->get(route('platform.blocks.create'))->assertOk();

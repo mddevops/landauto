@@ -75,7 +75,7 @@ class E2eSeeder extends Seeder
 
         // Core platform flow: creates Sites, so it is isolated from the `member` assertions.
         // The generous test-only limit keeps repeated runs against one server passing.
-        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class]);
+        $this->call([TemplateSeeder::class, OfficialBlockSeeder::class, OfficialQuizTemplateSeeder::class]);
         $plan = Plan::factory()->create(['key' => 'e2e-sites', 'name' => 'E2E Sites']);
         $plan->setEntitlement(Entitlement::MaxSites, 100);
         $plan->setEntitlement(Entitlement::MultiPageSites, true);
@@ -138,12 +138,14 @@ class E2eSeeder extends Seeder
 
         $this->createTeamWorkspace();
 
-        // Site formats: a Free-like plan (many Sites, no `multi_page_sites`) and one compatible
-        // official Template each for Quiz and Chat Selection.
+        // Site formats: a Free-like plan (many Sites, no `multi_page_sites`), the official quiz
+        // Template (OfficialQuizTemplateSeeder) and a content-less official Chat Selection Template.
         $formatsPlan = Plan::factory()->create(['key' => 'e2e-formats', 'name' => 'E2E Formats']);
         $formatsPlan->setEntitlement(Entitlement::MaxSites, 100);
         $this->createWorkspace($this->createUser('Фёкла Форматова', 'formats@landflow.test'), 'Автосалон Формат', plan: $formatsPlan);
-        foreach ([['e2e-quiz', 'Квиз: подбор автомобиля', SiteType::Quiz], ['e2e-chat', 'Чат: подбор автомобиля', SiteType::ChatSelection]] as [$slug, $name, $type]) {
+        // Quiz flow (P9-016): its own login so the visitor walk-through never couples to formats.
+        $this->createWorkspace($this->createUser('Зоя Квизова', 'quiz@landflow.test'), 'Автосалон Квиз', plan: $formatsPlan);
+        foreach ([['e2e-chat', 'Чат: подбор автомобиля', SiteType::ChatSelection]] as [$slug, $name, $type]) {
             $template = Template::query()->create(['slug' => $slug, 'name' => $name]);
             $template->forceFill(['is_official' => true, 'site_types' => [$type->value]])->save();
             $template->versions()->create(['version' => '1.0.0']);

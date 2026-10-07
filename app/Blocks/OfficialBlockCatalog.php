@@ -12,6 +12,11 @@ final class OfficialBlockCatalog
 {
     public const INITIAL_VERSION = '1.0.0';
 
+    /** Quiz Block (P9-016): visitor answers are resolved against its `steps` state on submission. */
+    public const QUIZ_SLUG = 'quiz';
+
+    public const QUIZ_MAX_STEPS = 10;
+
     /**
      * Category for a newly bootstrapped official Definition; later edits belong to Platform authoring.
      */
@@ -24,6 +29,7 @@ final class OfficialBlockCatalog
             $slug === 'cta' => BlockCategory::Cta,
             $slug === 'contacts' => BlockCategory::Contacts,
             $slug === 'footer' => BlockCategory::Footer,
+            $slug === self::QUIZ_SLUG => BlockCategory::Forms,
             str_starts_with($slug, 'vehicle-') => BlockCategory::Vehicles,
             default => BlockCategory::Other,
         };
@@ -187,6 +193,19 @@ final class OfficialBlockCatalog
                 self::vehicle(),
                 self::text('title', 'Заголовок', 120, 'Оснащение'),
                 ['key' => 'show_optional', 'type' => 'boolean', 'label' => 'Показывать опции за доплату', 'default' => true],
+            ]),
+            self::block(self::QUIZ_SLUG, 'Квиз', [
+                self::text('title', 'Заголовок', 120, 'Подберём автомобиль за минуту', required: true),
+                self::textarea('subtitle', 'Подзаголовок', 500),
+                self::repeater('steps', 'Вопросы', self::QUIZ_MAX_STEPS, [
+                    self::text('question', 'Вопрос', 160, required: true),
+                    self::repeater('options', 'Варианты ответа', 8, [
+                        self::text('label', 'Текст варианта', 80, required: true),
+                    ]),
+                ]),
+                self::text('result_title', 'Заголовок результата', 120, 'Подборка готова'),
+                self::textarea('result_text', 'Текст результата', 500),
+                self::actionButton('button', 'Кнопка заявки', 'Получить подборку'),
             ]),
         ];
     }

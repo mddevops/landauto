@@ -14,6 +14,7 @@ use App\Models\Workspace;
 use App\Support\SiteSubdomain;
 use App\Support\WorkspaceEntitlements;
 use App\Templates\InstallTemplateVersion;
+use App\Templates\ProvisionQuizLead;
 use App\Templates\TemplateCatalogAccess;
 use Illuminate\Support\Facades\DB;
 
@@ -29,6 +30,7 @@ final class CreateSite
         private WorkspaceEntitlements $entitlements,
         private TemplateCatalogAccess $templateAccess,
         private InstallTemplateVersion $installer,
+        private ProvisionQuizLead $quizLead,
     ) {}
 
     /**
@@ -88,6 +90,10 @@ final class CreateSite
 
             if ($version?->content_json !== null) {
                 $this->installer->install($site, $version);
+
+                if ($type === SiteType::Quiz) {
+                    $this->quizLead->provision($site);
+                }
             } else {
                 $this->createHomePage($site);
             }

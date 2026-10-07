@@ -145,7 +145,7 @@ class BlockOwnershipTest extends TestCase
 
         $this->seed(OfficialBlockSeeder::class);
 
-        $this->assertSame(12, BlockDefinition::query()->platformOwned()->count());
+        $this->assertSame(count(OfficialBlocksTest::SLUGS), BlockDefinition::query()->platformOwned()->count());
         $this->assertSame($schemas, BlockVersion::query()->orderBy('id')->pluck('schema_json', 'id')->all());
 
         BlockDefinition::query()->where('slug', 'hero')->firstOrFail()->versions()->delete();

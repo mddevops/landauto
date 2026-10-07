@@ -7,6 +7,7 @@ import {
     HeaderBlock,
     HeroBlock,
 } from '@/blocks/official-blocks';
+import { QuizBlock } from '@/blocks/quiz-block';
 import type { BlockRendererProps } from '@/blocks/state';
 import { VehicleCardBlock, VehicleGridBlock } from '@/blocks/vehicle-blocks';
 import {
@@ -33,6 +34,7 @@ const officialBlockRenderers: Record<
     'vehicle-offers': VehicleOffersBlock,
     'vehicle-characteristics': VehicleCharacteristicsBlock,
     'vehicle-equipment': VehicleEquipmentBlock,
+    quiz: QuizBlock,
 };
 
 export function blockRenderer(

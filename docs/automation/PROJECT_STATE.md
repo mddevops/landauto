@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: IN_PROGRESS** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-013, P9-014 and P9-015 DONE; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-079 / D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED, P9-018 BLOCKED_DECISION on D-094). Next ready task per `BACKLOG.md`: `P9-016 — Quiz Site Flow`.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: IN_PROGRESS** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-013 and P9-014 … P9-016 DONE; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-079 / D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED, P9-018 BLOCKED_DECISION on D-094). Next ready task per `BACKLOG.md`: `P9-017 — Chat Selection Site Flow`.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -221,6 +221,7 @@ Current focus:
 - `P9-014` DONE (D-079): `block_definitions.access_mode` free / entitlement (boolean catalog gate) / paid (ADR-004 price, no checkout) / admin_grant, set in Block Studio «Настройки»; `site_licenses` (Site × Block, source purchase | admin_grant) granted / revoked by Super Admin at «Лицензии сайтов» (`manage_site_licenses`); Designer library = platform + Developer Blocks with access cards; `BlockCatalogAccess` checks add, duplicate and publish (`block_access_denied`). License purchase DEFERRED (P10-005).
 - `P9-007` DONE: Template Builder — `templates.owner_scope` platform / developer (immutable), Draft `template_pages` / `template_blocks` edited in the reused Designer at `studio/templates/{template}` (owner only, others 404); created from «Шаблоны Landflow» (`manage_platform_content`) or «Студия → Шаблоны» (`create_templates`); library = catalog Blocks with a published version; device preview (Компьютер / Планшет / Телефон) via frame page; publish = automated checks → immutable `template_versions.content_json` snapshot. Installation and access: P9-015.
 - `P9-015` DONE (D-079): published platform / Developer Templates are offered on «Новый сайт»; `CreateSite` copies the latest `template_versions.content_json` into new Pages / Block Instances (new `public_id`s, `open_page` / `scroll_to` remapped, no later sync). Backend checks: version, Site type, multi-page content only for page-capable types, Template + included Block access (free / entitlement). Templates have `access_mode` etc. like Blocks (owner edits on «Публикация шаблона»); `site_licenses.template_id` — a Template license covers its Blocks for that Site. `paid` / `admin_grant` Templates cannot start a new Site (open product question: purchase / install into an existing Site).
+- `P9-016` DONE: official Block `quiz` (steps / options / result / lead button) and official Template «Квиз: подбор автомобиля» (`OfficialQuizTemplateSeeder`, `TemplatePublisher::publishOfficial`), installable only into `quiz` Sites; installation creates a Site-owned Form «Заявка с квиза» in a Popup wired to the quiz button (`ProvisionQuizLead`). Visitor `context.answers` (option IDs) are resolved by the backend from the Draft Block / Published Version into `trusted.quiz.answers` (shown on «Заявки», mapping source `quiz.answers`).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1214,7 +1215,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P9-016 — Quiz Site Flow`** (Phase 9 — Developer Platform IN_PROGRESS: P9-001 … P9-009, P9-013, P9-014 and P9-015 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
+**Next: `P9-017 — Chat Selection Site Flow`** (Phase 9 — Developer Platform IN_PROGRESS: P9-001 … P9-009, P9-013 and P9-014 … P9-016 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1772,7 +1773,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P9-016 — Quiz Site Flow`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is IN_PROGRESS (P9-001 … P9-009, P9-013, P9-014 and P9-015 DONE).
+**`P9-017 — Chat Selection Site Flow`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is IN_PROGRESS (P9-001 … P9-009, P9-013 and P9-014 … P9-016 DONE).
 
 ---
 
@@ -1828,5 +1829,5 @@ Production deployment:        NOT_CONFIGURED
 Core Landflow implementation: IN_PROGRESS (Phases 0–8 COMPLETED, Phase 9 IN_PROGRESS; P7-009 DEFERRED; D-093, D-118 APPROVED; D-094, X-013, X-017 OPEN)
 ```
 
-**Current phase: Phase 9 — Developer Platform (IN_PROGRESS; P9-001 … P9-009, P9-013, P9-014 and P9-015 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED).
-Next: `P9-016 — Quiz Site Flow` per `BACKLOG.md`.**
+**Current phase: Phase 9 — Developer Platform (IN_PROGRESS; P9-001 … P9-009, P9-013 and P9-014 … P9-016 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED).
+Next: `P9-017 — Chat Selection Site Flow` per `BACKLOG.md`.**

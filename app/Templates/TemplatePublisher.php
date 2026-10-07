@@ -112,6 +112,30 @@ final class TemplatePublisher
     }
 
     /**
+     * First version of a platform Template shipped by a seeder (P9-016): same checks and snapshot,
+     * no acting user.
+     */
+    public function publishOfficial(Template $template): TemplateVersion
+    {
+        if (! $template->isPlatformOwned() || $template->versions()->exists()) {
+            throw new LogicException('Only an unpublished platform Template can be published by the platform.');
+        }
+
+        $issues = $this->checks($template);
+
+        if ($issues !== []) {
+            throw new LogicException('Official Template does not pass the checks: '.implode(' ', $issues));
+        }
+
+        $version = new TemplateVersion(['version' => '1.0.0']);
+        $version->content_json = $this->snapshot($template);
+        $version->template()->associate($template);
+        $version->save();
+
+        return $version;
+    }
+
+    /**
      * @return array{pages: list<array{key: string, title: string, slug: string, is_home: bool, blocks: list<array{key: string, block_version_id: int, is_hidden: bool, state: array<string, mixed>}>}>}
      */
     private function snapshot(Template $template): array
