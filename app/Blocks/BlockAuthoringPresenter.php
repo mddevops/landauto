@@ -12,7 +12,10 @@ use stdClass;
  */
 final class BlockAuthoringPresenter
 {
-    public function __construct(private BlockStudio $studio) {}
+    public function __construct(
+        private BlockStudio $studio,
+        private BlockSourceChecker $checker,
+    ) {}
 
     /**
      * @return array{public_id: string, name: string, slug: string, category: string, category_label: string, versions_count: int, updated_at: string|null}
@@ -60,29 +63,18 @@ final class BlockAuthoringPresenter
     }
 
     /**
-     * @return array{revision: int, sources: array<string, string>, preview: array<string, mixed>|stdClass, schema_errors: list<array{path: string, message: string}>, template_errors: list<array{line: int, message: string}>, saved_at: string|null}
+     * @return array{revision: int, sources: array{html: string, css: string, js: string, schema: string}, preview: array<string, mixed>|stdClass, checks: list<array{source: string, line: int|null, path: string|null, message: string}>, saved_at: string|null}
      */
     public function draft(BlockDraft $draft): array
     {
-        $sources = [];
-
-        foreach (BlockStudio::SOURCES as $key => $column) {
-            $sources[$key] = (string) $draft->getAttribute($column);
-        }
-
-        $errors = [];
-
-        foreach ($this->studio->schemaErrors($sources['schema']) as $path => $message) {
-            $errors[] = ['path' => $path, 'message' => $message];
-        }
+        $sources = BlockStudio::sources($draft);
 
         return [
             'revision' => $draft->revision,
             'sources' => $sources,
             // An empty preview must reach the browser as an object, not a list.
             'preview' => $draft->preview_data ?: new stdClass,
-            'schema_errors' => $errors,
-            'template_errors' => $this->studio->templateErrors($sources['html'], $sources['schema']),
+            'checks' => $this->checker->check($sources),
             'saved_at' => $draft->exists ? $draft->updated_at?->toIso8601String() : null,
         ];
     }

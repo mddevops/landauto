@@ -21,15 +21,18 @@ export type DraftSourceKey = 'html' | 'css' | 'js' | 'schema';
 
 export type DraftSources = Record<DraftSourceKey, string>;
 
-export type SchemaError = { path: string; message: string };
-
-export type TemplateError = { line: number; message: string };
+/** An automated publishing check failure (ADR-008 §7) with its file and line or schema path. */
+export type BlockCheckIssue = {
+    source: DraftSourceKey;
+    line: number | null;
+    path: string | null;
+    message: string;
+};
 
 export type BlockDraft = {
     revision: number;
     sources: DraftSources;
     preview: Record<string, unknown>;
-    schema_errors: SchemaError[];
-    template_errors: TemplateError[];
+    checks: BlockCheckIssue[];
     saved_at: string | null;
 };

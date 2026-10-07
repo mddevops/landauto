@@ -26,6 +26,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type {
     AuthoringBlockDetail,
+    BlockCheckIssue,
     BlockDraft,
     DraftSourceKey,
 } from '@/types/blocks';
@@ -268,11 +269,7 @@ export function BlockStudio({
                     )}
                 </div>
 
-                <DraftChecks
-                    draft={draft}
-                    schemaIsJson={schema !== null}
-                    stale={status !== 'saved'}
-                />
+                <DraftChecks draft={draft} stale={status !== 'saved'} />
             </div>
         </main>
     );
@@ -330,106 +327,86 @@ function SourceEditor({
         </div>
     );
 }
-function CheckList({
-    label,
-    items,
-    empty,
-}: {
-    label: string;
-    items: { key: string; location: string; message: string }[];
-    empty: string;
-}) {
-    if (items.length === 0) {
-        return (
-            <p className="flex gap-2 text-sm">
-                <CircleCheck
-                    aria-hidden="true"
-                    className="size-4 shrink-0 text-green-600"
-                />
-                {empty}
-            </p>
-        );
+
+function issueLocation(issue: BlockCheckIssue): string | null {
+    if (issue.line !== null) {
+        return `Строка ${issue.line}`;
     }
 
-    return (
-        <ul className="grid gap-2" aria-label={label}>
-            {items.map((item) => (
-                <li
-                    key={item.key}
-                    className="rounded-md border border-destructive/40 p-2 text-sm"
-                >
-                    <code className="text-xs break-all text-muted-foreground">
-                        {item.location}
-                    </code>
-                    <p className="text-destructive">{item.message}</p>
-                </li>
-            ))}
-        </ul>
-    );
+    return issue.path;
 }
 
-function DraftChecks({
-    draft,
-    schemaIsJson,
-    stale,
-}: {
-    draft: BlockDraft;
-    schemaIsJson: boolean;
-    stale: boolean;
-}) {
+function DraftChecks({ draft, stale }: { draft: BlockDraft; stale: boolean }) {
+    const groups = files
+        .map((item) => ({
+            ...item,
+            issues: draft.checks.filter((issue) => issue.source === item.key),
+        }))
+        .filter((group) => group.issues.length > 0);
+
     return (
         <aside
             aria-labelledby="studio-checks-title"
             className="h-fit space-y-4 rounded-xl border bg-card p-4 shadow-sm"
         >
             <h2 id="studio-checks-title" className="font-semibold">
-                Проверки
+                Проверки перед публикацией
             </h2>
-            <section
-                aria-labelledby="studio-checks-schema"
-                className="space-y-2"
-            >
-                <h3 id="studio-checks-schema" className="text-sm font-medium">
-                    Схема
-                </h3>
-                {schemaIsJson ? (
-                    <CheckList
-                        label="Ошибки схемы"
-                        empty="Ошибок в схеме нет."
-                        items={draft.schema_errors.map((error) => ({
-                            key: error.path,
-                            location: error.path,
-                            message: error.message,
-                        }))}
+            {groups.length === 0 ? (
+                <p className="flex gap-2 text-sm">
+                    <CircleCheck
+                        aria-hidden="true"
+                        className="size-4 shrink-0 text-green-600"
                     />
-                ) : (
+                    Все проверки пройдены.
+                </p>
+            ) : (
+                <>
                     <p className="flex gap-2 text-sm text-destructive">
                         <TriangleAlert
                             aria-hidden="true"
                             className="size-4 shrink-0"
                         />
-                        schema.json сейчас не является корректным JSON со
-                        списком fields.
+                        Найдено проблем: {draft.checks.length}. Опубликовать
+                        блок можно будет после их исправления.
                     </p>
-                )}
-            </section>
-            <section
-                aria-labelledby="studio-checks-template"
-                className="space-y-2"
-            >
-                <h3 id="studio-checks-template" className="text-sm font-medium">
-                    Шаблон index.html
-                </h3>
-                <CheckList
-                    label="Ошибки шаблона"
-                    empty="Ошибок в шаблоне нет."
-                    items={draft.template_errors.map((error, index) => ({
-                        key: `${index}-${error.line}`,
-                        location: `Строка ${error.line}`,
-                        message: error.message,
-                    }))}
-                />
-            </section>
+                    {groups.map((group) => (
+                        <section
+                            key={group.key}
+                            aria-labelledby={`studio-checks-${group.key}`}
+                            className="space-y-2"
+                        >
+                            <h3
+                                id={`studio-checks-${group.key}`}
+                                className="font-mono text-sm font-medium"
+                            >
+                                {group.name}
+                            </h3>
+                            <ul className="grid gap-2">
+                                {group.issues.map((issue, index) => {
+                                    const location = issueLocation(issue);
+
+                                    return (
+                                        <li
+                                            key={index}
+                                            className="rounded-md border border-destructive/40 p-2 text-sm"
+                                        >
+                                            {location && (
+                                                <code className="text-xs break-all text-muted-foreground">
+                                                    {location}
+                                                </code>
+                                            )}
+                                            <p className="text-destructive">
+                                                {issue.message}
+                                            </p>
+                                        </li>
+                                    );
+                                })}
+                            </ul>
+                        </section>
+                    ))}
+                </>
+            )}
             <p className="text-xs text-muted-foreground">
                 {stale
                     ? 'Результат обновится после сохранения черновика.'

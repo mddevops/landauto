@@ -3454,8 +3454,15 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-008 — Automated Block Checks (replaces Review Workflow)
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-004 (D-120)
+
+### Result
+
+- `App\Blocks\BlockSourceChecker::check(sources)` → `list<{source, line, path, message}>`: UTF-8 and 64 KB per source (the JSON-safety precondition of the sandbox wrapper), empty / invalid / non-canonical schema (schema paths), `BlockTemplateParser` syntax + paths, `data-landflow-action` keys (literal, top-level `action` field), forbidden elements (`script`, `style`, `link`, `meta`, `base`, `iframe`, `frame`, `object`, `embed`, `form`, `portal`), external URLs (`http(s)://`, protocol-relative `//` in URL attributes / `url()`, `@import`) in HTML / CSS; SVG `xmlns` URIs exempt; ordered by file then line.
+- `BlockStudio::schemaErrors` / `templateErrors` replaced; Studio prop `draft.checks`; panel «Проверки перед публикацией» («Все проверки пройдены.» / «Найдено проблем: N…», grouped by file with line or schema path). P9-006 runs the same checker before publishing.
+- No approval state, queue or reviewer role exists in code (D-120).
+- Checks: `BlockSourceCheckerTest` (every rule, 31 cases), `BlockStudioDraftTest`, PHPStan, Pint, vp check; Playwright `block-authoring.spec.ts` (forbidden tag + external URL with lines) on desktop / tablet / mobile.
 
 ### Acceptance Criteria
 
@@ -4284,8 +4291,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`.
-- Next: `P9-008 — Automated Block Checks (replaces Review Workflow)`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`.
+- Next: `P9-006 — Block Version Publishing`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

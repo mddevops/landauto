@@ -181,12 +181,13 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     );
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
 
-    const checks = page.getByRole('complementary', { name: 'Проверки' });
-    await expect(checks).toContainText('Ошибок в схеме нет.');
-    await expect(checks).toContainText('Ошибок в шаблоне нет.');
+    const checks = page.getByRole('complementary', {
+        name: 'Проверки перед публикацией',
+    });
+    await expect(checks).toContainText('Все проверки пройдены.');
 
     // Code mode: the starter Draft is editable per file and autosaves.
-    const html = page.getByLabel('index.html', { exact: true });
+    const html = page.getByRole('textbox', { name: 'index.html', exact: true });
     await expect(html).toHaveValue(/\{\{ title \}\}/);
     await html.fill(
         '<section class="promo">\n  <h2>{{ title }}</h2>\n  <p>{{ subtitle }}</p>\n</section>',
@@ -195,27 +196,45 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     await expect(checks).toContainText(
         'Строка 3Поле «subtitle» не описано в схеме.',
     );
+
+    // Automated publishing checks: forbidden tags and external resources, with file and line.
+    await html.fill(
+        '<section class="promo">\n  <h2>{{ title }}</h2>\n  <script>alert(1)</script>\n  <img src="https://cdn.example.com/a.png" alt="">\n</section>',
+    );
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('Найдено проблем: 2.');
+    await expect(
+        checks.getByRole('region', { name: 'index.html' }),
+    ).toContainText(
+        'Строка 3Тег <script> запрещён в шаблоне: код блока пишется в script.js.',
+    );
+    await expect(checks).toContainText(
+        'Строка 4Внешний адрес «https://cdn.example.com/a.png» запрещён в index.html',
+    );
     await html.fill(
         '<section class="promo">\n  <h2>{{ title }}</h2>\n</section>',
     );
     await expectDraftSaved(page);
-    await expect(checks).toContainText('Ошибок в шаблоне нет.');
+    await expect(checks).toContainText('Все проверки пройдены.');
 
     await page.getByRole('button', { name: 'styles.css' }).click();
     await page
-        .getByLabel('styles.css', { exact: true })
+        .getByRole('textbox', { name: 'styles.css', exact: true })
         .fill('.promo { padding: 32px; }');
     await expectDraftSaved(page);
     await expectNoHorizontalOverflow(page);
 
     // Invalid JSON is saved as work in progress and reported, not rejected.
     await page.getByRole('button', { name: 'schema.json' }).click();
-    const schema = page.getByLabel('schema.json', { exact: true });
+    const schema = page.getByRole('textbox', {
+        name: 'schema.json',
+        exact: true,
+    });
     await schema.fill('{"fields": [');
     await expectDraftSaved(page);
-    await expect(checks).toContainText(
-        'schema.json сейчас не является корректным JSON',
-    );
+    await expect(
+        checks.getByRole('region', { name: 'schema.json' }),
+    ).toContainText('schema.json содержит некорректный JSON.');
 
     await openMode(page, 'Конструктор схемы');
     await expect(
@@ -226,7 +245,7 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
         '{"fields":[{"key":"title","type":"text","label":"Заголовок"}]}',
     );
     await expectDraftSaved(page);
-    await expect(checks).toContainText('Ошибок в схеме нет.');
+    await expect(checks).toContainText('Все проверки пройдены.');
 
     // Schema Builder edits the same canonical JSON.
     await openMode(page, 'Конструктор схемы');
@@ -246,7 +265,7 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     await numberField.getByLabel('Минимум', { exact: true }).fill('1');
     await numberField.getByLabel('Максимум', { exact: true }).fill('4');
     await expectDraftSaved(page);
-    await expect(checks).toContainText('Ошибок в схеме нет.');
+    await expect(checks).toContainText('Все проверки пройдены.');
 
     await numberField
         .getByRole('button', { name: 'Переместить поле «Колонки» выше' })
@@ -259,12 +278,14 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
 
     // Reload restores the saved Draft.
     await page.reload();
-    await expect(page.getByLabel('index.html', { exact: true })).toHaveValue(
-        /class="promo"/,
-    );
+    await expect(
+        page.getByRole('textbox', { name: 'index.html', exact: true }),
+    ).toHaveValue(/class="promo"/);
     await page.getByRole('button', { name: 'schema.json' }).click();
     const saved = JSON.parse(
-        await page.getByLabel('schema.json', { exact: true }).inputValue(),
+        await page
+            .getByRole('textbox', { name: 'schema.json', exact: true })
+            .inputValue(),
     ) as { fields: { key: string; type: string; min?: number }[] };
     expect(saved.fields.map((field) => field.key)).toEqual([
         'columns',
@@ -275,19 +296,19 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
 
     // Live preview renders the Draft in the opaque-origin sandbox.
     await page
-        .getByLabel('schema.json', { exact: true })
+        .getByRole('textbox', { name: 'schema.json', exact: true })
         .fill(
             '{"fields":[{"key":"title","type":"text","label":"Заголовок"},{"key":"cta","type":"action","label":"Кнопка"}]}',
         );
     await expectDraftSaved(page);
     await page.getByRole('button', { name: 'index.html' }).click();
     await page
-        .getByLabel('index.html', { exact: true })
+        .getByRole('textbox', { name: 'index.html', exact: true })
         .fill(
             '<section class="promo">\n  <h2>{{ title }}</h2>\n  <button data-landflow-action="cta">Подробнее</button>\n</section>',
         );
     await expectDraftSaved(page);
-    await expect(checks).toContainText('Ошибок в шаблоне нет.');
+    await expect(checks).toContainText('Все проверки пройдены.');
 
     await openMode(page, 'Предпросмотр');
     const iframe = page.getByTitle('Предпросмотр блока');
@@ -321,7 +342,9 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     browserIssues.expectConsoleError('Content Security Policy');
     await openMode(page, 'Код');
     await page.getByRole('button', { name: 'script.js' }).click();
-    await page.getByLabel('script.js', { exact: true }).fill(SANDBOX_PROBE);
+    await page
+        .getByRole('textbox', { name: 'script.js', exact: true })
+        .fill(SANDBOX_PROBE);
     await expectDraftSaved(page);
     await openMode(page, 'Предпросмотр');
     await expect(frame.locator('[data-probe]')).toHaveText(
@@ -364,17 +387,17 @@ test('Block preview escapes sources and only trusts its own sandbox', async ({
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
 
     await page
-        .getByLabel('index.html', { exact: true })
+        .getByRole('textbox', { name: 'index.html', exact: true })
         .fill('<h2>{{ title }}</h2>\n<p data-css-check>Стили</p>');
     await page.getByRole('button', { name: 'styles.css' }).click();
     await page
-        .getByLabel('styles.css', { exact: true })
+        .getByRole('textbox', { name: 'styles.css', exact: true })
         .fill(
             "p { color: rgb(1, 2, 3); } </style><script>document.body.setAttribute('data-escaped', 'no')</script>",
         );
     await page.getByRole('button', { name: 'script.js' }).click();
     await page
-        .getByLabel('script.js', { exact: true })
+        .getByRole('textbox', { name: 'script.js', exact: true })
         .fill(
             [
                 "parent.postMessage({ type: 'landflow:navigate', url: '/dashboard' }, '*');",

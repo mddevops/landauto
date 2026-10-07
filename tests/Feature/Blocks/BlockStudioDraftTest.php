@@ -55,8 +55,7 @@ class BlockStudioDraftTest extends TestCase
                 ->where('block.category_label', 'Другое')
                 ->where('draft.revision', 0)
                 ->where('draft.saved_at', null)
-                ->where('draft.schema_errors', [])
-                ->where('draft.template_errors', [])
+                ->where('draft.checks', [])
                 ->where('draft.preview', [])
                 ->where('draft.sources.js', '')
                 ->where('draft.sources.html', fn (string $html): bool => str_contains($html, '{{ title }}'))
@@ -118,7 +117,7 @@ class BlockStudioDraftTest extends TestCase
         $this->actingAs($user)->get(route('developer.blocks.show', $this->block))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('draft.sources.schema', '{"fields": [')
-                ->where('draft.schema_errors', [['path' => 'schema', 'message' => 'schema.json содержит некорректный JSON.']]));
+                ->where('draft.checks', [['source' => 'schema', 'line' => null, 'path' => 'schema', 'message' => 'schema.json содержит некорректный JSON.']]));
 
         $schema = json_encode(['fields' => [
             ['key' => 'count', 'type' => 'number', 'label' => 'Количество', 'min' => 5, 'max' => 1],
@@ -128,17 +127,20 @@ class BlockStudioDraftTest extends TestCase
         $this->actingAs($user)->put(route('developer.blocks.draft', $this->block), self::payload(1, ['schema' => $schema]))
             ->assertSessionHasNoErrors();
         $this->actingAs($user)->get(route('developer.blocks.show', $this->block))
-            ->assertInertia(fn (Assert $page) => $page->where('draft.schema_errors', fn ($errors): bool => collect($errors)->pluck('path')->sort()->values()->all() === [
+            ->assertInertia(fn (Assert $page) => $page->where('draft.checks', fn ($issues): bool => collect($issues)->where('source', 'schema')->pluck('path')->sort()->values()->all() === [
                 'fields.0.min',
                 'fields.1.fields.0.key',
                 'fields.1.max_items',
             ]));
     }
 
-    public function test_preview_data_and_template_errors_round_trip(): void
+    public function test_preview_data_and_publishing_checks_round_trip(): void
     {
         $user = $this->profile->user;
-        $payload = self::payload(0, ['html' => "<h2>{{ title }}</h2>\n{{ subtitle }}\n{{#if title}}"]);
+        $payload = self::payload(0, [
+            'html' => "<h2>{{ title }}</h2>\n{{ subtitle }}\n{{#if title}}",
+            'css' => '@import "theme.css";',
+        ]);
         $payload['preview'] = ['title' => 'Весенняя акция', 'items' => [['name' => 'Первый']]];
 
         $this->actingAs($user)->put(route('developer.blocks.draft', $this->block), $payload)->assertSessionHasNoErrors();
@@ -147,9 +149,10 @@ class BlockStudioDraftTest extends TestCase
         $this->actingAs($user)->get(route('developer.blocks.show', $this->block))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('draft.preview.title', 'Весенняя акция')
-                ->where('draft.template_errors', [
-                    ['line' => 2, 'message' => 'Поле «subtitle» не описано в схеме.'],
-                    ['line' => 3, 'message' => 'Не закрыт блок {{#if …}}: добавьте {{/if}}.'],
+                ->where('draft.checks', [
+                    ['source' => 'html', 'line' => 2, 'path' => null, 'message' => 'Поле «subtitle» не описано в схеме.'],
+                    ['source' => 'html', 'line' => 3, 'path' => null, 'message' => 'Не закрыт блок {{#if …}}: добавьте {{/if}}.'],
+                    ['source' => 'css', 'line' => 1, 'path' => null, 'message' => '@import запрещён в styles.css: все стили блока должны находиться в styles.css.'],
                 ]));
 
         $tooLarge = self::payload(1);

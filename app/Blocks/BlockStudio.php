@@ -9,7 +9,6 @@ use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
-use JsonException;
 
 /**
  * Block Studio Draft (ADR-008): one editable set of sources per Block Definition. Saving (manual
@@ -50,11 +49,7 @@ final class BlockStudio
         }
         JSON;
 
-    public function __construct(
-        private BlockAuthoringAuthorization $authorization,
-        private BlockSchemaValidator $schemas,
-        private BlockTemplateParser $templates,
-    ) {}
+    public function __construct(private BlockAuthoringAuthorization $authorization) {}
 
     /**
      * The saved Draft, or an unsaved starter Draft (revision 0) until the first save.
@@ -123,51 +118,15 @@ final class BlockStudio
     }
 
     /**
-     * Canonical schema errors of a Draft schema source, keyed by schema path; empty when valid.
-     *
-     * @return array<string, string>
+     * @return array{html: string, css: string, js: string, schema: string}
      */
-    public function schemaErrors(string $source): array
+    public static function sources(BlockDraft $draft): array
     {
-        if (trim($source) === '') {
-            return ['schema' => 'Схема пуста. Опишите поля блока в schema.json.'];
-        }
-
-        $schema = null;
-
-        if (! $this->decode($source, $schema)) {
-            return ['schema' => 'schema.json содержит некорректный JSON.'];
-        }
-
-        return $this->schemas->errors($schema);
-    }
-
-    /**
-     * Template syntax errors, plus undeclared / misused paths when the schema itself is valid.
-     *
-     * @return list<array{line: int, message: string}>
-     */
-    public function templateErrors(string $html, string $schemaSource): array
-    {
-        $fields = null;
-        $schema = null;
-
-        if ($this->decode($schemaSource, $schema) && is_array($schema) && $this->schemas->errors($schema) === [] && is_array($schema['fields'] ?? null)) {
-            /** @var list<array<string, mixed>> $fields */
-            $fields = $schema['fields'];
-        }
-
-        return $this->templates->errors($html, $fields);
-    }
-
-    private function decode(string $source, mixed &$value): bool
-    {
-        try {
-            $value = json_decode($source, true, 64, JSON_THROW_ON_ERROR);
-
-            return true;
-        } catch (JsonException) {
-            return false;
-        }
+        return [
+            'html' => (string) $draft->html,
+            'css' => (string) $draft->css,
+            'js' => (string) $draft->js,
+            'schema' => (string) $draft->schema_source,
+        ];
     }
 }
