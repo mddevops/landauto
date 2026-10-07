@@ -2,6 +2,7 @@ import { Head } from '@inertiajs/react';
 import { Blocks, LayoutTemplate } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes/developer';
+import type { DeveloperPermission } from '@/types/platform';
 
 type DeveloperDashboardProps = {
     profile: {
@@ -11,24 +12,32 @@ type DeveloperDashboardProps = {
         status_label: string;
         bio: string | null;
     };
+    capabilities: Record<DeveloperPermission, boolean>;
 };
 
-const upcoming = [
+const allowedText = 'Доступ разрешён. Инструмент появится на следующем этапе.';
+
+const tools = [
     {
         title: 'Мои блоки',
         icon: Blocks,
-        text: 'Создание блоков будет доступно на следующем этапе.',
+        permission: 'create_blocks',
+        deniedText: 'Нет разрешения на создание блоков.',
     },
     {
         title: 'Мои шаблоны',
         icon: LayoutTemplate,
-        text: 'Создание шаблонов будет доступно на следующем этапе.',
+        permission: 'create_templates',
+        deniedText: 'Нет разрешения на создание шаблонов.',
     },
-];
+] as const;
 
 export default function DeveloperDashboard({
     profile,
+    capabilities,
 }: DeveloperDashboardProps) {
+    const hasAny = Object.values(capabilities).some(Boolean);
+
     return (
         <>
             <Head title="Панель разработчика" />
@@ -63,6 +72,14 @@ export default function DeveloperDashboard({
                         </dd>
                         <dt className="text-muted-foreground">Статус</dt>
                         <dd>{profile.status_label}</dd>
+                        <dt className="text-muted-foreground">
+                            Отправка на модерацию
+                        </dt>
+                        <dd>
+                            {capabilities.submit_marketplace_item
+                                ? 'Разрешена'
+                                : 'Нет разрешения'}
+                        </dd>
                     </dl>
                     {profile.bio && (
                         <p className="text-sm whitespace-pre-line">
@@ -71,21 +88,36 @@ export default function DeveloperDashboard({
                     )}
                 </section>
 
+                {!hasAny && (
+                    <p
+                        role="status"
+                        className="rounded-xl border bg-muted/40 p-4 text-sm"
+                    >
+                        У вас пока нет разрешений на создание контента.
+                        Обратитесь к администратору Landflow.
+                    </p>
+                )}
+
                 <div className="grid gap-4 sm:grid-cols-2">
-                    {upcoming.map((item) => (
+                    {tools.map((tool) => (
                         <section
-                            key={item.title}
-                            aria-label={item.title}
+                            key={tool.title}
+                            aria-label={tool.title}
+                            data-allowed={capabilities[tool.permission]}
                             className="space-y-2 rounded-xl border border-dashed p-4 text-muted-foreground"
                         >
                             <h2 className="flex items-center gap-2 font-semibold text-foreground">
-                                <item.icon
+                                <tool.icon
                                     aria-hidden="true"
                                     className="size-4"
                                 />
-                                {item.title}
+                                {tool.title}
                             </h2>
-                            <p className="text-sm">{item.text}</p>
+                            <p className="text-sm">
+                                {capabilities[tool.permission]
+                                    ? allowedText
+                                    : tool.deniedText}
+                            </p>
                         </section>
                     ))}
                 </div>

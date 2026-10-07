@@ -76,9 +76,9 @@ Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117).
+Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118).
 
-Next ready task: `P9-002 — Developer Permissions`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P9-003 — Block Authoring UI`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3340,8 +3340,18 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-002 — Developer Permissions
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P9-001
+
+### Result
+
+- D-118 APPROVED: Developer Platform access = active Developer Profile (not a permission); creator permissions `create_blocks` / `create_templates` / `submit_marketplace_item` (`DeveloperPermission`); platform and Workspace permissions stay separate; no Developer role.
+- `developer_profile_permissions` (internal, unique profile + permission). Existing profiles backfilled with the defaults; new Super Admin-granted profiles get all three as stored rows.
+- `DeveloperAuthorization` resolves deny-by-default (missing / suspended profile, missing row, unknown key). Suspension keeps the rows and denies them; reactivation restores them; zero permissions is a valid active state.
+- «Разработчики»: permission badges and a «Права» dialog saving the full set atomically (`manage_developers` only; Catalog Managers, customers and the Developer themselves cannot); `developer.permissions_updated` log with public ID, keys and actor.
+- «Панель разработчика» shows the effective capability state per request (no authoring links or routes).
+- Platform permission `manage_platform_content` (Super Admin only) reserved for official platform content; grants no Developer Profile or permission.
+- No Block / Template schema changes, no Marketplace, billing or entitlement changes; D-079 stays ADR_REQUIRED.
 
 ---
 
@@ -4104,8 +4114,8 @@ Task statuses and results live in the phase sections above; this section only po
 
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
-- Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 DONE; D-093 APPROVED).
-- Next: `P9-002 — Developer Permissions`.
+- Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001, P9-002 DONE; D-093, D-117, D-118 APPROVED).
+- Next: `P9-003 — Block Authoring UI`.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

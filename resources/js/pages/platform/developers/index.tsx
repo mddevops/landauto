@@ -1,9 +1,12 @@
-import { Form, Head } from '@inertiajs/react';
+import { Form, Head, useForm } from '@inertiajs/react';
 import { Plus } from 'lucide-react';
 import { useState } from 'react';
+import type { FormEvent } from 'react';
+import InputError from '@/components/input-error';
 import { Field, TextField } from '@/components/platform/form-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogClose,
@@ -14,6 +17,7 @@ import {
     DialogTitle,
     DialogTrigger,
 } from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import {
     index,
@@ -21,6 +25,11 @@ import {
     store,
     suspend,
 } from '@/routes/platform/developers';
+import { update as updatePermissions } from '@/routes/platform/developers/permissions';
+import type {
+    DeveloperPermission,
+    DeveloperPermissionOption,
+} from '@/types/platform';
 
 type Developer = {
     public_id: string;
@@ -29,11 +38,13 @@ type Developer = {
     email: string;
     status: 'active' | 'suspended';
     status_label: string;
+    permissions: DeveloperPermission[];
     created_at: string | null;
 };
 
 type DevelopersProps = {
     developers: Developer[];
+    permissionOptions: DeveloperPermissionOption[];
 };
 
 const textareaClass =
@@ -136,6 +147,157 @@ function CreateDeveloperDialog() {
     );
 }
 
+function PermissionsDialog({
+    developer,
+    options,
+}: {
+    developer: Developer;
+    options: DeveloperPermissionOption[];
+}) {
+    const [open, setOpen] = useState(false);
+    const form = useForm<{ permissions: DeveloperPermission[] }>({
+        permissions: developer.permissions,
+    });
+    const prefix = `developer-${developer.public_id}-permission`;
+
+    function toggle(permission: DeveloperPermission, checked: boolean) {
+        form.setData(
+            'permissions',
+            options
+                .map((option) => option.value)
+                .filter((value) =>
+                    value === permission
+                        ? checked
+                        : form.data.permissions.includes(value),
+                ),
+        );
+    }
+
+    function submit(event: FormEvent) {
+        event.preventDefault();
+        form.submit(updatePermissions(developer.public_id), {
+            preserveScroll: true,
+            onSuccess: () => setOpen(false),
+        });
+    }
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(next) => {
+                setOpen(next);
+
+                if (next) {
+                    form.setData('permissions', developer.permissions);
+                    form.clearErrors();
+                }
+            }}
+        >
+            <DialogTrigger asChild>
+                <Button
+                    type="button"
+                    size="sm"
+                    variant="outline"
+                    aria-label={`Права разработчика ${developer.display_name}`}
+                >
+                    Права
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-md">
+                <DialogHeader>
+                    <DialogTitle>Права разработчика</DialogTitle>
+                    <DialogDescription>
+                        {developer.display_name}. Права действуют только для
+                        активного профиля и не дают доступа к пространствам или
+                        платформенным ролям.
+                    </DialogDescription>
+                </DialogHeader>
+                <form onSubmit={submit} className="grid gap-4">
+                    <fieldset className="grid gap-3">
+                        <legend className="sr-only">Права разработчика</legend>
+                        {options.map((option) => (
+                            <div
+                                key={option.value}
+                                className="flex items-center gap-2"
+                            >
+                                <Checkbox
+                                    id={`${prefix}-${option.value}`}
+                                    checked={form.data.permissions.includes(
+                                        option.value,
+                                    )}
+                                    onCheckedChange={(checked) =>
+                                        toggle(option.value, checked === true)
+                                    }
+                                />
+                                <Label
+                                    htmlFor={`${prefix}-${option.value}`}
+                                    className="font-normal"
+                                >
+                                    {option.label}
+                                </Label>
+                            </div>
+                        ))}
+                    </fieldset>
+                    {form.data.permissions.length === 0 && (
+                        <p className="text-sm text-muted-foreground">
+                            Без прав разработчик сможет открыть панель, но не
+                            сможет создавать блоки, шаблоны и отправлять их на
+                            модерацию.
+                        </p>
+                    )}
+                    <InputError
+                        message={
+                            form.errors.permissions ??
+                            Object.entries(form.errors).find(([key]) =>
+                                key.startsWith('permissions.'),
+                            )?.[1]
+                        }
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button type="button" variant="outline">
+                                Отмена
+                            </Button>
+                        </DialogClose>
+                        <Button type="submit" disabled={form.processing}>
+                            {form.processing && <Spinner />}
+                            Сохранить права
+                        </Button>
+                    </DialogFooter>
+                </form>
+            </DialogContent>
+        </Dialog>
+    );
+}
+
+function PermissionBadges({
+    developer,
+    options,
+}: {
+    developer: Developer;
+    options: DeveloperPermissionOption[];
+}) {
+    const granted = options.filter((option) =>
+        developer.permissions.includes(option.value),
+    );
+
+    if (granted.length === 0) {
+        return <p className="text-xs text-muted-foreground">Нет прав</p>;
+    }
+
+    return (
+        <ul aria-label="Права разработчика" className="flex flex-wrap gap-1">
+            {granted.map((option) => (
+                <li key={option.value}>
+                    <Badge variant="outline" title={option.label}>
+                        {option.short_label}
+                    </Badge>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
 function StatusAction({ developer }: { developer: Developer }) {
     const isActive = developer.status === 'active';
     const action = isActive
@@ -160,7 +322,10 @@ function StatusAction({ developer }: { developer: Developer }) {
     );
 }
 
-export default function PlatformDevelopers({ developers }: DevelopersProps) {
+export default function PlatformDevelopers({
+    developers,
+    permissionOptions,
+}: DevelopersProps) {
     return (
         <>
             <Head title="Разработчики" />
@@ -205,8 +370,14 @@ export default function PlatformDevelopers({ developers }: DevelopersProps) {
                                     <p className="text-xs break-all text-muted-foreground">
                                         <code>{developer.slug}</code>
                                     </p>
+                                    <div className="pt-1">
+                                        <PermissionBadges
+                                            developer={developer}
+                                            options={permissionOptions}
+                                        />
+                                    </div>
                                 </div>
-                                <div className="flex items-center gap-3">
+                                <div className="flex flex-wrap items-center gap-3">
                                     <Badge
                                         variant={
                                             developer.status === 'active'
@@ -216,6 +387,10 @@ export default function PlatformDevelopers({ developers }: DevelopersProps) {
                                     >
                                         {developer.status_label}
                                     </Badge>
+                                    <PermissionsDialog
+                                        developer={developer}
+                                        options={permissionOptions}
+                                    />
                                     <StatusAction developer={developer} />
                                 </div>
                             </li>

@@ -2150,6 +2150,28 @@ Owner decision dated 2026-10-07 (Phase 9 start); P9-001 implements the access pa
 
 ---
 
+## D-118 — Developer Permission Separation
+
+**Status:** APPROVED (owner instruction for P9-002, 2026-10-07)
+
+### Decision
+
+Three authorization domains stay separate and never grant each other:
+
+- **Developer Platform access** = the authenticated User's own active Developer Profile (D-093). `access_developer_platform` is this gate, not an assignable permission.
+- **Developer creator permissions** (`DeveloperPermission`: `create_blocks`, `create_templates`, `submit_marketplace_item`) are explicit rows in `developer_profile_permissions`, resolved deny-by-default by `DeveloperAuthorization`: missing / suspended profile, missing row or unknown key → deny. A suspension keeps the rows and denies all of them; reactivation restores them. An active profile may have zero permissions.
+- **Platform permissions** stay Landflow staff authority. `manage_developers` (Super Admin) manages profiles and their creator permissions; `manage_platform_content` (Super Admin only, not Catalog Manager) will authorize official platform-owned Blocks / Templates without a Developer Profile.
+- **Workspace permissions** stay customer tenant authority.
+- There is no Developer role (no `DeveloperRole`, `PlatformRole::Developer` or `WorkspaceRole::Developer`).
+
+MVP default: a new Super Admin-granted profile receives all current creator permissions as stored rows (existing profiles were backfilled), so a Super Admin can narrow them individually. A creator permission only ever covers content owned by the same Developer Profile; `submit_marketplace_item` means submitting own content to review, never approval, publication, pricing, payouts or licenses (P9-008, Phase 10, D-079).
+
+### Resolved By
+
+Owner instruction for P9-002 (2026-10-07); P9-002.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

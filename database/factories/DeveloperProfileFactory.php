@@ -2,6 +2,7 @@
 
 namespace Database\Factories;
 
+use App\Enums\DeveloperPermission;
 use App\Enums\DeveloperProfileStatus;
 use App\Models\DeveloperProfile;
 use App\Models\User;
@@ -26,5 +27,18 @@ class DeveloperProfileFactory extends Factory
     public function suspended(): static
     {
         return $this->state(['status' => DeveloperProfileStatus::Suspended]);
+    }
+
+    /**
+     * Explicit creator grants; without this state a factory profile has none (deny-by-default).
+     */
+    public function withPermissions(DeveloperPermission ...$permissions): static
+    {
+        return $this->afterCreating(function (DeveloperProfile $profile) use ($permissions): void {
+            $profile->permissions()->createMany(array_map(
+                fn (DeveloperPermission $permission): array => ['permission' => $permission->value],
+                $permissions === [] ? DeveloperPermission::defaults() : $permissions,
+            ));
+        });
     }
 }

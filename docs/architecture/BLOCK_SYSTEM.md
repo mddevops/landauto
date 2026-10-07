@@ -98,6 +98,12 @@ Approved ownership (D-093, D-117) — target model, not implemented yet; the aut
 
 Today `block_definitions` only has `is_official`; Block / Template authoring does not exist yet.
 
+Authoring authorization (D-118; boundary defined in P9-002, used by the authoring tasks):
+
+- `platform` content: authenticated User with platform permission `manage_platform_content` (Super Admin); no Developer Profile needed.
+- `developer` content: the User's own active Developer Profile plus `DeveloperPermission::CreateBlocks` / `CreateTemplates`, checked through `DeveloperAuthorization`; never another profile's content.
+- `workspace_private` content: a future, separate Workspace-authorized path.
+
 ---
 
 # 5. Block Version

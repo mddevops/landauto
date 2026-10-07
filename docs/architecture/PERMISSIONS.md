@@ -372,7 +372,9 @@ Permissions should be grouped conceptually.
 
 ## Developer
 
-- access_developer_platform
+Not Workspace permissions; a separate creator domain (D-118, see §65):
+
+- Developer Platform access: the active Developer Profile itself (historically `access_developer_platform`; not an assignable permission)
 - create_blocks
 - create_templates
 - submit_marketplace_item
@@ -1052,16 +1054,16 @@ Visitor cannot choose routing or integration.
 
 # 65. Developer Platform Permissions
 
-Potential permissions:
+Implemented (D-118, P9-002). Three domains stay separate and never grant each other:
 
-- access_developer_platform
-- create_blocks
-- create_templates
-- submit_marketplace_item
-- view_sales
-- manage_developer_profile
+- **Developer Platform access** (`/developer`): the authenticated User's own active Developer Profile. The former `access_developer_platform` idea is this gate, not a stored permission.
+- **Developer creator permissions** (`App\Enums\DeveloperPermission`): `create_blocks`, `create_templates`, `submit_marketplace_item`. Stored explicitly per profile in `developer_profile_permissions`; resolved deny-by-default by `App\Developers\DeveloperAuthorization` (missing / suspended profile, missing row or unknown key → deny). Suspension keeps the rows but denies all of them. Zero permissions is a valid active state. New Super Admin-granted profiles get all current permissions as stored rows.
+- **Platform permissions**: `manage_developers` (Super Admin) grants / suspends profiles and edits their creator permissions; `manage_platform_content` (Super Admin only) is reserved for official platform-owned Blocks / Templates and needs no Developer Profile.
+- **Workspace permissions** remain customer tenant authority; no Developer role exists in any domain.
 
-Some may require developer account approval/entitlement.
+A creator permission never authorizes content owned by another Developer Profile. `submit_marketplace_item` only submits own content to review (P9-008): no approval, publication, pricing, payouts or licenses.
+
+Later candidates (not implemented): `view_sales`, Developer self-edit of the profile.
 
 ---
 

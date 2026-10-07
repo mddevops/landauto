@@ -11,4 +11,6 @@ enum PlatformPermission: string
     case EditCatalog = 'edit_catalog';
     case ManageCatalogMedia = 'manage_catalog_media';
     case ManageDevelopers = 'manage_developers';
+    // Official platform-owned Blocks / Templates (D-117, D-118); needs no Developer Profile.
+    case ManagePlatformContent = 'manage_platform_content';
 }

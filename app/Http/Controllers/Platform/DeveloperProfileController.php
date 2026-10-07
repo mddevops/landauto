@@ -3,8 +3,10 @@
 namespace App\Http\Controllers\Platform;
 
 use App\Developers\DeveloperProfiles;
+use App\Enums\DeveloperPermission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Platform\StoreDeveloperProfileRequest;
+use App\Http\Requests\Platform\UpdateDeveloperPermissionsRequest;
 use App\Models\DeveloperProfile;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -15,8 +17,9 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * «Разработчики»: Super Admin management of Developer Profiles (`manage_developers`, D-093).
- * Profiles are addressed by public ID only and are never hard-deleted.
+ * «Разработчики»: Super Admin management of Developer Profiles and their creator permissions
+ * (`manage_developers`, D-093, D-118). Profiles are addressed by public ID only and are never
+ * hard-deleted.
  */
 class DeveloperProfileController extends Controller
 {
@@ -26,7 +29,7 @@ class DeveloperProfileController extends Controller
     {
         return Inertia::render('platform/developers/index', [
             'developers' => DeveloperProfile::query()
-                ->with('user:id,email')
+                ->with(['user:id,email', 'permissions:id,developer_profile_id,permission'])
                 ->orderBy('display_name')
                 ->orderBy('id')
                 ->get()
@@ -37,10 +40,19 @@ class DeveloperProfileController extends Controller
                     'email' => $profile->user->email,
                     'status' => $profile->status->value,
                     'status_label' => $profile->status->label(),
+                    'permissions' => array_map(
+                        fn (DeveloperPermission $permission): string => $permission->value,
+                        DeveloperPermission::fromKeys($profile->permissions->pluck('permission')),
+                    ),
                     'created_at' => $profile->created_at?->toIso8601String(),
                 ])
                 ->values()
                 ->all(),
+            'permissionOptions' => array_map(fn (DeveloperPermission $permission): array => [
+                'value' => $permission->value,
+                'label' => $permission->label(),
+                'short_label' => $permission->shortLabel(),
+            ], DeveloperPermission::cases()),
         ]);
     }
 
@@ -72,6 +84,14 @@ class DeveloperProfileController extends Controller
     {
         $this->profiles->reactivate($this->actor($request), $developer);
         Inertia::flash('toast', ['type' => 'success', 'message' => "Профиль «{$developer->display_name}» восстановлен."]);
+
+        return to_route('platform.developers.index');
+    }
+
+    public function updatePermissions(UpdateDeveloperPermissionsRequest $request, DeveloperProfile $developer): RedirectResponse
+    {
+        $this->profiles->syncPermissions($this->actor($request), $developer, $request->permissions());
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Права разработчика «{$developer->display_name}» сохранены."]);
 
         return to_route('platform.developers.index');
     }

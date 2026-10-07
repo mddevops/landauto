@@ -302,6 +302,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [DeveloperProfileController::class, 'store'])->middleware('throttle:30,1')->name('store');
             Route::post('{developer}/suspend', [DeveloperProfileController::class, 'suspend'])->whereUlid('developer')->name('suspend');
             Route::post('{developer}/reactivate', [DeveloperProfileController::class, 'reactivate'])->whereUlid('developer')->name('reactivate');
+            Route::put('{developer}/permissions', [DeveloperProfileController::class, 'updatePermissions'])->whereUlid('developer')->name('permissions.update');
         });
 
     // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).

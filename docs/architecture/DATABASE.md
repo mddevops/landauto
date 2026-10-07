@@ -1790,6 +1790,17 @@ Fields:
 
 No Workspace, plan or subscription relation (D-093). A User may be both customer and developer. Implemented in P9-001.
 
+## developer_profile_permissions
+
+Internal explicit creator grants (D-118, P9-002); no `public_id`.
+
+- id
+- developer_profile_id FK (cascade; profiles are not hard-deleted)
+- permission (`create_blocks` / `create_templates` / `submit_marketplace_item`)
+- timestamps
+
+Unique `developer_profile_id + permission`. Rows survive suspension. Unknown keys never grant access. Existing profiles were backfilled with the current defaults.
+
 ---
 
 # 70. Marketplace Listings
