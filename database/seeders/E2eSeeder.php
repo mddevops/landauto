@@ -9,6 +9,7 @@ use App\Enums\DeveloperProfileStatus;
 use App\Enums\Entitlement;
 use App\Enums\MediaAngle;
 use App\Enums\PlatformRole;
+use App\Enums\SiteType;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
@@ -74,6 +75,7 @@ class E2eSeeder extends Seeder
         $this->call([TemplateSeeder::class, OfficialBlockSeeder::class]);
         $plan = Plan::factory()->create(['key' => 'e2e-sites', 'name' => 'E2E Sites']);
         $plan->setEntitlement(Entitlement::MaxSites, 100);
+        $plan->setEntitlement(Entitlement::MultiPageSites, true);
         $creator = $this->createUser('Олег Создатель', 'creator@landflow.test');
         $this->createWorkspace($creator, 'Автосалон Юг', plan: $plan);
         $this->createWorkspace($creator, 'Сервисный центр Юг', plan: $plan);
@@ -117,20 +119,32 @@ class E2eSeeder extends Seeder
         // Workspace / Site navigation: a single-Workspace Owner who creates and renames Workspaces.
         $navigator = $this->createUser('Нина Навигаторова', 'navigator@landflow.test');
         $navigatorWorkspace = $this->createWorkspace($navigator, 'Автодом Навигатор', plan: $plan);
-        app(CreateSite::class)->create($navigatorWorkspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт навигации');
+        app(CreateSite::class)->create($navigatorWorkspace, 'Сайт навигации', SiteType::MultiPage);
 
         // Custom domains + branding: a test-only plan with `custom_domain`, an Owner and a Designer.
         $domainsPlan = Plan::factory()->create(['key' => 'e2e-domains', 'name' => 'E2E Domains']);
         $domainsPlan->setEntitlement(Entitlement::MaxSites, 100);
         $domainsPlan->setEntitlement(Entitlement::CustomDomain, true);
+        $domainsPlan->setEntitlement(Entitlement::MultiPageSites, true);
         $domainsOwner = $this->createUser('Дмитрий Доменов', 'domains@landflow.test');
         $domainsWorkspace = $this->createWorkspace($domainsOwner, 'Автосалон Домен', plan: $domainsPlan);
         $domainsWorkspace->addMember($this->createUser('Диана Доменная', 'domains-designer@landflow.test'), WorkspaceRole::Designer);
-        $domainsSite = app(CreateSite::class)->create($domainsWorkspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт с доменом');
+        $domainsSite = app(CreateSite::class)->create($domainsWorkspace, 'Сайт с доменом', SiteType::MultiPage);
         $domainsSite->forceFill(['subdomain' => 'domains-e2e'])->save();
         $this->placeBlock($domainsSite->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Свой домен: главная']);
 
         $this->createTeamWorkspace();
+
+        // Site formats: a Free-like plan (many Sites, no `multi_page_sites`) and one compatible
+        // official Template each for Quiz and Chat Selection.
+        $formatsPlan = Plan::factory()->create(['key' => 'e2e-formats', 'name' => 'E2E Formats']);
+        $formatsPlan->setEntitlement(Entitlement::MaxSites, 100);
+        $this->createWorkspace($this->createUser('Фёкла Форматова', 'formats@landflow.test'), 'Автосалон Формат', plan: $formatsPlan);
+        foreach ([['e2e-quiz', 'Квиз: подбор автомобиля', SiteType::Quiz], ['e2e-chat', 'Чат: подбор автомобиля', SiteType::ChatSelection]] as [$slug, $name, $type]) {
+            $template = Template::query()->create(['slug' => $slug, 'name' => $name]);
+            $template->forceFill(['is_official' => true, 'site_types' => [$type->value]])->save();
+            $template->versions()->create(['version' => '1.0.0']);
+        }
 
         // Block authoring: only an active Developer Profile with `create_blocks` grants access;
         // no platform role, and the personal Workspace grants no authoring.
@@ -156,12 +170,11 @@ class E2eSeeder extends Seeder
         $plan = Plan::factory()->create(['key' => 'e2e-team', 'name' => 'E2E Team']);
         $plan->setEntitlement(Entitlement::MaxSites, 100);
         $plan->setEntitlement(Entitlement::MaxMembers, 10);
+        $plan->setEntitlement(Entitlement::MultiPageSites, true);
         $workspace = $this->createWorkspace($this->createUser('Тимур Командиров', 'team-owner@landflow.test'), 'Автосалон Команда', plan: $plan);
-        $blank = Template::query()->where('slug', 'blank')->firstOrFail();
-
-        $siteA = app(CreateSite::class)->create($workspace, $blank, 'Сайт команды А');
+        $siteA = app(CreateSite::class)->create($workspace, 'Сайт команды А', SiteType::MultiPage);
         $siteA->forceFill(['subdomain' => 'team-a-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
-        $siteB = app(CreateSite::class)->create($workspace, $blank, 'Сайт команды Б');
+        $siteB = app(CreateSite::class)->create($workspace, 'Сайт команды Б', SiteType::MultiPage);
         $siteB->forceFill(['subdomain' => 'team-b-e2e'])->save();
         $this->placeBlock($siteA->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Команда: главная']);
         $form = Form::factory()->for($siteA)->withLeadFields()->create(['name' => 'Заявка команды']);
@@ -206,7 +219,7 @@ class E2eSeeder extends Seeder
      */
     private function createIntegrationsSite(Workspace $workspace): void
     {
-        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт интеграций');
+        $site = app(CreateSite::class)->create($workspace, 'Сайт интеграций', SiteType::MultiPage);
         $site->forceFill(['subdomain' => 'integrations-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         $popup = Popup::factory()->for($site)->create(['name' => 'Обратный звонок', 'title' => 'Перезвоним за 5 минут']);
@@ -236,7 +249,7 @@ class E2eSeeder extends Seeder
 
     private function createPublishingSite(Workspace $workspace): void
     {
-        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт для публикации');
+        $site = app(CreateSite::class)->create($workspace, 'Сайт для публикации', SiteType::MultiPage);
         $site->forceFill(['subdomain' => 'publish-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($site)->create(['name' => 'Обратный звонок'])->form()->associate($form)->save();
@@ -250,7 +263,7 @@ class E2eSeeder extends Seeder
      */
     private function createLifecycleSite(Workspace $workspace): void
     {
-        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Сайт жизненного цикла');
+        $site = app(CreateSite::class)->create($workspace, 'Сайт жизненного цикла', SiteType::MultiPage);
         $site->forceFill(['subdomain' => 'lifecycle-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка на тест-драйв']);
         $popup = Popup::factory()->for($site)->create(['name' => 'Тест-драйв', 'title' => 'Тест-драйв за 15 минут']);
@@ -333,7 +346,7 @@ class E2eSeeder extends Seeder
      */
     private function createVehicleShowcase(Workspace $workspace): void
     {
-        $site = app(CreateSite::class)->create($workspace, Template::query()->where('slug', 'blank')->firstOrFail(), 'Витрина Запад');
+        $site = app(CreateSite::class)->create($workspace, 'Витрина Запад', SiteType::MultiPage);
         // Many preview submissions from one IP across retries must not hit the default IP limit.
         $site->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
 

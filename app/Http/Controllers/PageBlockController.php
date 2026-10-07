@@ -27,7 +27,7 @@ class PageBlockController extends Controller
     public function store(Request $request, Site $site, Page $page, BlockStateDefaults $defaults): RedirectResponse
     {
         $this->scope->page($site, $page);
-        Gate::authorize('editDesign', $site);
+        Gate::authorize('editStructure', $site);
         $validated = $request->validate(['block' => ['required', 'string', 'max:'.BlockDefinition::SLUG_MAX]]);
 
         // Same set as the Designer library: platform-owned Blocks that have a version.
@@ -118,7 +118,7 @@ class PageBlockController extends Controller
     private function authorizeStructure(Site $site, BlockInstance $block): void
     {
         $this->scope->block($site, $block);
-        Gate::authorize('editDesign', $site);
+        Gate::authorize('editStructure', $site);
     }
 
     private function backTo(Site $site, Page $page, ?BlockInstance $block = null): RedirectResponse

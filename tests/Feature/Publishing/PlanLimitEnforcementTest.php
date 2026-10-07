@@ -4,6 +4,7 @@ namespace Tests\Feature\Publishing;
 
 use App\Enums\DomainSslStatus;
 use App\Enums\Entitlement;
+use App\Enums\SiteType;
 use App\Models\Plan;
 use App\Models\Site;
 use App\Models\SiteDomain;
@@ -91,7 +92,7 @@ class PlanLimitEnforcementTest extends TestCase
     {
         return $this->actingAs($this->owner)
             ->withSession([WorkspaceContext::SESSION_KEY => $this->workspace->public_id])
-            ->post(route('sites.store'), ['name' => $name, 'template' => Template::factory()->create()->public_id]);
+            ->post(route('sites.store'), ['name' => $name, 'site_type' => SiteType::Landing->value, 'start' => 'template', 'template' => Template::factory()->create()->public_id]);
     }
 
     /**

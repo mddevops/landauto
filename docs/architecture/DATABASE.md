@@ -322,6 +322,8 @@ Suggested fields:
 
 P1-010 implements only the foundation subset: bigint `id` / required `workspace_id`, unique ULID `public_id` (ADR-001), `name`, `active` / `archived` status and timestamps. Workspace hard deletion is restricted while Sites exist. All other suggested fields remain deferred to their owning tasks.
 
+P9-013 (D-119) adds `site_type` (`multi_page` / `landing` / `quiz` / `chat_selection`, `App\Enums\SiteType`, default `multi_page` for pre-existing rows), fixed at creation (model-enforced).
+
 Important:
 
 Site owns commercial configuration.
@@ -551,6 +553,8 @@ Fields:
 - price nullable
 - current_version_id nullable
 - timestamps
+
+Implemented so far: `public_id`, `name`, `slug`, `is_official`, timestamps and (P9-013, D-119) `site_types` — JSON list of compatible Site types; empty / null means the Template is not offered at Site creation (the legacy official `blank` Template).
 
 ## template_versions
 

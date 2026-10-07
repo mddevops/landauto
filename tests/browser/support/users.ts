@@ -25,7 +25,7 @@ export const users = {
         email: 'creator@landflow.test',
         password: 'e2e-password',
         workspaces: ['Автосалон Юг', 'Сервисный центр Юг'],
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Designer flow on its own Site (Workspace Owner, so preview is allowed).
     designer: {
@@ -33,7 +33,7 @@ export const users = {
         email: 'designer@landflow.test',
         password: 'e2e-password',
         workspace: 'Студия Дины',
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Automotive flow: platform super admin (catalog + Series media) and a dealer Owner.
     catalogAdmin: {
@@ -46,7 +46,7 @@ export const users = {
         email: 'dealer@landflow.test',
         password: 'e2e-password',
         workspace: 'Автосалон Восток',
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Interactive flow: Forms, Popups and submissions on its own Site.
     interactive: {
@@ -54,7 +54,7 @@ export const users = {
         email: 'interactive@landflow.test',
         password: 'e2e-password',
         workspace: 'Автосалон Запад',
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Publishing flow: Site «Сайт для публикации» on the `publish-e2e` subdomain.
     publisher: {
@@ -161,6 +161,15 @@ export const users = {
         name: 'Иван Связев',
         email: 'team-integrations@landflow.test',
         password: 'e2e-password',
+    },
+    // Site formats: plan without `multi_page_sites`; official Quiz / Chat Templates exist.
+    formats: {
+        name: 'Фёкла Форматова',
+        email: 'formats@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Формат',
+        quizTemplate: 'Квиз: подбор автомобиля',
+        chatTemplate: 'Чат: подбор автомобиля',
     },
     // Block authoring: active Developer Profile with `create_blocks`, no platform role.
     developer: {

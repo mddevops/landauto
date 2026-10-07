@@ -3379,8 +3379,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-013 — Site Types and Creation Flow
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-003 (D-119)
+
+### Result
+
+- `SiteType` enum + `sites.site_type` (immutable, pre-existing rows `multi_page`), `templates.site_types`; typed boolean entitlement `multi_page_sites` (Free has none).
+- `CreateSite(workspace, name, type, ?template)`: blank start only for multi-page / landing, official compatible Template required otherwise, entitlement and `max_sites` checked under the Workspace lock; Russian validation errors (`site_type`, `template`, `site`).
+- `SitePolicy::addPage` (multi-page only; Page create / delete) and `editStructure` (not Quiz / Chat; Block add / move / duplicate / hide / delete); Designer hides those controls; content editing stays.
+- «Создание сайта»: «1. Формат» / «2. Старт» / «3. Название»; multi-page disabled «Недоступно на текущем тарифе.»; Quiz / Chat list only compatible Templates.
+- Template content copy does not exist yet (Templates carry no content until P9-007 / P9-015), so Quiz / Chat Sites start with an empty home Page.
+- Checks: `CreateSiteTest`, `SiteTypeStructureTest`, `DefaultFreePlanTest`, PHPUnit 968 passed, PHPStan, vp check; Playwright `site-formats.spec.ts` (desktop / tablet / mobile) + updated creation specs.
 
 ### Acceptance Criteria
 
@@ -4258,7 +4267,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Next: `P9-013 — Site Types and Creation Flow`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`.
+- Next: `P9-004 — Block Studio (Draft Source and Schema Builder)`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

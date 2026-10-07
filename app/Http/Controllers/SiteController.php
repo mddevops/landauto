@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Actions\Sites\CreateSite;
 use App\Enums\Entitlement;
 use App\Enums\SiteStatus;
+use App\Enums\SiteType;
+use App\Exceptions\SiteCreationRejectedException;
 use App\Exceptions\SiteLimitReachedException;
 use App\Http\Requests\StoreSiteRequest;
 use App\Http\Requests\UpdateSiteRequest;
@@ -41,13 +43,26 @@ class SiteController extends Controller
                 'public_id' => $workspace->public_id,
                 'name' => $workspace->name,
             ],
+            'siteTypes' => array_map(function (SiteType $type) use ($entitlements, $workspace): array {
+                $required = $type->requiredEntitlement();
+
+                return [
+                    'value' => $type->value,
+                    'label' => $type->label(),
+                    'description' => $type->description(),
+                    'allowed' => $required === null || $entitlements->allows($workspace, $required),
+                    'blank_allowed' => $type->allowsBlankStart(),
+                ];
+            }, SiteType::cases()),
             'templates' => Template::query()
-                ->where('is_official', true)
+                ->availableForSites()
                 ->orderBy('name')
-                ->get(['public_id', 'name'])
+                ->get(['public_id', 'name', 'site_types'])
+                ->filter(fn (Template $template): bool => $template->siteTypes() !== [])
                 ->map(fn (Template $template): array => [
                     'public_id' => $template->public_id,
                     'name' => $template->name,
+                    'site_types' => array_map(fn (SiteType $type): string => $type->value, $template->siteTypes()),
                 ])
                 ->values()
                 ->all(),
@@ -67,17 +82,19 @@ class SiteController extends Controller
         $workspace = $workspaceContext->current();
         abort_if($workspace === null, 403);
 
-        $template = Template::query()
-            ->where('public_id', $request->string('template')->toString())
-            ->where('is_official', true)
-            ->firstOrFail();
+        $template = $request->input('start') === StoreSiteRequest::START_TEMPLATE
+            ? Template::query()->availableForSites()->where('public_id', $request->string('template')->toString())->firstOrFail()
+            : null;
 
         try {
             $site = $createSite->create(
                 $workspace,
-                $template,
                 $request->string('name')->toString(),
+                $request->enum('site_type', SiteType::class) ?? SiteType::MultiPage,
+                $template,
             );
+        } catch (SiteCreationRejectedException $exception) {
+            throw ValidationException::withMessages([$exception->field => $exception->getMessage()]);
         } catch (SiteLimitReachedException) {
             throw ValidationException::withMessages([
                 'site' => 'Достигнут лимит активных сайтов для текущего рабочего пространства.',

@@ -4,6 +4,7 @@ namespace Tests\Feature\Sites;
 
 use App\Enums\Entitlement;
 use App\Enums\SiteStatus;
+use App\Enums\SiteType;
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
 use App\Models\Plan;
@@ -172,6 +173,97 @@ class CreateSiteTest extends TestCase
         $this->assertDatabaseCount('sites', 0);
     }
 
+    public function test_multi_page_requires_the_typed_entitlement_and_landing_does_not(): void
+    {
+        [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 5);
+
+        $this->postAsCurrent($user, $workspace, ['name' => 'Многостраничный', 'site_type' => SiteType::MultiPage->value])
+            ->assertSessionHasErrors(['site_type' => 'Многостраничные сайты недоступны на текущем тарифе. Выберите лендинг или смените тариф.']);
+        $this->assertDatabaseCount('sites', 0);
+
+        $this->postAsCurrent($user, $workspace, ['name' => 'Лендинг'])->assertSessionHasNoErrors();
+        $this->assertSame(SiteType::Landing, Site::query()->sole()->site_type);
+
+        [$paidUser, $paidWorkspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 5, multiPage: true);
+        $this->postAsCurrent($paidUser, $paidWorkspace, ['name' => 'Многостраничный', 'site_type' => SiteType::MultiPage->value])
+            ->assertSessionHasNoErrors();
+        $site = $paidWorkspace->sites()->sole();
+        $this->assertSame(SiteType::MultiPage, $site->site_type);
+        $this->assertTrue($site->pages()->sole()->is_home);
+    }
+
+    public function test_quiz_and_chat_require_a_compatible_template_and_never_start_blank(): void
+    {
+        [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 10);
+        $quiz = Template::factory()->forSiteTypes(SiteType::Quiz)->create();
+        $chat = Template::factory()->forSiteTypes(SiteType::ChatSelection)->create();
+
+        foreach ([SiteType::Quiz, SiteType::ChatSelection] as $type) {
+            $this->postAsCurrent($user, $workspace, ['name' => 'Пустой', 'site_type' => $type->value])
+                ->assertSessionHasErrors(['template' => 'Этот формат создаётся только из шаблона. Выберите шаблон.']);
+        }
+
+        $this->postAsCurrent($user, $workspace, ['name' => 'Квиз из чата', 'site_type' => SiteType::Quiz->value, 'template' => $chat->public_id])
+            ->assertSessionHasErrors(['template' => 'Шаблон не подходит для выбранного формата сайта.']);
+        $this->postAsCurrent($user, $workspace, ['name' => 'Лендинг из квиза', 'template' => $quiz->public_id])
+            ->assertSessionHasErrors('template');
+        $this->assertDatabaseCount('sites', 0);
+
+        $this->postAsCurrent($user, $workspace, ['name' => 'Квиз', 'site_type' => SiteType::Quiz->value, 'template' => $quiz->public_id])
+            ->assertSessionHasNoErrors();
+        $this->postAsCurrent($user, $workspace, ['name' => 'Чат', 'site_type' => SiteType::ChatSelection->value, 'template' => $chat->public_id])
+            ->assertSessionHasNoErrors();
+
+        $this->assertEqualsCanonicalizing(
+            [SiteType::Quiz->value, SiteType::ChatSelection->value],
+            $workspace->sites()->get()->map(fn (Site $site): string => $site->site_type->value)->all(),
+        );
+    }
+
+    public function test_every_site_type_counts_toward_max_sites(): void
+    {
+        $quiz = Template::factory()->forSiteTypes(SiteType::Quiz)->create();
+        $chat = Template::factory()->forSiteTypes(SiteType::ChatSelection)->create();
+        $requests = [
+            ['site_type' => SiteType::MultiPage->value],
+            ['site_type' => SiteType::Landing->value],
+            ['site_type' => SiteType::Quiz->value, 'template' => $quiz->public_id],
+            ['site_type' => SiteType::ChatSelection->value, 'template' => $chat->public_id],
+        ];
+
+        foreach ($requests as $request) {
+            [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 1, multiPage: true);
+            Site::factory()->for($workspace)->create();
+
+            $this->postAsCurrent($user, $workspace, ['name' => 'Сверх лимита', ...$request])->assertSessionHasErrors('site');
+            $this->assertSame(1, $workspace->sites()->count(), $request['site_type']);
+        }
+    }
+
+    public function test_unknown_type_or_start_is_rejected_and_create_page_exposes_safe_options(): void
+    {
+        [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 3);
+        Template::factory()->forSiteTypes(SiteType::Quiz)->create(['name' => 'Квиз-шаблон']);
+        Template::factory()->forSiteTypes()->create(['name' => 'Без формата']);
+
+        $this->postAsCurrent($user, $workspace, ['name' => 'Сайт', 'site_type' => 'shop'])->assertSessionHasErrors('site_type');
+        $this->postAsCurrent($user, $workspace, ['name' => 'Сайт', 'start' => 'copy'])->assertSessionHasErrors('start');
+        $this->assertDatabaseCount('sites', 0);
+
+        $this->actingAs($user)
+            ->withSession([WorkspaceContext::SESSION_KEY => $workspace->public_id])
+            ->get(route('sites.create'))
+            ->assertInertia(fn ($page) => $page
+                ->where('siteTypes.0.value', 'multi_page')
+                ->where('siteTypes.0.allowed', false)
+                ->where('siteTypes.1.allowed', true)
+                ->where('siteTypes.2.blank_allowed', false)
+                ->has('templates', 1)
+                ->where('templates.0.name', 'Квиз-шаблон')
+                ->where('templates.0.site_types', ['quiz'])
+                ->missing('templates.0.id'));
+    }
+
     public function test_unverified_user_cannot_create_site(): void
     {
         $user = User::factory()->unverified()->create();
@@ -190,19 +282,23 @@ class CreateSiteTest extends TestCase
     /**
      * @return array{User, Workspace}
      */
-    private function userWithWorkspace(WorkspaceRole $role, int $maxSites): array
+    private function userWithWorkspace(WorkspaceRole $role, int $maxSites, bool $multiPage = false): array
     {
         $user = User::factory()->create();
-        $workspace = $this->workspaceWithLimit($maxSites);
+        $workspace = $this->workspaceWithLimit($maxSites, $multiPage);
         $workspace->addMember($user, $role);
 
         return [$user, $workspace];
     }
 
-    private function workspaceWithLimit(int $maxSites): Workspace
+    private function workspaceWithLimit(int $maxSites, bool $multiPage = false): Workspace
     {
         $plan = Plan::factory()->create();
         $plan->setEntitlement(Entitlement::MaxSites, $maxSites);
+
+        if ($multiPage) {
+            $plan->setEntitlement(Entitlement::MultiPageSites, true);
+        }
 
         return Workspace::factory()->create(['plan_id' => $plan->id]);
     }
@@ -212,8 +308,10 @@ class CreateSiteTest extends TestCase
      */
     private function postAsCurrent(User $user, Workspace $workspace, array $data): TestResponse
     {
+        $defaults = ['site_type' => SiteType::Landing->value, 'start' => array_key_exists('template', $data) ? 'template' : 'blank'];
+
         return $this->actingAs($user)
             ->withSession([WorkspaceContext::SESSION_KEY => $workspace->public_id])
-            ->post(route('sites.store'), $data);
+            ->post(route('sites.store'), [...$defaults, ...$data]);
     }
 }

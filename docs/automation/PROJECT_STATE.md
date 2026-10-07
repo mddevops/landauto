@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: IN_PROGRESS** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-003 DONE; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-079 / D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED, P9-018 BLOCKED_DECISION on D-094). Next ready task per `BACKLOG.md`: `P9-013 — Site Types and Creation Flow`.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: IN_PROGRESS** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-003 DONE; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-079 / D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED, P9-018 BLOCKED_DECISION on D-094). Next ready task per `BACKLOG.md`: `P9-004 — Block Studio (Draft Source and Schema Builder)`.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -212,6 +212,7 @@ Current focus:
 - `P9-001` DONE (D-093 APPROVED, D-117): `developer_profiles` — User-owned creator identity (one per User, immutable owner, restricted User delete, no Workspace relation, `active` / `suspended`); `manage_developers` platform permission (Super Admin only, no Developer platform role); «Разработчики» `/platform/developers` (grant to an existing verified User by email, suspend / restore, no hard delete); «Панель разработчика» `/developer` for the current User's own active profile without Workspace context. Block / Template authoring does not exist yet (P9-003+).
 - `P9-002` DONE (D-118): Developer creator permissions `create_blocks` / `create_templates` / `submit_marketplace_item` (`DeveloperPermission`) as explicit `developer_profile_permissions` rows (existing profiles backfilled; new profiles get all three), resolved deny-by-default by `DeveloperAuthorization` (suspension denies but keeps rows; zero permissions allowed); Super Admin edits them in «Разработчики» (`manage_developers`, `developer.permissions_updated` log); «Панель разработчика» shows the effective capability state; platform permission `manage_platform_content` (Super Admin only) reserved for official platform content. Developer Platform access stays the active profile, not a permission; no Developer role; no Block / Template schema change.
 - `P9-003` DONE: Block Definition ownership `owner_scope` (`platform` / `developer` / `workspace_private`, model-enforced, immutable with slug and creator; `is_official` removed, existing Blocks backfilled as `platform`; audit-only creator / editor). «Мои блоки» `/developer/blocks` (own active profile + `create_blocks`, server-derived ownership, foreign Blocks 404) and «Блоки Landflow» `/platform/blocks` (`manage_platform_content`, no Developer Profile): list / create (name + globally unique slug) / editor shell with disabled Schema / Preview / Versions sections. No Block Version is created; Developer Blocks have no runtime — the customer Designer, Page Blocks, publishing and restore use only platform-owned Blocks with a version. `OfficialBlockSeeder` creates missing platform definitions and appends missing official versions without overwriting existing definition metadata.
+- `P9-013` DONE (D-119): Site types `multi_page` / `landing` / `quiz` / `chat_selection` (`sites.site_type`, immutable); typed entitlement `multi_page_sites` (Free denied); blank start only for multi-page / landing, Quiz / Chat only from a compatible official Template (`templates.site_types`); all types count toward `max_sites`; Landing has one Page, Quiz / Chat structure locked (`SitePolicy::addPage` / `editStructure`). Templates still carry no content (P9-007 / P9-015).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -1205,7 +1206,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P9-013 — Site Types and Creation Flow`** (Phase 9 — Developer Platform IN_PROGRESS: P9-001 … P9-003 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
+**Next: `P9-004 — Block Studio (Draft Source and Schema Builder)`** (Phase 9 — Developer Platform IN_PROGRESS: P9-001 … P9-003 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1763,7 +1764,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P9-013 — Site Types and Creation Flow`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is IN_PROGRESS (P9-001 … P9-003 DONE).
+**`P9-004 — Block Studio (Draft Source and Schema Builder)`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is IN_PROGRESS (P9-001 … P9-003 DONE).
 
 ---
 
@@ -1820,4 +1821,4 @@ Core Landflow implementation: IN_PROGRESS (Phases 0–8 COMPLETED, Phase 9 IN_PR
 ```
 
 **Current phase: Phase 9 — Developer Platform (IN_PROGRESS; P9-001 … P9-003 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED).
-Next: `P9-013 — Site Types and Creation Flow` per `BACKLOG.md`.**
+Next: `P9-004 — Block Studio (Draft Source and Schema Builder)` per `BACKLOG.md`.**

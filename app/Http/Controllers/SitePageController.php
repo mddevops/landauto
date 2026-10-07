@@ -46,7 +46,7 @@ class SitePageController extends Controller
     public function destroy(Site $site, Page $page): RedirectResponse
     {
         $this->scope->page($site, $page);
-        Gate::authorize('editDesign', $site);
+        Gate::authorize('addPage', $site);
 
         if ($page->is_home) {
             throw ValidationException::withMessages(['page' => 'Главную страницу удалить нельзя.']);

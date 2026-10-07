@@ -4,17 +4,16 @@ namespace Tests\Feature\Publishing;
 
 use App\Actions\Sites\CreateSite;
 use App\Enums\Entitlement;
+use App\Enums\SiteType;
 use App\Enums\WorkspaceRole;
 use App\Models\Plan;
 use App\Models\Site;
-use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Publishing\PublishSite;
 use App\Publishing\PublishValidator;
 use App\Support\SiteSubdomain;
 use App\Support\WorkspaceContext;
-use Database\Seeders\TemplateSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -55,12 +54,10 @@ class SiteSubdomainTest extends TestCase
 
     public function test_new_sites_get_a_unique_transliterated_subdomain_that_survives_renames(): void
     {
-        $this->seed(TemplateSeeder::class);
-        $template = Template::query()->where('slug', 'blank')->firstOrFail();
         $plan = Plan::factory()->create();
         $plan->setEntitlement(Entitlement::MaxSites, 10);
         $workspace = Workspace::factory()->create(['plan_id' => $plan->id]);
-        $create = fn (string $name): Site => app(CreateSite::class)->create($workspace, $template, $name);
+        $create = fn (string $name): Site => app(CreateSite::class)->create($workspace, $name, SiteType::Landing);
 
         $first = $create('Changan Москва');
         $second = $create('Changan Москва');

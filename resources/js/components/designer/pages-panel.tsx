@@ -26,6 +26,7 @@ type PagesPanelProps = {
     pages: DesignerPage[];
     currentPageId: string;
     canEdit: boolean;
+    canAddPages: boolean;
     canEditSeo: boolean;
     canEditSeoIndexing: boolean;
 };
@@ -42,6 +43,7 @@ export function PagesPanel({
     pages,
     currentPageId,
     canEdit,
+    canAddPages,
     canEditSeo,
     canEditSeoIndexing,
 }: PagesPanelProps) {
@@ -110,7 +112,7 @@ export function PagesPanel({
                                 >
                                     <Pencil aria-hidden="true" />
                                 </Button>
-                                {!page.is_home && (
+                                {canAddPages && !page.is_home && (
                                     <Button
                                         type="button"
                                         variant="ghost"
@@ -130,7 +132,7 @@ export function PagesPanel({
                 ))}
             </ul>
 
-            {canEdit && (
+            {canAddPages && (
                 <Button
                     type="button"
                     variant="outline"

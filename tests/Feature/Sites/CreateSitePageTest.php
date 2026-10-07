@@ -38,10 +38,12 @@ class CreateSitePageTest extends TestCase
             ->where('templates.0', [
                 'public_id' => $blank->public_id,
                 'name' => 'Пустой шаблон',
+                'site_types' => ['multi_page', 'landing'],
             ])
             ->where('templates.1', [
                 'public_id' => $starter->public_id,
                 'name' => 'Стартовый шаблон',
+                'site_types' => ['multi_page', 'landing'],
             ])
             ->missing('templates.0.id')
             ->missing('currentWorkspace.id')

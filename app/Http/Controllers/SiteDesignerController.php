@@ -99,6 +99,8 @@ class SiteDesignerController extends Controller
                 ->all(),
             'can' => [
                 'editDesign' => Gate::allows('editDesign', $site),
+                'editStructure' => Gate::allows('editStructure', $site),
+                'addPage' => Gate::allows('addPage', $site),
                 'editContent' => Gate::allows('editContent', $site),
                 'manageAssets' => Gate::allows('manageAssets', $site),
                 'preview' => Gate::allows('preview', $site),

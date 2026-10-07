@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Enums\SiteStatus;
+use App\Enums\SiteType;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -20,6 +21,7 @@ use LogicException;
  * @property string $public_id
  * @property int $workspace_id
  * @property string $name
+ * @property SiteType $site_type
  * @property string|null $subdomain
  * @property SiteStatus $status
  * @property array<string, string>|null $design_tokens
@@ -40,6 +42,7 @@ class Site extends Model
      */
     protected $attributes = [
         'status' => SiteStatus::Active->value,
+        'site_type' => SiteType::MultiPage->value,
     ];
 
     /**
@@ -49,6 +52,7 @@ class Site extends Model
     {
         return [
             'status' => SiteStatus::class,
+            'site_type' => SiteType::class,
             'design_tokens' => 'array',
             'form_security' => 'array',
         ];
@@ -59,6 +63,10 @@ class Site extends Model
         static::updating(function (Site $site): void {
             if ($site->isDirty('workspace_id')) {
                 throw new LogicException('Site workspace is immutable outside a dedicated transfer workflow.');
+            }
+
+            if ($site->isDirty('site_type')) {
+                throw new LogicException('The Site type is fixed at creation.');
             }
 
             if ($site->isDirty('active_published_version_id') && $site->active_published_version_id !== null) {

@@ -65,6 +65,8 @@ type DesignerProps = {
     library: DesignerLibraryBlock[];
     can: {
         editDesign: boolean;
+        editStructure: boolean;
+        addPage: boolean;
         editContent: boolean;
         manageAssets: boolean;
         preview: boolean;
@@ -266,6 +268,7 @@ export default function Designer({
                                     pages={pages}
                                     currentPageId={page.public_id}
                                     canEdit={can.editDesign}
+                                    canAddPages={can.addPage}
                                     canEditSeo={can.editSeo}
                                     canEditSeoIndexing={can.editSeoIndexing}
                                 />
@@ -278,7 +281,7 @@ export default function Designer({
                                     library={library}
                                     selectedId={selectedId}
                                     onSelect={setSelectedId}
-                                    canEdit={can.editDesign}
+                                    canEdit={can.editStructure}
                                 />
                             )}
                         </div>
