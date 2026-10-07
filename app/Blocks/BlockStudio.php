@@ -53,6 +53,7 @@ final class BlockStudio
     public function __construct(
         private BlockAuthoringAuthorization $authorization,
         private BlockSchemaValidator $schemas,
+        private BlockTemplateParser $templates,
     ) {}
 
     /**
@@ -79,17 +80,18 @@ final class BlockStudio
 
     /**
      * @param  array{html: string, css: string, js: string, schema: string}  $sources
+     * @param  array<string, mixed>  $preview  synthetic Studio preview data (P9-005)
      *
      * @throws BlockDraftConflictException when `$revision` is not the latest saved revision
      */
-    public function save(User $actor, BlockDefinition $block, array $sources, int $revision): BlockDraft
+    public function save(User $actor, BlockDefinition $block, array $sources, array $preview, int $revision): BlockDraft
     {
         if (! $this->authorization->canEdit($actor, $block)) {
             throw new AuthorizationException;
         }
 
         try {
-            return DB::transaction(function () use ($actor, $block, $sources, $revision): BlockDraft {
+            return DB::transaction(function () use ($actor, $block, $sources, $preview, $revision): BlockDraft {
                 $draft = BlockDraft::query()
                     ->where('block_definition_id', $block->id)
                     ->lockForUpdate()
@@ -104,6 +106,8 @@ final class BlockStudio
                 foreach (self::SOURCES as $key => $column) {
                     $draft->setAttribute($column, $sources[$key]);
                 }
+
+                $draft->preview_data = $preview;
 
                 $draft->revision = $revision + 1;
                 $draft->lastEditor()->associate($actor);
@@ -129,12 +133,41 @@ final class BlockStudio
             return ['schema' => 'Схема пуста. Опишите поля блока в schema.json.'];
         }
 
-        try {
-            $schema = json_decode($source, true, 64, JSON_THROW_ON_ERROR);
-        } catch (JsonException) {
+        $schema = null;
+
+        if (! $this->decode($source, $schema)) {
             return ['schema' => 'schema.json содержит некорректный JSON.'];
         }
 
         return $this->schemas->errors($schema);
+    }
+
+    /**
+     * Template syntax errors, plus undeclared / misused paths when the schema itself is valid.
+     *
+     * @return list<array{line: int, message: string}>
+     */
+    public function templateErrors(string $html, string $schemaSource): array
+    {
+        $fields = null;
+        $schema = null;
+
+        if ($this->decode($schemaSource, $schema) && is_array($schema) && $this->schemas->errors($schema) === [] && is_array($schema['fields'] ?? null)) {
+            /** @var list<array<string, mixed>> $fields */
+            $fields = $schema['fields'];
+        }
+
+        return $this->templates->errors($html, $fields);
+    }
+
+    private function decode(string $source, mixed &$value): bool
+    {
+        try {
+            $value = json_decode($source, true, 64, JSON_THROW_ON_ERROR);
+
+            return true;
+        } catch (JsonException) {
+            return false;
+        }
     }
 }

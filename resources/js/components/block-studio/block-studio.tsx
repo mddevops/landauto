@@ -1,11 +1,11 @@
 import { Form } from '@inertiajs/react';
 import { CircleCheck, FileCode2, TriangleAlert } from 'lucide-react';
-import { useState } from 'react';
-import type { ReactNode } from 'react';
+import { useMemo, useState } from 'react';
 import {
     formatBlockDate,
     versionsLabel,
 } from '@/components/block-authoring/block-list';
+import { BlockPreview } from '@/components/block-studio/block-preview';
 import {
     parseSchema,
     SchemaBuilder,
@@ -87,7 +87,7 @@ export function BlockStudio({
     const [mode, setMode] = useState<Mode>('code');
     const [file, setFile] = useState<DraftSourceKey>('html');
     const current = files.find((item) => item.key === file) ?? files[0];
-    const schemaIsJson = parseSchema(sources.schema) !== null;
+    const schema = useMemo(() => parseSchema(sources.schema), [sources.schema]);
 
     return (
         <main className="flex min-w-0 flex-1 flex-col gap-4 p-4 sm:p-6">
@@ -251,10 +251,12 @@ export function BlockStudio({
                     )}
 
                     {mode === 'preview' && (
-                        <p className="rounded-xl border border-dashed p-6 text-sm text-muted-foreground">
-                            Предпросмотр в изолированной песочнице появится на
-                            следующем шаге студии.
-                        </p>
+                        <BlockPreview
+                            sources={sources}
+                            fields={schema?.fields ?? null}
+                            preview={autosave.preview}
+                            onPreviewChange={autosave.updatePreview}
+                        />
                     )}
 
                     {mode === 'settings' && (
@@ -266,11 +268,10 @@ export function BlockStudio({
                     )}
                 </div>
 
-                <SchemaChecks
-                    errors={draft.schema_errors}
-                    schemaIsJson={schemaIsJson}
+                <DraftChecks
+                    draft={draft}
+                    schemaIsJson={schema !== null}
                     stale={status !== 'saved'}
-                    savedAt={draft.saved_at}
                 />
             </div>
         </main>
@@ -329,70 +330,111 @@ function SourceEditor({
         </div>
     );
 }
-
-function SchemaChecks({
-    errors,
-    schemaIsJson,
-    stale,
-    savedAt,
+function CheckList({
+    label,
+    items,
+    empty,
 }: {
-    errors: BlockDraft['schema_errors'];
-    schemaIsJson: boolean;
-    stale: boolean;
-    savedAt: string | null;
+    label: string;
+    items: { key: string; location: string; message: string }[];
+    empty: string;
 }) {
-    let body: ReactNode;
-
-    if (!schemaIsJson) {
-        body = (
-            <p className="flex gap-2 text-sm text-destructive">
-                <TriangleAlert aria-hidden="true" className="size-4 shrink-0" />
-                schema.json сейчас не является корректным JSON со списком
-                fields.
-            </p>
-        );
-    } else if (errors.length === 0) {
-        body = (
+    if (items.length === 0) {
+        return (
             <p className="flex gap-2 text-sm">
                 <CircleCheck
                     aria-hidden="true"
                     className="size-4 shrink-0 text-green-600"
                 />
-                Ошибок в схеме нет.
+                {empty}
             </p>
-        );
-    } else {
-        body = (
-            <ul className="grid gap-2" aria-label="Ошибки схемы">
-                {errors.map((error) => (
-                    <li
-                        key={error.path}
-                        className="rounded-md border border-destructive/40 p-2 text-sm"
-                    >
-                        <code className="text-xs break-all text-muted-foreground">
-                            {error.path}
-                        </code>
-                        <p className="text-destructive">{error.message}</p>
-                    </li>
-                ))}
-            </ul>
         );
     }
 
     return (
+        <ul className="grid gap-2" aria-label={label}>
+            {items.map((item) => (
+                <li
+                    key={item.key}
+                    className="rounded-md border border-destructive/40 p-2 text-sm"
+                >
+                    <code className="text-xs break-all text-muted-foreground">
+                        {item.location}
+                    </code>
+                    <p className="text-destructive">{item.message}</p>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+function DraftChecks({
+    draft,
+    schemaIsJson,
+    stale,
+}: {
+    draft: BlockDraft;
+    schemaIsJson: boolean;
+    stale: boolean;
+}) {
+    return (
         <aside
             aria-labelledby="studio-checks-title"
-            className="h-fit space-y-3 rounded-xl border bg-card p-4 shadow-sm"
+            className="h-fit space-y-4 rounded-xl border bg-card p-4 shadow-sm"
         >
             <h2 id="studio-checks-title" className="font-semibold">
-                Проверка схемы
+                Проверки
             </h2>
-            {body}
+            <section
+                aria-labelledby="studio-checks-schema"
+                className="space-y-2"
+            >
+                <h3 id="studio-checks-schema" className="text-sm font-medium">
+                    Схема
+                </h3>
+                {schemaIsJson ? (
+                    <CheckList
+                        label="Ошибки схемы"
+                        empty="Ошибок в схеме нет."
+                        items={draft.schema_errors.map((error) => ({
+                            key: error.path,
+                            location: error.path,
+                            message: error.message,
+                        }))}
+                    />
+                ) : (
+                    <p className="flex gap-2 text-sm text-destructive">
+                        <TriangleAlert
+                            aria-hidden="true"
+                            className="size-4 shrink-0"
+                        />
+                        schema.json сейчас не является корректным JSON со
+                        списком fields.
+                    </p>
+                )}
+            </section>
+            <section
+                aria-labelledby="studio-checks-template"
+                className="space-y-2"
+            >
+                <h3 id="studio-checks-template" className="text-sm font-medium">
+                    Шаблон index.html
+                </h3>
+                <CheckList
+                    label="Ошибки шаблона"
+                    empty="Ошибок в шаблоне нет."
+                    items={draft.template_errors.map((error, index) => ({
+                        key: `${index}-${error.line}`,
+                        location: `Строка ${error.line}`,
+                        message: error.message,
+                    }))}
+                />
+            </section>
             <p className="text-xs text-muted-foreground">
                 {stale
                     ? 'Результат обновится после сохранения черновика.'
-                    : savedAt
-                      ? `По черновику от ${formatBlockDate(savedAt)}.`
+                    : draft.saved_at
+                      ? `По черновику от ${formatBlockDate(draft.saved_at)}.`
                       : 'Черновик ещё не сохранялся.'}
             </p>
         </aside>

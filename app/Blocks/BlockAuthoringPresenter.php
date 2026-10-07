@@ -5,6 +5,7 @@ namespace App\Blocks;
 use App\Enums\BlockCategory;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
+use stdClass;
 
 /**
  * Safe authoring props: public ID and readable ownership only, never internal or audit keys.
@@ -59,7 +60,7 @@ final class BlockAuthoringPresenter
     }
 
     /**
-     * @return array{revision: int, sources: array<string, string>, schema_errors: list<array{path: string, message: string}>, saved_at: string|null}
+     * @return array{revision: int, sources: array<string, string>, preview: array<string, mixed>|stdClass, schema_errors: list<array{path: string, message: string}>, template_errors: list<array{line: int, message: string}>, saved_at: string|null}
      */
     public function draft(BlockDraft $draft): array
     {
@@ -78,7 +79,10 @@ final class BlockAuthoringPresenter
         return [
             'revision' => $draft->revision,
             'sources' => $sources,
+            // An empty preview must reach the browser as an object, not a list.
+            'preview' => $draft->preview_data ?: new stdClass,
             'schema_errors' => $errors,
+            'template_errors' => $this->studio->templateErrors($sources['html'], $sources['schema']),
             'saved_at' => $draft->exists ? $draft->updated_at?->toIso8601String() : null,
         ];
     }

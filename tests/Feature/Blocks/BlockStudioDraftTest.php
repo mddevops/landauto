@@ -56,6 +56,8 @@ class BlockStudioDraftTest extends TestCase
                 ->where('draft.revision', 0)
                 ->where('draft.saved_at', null)
                 ->where('draft.schema_errors', [])
+                ->where('draft.template_errors', [])
+                ->where('draft.preview', [])
                 ->where('draft.sources.js', '')
                 ->where('draft.sources.html', fn (string $html): bool => str_contains($html, '{{ title }}'))
                 ->has('categories', 11)
@@ -131,6 +133,30 @@ class BlockStudioDraftTest extends TestCase
                 'fields.1.fields.0.key',
                 'fields.1.max_items',
             ]));
+    }
+
+    public function test_preview_data_and_template_errors_round_trip(): void
+    {
+        $user = $this->profile->user;
+        $payload = self::payload(0, ['html' => "<h2>{{ title }}</h2>\n{{ subtitle }}\n{{#if title}}"]);
+        $payload['preview'] = ['title' => 'Весенняя акция', 'items' => [['name' => 'Первый']]];
+
+        $this->actingAs($user)->put(route('developer.blocks.draft', $this->block), $payload)->assertSessionHasNoErrors();
+
+        $this->assertSame($payload['preview'], BlockDraft::query()->sole()->preview_data);
+        $this->actingAs($user)->get(route('developer.blocks.show', $this->block))
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('draft.preview.title', 'Весенняя акция')
+                ->where('draft.template_errors', [
+                    ['line' => 2, 'message' => 'Поле «subtitle» не описано в схеме.'],
+                    ['line' => 3, 'message' => 'Не закрыт блок {{#if …}}: добавьте {{/if}}.'],
+                ]));
+
+        $tooLarge = self::payload(1);
+        $tooLarge['preview'] = ['title' => str_repeat('a', BlockStudio::SOURCE_MAX_BYTES)];
+        $this->actingAs($user)->put(route('developer.blocks.draft', $this->block), $tooLarge)->assertSessionHasErrors('preview');
+        $this->actingAs($user)->put(route('developer.blocks.draft', $this->block), [...self::payload(1), 'preview' => 'x'])->assertSessionHasErrors('preview');
+        $this->assertSame(1, BlockDraft::query()->sole()->revision);
     }
 
     public function test_sources_are_limited_to_64_kilobytes_each(): void

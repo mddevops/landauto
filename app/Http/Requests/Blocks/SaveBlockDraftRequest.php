@@ -42,6 +42,8 @@ class SaveBlockDraftRequest extends FormRequest
             $rules["sources.{$key}"] = ['present', 'string', $this->maxBytes(...)];
         }
 
+        $rules['preview'] = ['nullable', 'array', $this->previewSize(...)];
+
         return $rules;
     }
 
@@ -50,6 +52,26 @@ class SaveBlockDraftRequest extends FormRequest
         if (is_string($value) && strlen($value) > BlockStudio::SOURCE_MAX_BYTES) {
             $fail('Файл :attribute больше 64 КБ. Сократите код.');
         }
+    }
+
+    private function previewSize(string $attribute, mixed $value, Closure $fail): void
+    {
+        $json = json_encode($value);
+
+        if ($json === false || strlen($json) > BlockStudio::SOURCE_MAX_BYTES) {
+            $fail('Данные предпросмотра больше 64 КБ. Сократите тексты или количество элементов.');
+        }
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    public function preview(): array
+    {
+        /** @var array<string, mixed>|null $preview */
+        $preview = $this->validated('preview');
+
+        return $preview ?? [];
     }
 
     /**

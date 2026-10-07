@@ -23,9 +23,13 @@ export type DraftSources = Record<DraftSourceKey, string>;
 
 export type SchemaError = { path: string; message: string };
 
+export type TemplateError = { line: number; message: string };
+
 export type BlockDraft = {
     revision: number;
     sources: DraftSources;
+    preview: Record<string, unknown>;
     schema_errors: SchemaError[];
+    template_errors: TemplateError[];
     saved_at: string | null;
 };

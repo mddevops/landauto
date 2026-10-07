@@ -14,7 +14,7 @@ trait SavesBlockDrafts
     private function saveDraft(BlockStudio $studio, SaveBlockDraftRequest $request, User $actor, BlockDefinition $block): void
     {
         try {
-            $studio->save($actor, $block, $request->sources(), $request->integer('revision'));
+            $studio->save($actor, $block, $request->sources(), $request->preview(), $request->integer('revision'));
         } catch (BlockDraftConflictException) {
             throw ValidationException::withMessages([
                 'draft' => 'Черновик уже изменён в другой вкладке или другим автором. Обновите страницу, чтобы не потерять изменения.',

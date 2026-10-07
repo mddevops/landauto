@@ -1,5 +1,7 @@
+import type { FormDataConvertible } from '@inertiajs/core';
 import { router } from '@inertiajs/react';
 import { useCallback, useEffect, useRef, useState } from 'react';
+import type { PreviewData } from '@/sandbox/preview-data';
 import type { BlockDraft, DraftSourceKey, DraftSources } from '@/types/blocks';
 
 export type DraftSaveStatus =
@@ -9,6 +11,8 @@ export type DraftSaveStatus =
     | 'error'
     | 'conflict';
 
+type DraftContent = { sources: DraftSources; preview: PreviewData };
+
 const DELAY_MS = 800;
 
 /**
@@ -17,11 +21,12 @@ const DELAY_MS = 800;
  * so a newer save is never overwritten. Saving only touches the Draft, never publishing.
  */
 export function useDraftAutosave(url: string, draft: BlockDraft) {
-    const [sources, setSources] = useState<DraftSources>(draft.sources);
+    const initial = { sources: draft.sources, preview: draft.preview };
+    const [content, setContent] = useState<DraftContent>(initial);
     const [status, setStatus] = useState<DraftSaveStatus>('saved');
     const [errors, setErrors] = useState<Record<string, string>>({});
-    const latest = useRef(draft.sources);
-    const saved = useRef(draft.sources);
+    const latest = useRef(initial);
+    const saved = useRef(initial);
     const revision = useRef(draft.revision);
     const timer = useRef<number | undefined>(undefined);
     const inFlight = useRef(false);
@@ -51,7 +56,11 @@ export function useDraftAutosave(url: string, draft: BlockDraft) {
 
         router.put(
             url,
-            { revision: revision.current, sources: payload },
+            {
+                revision: revision.current,
+                sources: payload.sources,
+                preview: payload.preview as FormDataConvertible,
+            },
             {
                 async: true,
                 preserveScroll: true,
@@ -91,10 +100,9 @@ export function useDraftAutosave(url: string, draft: BlockDraft) {
         );
     }, [url]);
 
-    const update = (key: DraftSourceKey, value: string) => {
-        const next = { ...latest.current, [key]: value };
+    const commit = (next: DraftContent) => {
         latest.current = next;
-        setSources(next);
+        setContent(next);
 
         if (stopped.current) {
             return;
@@ -104,6 +112,15 @@ export function useDraftAutosave(url: string, draft: BlockDraft) {
         window.clearTimeout(timer.current);
         timer.current = window.setTimeout(save, DELAY_MS);
     };
+
+    const update = (key: DraftSourceKey, value: string) =>
+        commit({
+            ...latest.current,
+            sources: { ...latest.current.sources, [key]: value },
+        });
+
+    const updatePreview = (preview: PreviewData) =>
+        commit({ ...latest.current, preview });
 
     const dirty = status !== 'saved';
 
@@ -131,5 +148,13 @@ export function useDraftAutosave(url: string, draft: BlockDraft) {
 
     useEffect(() => () => window.clearTimeout(timer.current), []);
 
-    return { sources, status, errors, update, saveNow: save };
+    return {
+        sources: content.sources,
+        preview: content.preview,
+        status,
+        errors,
+        update,
+        updatePreview,
+        saveNow: save,
+    };
 }

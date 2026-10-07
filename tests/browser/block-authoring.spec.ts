@@ -141,8 +141,31 @@ test('developer creates and renames an own Block @responsive', async ({
     expect((await page.goto('/platform/blocks'))?.status()).toBe(403);
 });
 
+/** Authored code probing the sandbox boundary; each probe reports whether it got through. */
+const SANDBOX_PROBE = `
+var results = [];
+function probe(name, run) {
+    try { run(); results.push(name + ': доступно'); } catch (error) { results.push(name + ': заблокировано'); }
+}
+probe('cookie', function () { return document.cookie; });
+probe('storage', function () { return window.localStorage.length; });
+probe('parent', function () { return window.parent.document.title; });
+probe('top', function () { window.top.location.href = '/dashboard'; });
+fetch('/dashboard').then(
+    function () { results.push('fetch: доступно'); },
+    function () { results.push('fetch: заблокировано'); }
+).then(function () {
+    var output = document.createElement('p');
+    output.setAttribute('data-probe', '');
+    output.textContent = results.join('; ');
+    landflow.root.appendChild(output);
+});
+throw new Error('Проверка ошибки выполнения');
+`;
+
 test('developer writes code and builds the schema in the Block Studio @responsive', async ({
     page,
+    browserIssues,
 }, testInfo) => {
     const suffix = uniqueSuffix(testInfo);
     const name = `E2E студия ${suffix}`;
@@ -158,16 +181,25 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     );
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
 
-    const checks = page.getByRole('complementary', { name: 'Проверка схемы' });
+    const checks = page.getByRole('complementary', { name: 'Проверки' });
     await expect(checks).toContainText('Ошибок в схеме нет.');
+    await expect(checks).toContainText('Ошибок в шаблоне нет.');
 
     // Code mode: the starter Draft is editable per file and autosaves.
     const html = page.getByLabel('index.html', { exact: true });
     await expect(html).toHaveValue(/\{\{ title \}\}/);
     await html.fill(
+        '<section class="promo">\n  <h2>{{ title }}</h2>\n  <p>{{ subtitle }}</p>\n</section>',
+    );
+    await expectDraftSaved(page);
+    await expect(checks).toContainText(
+        'Строка 3Поле «subtitle» не описано в схеме.',
+    );
+    await html.fill(
         '<section class="promo">\n  <h2>{{ title }}</h2>\n</section>',
     );
     await expectDraftSaved(page);
+    await expect(checks).toContainText('Ошибок в шаблоне нет.');
 
     await page.getByRole('button', { name: 'styles.css' }).click();
     await page
@@ -240,6 +272,170 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     ]);
     expect(saved.fields[0]).toMatchObject({ type: 'number', min: 1, max: 4 });
     await expect(page.getByText('Нет версий', { exact: true })).toBeVisible();
+
+    // Live preview renders the Draft in the opaque-origin sandbox.
+    await page
+        .getByLabel('schema.json', { exact: true })
+        .fill(
+            '{"fields":[{"key":"title","type":"text","label":"Заголовок"},{"key":"cta","type":"action","label":"Кнопка"}]}',
+        );
+    await expectDraftSaved(page);
+    await page.getByRole('button', { name: 'index.html' }).click();
+    await page
+        .getByLabel('index.html', { exact: true })
+        .fill(
+            '<section class="promo">\n  <h2>{{ title }}</h2>\n  <button data-landflow-action="cta">Подробнее</button>\n</section>',
+        );
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('Ошибок в шаблоне нет.');
+
+    await openMode(page, 'Предпросмотр');
+    const iframe = page.getByTitle('Предпросмотр блока');
+    await expect(iframe).toHaveAttribute('sandbox', 'allow-scripts');
+    const frame = page.frameLocator('iframe[title="Предпросмотр блока"]');
+    const previewData = page.getByRole('region', {
+        name: 'Данные предпросмотра',
+    });
+    await previewData.getByLabel('Заголовок').fill('Летняя распродажа');
+    await expect(frame.getByRole('heading', { level: 2 })).toHaveText(
+        'Летняя распродажа',
+    );
+    await expectDraftSaved(page);
+
+    await frame.getByRole('button', { name: 'Подробнее' }).click();
+    await expect(
+        page.getByText(
+            'Вызвано действие «cta». В предпросмотре действия не выполняются.',
+        ),
+    ).toBeVisible();
+
+    const viewport = page.getByTestId('preview-viewport');
+    await page.getByRole('button', { name: 'Телефон' }).click();
+    await expect(viewport).toHaveCSS('width', '375px');
+    await expectNoHorizontalOverflow(page);
+    await page.getByRole('button', { name: 'Компьютер' }).click();
+
+    // Authored JS cannot reach cookies, storage, the parent, top navigation or the network.
+    browserIssues.expectConsoleError('Проверка ошибки выполнения');
+    browserIssues.expectConsoleError('allow-top-navigation');
+    browserIssues.expectConsoleError('Content Security Policy');
+    await openMode(page, 'Код');
+    await page.getByRole('button', { name: 'script.js' }).click();
+    await page.getByLabel('script.js', { exact: true }).fill(SANDBOX_PROBE);
+    await expectDraftSaved(page);
+    await openMode(page, 'Предпросмотр');
+    await expect(frame.locator('[data-probe]')).toHaveText(
+        'cookie: заблокировано; storage: заблокировано; parent: заблокировано; top: заблокировано; fetch: заблокировано',
+    );
+    await expect(
+        page.getByRole('region', { name: 'Ошибки выполнения' }),
+    ).toContainText('Проверка ошибки выполнения');
+    await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
+    await expect(frame.getByRole('heading', { level: 2 })).toHaveText(
+        'Летняя распродажа',
+    );
+
+    // Preview data is part of the Draft and survives a reload.
+    await page.reload();
+    await openMode(page, 'Предпросмотр');
+    await expect(
+        page
+            .getByRole('region', { name: 'Данные предпросмотра' })
+            .getByLabel('Заголовок'),
+    ).toHaveValue('Летняя распродажа');
+});
+
+test('Block preview escapes sources and only trusts its own sandbox', async ({
+    page,
+}, testInfo) => {
+    const suffix = uniqueSuffix(testInfo);
+    const breakout =
+        '</script><img src="x" onerror="document.body.setAttribute(\'data-escaped\', \'no\')">';
+
+    await login(page, users.studioDeveloper);
+    await page.goto('/developer/blocks/create');
+    await createBlock(
+        page,
+        `E2E песочница ${suffix}`,
+        `e2e-sandbox-${suffix}`,
+        'Контент',
+        'Создать блок',
+    );
+    await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
+
+    await page
+        .getByLabel('index.html', { exact: true })
+        .fill('<h2>{{ title }}</h2>\n<p data-css-check>Стили</p>');
+    await page.getByRole('button', { name: 'styles.css' }).click();
+    await page
+        .getByLabel('styles.css', { exact: true })
+        .fill(
+            "p { color: rgb(1, 2, 3); } </style><script>document.body.setAttribute('data-escaped', 'no')</script>",
+        );
+    await page.getByRole('button', { name: 'script.js' }).click();
+    await page
+        .getByLabel('script.js', { exact: true })
+        .fill(
+            [
+                "parent.postMessage({ type: 'landflow:navigate', url: '/dashboard' }, '*');",
+                "parent.postMessage({ type: 'landflow:action', key: 'unknown' }, '*');",
+                "document.body.setAttribute('data-js', 'ok');",
+                "// </script><script>document.body.setAttribute('data-escaped', 'no')</script>",
+            ].join('\n'),
+        );
+    await expectDraftSaved(page);
+
+    await openMode(page, 'Предпросмотр');
+    await page
+        .getByRole('region', { name: 'Данные предпросмотра' })
+        .getByLabel('Заголовок')
+        .fill(breakout);
+
+    const iframe = page.getByTitle('Предпросмотр блока');
+    const frame = page.frameLocator('iframe[title="Предпросмотр блока"]');
+    await expect(frame.getByRole('heading', { level: 2 })).toHaveText(breakout);
+    await expect(frame.locator('body')).toHaveAttribute('data-js', 'ok');
+    await expect(frame.locator('body')).not.toHaveAttribute('data-escaped');
+    await expect(frame.locator('[data-css-check]')).toHaveCSS(
+        'color',
+        'rgb(1, 2, 3)',
+    );
+
+    // Opaque origin with scripts only; the Landflow CSP precedes every authored source.
+    await expect(iframe).toHaveAttribute('sandbox', 'allow-scripts');
+    const srcdoc = (await iframe.getAttribute('srcdoc')) ?? '';
+    const csp = srcdoc.indexOf('http-equiv="Content-Security-Policy"');
+    expect(csp).toBeGreaterThan(0);
+    expect(csp).toBeLessThan(srcdoc.indexOf('<style'));
+    expect(csp).toBeLessThan(srcdoc.indexOf('<script'));
+    expect(srcdoc).toContain("default-src 'none'");
+    expect(srcdoc).toContain("connect-src 'none'");
+    expect(srcdoc).toContain("form-action 'none'");
+
+    // Forged bridge messages: unknown type / action from the sandbox, resize from a foreign window.
+    const heightBefore = await iframe.evaluate(
+        (element) => element.getBoundingClientRect().height,
+    );
+    await page.evaluate(async () => {
+        window.postMessage({ type: 'landflow:resize', height: 3000 }, '*');
+        const forger = document.createElement('iframe');
+        forger.srcdoc =
+            "<script>parent.postMessage({ type: 'landflow:resize', height: 3000 }, '*'); parent.postMessage({ type: 'landflow:action', key: 'cta' }, '*');</script>";
+        const loaded = new Promise((resolve) =>
+            forger.addEventListener('load', resolve),
+        );
+        document.body.appendChild(forger);
+        await loaded;
+        await new Promise((resolve) => setTimeout(resolve, 200));
+        forger.remove();
+    });
+    expect(
+        await iframe.evaluate(
+            (element) => element.getBoundingClientRect().height,
+        ),
+    ).toBe(heightBefore);
+    await expect(page.getByText(/Вызвано действие/)).toHaveCount(0);
+    await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
 });
 
 test('super admin creates and renames a Platform Block', async ({
