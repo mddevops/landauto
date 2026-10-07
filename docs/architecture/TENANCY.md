@@ -1037,6 +1037,8 @@ Public Developer assets belong to Developer/Marketplace domain.
 
 Do not confuse customer tenancy with creator ownership.
 
+Approved (D-093, implemented in P9-001): a Developer Profile is a User-owned creator identity (one per User), not a Workspace. It grants no Workspace membership, Site access, Workspace permission, entitlement or platform permission, and the Developer Platform (`/developer`) never uses Workspace context. Access is controlled by a Super Admin for now (no self-service registration).
+
 ---
 
 # 60. Private Blocks

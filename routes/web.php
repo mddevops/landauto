@@ -4,6 +4,7 @@ use App\Catalog\CatalogLevel;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
+use App\Http\Controllers\Developer\DeveloperDashboardController;
 use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
 use App\Http\Controllers\Forms\FormRouteController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
 use App\Http\Controllers\Platform\CatalogEntryController;
 use App\Http\Controllers\Platform\CatalogEquipmentController;
+use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
 use App\Http\Controllers\Popups\SitePopupController;
@@ -48,6 +50,7 @@ use App\Http\Controllers\WorkspaceAssetController;
 use App\Http\Controllers\WorkspaceContextController;
 use App\Http\Controllers\WorkspaceController;
 use App\Http\Controllers\WorkspaceSettingsController;
+use App\Http\Middleware\EnsureActiveDeveloperProfile;
 use App\Http\Middleware\EnsurePlatformPermission;
 use App\Http\Middleware\EnsureSiteAccess;
 use App\Http\Middleware\RequireWorkspaceContext;
@@ -290,6 +293,21 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->name('media.images.destroy');
             });
         });
+
+    Route::prefix('platform/developers')
+        ->name('platform.developers.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageDevelopers->value)
+        ->group(function () {
+            Route::get('/', [DeveloperProfileController::class, 'index'])->name('index');
+            Route::post('/', [DeveloperProfileController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::post('{developer}/suspend', [DeveloperProfileController::class, 'suspend'])->whereUlid('developer')->name('suspend');
+            Route::post('{developer}/reactivate', [DeveloperProfileController::class, 'reactivate'])->whereUlid('developer')->name('reactivate');
+        });
+
+    // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).
+    Route::get('developer', DeveloperDashboardController::class)
+        ->middleware(EnsureActiveDeveloperProfile::class)
+        ->name('developer.dashboard');
 });
 
 require __DIR__.'/settings.php';

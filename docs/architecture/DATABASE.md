@@ -1779,15 +1779,16 @@ Exact publishing storage will be decided separately.
 Fields:
 
 - id
-- user_id or workspace relation
+- public_id ULID, unique, immutable
+- user_id required, unique, immutable (restrict on User delete)
 - display_name
-- slug
-- status
+- slug unique (lowercase ASCII, digits, single inner hyphens, 3–60)
+- status (`active` / `suspended`)
 - bio nullable
-- payout metadata later
+- payout metadata later (Marketplace work)
 - timestamps
 
-A User may be both customer and developer.
+No Workspace, plan or subscription relation (D-093). A User may be both customer and developer. Implemented in P9-001.
 
 ---
 

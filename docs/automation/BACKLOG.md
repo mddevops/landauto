@@ -76,9 +76,9 @@ Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Phase 9 — Developer Platform: NOT_STARTED.
+Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117).
 
-Next ready task: `P9-001 — Developer Profile`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P9-002 — Developer Permissions`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3325,8 +3325,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-001 — Developer Profile
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-011
+
+### Result
+
+- D-093 APPROVED (User-owned creator identity, one per User, not a Workspace, Super Admin-granted) and D-117 APPROVED (platform / developer / workspace_private ownership; controlled Developer access; D-079 stays ADR_REQUIRED).
+- `developer_profiles` (ULID `public_id`, unique immutable `user_id` with restricted delete, `display_name`, unique slug 3–60 `[a-z0-9]` with single inner hyphens, `active` / `suspended`, nullable `bio`; no Workspace / plan / payout fields). Accounts with a profile cannot be self-deleted.
+- Platform permission `manage_developers` (Super Admin only; no `PlatformRole::Developer`). «Разработчики» (`/platform/developers`): grant to an existing verified User found by normalized email, suspend / restore, no hard delete; `developer.profile_*` log events with public IDs.
+- «Панель разработчика» (`/developer`): auth + verified + the current User's own active profile (read fresh per request, 403 otherwise), no Workspace context, read-only profile plus empty «Мои блоки» / «Мои шаблоны» cards; the user menu shows the link only for an active profile. Developer self-edit is deferred.
+- A profile grants no Workspace membership, Site access, Workspace or platform permission; platform roles never create profiles. No Marketplace, billing or entitlement changes.
 
 ---
 
@@ -4096,9 +4104,8 @@ Task statuses and results live in the phase sections above; this section only po
 
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
-- Current: Phase 9 — Developer Platform NOT_STARTED.
-- Next: `P9-001 — Developer Profile`.
-- Open prerequisite for P9-001: D-093 — Developer Profile Ownership (OPEN).
+- Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 DONE; D-093 APPROVED).
+- Next: `P9-002 — Developer Permissions`.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

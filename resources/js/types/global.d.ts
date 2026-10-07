@@ -1,5 +1,5 @@
 import type { Auth } from '@/types/auth';
-import type { PlatformContext } from '@/types/platform';
+import type { DeveloperContext, PlatformContext } from '@/types/platform';
 import type { SiteContext, WorkspaceContext } from '@/types/workspace';
 
 declare module 'react' {
@@ -15,6 +15,7 @@ declare module '@inertiajs/core' {
             auth: Auth;
             workspace: WorkspaceContext;
             platform: PlatformContext;
+            developer: DeveloperContext;
             siteContext: SiteContext | null;
             sidebarOpen: boolean;
             [key: string]: unknown;

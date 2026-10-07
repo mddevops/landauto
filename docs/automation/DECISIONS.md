@@ -1731,9 +1731,24 @@ Internal Landflow schema stays provider-neutral.
 
 ## D-093 — Developer Profile Ownership
 
-**Status:** OPEN
+**Status:** APPROVED (owner decision, 2026-10-07; implemented in P9-001)
 
-### Question
+### Decision
+
+1. A Developer Profile belongs to exactly one User (`developer_profiles.user_id`, required, unique, immutable).
+2. A Developer Profile is not a Workspace.
+3. A User may at the same time belong to customer Workspaces and own one Developer Profile.
+4. A Developer Profile does not inherit or create Workspace memberships, Workspace permissions, Site access, plan entitlements or platform staff permissions.
+5. Workspace membership does not grant Developer access.
+6. There is no «Стать разработчиком», open developer registration, developer application form or automatic approval.
+7. Only a Super Admin (`manage_developers`) grants Developer Profile access to an existing Landflow User.
+8. Developer authorization is explicit and persistent (`active` / `suspended`; no hard delete from the UI).
+9. One User has at most one Developer Profile.
+10. Workspace-private Blocks remain Workspace-owned.
+11. Public Developer-created content will belong to the Developer Profile.
+12. Official Landflow content is not owned by the User who physically created it (D-117).
+
+### Original Question
 
 Whether a Developer Profile is:
 
@@ -1749,9 +1764,9 @@ Whether a Developer Profile is:
 - Workspace-private Blocks remain Workspace-owned;
 - Marketplace license scope (D-079) stays consistent with the chosen owner.
 
-### Blocking
+### Resolved By
 
-`P9-001 — Developer Profile`.
+Owner decision dated 2026-10-07 (Phase 9 start); P9-001.
 
 ---
 
@@ -2106,6 +2121,32 @@ Owner instruction in the Phase 8 autopilot (2026-10-06); P8-005.
 ### Resolved By
 
 Owner instruction in the Phase 8 autopilot (2026-10-06); P8-008.
+
+---
+
+## D-117 — Official Developer Content Ownership and Controlled Developer Access
+
+**Status:** APPROVED
+
+### Decision
+
+Content ownership:
+
+- Landflow official Blocks / Templates are platform-owned. A Super Admin acts as their creator / editor but is not the owner; the creator / editor User is stored only as audit identity where needed.
+- Developer-created public content belongs to the Developer Profile.
+- Workspace-private content stays Workspace-owned.
+- Ownership scope is always explicit: `platform`, `developer` or `workspace_private`. A Super Admin does not need a Developer Profile to create platform content.
+
+Developer access:
+
+- Only a Super Admin grants / revokes Developer Profile access (platform permission `manage_developers`, which Catalog Managers do not have). It authorizes listing, granting, suspending and reactivating profiles, not Block / Template authoring (P9-002).
+- A Developer Profile is not a platform role; there is no `PlatformRole::Developer`. Developers are not Landflow staff merely because they create content.
+
+Future Marketplace distribution direction (approved direction only): free, entitlement-based, separately paid, private / admin grant. The architecture must not assume that a paid item is account-wide, that all premium items come from a plan, or that all Marketplace content is globally unlocked. Preferred future paid scopes remain Site and Workspace, but the final paid license scope stays with D-079 (ADR_REQUIRED) / P10-004.
+
+### Resolved By
+
+Owner decision dated 2026-10-07 (Phase 9 start); P9-001 implements the access part. Content ownership is implemented by the authoring tasks that own it.
 
 ---
 

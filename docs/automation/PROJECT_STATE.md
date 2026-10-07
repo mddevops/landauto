@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9: NOT_STARTED.** Next ready task per `BACKLOG.md`: `P9-001 — Developer Profile`.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: IN_PROGRESS** (branch `autopilot/phase9-2026-10-07`; P9-001 DONE; D-093 APPROVED, D-117). Next ready task per `BACKLOG.md`: `P9-002 — Developer Permissions`.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -209,6 +209,7 @@ Current focus:
 - `P8-010` DONE: Team E2E fixtures (test-only 10-seat plan, Site A / B, role accounts, foreign Workspace with fixed IDs), env-gated `team:e2e-invitation-url` (testing / e2e only, hash-only storage) and `tests/browser/team.spec.ts` covering invitation, site access, suspend / restore / remove, role limits, library / copy / conflicts, shared assets, version notes / restore, foreign-resource 404s and 375px layouts.
 - `P8-011` DONE: Phase 8 review, no regressions. Phase 8 COMPLETED, Phase 9 NOT_STARTED. Open follow-ups: platform Series media sets referenced by the Workspace library cannot be deleted (restrict); unpublished-changes indicator only on the Publishing page; restores are audited in `site_version_restores` but not written to the app log; no shipped Block renders the vehicle `description` binding yet; flaky tablet `auth.spec.ts` root cause still unknown. Invitation tokens: application logging never records them, the DB stores only the hash and normal Inertia / HTML never carries them; the local `MAIL_MAILER=log` transport writes the rendered email (including the invitation URL) to the local log by definition — production must use a real mail transport (X-013). Still open: D-076, D-077, D-089, D-090, D-091, D-093, D-094, X-013, X-017.
 - Phase 8 correctness pass (after P8-011): restore-to-Draft brings back historical Site Vehicle `custom_name` / `custom_description` (snapshots from before these keys keep the current values); the public vehicle binding / Published manifest exposes optional `description` (= `custom_description`, present only when set, so vehicles without one keep their pre-Phase-8 manifest hash; a new description changes the hash and the unpublished-changes indicator); a Site-to-Site conflict update that would touch offers is refused as `ambiguous` (nothing on the vehicle changes) when the destination holds several offers for one of the source's Equipment.
+- `P9-001` DONE (D-093 APPROVED, D-117): `developer_profiles` — User-owned creator identity (one per User, immutable owner, restricted User delete, no Workspace relation, `active` / `suspended`); `manage_developers` platform permission (Super Admin only, no Developer platform role); «Разработчики» `/platform/developers` (grant to an existing verified User by email, suspend / restore, no hard delete); «Панель разработчика» `/developer` for the current User's own active profile without Workspace context. Block / Template authoring does not exist yet (P9-002+).
 
 No product feature implementation should begin merely because architecture documents now exist.
 
@@ -372,7 +373,7 @@ Implemented core domains (Phases 0–8 COMPLETED):
 
 The Global Automotive Catalog is implemented on the separate `catalog` connection.
 
-Phase 9 — Developer Platform is NOT_STARTED. Architecture documents also describe planned target models; agents must check the code to tell implemented from planned.
+Phase 9 — Developer Platform is IN_PROGRESS: Developer Profiles exist (P9-001); Block / Template authoring does not. Architecture documents also describe planned target models; agents must check the code to tell implemented from planned.
 
 ---
 
@@ -1202,7 +1203,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-**Next: `P9-001 — Developer Profile`** (Phase 8 — Team / Collaboration COMPLETED: P8-001 … P8-011 DONE; Phase 9 NOT_STARTED; Phase 7 COMPLETED for planned scope, P7-009 DEFERRED) per `BACKLOG.md`.
+**Next: `P9-002 — Developer Permissions`** (Phase 9 — Developer Platform IN_PROGRESS: P9-001 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED) per `BACKLOG.md`.
 
 No implementation task should be inferred from this alone.
 
@@ -1497,7 +1498,7 @@ Phase 5 — Publishing: COMPLETED (gate P5-012)
 Phase 6 — Integrations & Analytics: COMPLETED (gate P6-015)
 Phase 7 — Paid Features: COMPLETED for planned scope (P7-008 ADR-007; P7-009 DEFERRED)
 Phase 8 — Team: COMPLETED
-Phase 9 — Developer Platform: NOT_STARTED
+Phase 9 — Developer Platform: IN_PROGRESS
 Phase 10 — Marketplace: NOT_STARTED
 Phase 11 — External Data Sources: NOT_STARTED
 ```
@@ -1760,7 +1761,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P9-001 — Developer Profile`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is NOT_STARTED.
+**`P9-002 — Developer Permissions`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is IN_PROGRESS (P9-001 DONE).
 
 ---
 
@@ -1813,8 +1814,8 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–8 COMPLETED, Phase 9 NOT_STARTED; P7-009 DEFERRED; D-093, D-094, X-013, X-017 OPEN)
+Core Landflow implementation: IN_PROGRESS (Phases 0–8 COMPLETED, Phase 9 IN_PROGRESS; P7-009 DEFERRED; D-093 APPROVED; D-094, X-013, X-017 OPEN)
 ```
 
-**Current phase: Phase 9 — Developer Platform (NOT_STARTED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
-Next: `P9-001 — Developer Profile` per `BACKLOG.md`.**
+**Current phase: Phase 9 — Developer Platform (IN_PROGRESS; P9-001 DONE; Phases 0–8 COMPLETED, P7-009 DEFERRED).
+Next: `P9-002 — Developer Permissions` per `BACKLOG.md`.**

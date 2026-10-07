@@ -90,6 +90,14 @@ Created for one Workspace and private by default.
 
 Scope must always be explicit.
 
+Approved ownership (D-093, D-117) — target model, not implemented yet; the authoring tasks add it:
+
+- `platform`: official Landflow content, owned by the platform; the Super Admin creator / editor is audit identity only and needs no Developer Profile;
+- `developer`: public Developer content, owned by a Developer Profile;
+- `workspace_private`: owned by one Workspace.
+
+Today `block_definitions` only has `is_official`; Block / Template authoring does not exist yet.
+
 ---
 
 # 5. Block Version

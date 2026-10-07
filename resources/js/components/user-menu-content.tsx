@@ -1,5 +1,5 @@
-import { Link, router } from '@inertiajs/react';
-import { LogOut, Settings } from 'lucide-react';
+import { Link, router, usePage } from '@inertiajs/react';
+import { Code, LogOut, Settings } from 'lucide-react';
 import {
     DropdownMenuGroup,
     DropdownMenuItem,
@@ -9,6 +9,7 @@ import {
 import { UserInfo } from '@/components/user-info';
 import { useMobileNavigation } from '@/hooks/use-mobile-navigation';
 import { logout } from '@/routes';
+import { dashboard as developerDashboard } from '@/routes/developer';
 import { edit } from '@/routes/profile';
 import type { User } from '@/types';
 
@@ -18,6 +19,7 @@ type Props = {
 
 export function UserMenuContent({ user }: Props) {
     const cleanup = useMobileNavigation();
+    const { developer } = usePage().props;
 
     const handleLogout = () => {
         cleanup();
@@ -44,6 +46,19 @@ export function UserMenuContent({ user }: Props) {
                         Настройки
                     </Link>
                 </DropdownMenuItem>
+                {developer.active && (
+                    <DropdownMenuItem asChild>
+                        <Link
+                            className="block w-full cursor-pointer"
+                            href={developerDashboard()}
+                            prefetch
+                            onClick={cleanup}
+                        >
+                            <Code className="mr-2" />
+                            Панель разработчика
+                        </Link>
+                    </DropdownMenuItem>
+                )}
             </DropdownMenuGroup>
             <DropdownMenuSeparator />
             <DropdownMenuItem asChild>

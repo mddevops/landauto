@@ -2,6 +2,7 @@ import { Link, usePage } from '@inertiajs/react';
 import {
     Car,
     CarFront,
+    Code,
     Images,
     LayoutGrid,
     Plug,
@@ -26,6 +27,7 @@ import { dashboard } from '@/routes';
 import { index as integrationsIndex } from '@/routes/integrations';
 import { index as assetsIndex } from '@/routes/workspace/assets';
 import { index as catalogIndex } from '@/routes/platform/catalog';
+import { index as developersIndex } from '@/routes/platform/developers';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
 import { index as teamIndex } from '@/routes/workspace/team';
@@ -76,18 +78,27 @@ export function AppSidebar() {
           ]
         : [];
 
-    const platformItems: NavItem[] = platform.permissions.includes(
-        'view_catalog',
-    )
-        ? [
-              {
-                  title: 'Каталог автомобилей',
-                  href: catalogIndex(),
-                  icon: Car,
-                  matchPrefix: true,
-              },
-          ]
-        : [];
+    const platformItems: NavItem[] = [
+        ...(platform.permissions.includes('view_catalog')
+            ? [
+                  {
+                      title: 'Каталог автомобилей',
+                      href: catalogIndex(),
+                      icon: Car,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_developers')
+            ? [
+                  {
+                      title: 'Разработчики',
+                      href: developersIndex(),
+                      icon: Code,
+                  },
+              ]
+            : []),
+    ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">

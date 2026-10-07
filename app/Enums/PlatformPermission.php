@@ -10,4 +10,5 @@ enum PlatformPermission: string
     case ViewCatalog = 'view_catalog';
     case EditCatalog = 'edit_catalog';
     case ManageCatalogMedia = 'manage_catalog_media';
+    case ManageDevelopers = 'manage_developers';
 }
