@@ -78,7 +78,7 @@ Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06
 
 Phase 9 — Developer Platform: IN_PROGRESS (branch `autopilot/phase9-2026-10-07`). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-079 / D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008); P9-018 BLOCKED_DECISION (D-094).
 
-Next ready task: `P9-011 — Developer Platform E2E`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P9-012 — Phase 9 Review`. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3649,8 +3649,18 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 
 ## P9-011 — Developer Platform E2E
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-004 … P9-009, P9-013 … P9-017
+
+### Acceptance Criteria
+
+- Playwright proves every browser-visible requirement of the Creator Studio / catalog / Site formats re-plan on seeded E2E data, with no mocks; the cross-actor path (Developer publishes in Block Studio → customer catalog respects access) runs end to end.
+
+### Result
+
+- New `developer-platform.spec.ts`: a Developer creates a Block in Block Studio (schema + HTML), publishes 1.0.0 immediately after the automated checks, sets catalog access «По тарифу» / «Собственный домен»; a customer without the option sees author, access label and the Russian reason with adding disabled; a customer whose plan has it adds the Block, it renders in its `allow-scripts` sandbox frame and is edited through its schema; a later unpublished Draft edit never reaches the placed Instance. E2E data: `platform-developer@` / `platform-customer@` / `platform-premium@` (`E2eSeeder`).
+- Coverage map of the remaining requirements: Studio Code / Schema / Preview, errors, reload, publishing, sandbox isolation, Super Admin and Developer ownership — `block-authoring`; schema-driven Instance editing, Draft / published sandbox — `sandboxed-blocks`; admin_grant Site license for one Site only — `catalog-licenses`; Template build / publish / devices — `template-builder`; compatible install as an independent copy — `template-install`; the four formats, multi-page denied without `multi_page_sites`, no blank start for Quiz / Chat — `site-formats` + `core-platform`; quiz and chat flows — `quiz-site`, `chat-selection`. Tablet / mobile overflow checks run in the `@responsive` specs.
+- Live operator chat is not tested: it is not implemented (P9-018 BLOCKED_DECISION).
 
 ---
 
@@ -4351,8 +4361,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`.
-- Next: `P9-011 — Developer Platform E2E` (P9-018 BLOCKED_DECISION, P9-010 DEFERRED), then `P9-012`.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`.
+- Next: `P9-012 — Phase 9 Review` (P9-018 BLOCKED_DECISION, P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

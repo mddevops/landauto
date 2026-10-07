@@ -191,6 +191,14 @@ class E2eSeeder extends Seeder
         $installPlan = Plan::factory()->create(['key' => 'e2e-template-install', 'name' => 'E2E Template Install']);
         $installPlan->setEntitlement(Entitlement::MaxSites, 100);
         $this->createWorkspace($this->createUser('Карина Шаблонова', 'template-customer@landflow.test'), 'Автосалон Шаблон', plan: $installPlan);
+
+        // Developer platform end to end (P9-011): a Developer publishes from Block Studio; one
+        // customer plan lacks `custom_domain`, the other has it.
+        $platformAuthor = $this->createUser('Пётр Платформенный', 'platform-developer@landflow.test');
+        $this->createWorkspace($platformAuthor, 'Workspace Петра');
+        $this->createDeveloperProfile($platformAuthor, 'Студия платформы E2E', 'e2e-platform-studio');
+        app(CreateSite::class)->create($this->createWorkspace($this->createUser('Вера Клиентова', 'platform-customer@landflow.test'), 'Автосалон Платформа', plan: $plan), 'Сайт без опции домена', SiteType::MultiPage);
+        app(CreateSite::class)->create($this->createWorkspace($this->createUser('Марк Премиумов', 'platform-premium@landflow.test'), 'Автосалон Премиум', plan: $domainsPlan), 'Сайт с опцией домена', SiteType::MultiPage);
     }
 
     private function createGrantOnlyDeveloperBlock(DeveloperProfile $profile): void

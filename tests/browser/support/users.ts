@@ -245,6 +245,25 @@ export const users = {
         password: 'e2e-password',
         workspace: 'Автосалон Шаблон',
     },
+    // Developer platform E2E (P9-011): a Developer and two customers, only one with `custom_domain`.
+    platformDeveloper: {
+        name: 'Пётр Платформенный',
+        email: 'platform-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия платформы E2E',
+    },
+    platformCustomer: {
+        name: 'Вера Клиентова',
+        email: 'platform-customer@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт без опции домена',
+    },
+    platformPremium: {
+        name: 'Марк Премиумов',
+        email: 'platform-premium@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт с опцией домена',
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).
