@@ -55,7 +55,7 @@ export function UserMenuContent({ user }: Props) {
                             onClick={cleanup}
                         >
                             <Code className="mr-2" />
-                            Панель разработчика
+                            Студия разработчика
                         </Link>
                     </DropdownMenuItem>
                 )}

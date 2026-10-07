@@ -2,6 +2,7 @@
 
 namespace App\Blocks;
 
+use App\Enums\BlockCategory;
 use App\Enums\BlockOwnerScope;
 use App\Models\BlockDefinition;
 use App\Models\User;
@@ -10,18 +11,17 @@ use Illuminate\Support\Facades\Log;
 
 /**
  * Block Definition authoring (D-117, D-118): ownership is always derived on the server and never
- * changes. Creating a definition creates no Block Version; schemas, preview and publishing belong
- * to later tasks.
+ * changes. Creating a definition creates no Block Version; sources live in the Draft (BlockStudio).
  */
 final class BlockAuthoring
 {
     public function __construct(private BlockAuthoringAuthorization $authorization) {}
 
-    public function createPlatform(User $actor, string $name, string $slug): BlockDefinition
+    public function createPlatform(User $actor, string $name, string $slug, BlockCategory $category): BlockDefinition
     {
         $this->authorize($this->authorization->canAuthorPlatformBlocks($actor));
 
-        $block = $this->newDefinition($actor, $name, $slug, BlockOwnerScope::Platform);
+        $block = $this->newDefinition($actor, $name, $slug, $category, BlockOwnerScope::Platform);
         $block->save();
         $this->log('block_created', $actor, $block);
 
@@ -31,12 +31,12 @@ final class BlockAuthoring
     /**
      * Owned by the actor's own active Developer Profile; browser input never selects it.
      */
-    public function createDeveloper(User $actor, string $name, string $slug): BlockDefinition
+    public function createDeveloper(User $actor, string $name, string $slug, BlockCategory $category): BlockDefinition
     {
         $profile = $this->authorization->developerAuthor($actor);
         $this->authorize($profile !== null);
 
-        $block = $this->newDefinition($actor, $name, $slug, BlockOwnerScope::Developer);
+        $block = $this->newDefinition($actor, $name, $slug, $category, BlockOwnerScope::Developer);
         $block->developerProfile()->associate($profile);
         $block->save();
         $this->log('block_created', $actor, $block);
@@ -44,11 +44,12 @@ final class BlockAuthoring
         return $block;
     }
 
-    public function updateMetadata(User $actor, BlockDefinition $block, string $name): void
+    public function updateMetadata(User $actor, BlockDefinition $block, string $name, BlockCategory $category): void
     {
         $this->authorize($this->authorization->canEdit($actor, $block));
 
         $block->name = $name;
+        $block->category = $category;
 
         if (! $block->isDirty()) {
             return;
@@ -59,9 +60,9 @@ final class BlockAuthoring
         $this->log('block_updated', $actor, $block);
     }
 
-    private function newDefinition(User $actor, string $name, string $slug, BlockOwnerScope $scope): BlockDefinition
+    private function newDefinition(User $actor, string $name, string $slug, BlockCategory $category, BlockOwnerScope $scope): BlockDefinition
     {
-        $block = new BlockDefinition(['name' => $name, 'slug' => $slug]);
+        $block = new BlockDefinition(['name' => $name, 'slug' => $slug, 'category' => $category]);
         $block->owner_scope = $scope;
         $block->creator()->associate($actor);
         $block->lastEditor()->associate($actor);

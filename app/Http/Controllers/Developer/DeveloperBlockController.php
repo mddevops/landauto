@@ -4,8 +4,12 @@ namespace App\Http\Controllers\Developer;
 
 use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockAuthoringPresenter;
+use App\Blocks\BlockStudio;
+use App\Enums\BlockCategory;
+use App\Http\Controllers\Concerns\SavesBlockDrafts;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsureActiveDeveloperProfile;
+use App\Http\Requests\Blocks\SaveBlockDraftRequest;
 use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
 use App\Models\BlockDefinition;
@@ -19,14 +23,17 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * «Мои блоки»: Block Definitions owned by the current User's own active Developer Profile
+ * «Студия» → «Блоки»: Block Definitions owned by the current User's own active Developer Profile
  * (`create_blocks`, D-117, D-118). Another profile's Block is indistinguishable from a missing one.
  */
 class DeveloperBlockController extends Controller
 {
+    use SavesBlockDrafts;
+
     public function __construct(
         private BlockAuthoring $authoring,
         private BlockAuthoringPresenter $presenter,
+        private BlockStudio $studio,
     ) {}
 
     public function index(Request $request): Response
@@ -46,7 +53,7 @@ class DeveloperBlockController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('developer/blocks/create');
+        return Inertia::render('developer/blocks/create', ['categories' => BlockCategory::options()]);
     }
 
     public function store(StoreBlockDefinitionRequest $request): RedirectResponse
@@ -56,6 +63,7 @@ class DeveloperBlockController extends Controller
                 $this->actor($request),
                 $request->string('name')->toString(),
                 $request->string('slug')->toString(),
+                $request->category(),
             );
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['slug' => 'Этот slug уже используется другим блоком.']);
@@ -68,16 +76,27 @@ class DeveloperBlockController extends Controller
 
     public function show(Request $request, string $block): Response
     {
-        return Inertia::render('developer/blocks/show', [
-            'block' => $this->presenter->detail($this->find($request, $block)),
-        ]);
+        return Inertia::render('developer/blocks/show', $this->presenter->studio($this->find($request, $block)));
     }
 
     public function update(UpdateBlockDefinitionRequest $request, string $block): RedirectResponse
     {
         $definition = $this->find($request, $block);
-        $this->authoring->updateMetadata($this->actor($request), $definition, $request->string('name')->toString());
+        $this->authoring->updateMetadata(
+            $this->actor($request),
+            $definition,
+            $request->string('name')->toString(),
+            $request->category(),
+        );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Изменения сохранены.']);
+
+        return to_route('developer.blocks.show', $definition);
+    }
+
+    public function draft(SaveBlockDraftRequest $request, string $block): RedirectResponse
+    {
+        $definition = $this->find($request, $block);
+        $this->saveDraft($this->studio, $request, $this->actor($request), $definition);
 
         return to_route('developer.blocks.show', $definition);
     }
@@ -87,7 +106,7 @@ class DeveloperBlockController extends Controller
         return BlockDefinition::query()
             ->ownedByDeveloper($this->profile($request))
             ->where('public_id', $publicId)
-            ->with('developerProfile')
+            ->with(['developerProfile', 'draft'])
             ->withCount('versions')
             ->firstOrFail();
     }

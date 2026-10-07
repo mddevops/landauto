@@ -247,6 +247,8 @@ Initial field types should include:
 - group
 - repeater
 
+Implemented canonical types (`App\Enums\BlockFieldType`, P9-004): text, textarea, number (`min` / `max` bound the value, `step` is the editor increment), boolean, select, image, action, vehicle, group, repeater. Block Studio's Schema Builder and `schema.json` edit this same JSON.
+
 Automotive types:
 
 - vehicle

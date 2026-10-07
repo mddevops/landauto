@@ -91,16 +91,6 @@ export function AppSidebar() {
                   },
               ]
             : []),
-        ...(platform.permissions.includes('manage_platform_content')
-            ? [
-                  {
-                      title: 'Блоки',
-                      href: platformBlocksIndex(),
-                      icon: Blocks,
-                      matchPrefix: true,
-                  },
-              ]
-            : []),
         ...(platform.permissions.includes('manage_developers')
             ? [
                   {
@@ -111,6 +101,19 @@ export function AppSidebar() {
               ]
             : []),
     ];
+
+    const studioItems: NavItem[] = platform.permissions.includes(
+        'manage_platform_content',
+    )
+        ? [
+              {
+                  title: 'Блоки',
+                  href: platformBlocksIndex(),
+                  icon: Blocks,
+                  matchPrefix: true,
+              },
+          ]
+        : [];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -144,6 +147,7 @@ export function AppSidebar() {
                             </>
                         )}
                         <NavMain items={platformItems} label="Платформа" />
+                        <NavMain items={studioItems} label="Студия" />
                     </nav>
                 )}
             </SidebarContent>

@@ -2,13 +2,14 @@
 
 namespace App\Http\Requests\Blocks;
 
+use App\Enums\BlockCategory;
 use App\Models\BlockDefinition;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Name and globally unique technical slug only. Ownership is never accepted from the browser.
+ * Name, category and globally unique technical slug. Ownership is never accepted from the browser.
  */
 class StoreBlockDefinitionRequest extends FormRequest
 {
@@ -27,6 +28,7 @@ class StoreBlockDefinitionRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:'.BlockDefinition::NAME_MAX],
+            'category' => ['required', Rule::enum(BlockCategory::class)],
             'slug' => [
                 'required',
                 'string',
@@ -46,6 +48,8 @@ class StoreBlockDefinitionRequest extends FormRequest
         return [
             'slug.regex' => 'Slug может содержать только строчные латинские буквы, цифры и одиночные дефисы между ними.',
             'slug.unique' => 'Этот slug уже используется другим блоком.',
+            'category.required' => 'Выберите категорию.',
+            'category.enum' => 'Выберите категорию из списка.',
         ];
     }
 
@@ -54,6 +58,11 @@ class StoreBlockDefinitionRequest extends FormRequest
      */
     public function attributes(): array
     {
-        return ['name' => 'Название', 'slug' => 'Slug'];
+        return ['name' => 'Название', 'slug' => 'Slug', 'category' => 'Категория'];
+    }
+
+    public function category(): BlockCategory
+    {
+        return BlockCategory::from($this->string('category')->toString());
     }
 }

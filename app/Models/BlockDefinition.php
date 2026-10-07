@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\BlockCategory;
 use App\Enums\BlockOwnerScope;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\BlockDefinitionFactory;
@@ -12,6 +13,7 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
 use LogicException;
 
@@ -24,6 +26,7 @@ use LogicException;
  * @property string $public_id
  * @property string $name
  * @property string $slug
+ * @property BlockCategory $category
  * @property BlockOwnerScope $owner_scope
  * @property int|null $developer_profile_id
  * @property int|null $workspace_id
@@ -32,7 +35,7 @@ use LogicException;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'slug'])]
+#[Fillable(['name', 'slug', 'category'])]
 #[Hidden(['id', 'developer_profile_id', 'workspace_id', 'created_by_user_id', 'updated_by_user_id'])]
 class BlockDefinition extends Model
 {
@@ -54,8 +57,13 @@ class BlockDefinition extends Model
      */
     protected function casts(): array
     {
-        return ['owner_scope' => BlockOwnerScope::class];
+        return ['owner_scope' => BlockOwnerScope::class, 'category' => BlockCategory::class];
     }
+
+    /**
+     * @var array<string, mixed>
+     */
+    protected $attributes = ['category' => 'other'];
 
     protected static function booted(): void
     {
@@ -112,6 +120,14 @@ class BlockDefinition extends Model
     public function versions(): HasMany
     {
         return $this->hasMany(BlockVersion::class);
+    }
+
+    /**
+     * @return HasOne<BlockDraft, $this>
+     */
+    public function draft(): HasOne
+    {
+        return $this->hasOne(BlockDraft::class);
     }
 
     /**

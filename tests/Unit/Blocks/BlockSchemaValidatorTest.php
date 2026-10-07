@@ -14,6 +14,8 @@ class BlockSchemaValidatorTest extends TestCase
         $schema = ['fields' => [
             ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'required' => true, 'max_length' => 120, 'default' => 'Новые автомобили'],
             ['key' => 'subtitle', 'type' => 'textarea', 'label' => 'Подзаголовок', 'help' => 'Короткое описание'],
+            ['key' => 'columns', 'type' => 'number', 'label' => 'Колонки', 'required' => true, 'min' => 1, 'max' => 4, 'step' => 1, 'default' => 3],
+            ['key' => 'opacity', 'type' => 'number', 'label' => 'Прозрачность', 'min' => 0, 'max' => 1, 'step' => 0.1],
             ['key' => 'show_button', 'type' => 'boolean', 'label' => 'Показывать кнопку', 'default' => true],
             ['key' => 'align', 'type' => 'select', 'label' => 'Выравнивание', 'options' => [
                 ['value' => 'left', 'label' => 'Слева'],
@@ -71,6 +73,12 @@ class BlockSchemaValidatorTest extends TestCase
             'select unknown default' => [['fields' => [['key' => 'a', 'type' => 'select', 'label' => 'A', 'options' => [
                 ['value' => 'x', 'label' => 'X'],
             ], 'default' => 'z']]], 'fields.0.default'],
+            'number string min' => [['fields' => [['key' => 'n', 'type' => 'number', 'label' => 'Число', 'min' => '1']]], 'fields.0.min'],
+            'number bool default' => [['fields' => [['key' => 'n', 'type' => 'number', 'label' => 'Число', 'default' => true]]], 'fields.0.default'],
+            'number min over max' => [['fields' => [['key' => 'n', 'type' => 'number', 'label' => 'Число', 'min' => 5, 'max' => 1]]], 'fields.0.min'],
+            'number zero step' => [['fields' => [['key' => 'n', 'type' => 'number', 'label' => 'Число', 'step' => 0]]], 'fields.0.step'],
+            'number default out of range' => [['fields' => [['key' => 'n', 'type' => 'number', 'label' => 'Число', 'min' => 1, 'max' => 4, 'default' => 9]]], 'fields.0.default'],
+            'number unknown option' => [['fields' => [['key' => 'n', 'type' => 'number', 'label' => 'Число', 'max_length' => 3]]], 'fields.0.max_length'],
             'image default' => [['fields' => [['key' => 'img', 'type' => 'image', 'label' => 'Фото', 'default' => 'x.jpg']]], 'fields.0.default'],
             'empty group' => [['fields' => [['key' => 'g', 'type' => 'group', 'label' => 'Группа', 'fields' => []]]], 'fields.0.fields'],
             'repeater without max' => [['fields' => [['key' => 'items', 'type' => 'repeater', 'label' => 'Элементы', 'fields' => [$text]]]], 'fields.0.max_items'],

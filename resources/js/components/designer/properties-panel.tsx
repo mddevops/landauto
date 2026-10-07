@@ -135,6 +135,33 @@ function FieldControl({
                     {errorMessage}
                 </div>
             );
+        case 'number':
+            return (
+                <div className="grid gap-1.5">
+                    <Label htmlFor={id}>{field.label}</Label>
+                    <Input
+                        id={id}
+                        type="number"
+                        inputMode="decimal"
+                        value={typeof value === 'number' ? value : ''}
+                        min={field.min}
+                        max={field.max}
+                        step={field.step ?? 'any'}
+                        aria-invalid={Boolean(error)}
+                        aria-describedby={describedBy}
+                        onChange={(event) =>
+                            onChange(
+                                event.target.value === '' ||
+                                    Number.isNaN(event.target.valueAsNumber)
+                                    ? null
+                                    : event.target.valueAsNumber,
+                            )
+                        }
+                    />
+                    {help}
+                    {errorMessage}
+                </div>
+            );
         case 'boolean':
             return (
                 <div className="grid gap-1.5">

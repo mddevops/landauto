@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Blocks;
 
+use App\Enums\BlockCategory;
 use App\Enums\BlockOwnerScope;
 use App\Enums\PlatformRole;
 use App\Enums\WorkspaceRole;
@@ -52,6 +53,7 @@ class DeveloperBlockAuthoringTest extends TestCase
         $response = $this->actingAs($this->developer)->post(route('developer.blocks.store'), [
             'name' => ' Карточка акции ',
             'slug' => 'promo-card',
+            'category' => 'menu',
             'owner_scope' => 'platform',
             'developer_profile_id' => $other->id,
             'workspace_id' => $workspace->id,
@@ -68,7 +70,8 @@ class DeveloperBlockAuthoringTest extends TestCase
         $this->assertNull($block->workspace_id);
         $this->assertSame($this->developer->id, $block->created_by_user_id);
         $this->assertSame($this->developer->id, $block->updated_by_user_id);
-        $this->assertSame(['Карточка акции', 'promo-card'], [$block->name, $block->slug]);
+        $this->assertSame(['Карточка акции', 'promo-card', BlockCategory::Menu], [$block->name, $block->slug, $block->category]);
+        $this->assertNull($block->draft, 'no Draft is created before the first save');
         $this->assertTrue(Str::isUlid($block->public_id));
         $this->assertSame(0, BlockVersion::query()->count(), 'no Block Version is created');
 
@@ -114,6 +117,7 @@ class DeveloperBlockAuthoringTest extends TestCase
         $this->actingAs($this->developer)
             ->patch(route('developer.blocks.update', $block), [
                 'name' => 'Новое название',
+                'category' => 'menu',
                 'slug' => 'hijacked',
                 'owner_scope' => 'platform',
                 'developer_profile_id' => $other->id,
@@ -122,7 +126,7 @@ class DeveloperBlockAuthoringTest extends TestCase
             ->assertRedirect(route('developer.blocks.show', $block));
 
         $block->refresh();
-        $this->assertSame(['Новое название', 'my-block', BlockOwnerScope::Developer, $this->profile->id], [$block->name, $block->slug, $block->owner_scope, $block->developer_profile_id]);
+        $this->assertSame(['Новое название', 'my-block', BlockOwnerScope::Developer, $this->profile->id, BlockCategory::Menu], [$block->name, $block->slug, $block->owner_scope, $block->developer_profile_id, $block->category]);
         $this->assertSame($this->developer->id, $block->updated_by_user_id);
         Log::shouldHaveReceived('info')->with('developer.block_updated', Mockery::any())->once();
 
@@ -137,13 +141,13 @@ class DeveloperBlockAuthoringTest extends TestCase
 
         foreach (['Promo', 'promo card', '-promo', 'promo-', 'pro--mo', 'промо', 'ab', str_repeat('a', 61)] as $slug) {
             $this->actingAs($this->developer)
-                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'slug' => $slug])
+                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => $slug])
                 ->assertSessionHasErrors('slug');
         }
 
         foreach (['hero', 'vehicle-card', 'taken-by-b'] as $slug) {
             $this->actingAs($this->developer)
-                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'slug' => $slug])
+                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => $slug])
                 ->assertSessionHasErrors(['slug' => 'Этот slug уже используется другим блоком.']);
         }
 
@@ -163,9 +167,12 @@ class DeveloperBlockAuthoringTest extends TestCase
 
         foreach ([$foreign, $platform, $private] as $block) {
             $this->actingAs($this->developer)->get(route('developer.blocks.show', $block))->assertNotFound();
-            $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом'])->assertNotFound();
+            $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом', 'category' => 'other'])->assertNotFound();
             $this->assertNotSame('Взлом', $block->fresh()?->name);
+            $this->actingAs($this->developer)->put(route('developer.blocks.draft', $block), self::draftPayload())->assertNotFound();
         }
+
+        $this->assertDatabaseCount('block_drafts', 0);
 
         $this->actingAs($this->developer)->get(route('developer.blocks.show', (string) Str::ulid()))->assertNotFound();
         $this->actingAs($this->developer)->get('/developer/blocks/'.$foreign->id)->assertNotFound();
@@ -208,7 +215,7 @@ class DeveloperBlockAuthoringTest extends TestCase
         // Workspace roles and platform staff authority never grant Developer authoring.
         foreach ([$owner, $catalogManager, $superAdmin, User::factory()->create()] as $user) {
             $this->actingAs($user)->get(route('developer.blocks.index'))->assertForbidden();
-            $this->actingAs($user)->post(route('developer.blocks.store'), ['name' => 'Блок', 'slug' => 'user-'.$user->id])->assertForbidden();
+            $this->actingAs($user)->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => 'user-'.$user->id])->assertForbidden();
             $this->actingAs($user)->get(route('developer.blocks.show', $block))->assertForbidden();
         }
 
@@ -223,9 +230,10 @@ class DeveloperBlockAuthoringTest extends TestCase
         $requests = [
             fn (): TestResponse => $this->actingAs($this->developer)->get(route('developer.blocks.index')),
             fn (): TestResponse => $this->actingAs($this->developer)->get(route('developer.blocks.create')),
-            fn (): TestResponse => $this->actingAs($this->developer)->post(route('developer.blocks.store'), ['name' => 'Блок', 'slug' => 'denied-block']),
+            fn (): TestResponse => $this->actingAs($this->developer)->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => 'denied-block']),
             fn (): TestResponse => $this->actingAs($this->developer)->get(route('developer.blocks.show', $block)),
-            fn (): TestResponse => $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом']),
+            fn (): TestResponse => $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом', 'category' => 'other']),
+            fn (): TestResponse => $this->actingAs($this->developer)->put(route('developer.blocks.draft', $block), self::draftPayload()),
         ];
 
         foreach ($requests as $request) {
@@ -233,6 +241,15 @@ class DeveloperBlockAuthoringTest extends TestCase
         }
 
         $this->assertDatabaseMissing('block_definitions', ['slug' => 'denied-block']);
+        $this->assertDatabaseCount('block_drafts', 0);
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private static function draftPayload(): array
+    {
+        return ['revision' => 0, 'sources' => ['html' => '<p>Взлом</p>', 'css' => '', 'js' => '', 'schema' => '{"fields":[]}']];
     }
 
     private function userWithRole(PlatformRole $role): User

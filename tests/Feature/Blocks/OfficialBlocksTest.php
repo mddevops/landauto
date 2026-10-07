@@ -5,6 +5,7 @@ namespace Tests\Feature\Blocks;
 use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockSchemaValidator;
 use App\Blocks\OfficialBlockCatalog;
+use App\Enums\BlockCategory;
 use App\Enums\PlatformRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -63,7 +64,7 @@ class OfficialBlocksTest extends TestCase
         $hero = BlockDefinition::query()->platformOwned()->where('slug', 'hero')->sole();
         $publicId = $hero->public_id;
 
-        app(BlockAuthoring::class)->updateMetadata($superAdmin, $hero, 'Главный Hero');
+        app(BlockAuthoring::class)->updateMetadata($superAdmin, $hero, 'Главный Hero', BlockCategory::Hero);
         $this->assertSame('Главный Hero', $hero->fresh()?->name);
         $versions = BlockVersion::query()->orderBy('id')->get(['id', 'block_definition_id', 'version', 'schema_json'])->toArray();
 

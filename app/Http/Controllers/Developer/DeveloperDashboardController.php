@@ -11,7 +11,7 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * «Панель разработчика»: read-only view of the current User's own active Developer Profile and its
+ * «Студия» (developer home): read-only view of the current User's own active Developer Profile and its
  * effective creator capabilities (D-118). No Workspace context is involved.
  */
 class DeveloperDashboardController extends Controller

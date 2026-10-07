@@ -1,8 +1,13 @@
 import { Head } from '@inertiajs/react';
 import { BlockCreateForm } from '@/components/block-authoring/block-create-form';
+import type { Choice } from '@/components/platform/form-fields';
 import { create, index, store } from '@/routes/platform/blocks';
 
-export default function CreatePlatformBlock() {
+export default function CreatePlatformBlock({
+    categories,
+}: {
+    categories: Choice[];
+}) {
     return (
         <>
             <Head title="Новый официальный блок" />
@@ -12,6 +17,7 @@ export default function CreatePlatformBlock() {
                 action={store.form()}
                 cancelHref={index()}
                 submitLabel="Создать официальный блок"
+                categories={categories}
             />
         </>
     );

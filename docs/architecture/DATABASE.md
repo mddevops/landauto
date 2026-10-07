@@ -471,7 +471,22 @@ Implemented fields (P2-002, ownership P9-003):
 - workspace_id nullable FK (restrict), immutable
 - created_by_user_id nullable FK (null on User delete), immutable audit identity
 - updated_by_user_id nullable FK (null on User delete), audit identity
+- category string(32), `App\Enums\BlockCategory`, default `other`, editable (P9-004; official Blocks backfilled)
 - timestamps
+
+## block_drafts
+
+Block Studio Draft (P9-004, ADR-008), one per Block Definition, created on the first save:
+
+- id
+- block_definition_id unique FK (cascade)
+- html, css, js, schema_source mediumText — raw sources, ≤ 64 KB (bytes) each; `schema_source` may be invalid JSON while drafting
+- preview_data json nullable (P9-005)
+- revision unsigned int — optimistic concurrency, +1 per save
+- updated_by_user_id nullable FK (null on User delete), audit identity
+- timestamps
+
+Saving a Draft never creates or changes a Block Version.
 
 Scope rules (D-117), enforced by the model:
 

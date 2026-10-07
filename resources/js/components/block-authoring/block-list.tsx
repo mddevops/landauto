@@ -107,6 +107,9 @@ export function BlockList({
                                     </p>
                                 </div>
                                 <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                                    <Badge variant="secondary">
+                                        {block.category_label}
+                                    </Badge>
                                     <Badge variant="outline">
                                         {versionsLabel(block.versions_count)}
                                     </Badge>

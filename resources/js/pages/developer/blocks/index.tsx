@@ -11,9 +11,9 @@ export default function DeveloperBlocks({
 }) {
     return (
         <>
-            <Head title="Мои блоки" />
+            <Head title="Блоки — Студия" />
             <BlockList
-                title="Мои блоки"
+                title="Блоки"
                 description="Блоки вашего профиля разработчика. Они пока не доступны клиентам и не используются на сайтах."
                 blocks={blocks}
                 createHref={create()}
@@ -28,7 +28,7 @@ export default function DeveloperBlocks({
 
 DeveloperBlocks.layout = {
     breadcrumbs: [
-        { title: 'Панель разработчика', href: dashboard() },
-        { title: 'Мои блоки', href: index() },
+        { title: 'Студия', href: dashboard() },
+        { title: 'Блоки', href: index() },
     ],
 };

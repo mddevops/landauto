@@ -150,10 +150,20 @@ class E2eSeeder extends Seeder
         // no platform role, and the personal Workspace grants no authoring.
         $developer = $this->createUser('Девелопер Блоков', 'developer@landflow.test');
         $this->createWorkspace($developer, 'Workspace Девелопера');
-        $profile = new DeveloperProfile(['display_name' => 'Студия блоков E2E', 'bio' => null]);
-        $profile->slug = 'e2e-block-studio';
+        $this->createDeveloperProfile($developer, 'Студия блоков E2E', 'e2e-block-studio');
+
+        // Block Studio editing flows log in separately so login throttling never couples the specs.
+        $studioDeveloper = $this->createUser('Сергей Студийный', 'studio-developer@landflow.test');
+        $this->createWorkspace($studioDeveloper, 'Workspace Студийного');
+        $this->createDeveloperProfile($studioDeveloper, 'Студия кода E2E', 'e2e-code-studio');
+    }
+
+    private function createDeveloperProfile(User $user, string $name, string $slug): void
+    {
+        $profile = new DeveloperProfile(['display_name' => $name, 'bio' => null]);
+        $profile->slug = $slug;
         $profile->status = DeveloperProfileStatus::Active;
-        $profile->user()->associate($developer)->save();
+        $profile->user()->associate($user)->save();
         $profile->permissions()->createMany(array_map(
             fn (DeveloperPermission $permission): array => ['permission' => $permission->value],
             DeveloperPermission::defaults(),

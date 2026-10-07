@@ -1,5 +1,6 @@
 import { Form, Link } from '@inertiajs/react';
-import { TextField } from '@/components/platform/form-fields';
+import { SelectField, TextField } from '@/components/platform/form-fields';
+import type { Choice } from '@/components/platform/form-fields';
 import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import type { RouteDefinition, RouteFormDefinition } from '@/wayfinder';
@@ -10,6 +11,7 @@ type BlockCreateFormProps = {
     action: RouteFormDefinition<'post'>;
     cancelHref: RouteDefinition<'get'>;
     submitLabel: string;
+    categories: Choice[];
 };
 
 export function BlockCreateForm({
@@ -18,6 +20,7 @@ export function BlockCreateForm({
     action,
     cancelHref,
     submitLabel,
+    categories,
 }: BlockCreateFormProps) {
     return (
         <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -43,6 +46,15 @@ export function BlockCreateForm({
                             maxLength={100}
                             autoComplete="off"
                             error={errors.name}
+                        />
+                        <SelectField
+                            id="block-category"
+                            name="category"
+                            label="Категория"
+                            choices={categories}
+                            emptyLabel="Выберите категорию"
+                            required
+                            error={errors.category}
                         />
                         <TextField
                             id="block-slug"

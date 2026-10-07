@@ -24,7 +24,11 @@ class OfficialBlockSeeder extends Seeder
             $definition = BlockDefinition::query()->where('slug', $block['slug'])->first();
 
             if ($definition === null) {
-                $definition = new BlockDefinition(['slug' => $block['slug'], 'name' => $block['name']]);
+                $definition = new BlockDefinition([
+                    'slug' => $block['slug'],
+                    'name' => $block['name'],
+                    'category' => OfficialBlockCatalog::category($block['slug']),
+                ]);
                 $definition->owner_scope = BlockOwnerScope::Platform;
                 $definition->save();
             } elseif (! $definition->isPlatformOwned()) {

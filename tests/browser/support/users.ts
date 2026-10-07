@@ -178,6 +178,13 @@ export const users = {
         password: 'e2e-password',
         profile: 'Студия блоков E2E',
     },
+    // Block Studio code / schema editing; same rights as `developer`, separate login throttle.
+    studioDeveloper: {
+        name: 'Сергей Студийный',
+        email: 'studio-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия кода E2E',
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).

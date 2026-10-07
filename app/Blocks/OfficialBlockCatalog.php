@@ -2,6 +2,8 @@
 
 namespace App\Blocks;
 
+use App\Enums\BlockCategory;
+
 /**
  * Platform-owned initial official Blocks. A published version is immutable: change a schema
  * only by adding a new version, never by editing an existing entry.
@@ -9,6 +11,23 @@ namespace App\Blocks;
 final class OfficialBlockCatalog
 {
     public const INITIAL_VERSION = '1.0.0';
+
+    /**
+     * Category for a newly bootstrapped official Definition; later edits belong to Platform authoring.
+     */
+    public static function category(string $slug): BlockCategory
+    {
+        return match (true) {
+            $slug === 'header' => BlockCategory::Menu,
+            $slug === 'hero' => BlockCategory::Hero,
+            $slug === 'benefits' => BlockCategory::Features,
+            $slug === 'cta' => BlockCategory::Cta,
+            $slug === 'contacts' => BlockCategory::Contacts,
+            $slug === 'footer' => BlockCategory::Footer,
+            str_starts_with($slug, 'vehicle-') => BlockCategory::Vehicles,
+            default => BlockCategory::Other,
+        };
+    }
 
     /**
      * Entries are ordered oldest-to-newest per slug; the seeder appends missing versions.

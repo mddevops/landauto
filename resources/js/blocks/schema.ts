@@ -1,6 +1,7 @@
 export type SchemaFieldType =
     | 'text'
     | 'textarea'
+    | 'number'
     | 'boolean'
     | 'select'
     | 'image'
@@ -16,7 +17,10 @@ export type SchemaField = {
     help?: string;
     required?: boolean;
     max_length?: number;
-    default?: string | boolean;
+    min?: number;
+    max?: number;
+    step?: number;
+    default?: string | number | boolean;
     options?: { value: string; label: string }[];
     fields?: SchemaField[];
     min_items?: number;

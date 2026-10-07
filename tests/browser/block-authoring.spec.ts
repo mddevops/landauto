@@ -1,6 +1,6 @@
 import type { Page, TestInfo } from '@playwright/test';
 import { expect, test } from './support/fixtures';
-import { expectNoHorizontalOverflow, isMobileViewport } from './support/layout';
+import { expectNoHorizontalOverflow } from './support/layout';
 import { guestStorageState, users } from './support/users';
 
 test.use({ storageState: guestStorageState });
@@ -24,9 +24,11 @@ async function createBlock(
     page: Page,
     name: string,
     slug: string,
+    category: string,
     submit: string,
 ) {
     await page.getByLabel('Название').fill(name);
+    await page.getByLabel('Категория').selectOption({ label: category });
     await page.getByLabel('Slug').fill(slug);
     await expectNoHorizontalOverflow(page);
     const button = page.getByRole('button', { name: submit, exact: true });
@@ -35,28 +37,47 @@ async function createBlock(
     await button.click();
 }
 
-async function expectEditor(page: Page, name: string, slug: string) {
-    await expect(page).toHaveTitle(/Редактор блока/);
-    await expect(
-        page.getByText('Редактор блока', { exact: true }),
-    ).toBeVisible();
-    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-    await expect(page.getByText('Нет версий', { exact: true })).toBeVisible();
+/** Waits for the debounced autosave of the latest edit to finish. */
+async function expectDraftSaved(page: Page) {
+    const status = page.locator('[data-status]');
+    await expect(status).not.toHaveAttribute('data-status', 'saved');
+    await expect(status).toHaveAttribute('data-status', 'saved');
+}
 
+async function openMode(page: Page, mode: string) {
+    await page.getByRole('tab', { name: mode, exact: true }).click();
+}
+
+async function expectStudio(
+    page: Page,
+    name: string,
+    slug: string,
+    category: string,
+) {
+    await expect(page).toHaveTitle(/Студия блоков/);
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+    await expect(page.getByText(category, { exact: true })).toBeVisible();
+    await expect(page.getByText('Нет версий', { exact: true })).toBeVisible();
+    await expect(page.locator('[data-status]')).toHaveText('Черновик сохранён');
+
+    await openMode(page, 'Настройки');
     const slugInput = page.getByLabel('Slug');
     await expect(slugInput).toHaveValue(slug);
     await expect(slugInput).not.toBeEditable();
 }
 
-async function renameBlock(page: Page, name: string) {
+async function renameBlock(page: Page, name: string, category: string) {
     const metadata = page.getByRole('region', { name: 'Основные данные' });
     await metadata.getByLabel('Название').fill(name);
+    await metadata.getByLabel('Категория').selectOption({ label: category });
     await metadata.getByRole('button', { name: 'Сохранить' }).click();
     await expect(page.getByText('Изменения сохранены.')).toBeVisible();
 
     await page.reload();
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+    await openMode(page, 'Настройки');
     await expect(metadata.getByLabel('Название')).toHaveValue(name);
+    await expect(metadata.getByLabel('Категория')).toHaveValue('footer');
 }
 
 test('developer creates and renames an own Block @responsive', async ({
@@ -72,14 +93,14 @@ test('developer creates and renames an own Block @responsive', async ({
 
     await page.goto('/developer');
     await expect(
-        page.getByRole('heading', { level: 1, name: 'Панель разработчика' }),
+        page.getByRole('heading', { level: 1, name: 'Студия' }),
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
-    await page.getByRole('link', { name: 'Мои блоки' }).click();
+    await page.getByRole('link', { name: /^Блоки/ }).click();
 
     await expect(page).toHaveURL('/developer/blocks');
     await expect(
-        page.getByRole('heading', { level: 1, name: 'Мои блоки' }),
+        page.getByRole('heading', { level: 1, name: 'Блоки' }),
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
     await page.getByRole('link', { name: /^Создать (первый )?блок$/ }).click();
@@ -88,11 +109,11 @@ test('developer creates and renames an own Block @responsive', async ({
     await expect(
         page.getByRole('heading', { level: 1, name: 'Новый блок' }),
     ).toBeVisible();
-    await createBlock(page, name, slug, 'Создать блок');
+    await createBlock(page, name, slug, 'Меню', 'Создать блок');
 
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
     await expect(page.getByText(`Блок «${name}» создан.`)).toBeVisible();
-    await expectEditor(page, name, slug);
+    await expectStudio(page, name, slug, 'Меню');
 
     const ownership = page.getByRole('region', { name: 'Владение' });
     await expect(
@@ -102,39 +123,123 @@ test('developer creates and renames an own Block @responsive', async ({
         ownership.getByText('Разработчик', { exact: true }),
     ).toBeVisible();
     await expect(ownership.getByText('0', { exact: true })).toBeVisible();
-
-    const roadmap = ['Схема', 'Предпросмотр', 'Версии'].map((title) =>
-        page.getByRole('region', { name: title, exact: true }),
-    );
-
-    for (const card of roadmap) {
-        await expect(card).toBeVisible();
-    }
-
-    if (isMobileViewport(page)) {
-        const boxes = await Promise.all(
-            roadmap.map((card) => card.boundingBox()),
-        );
-        const [first, second, third] = boxes.map((box) => box!);
-        expect(second.y).toBeGreaterThanOrEqual(first.y + first.height);
-        expect(third.y).toBeGreaterThanOrEqual(second.y + second.height);
-        expect(second.x).toBe(first.x);
-    }
-
     await expectNoHorizontalOverflow(page);
 
-    await renameBlock(page, renamed);
+    await renameBlock(page, renamed, 'Подвал');
     await expectNoHorizontalOverflow(page);
 
     await page.goto('/developer/blocks');
-    await expect(
-        page.getByTestId('authoring-block').filter({ hasText: renamed }),
-    ).toContainText(slug);
+    const listed = page
+        .getByTestId('authoring-block')
+        .filter({ hasText: renamed });
+    await expect(listed).toContainText(slug);
+    await expect(listed).toContainText('Подвал');
     await expectNoHorizontalOverflow(page);
 
     // Developer authoring never grants Platform Block authoring.
     browserIssues.expectFailedResponse(403, '/platform/blocks');
     expect((await page.goto('/platform/blocks'))?.status()).toBe(403);
+});
+
+test('developer writes code and builds the schema in the Block Studio @responsive', async ({
+    page,
+}, testInfo) => {
+    const suffix = uniqueSuffix(testInfo);
+    const name = `E2E студия ${suffix}`;
+
+    await login(page, users.studioDeveloper);
+    await page.goto('/developer/blocks/create');
+    await createBlock(
+        page,
+        name,
+        `e2e-studio-${suffix}`,
+        'Первый экран',
+        'Создать блок',
+    );
+    await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
+
+    const checks = page.getByRole('complementary', { name: 'Проверка схемы' });
+    await expect(checks).toContainText('Ошибок в схеме нет.');
+
+    // Code mode: the starter Draft is editable per file and autosaves.
+    const html = page.getByLabel('index.html', { exact: true });
+    await expect(html).toHaveValue(/\{\{ title \}\}/);
+    await html.fill(
+        '<section class="promo">\n  <h2>{{ title }}</h2>\n</section>',
+    );
+    await expectDraftSaved(page);
+
+    await page.getByRole('button', { name: 'styles.css' }).click();
+    await page
+        .getByLabel('styles.css', { exact: true })
+        .fill('.promo { padding: 32px; }');
+    await expectDraftSaved(page);
+    await expectNoHorizontalOverflow(page);
+
+    // Invalid JSON is saved as work in progress and reported, not rejected.
+    await page.getByRole('button', { name: 'schema.json' }).click();
+    const schema = page.getByLabel('schema.json', { exact: true });
+    await schema.fill('{"fields": [');
+    await expectDraftSaved(page);
+    await expect(checks).toContainText(
+        'schema.json сейчас не является корректным JSON',
+    );
+
+    await openMode(page, 'Конструктор схемы');
+    await expect(
+        page.getByText('Конструктор открывается только для корректного JSON'),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Открыть schema.json' }).click();
+    await schema.fill(
+        '{"fields":[{"key":"title","type":"text","label":"Заголовок"}]}',
+    );
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('Ошибок в схеме нет.');
+
+    // Schema Builder edits the same canonical JSON.
+    await openMode(page, 'Конструктор схемы');
+    await expect(page.getByTestId('schema-field')).toHaveCount(1);
+    await page.getByLabel('Тип нового поля').selectOption({ label: 'Число' });
+    await page.getByRole('button', { name: 'Добавить поле' }).click();
+    const numberField = page.getByTestId('schema-field').nth(1);
+    await numberField.getByRole('button', { name: /^Новое поле/ }).click();
+    await numberField.getByLabel('Ключ').fill('columns');
+    await numberField.getByLabel('Подпись').fill('Колонки');
+    await numberField.getByLabel('Минимум', { exact: true }).fill('5');
+    await numberField.getByLabel('Максимум', { exact: true }).fill('1');
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('fields.1.min');
+    await expect(checks).toContainText('Минимум не может превышать максимум.');
+
+    await numberField.getByLabel('Минимум', { exact: true }).fill('1');
+    await numberField.getByLabel('Максимум', { exact: true }).fill('4');
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('Ошибок в схеме нет.');
+
+    await numberField
+        .getByRole('button', { name: 'Переместить поле «Колонки» выше' })
+        .click();
+    await expect(page.getByTestId('schema-field').first()).toContainText(
+        'Колонки',
+    );
+    await expectDraftSaved(page);
+    await expectNoHorizontalOverflow(page);
+
+    // Reload restores the saved Draft.
+    await page.reload();
+    await expect(page.getByLabel('index.html', { exact: true })).toHaveValue(
+        /class="promo"/,
+    );
+    await page.getByRole('button', { name: 'schema.json' }).click();
+    const saved = JSON.parse(
+        await page.getByLabel('schema.json', { exact: true }).inputValue(),
+    ) as { fields: { key: string; type: string; min?: number }[] };
+    expect(saved.fields.map((field) => field.key)).toEqual([
+        'columns',
+        'title',
+    ]);
+    expect(saved.fields[0]).toMatchObject({ type: 'number', min: 1, max: 4 });
+    await expect(page.getByText('Нет версий', { exact: true })).toBeVisible();
 });
 
 test('super admin creates and renames a Platform Block', async ({
@@ -160,13 +265,13 @@ test('super admin creates and renames a Platform Block', async ({
     await expect(
         page.getByRole('heading', { level: 1, name: 'Новый официальный блок' }),
     ).toBeVisible();
-    await createBlock(page, name, slug, 'Создать официальный блок');
+    await createBlock(page, name, slug, 'Контакты', 'Создать официальный блок');
 
     await expect(page).toHaveURL(/\/platform\/blocks\/[0-9a-z]{26}$/i);
     await expect(
         page.getByText(`Официальный блок «${name}» создан.`),
     ).toBeVisible();
-    await expectEditor(page, name, slug);
+    await expectStudio(page, name, slug, 'Контакты');
 
     const ownership = page.getByRole('region', { name: 'Владение' });
     await expect(
@@ -177,7 +282,7 @@ test('super admin creates and renames a Platform Block', async ({
     ).toBeVisible();
     await expect(ownership.getByText('0', { exact: true })).toBeVisible();
 
-    await renameBlock(page, renamed);
+    await renameBlock(page, renamed, 'Подвал');
 
     await page.goto('/platform/blocks');
     await expect(

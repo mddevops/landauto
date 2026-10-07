@@ -4,7 +4,11 @@ namespace App\Http\Controllers\Platform;
 
 use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockAuthoringPresenter;
+use App\Blocks\BlockStudio;
+use App\Enums\BlockCategory;
+use App\Http\Controllers\Concerns\SavesBlockDrafts;
 use App\Http\Controllers\Controller;
+use App\Http\Requests\Blocks\SaveBlockDraftRequest;
 use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
 use App\Models\BlockDefinition;
@@ -17,14 +21,17 @@ use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * «Блоки Landflow»: official platform-owned Block Definitions (`manage_platform_content`, D-117).
- * No Developer Profile is involved; Developer and Workspace-private Blocks are not reachable here.
+ * «Студия» → «Блоки Landflow»: official platform-owned Block Definitions (`manage_platform_content`,
+ * D-117). No Developer Profile is involved; Developer and Workspace-private Blocks are not reachable here.
  */
 class PlatformBlockController extends Controller
 {
+    use SavesBlockDrafts;
+
     public function __construct(
         private BlockAuthoring $authoring,
         private BlockAuthoringPresenter $presenter,
+        private BlockStudio $studio,
     ) {}
 
     public function index(): Response
@@ -44,7 +51,7 @@ class PlatformBlockController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('platform/blocks/create');
+        return Inertia::render('platform/blocks/create', ['categories' => BlockCategory::options()]);
     }
 
     public function store(StoreBlockDefinitionRequest $request): RedirectResponse
@@ -54,6 +61,7 @@ class PlatformBlockController extends Controller
                 $this->actor($request),
                 $request->string('name')->toString(),
                 $request->string('slug')->toString(),
+                $request->category(),
             );
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['slug' => 'Этот slug уже используется другим блоком.']);
@@ -66,16 +74,27 @@ class PlatformBlockController extends Controller
 
     public function show(string $block): Response
     {
-        return Inertia::render('platform/blocks/show', [
-            'block' => $this->presenter->detail($this->find($block)),
-        ]);
+        return Inertia::render('platform/blocks/show', $this->presenter->studio($this->find($block)));
     }
 
     public function update(UpdateBlockDefinitionRequest $request, string $block): RedirectResponse
     {
         $definition = $this->find($block);
-        $this->authoring->updateMetadata($this->actor($request), $definition, $request->string('name')->toString());
+        $this->authoring->updateMetadata(
+            $this->actor($request),
+            $definition,
+            $request->string('name')->toString(),
+            $request->category(),
+        );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Изменения сохранены.']);
+
+        return to_route('platform.blocks.show', $definition);
+    }
+
+    public function draft(SaveBlockDraftRequest $request, string $block): RedirectResponse
+    {
+        $definition = $this->find($block);
+        $this->saveDraft($this->studio, $request, $this->actor($request), $definition);
 
         return to_route('platform.blocks.show', $definition);
     }
@@ -85,6 +104,7 @@ class PlatformBlockController extends Controller
         return BlockDefinition::query()
             ->platformOwned()
             ->where('public_id', $publicId)
+            ->with('draft')
             ->withCount('versions')
             ->firstOrFail();
     }

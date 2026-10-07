@@ -51,11 +51,11 @@ export default function DeveloperDashboard({
 
     return (
         <>
-            <Head title="Панель разработчика" />
+            <Head title="Студия" />
             <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
                 <header className="space-y-1">
                     <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                        Панель разработчика
+                        Студия
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Профиль разработчика не связан с вашими пространствами и
@@ -118,26 +118,26 @@ export default function DeveloperDashboard({
                         >
                             <h2 className="flex items-center gap-2 font-semibold">
                                 <Blocks aria-hidden="true" className="size-4" />
-                                Мои блоки
+                                Блоки
                                 <ArrowRight
                                     aria-hidden="true"
                                     className="ml-auto size-4 text-muted-foreground transition-transform group-hover:translate-x-0.5"
                                 />
                             </h2>
                             <p className="text-sm text-muted-foreground">
-                                Создавайте блоки и редактируйте их основные
-                                данные.
+                                Пишите код блоков, собирайте схему настроек и
+                                сохраняйте черновики.
                             </p>
                         </Link>
                     ) : (
                         <ToolPlaceholder
-                            title="Мои блоки"
+                            title="Блоки"
                             icon={Blocks}
                             text="Нет разрешения на создание блоков."
                         />
                     )}
                     <ToolPlaceholder
-                        title="Мои шаблоны"
+                        title="Шаблоны"
                         icon={LayoutTemplate}
                         text={
                             capabilities.create_templates
@@ -153,5 +153,5 @@ export default function DeveloperDashboard({
 }
 
 DeveloperDashboard.layout = {
-    breadcrumbs: [{ title: 'Панель разработчика', href: dashboard() }],
+    breadcrumbs: [{ title: 'Студия', href: dashboard() }],
 };

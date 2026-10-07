@@ -1,25 +1,39 @@
 import { Head } from '@inertiajs/react';
-import { BlockEditor } from '@/components/block-authoring/block-editor';
+import { BlockStudio } from '@/components/block-studio/block-studio';
+import type { Choice } from '@/components/platform/form-fields';
 import { dashboard } from '@/routes/developer';
-import { index, update } from '@/routes/developer/blocks';
-import type { AuthoringBlockDetail } from '@/types/blocks';
+import { draft as draftRoute, index, update } from '@/routes/developer/blocks';
+import type { AuthoringBlockDetail, BlockDraft } from '@/types/blocks';
 
-export default function DeveloperBlockEditor({
+export default function DeveloperBlockStudio({
     block,
+    draft,
+    categories,
+    sourceMaxBytes,
 }: {
     block: AuthoringBlockDetail;
+    draft: BlockDraft;
+    categories: Choice[];
+    sourceMaxBytes: number;
 }) {
     return (
         <>
-            <Head title="Редактор блока" />
-            <BlockEditor block={block} action={update.form(block.public_id)} />
+            <Head title={`${block.name} — Студия блоков`} />
+            <BlockStudio
+                block={block}
+                draft={draft}
+                categories={categories}
+                sourceMaxBytes={sourceMaxBytes}
+                metadataAction={update.form(block.public_id)}
+                draftUrl={draftRoute.url(block.public_id)}
+            />
         </>
     );
 }
 
-DeveloperBlockEditor.layout = {
+DeveloperBlockStudio.layout = {
     breadcrumbs: [
-        { title: 'Панель разработчика', href: dashboard() },
-        { title: 'Мои блоки', href: index() },
+        { title: 'Студия', href: dashboard() },
+        { title: 'Блоки', href: index() },
     ],
 };
