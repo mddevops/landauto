@@ -1462,58 +1462,44 @@ Nothing in planned scope. Real subscription integration is `P7-009` (DEFERRED).
 
 ## D-079 — Marketplace License Scope
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED (owner instruction «Landflow Creator Studio, Marketplace и форматы сайтов», 2026-10-07)
 
-### Decision Needed
+### Decision
 
-Determine whether paid Template/Block license belongs to:
+Published Blocks and Templates in the customer catalog declare exactly one access mode:
 
-- Workspace;
-- Site;
-- account;
-- another scope.
+- `free` — usable by any Site under product rules;
+- `entitlement` — usable when the Site's Workspace has the declared typed entitlement (never a plan-name check);
+- `paid` — usable on a Site that holds a **Site license** for the item (one-time purchase);
+- `admin_grant` — usable on a Site that holds a Site license granted by a Super Admin.
 
-### Blocking
+A paid license is **Site-scoped**: one license = one item × one Site. A licensed Block may be used on any Page of that Site; another Site needs its own license or a covering entitlement. A Template license covers the Blocks included in that Template for the same Site, without paying again per included Block. Entitlements and licenses stay separate concepts. The backend checks access when a Block / Template is installed or used (adding a Block Instance, installing a Template, publishing), not only when a catalog card is rendered.
 
-Paid Marketplace.
+Not decided here (no invention): prices, commissions, payouts, taxes, refunds, transfers between Sites. Purchasing (`paid` → license via payment) needs the billing integration (P10-005, after P7-009) and stays DEFERRED; `admin_grant` licenses are available without billing.
+
+### Resolved By
+
+Owner instruction 2026-10-07; implemented by P9-014 / P9-015.
 
 ---
 
 ## D-080 — Marketplace Runtime / Sandbox
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`
 
-### Decision Needed
+### Decision
 
-Define third-party Developer Block runtime and restrictions.
-
-### Must Cover
-
-- JavaScript;
-- dependencies;
-- network;
-- data access;
-- sandboxing;
-- CSP;
-- review.
-
-### Blocking
-
-Public third-party Marketplace runtime.
+Authored Block HTML/CSS/JS runs only in an opaque-origin sandboxed iframe (`sandbox="allow-scripts"`, Landflow-built `srcdoc`, strict CSP with `connect-src 'none'`), never in the application origin. Validated props are serialized by Landflow; the only channel back is an allowlisted `postMessage` bridge (`resize`, `action` by schema key, `error`) with source / origin / type checks. No external dependencies, CDNs or network access. Automated checks replace manual review (D-120).
 
 ---
 
 ## D-081 — Custom Developer Script Support
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`
 
-### Decision Needed
+### Decision
 
-Whether Landflow will support customer/developer custom code and under what restrictions.
-
-### Note
-
-Not required for core MVP.
+Super Admins (platform-owned Blocks) and Developers with an active Developer Profile and `create_blocks` (own Blocks) may author HTML / CSS / JS Block source under ADR-008. Workspace customers do not author code; they configure installed Blocks only through the published schema.
 
 ---
 
@@ -1790,6 +1776,7 @@ Define for personal data (Submissions, contact fields, IP addresses, delivery pa
 
 - production launch;
 - Submission export (no BACKLOG task exists yet; the task must reference D-094 when created).
+- Persisting operator chat transcripts of Chat Selection Sites (P9-018): messages are personal data with no defined retention / deletion rule.
 
 ---
 
@@ -2142,7 +2129,7 @@ Developer access:
 - Only a Super Admin grants / revokes Developer Profile access (platform permission `manage_developers`, which Catalog Managers do not have). It authorizes listing, granting, suspending and reactivating profiles, not Block / Template authoring (P9-002).
 - A Developer Profile is not a platform role; there is no `PlatformRole::Developer`. Developers are not Landflow staff merely because they create content.
 
-Future Marketplace distribution direction (approved direction only): free, entitlement-based, separately paid, private / admin grant. The architecture must not assume that a paid item is account-wide, that all premium items come from a plan, or that all Marketplace content is globally unlocked. Preferred future paid scopes remain Site and Workspace, but the final paid license scope stays with D-079 (ADR_REQUIRED) / P10-004.
+Future Marketplace distribution direction (approved direction only): free, entitlement-based, separately paid, private / admin grant. The architecture must not assume that a paid item is account-wide, that all premium items come from a plan, or that all Marketplace content is globally unlocked. The paid license scope is Site (D-079, APPROVED 2026-10-07).
 
 ### Resolved By
 
@@ -2169,6 +2156,48 @@ MVP default: a new Super Admin-granted profile receives all current creator perm
 ### Resolved By
 
 Owner instruction for P9-002 (2026-10-07); P9-002.
+
+---
+
+## D-119 — Site Types and Creation Start
+
+**Status:** APPROVED (owner instruction «Landflow Creator Studio, Marketplace и форматы сайтов», 2026-10-07)
+
+### Decision
+
+`site_type` is a domain field of Site (not a kind of Template), fixed at creation:
+
+| Type | Key | Start | Access |
+|---|---|---|---|
+| Многостраничный сайт | `multi_page` | blank or compatible Template | typed boolean entitlement `multi_page_sites` (absent on Free) |
+| Лендинг | `landing` | blank or compatible Template | all plans |
+| Квиз | `quiz` | compatible Template only | all plans |
+| Чат-подбор с оператором | `chat_selection` | compatible Template only | all plans |
+
+- Every type counts toward `max_sites` (D-099). No plan-name checks.
+- A Template declares its compatible Site types; the backend checks compatibility on create / clone.
+- A Landing has exactly one Page. Quiz and Chat Sites have a locked structure: customers edit only schema-exposed parameters, without adding, removing or reordering Pages / Blocks.
+- A Site created from a Template is an independent copy; Template changes never sync into existing Sites.
+- Sites that existed before this decision are `multi_page` (they could already hold several Pages); the entitlement is checked only when creating.
+- "Пустой старт" uses no Template. The legacy official `blank` Template is retained but declares no compatible type, so it is not offered.
+
+### Resolved By
+
+Owner instruction 2026-10-07; P9-013.
+
+---
+
+## D-120 — Automated Checks Replace Manual Review
+
+**Status:** APPROVED (owner instruction 2026-10-07)
+
+### Decision
+
+There is no manual moderation / approval queue for Blocks or Templates. The author (Super Admin for platform content, Developer for own content) publishes immediately after the automated security, schema and runtime checks of ADR-008 §7 pass. Autosave stores only the Draft and never publishes. `submit_marketplace_item` (D-118) is not an approval step; P9-008 "Review Workflow" is replaced by "Automated Block Checks".
+
+### Resolved By
+
+Owner instruction 2026-10-07; P9-008 / P9-006.
 
 ---
 
