@@ -72,7 +72,8 @@ class TemplateBuilderTest extends TestCase
         $this->assertSame(TemplateOwnerScope::Developer, $template->owner_scope);
         $this->assertSame($this->profile->id, $template->developer_profile_id);
         $this->assertSame($this->developer->id, $template->created_by_user_id);
-        $this->assertFalse($template->is_official, 'a new Template is not offered for Site creation');
+        $this->assertFalse($template->is_official, 'an author cannot mark a Template official');
+        $this->assertFalse(Template::query()->availableForSites()->whereKey($template->id)->exists(), 'an unpublished Template is not offered for Site creation');
         $this->assertSame(['landing', 'quiz'], $template->site_types);
         $this->assertTrue(Str::isUlid($template->public_id));
         $this->assertSame([['Главная', 'home', true]], $template->pages()->get()->map(fn (TemplatePage $page): array => [$page->title, $page->slug, $page->is_home])->all());
@@ -369,7 +370,8 @@ class TemplateBuilderTest extends TestCase
                 ->missing('versions.0.id')
                 ->missing('versions.0.content_json'));
 
-        $this->assertFalse($template->fresh()?->is_official, 'publishing does not offer the Template for Site creation (P9-015)');
+        $this->assertFalse($template->fresh()?->is_official, 'an author cannot mark a Template official');
+        $this->assertTrue(Template::query()->availableForSites()->whereKey($template->id)->exists(), 'a published Template is offered for Site creation');
 
         $this->expectException(LogicException::class);
         $first->update(['version' => '9.9.9']);

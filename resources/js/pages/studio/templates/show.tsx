@@ -8,6 +8,7 @@ import {
     Upload,
 } from 'lucide-react';
 import { formatBlockDate } from '@/components/block-authoring/block-list';
+import { CatalogAccessForm } from '@/components/catalog/catalog-access-form';
 import { TextField } from '@/components/platform/form-fields';
 import type { Choice } from '@/components/platform/form-fields';
 import { SiteTypeFields } from '@/components/template-authoring/site-type-fields';
@@ -17,7 +18,14 @@ import { Button } from '@/components/ui/button';
 import { Spinner } from '@/components/ui/spinner';
 import { index as developerTemplates } from '@/routes/developer/templates';
 import { index as platformTemplates } from '@/routes/platform/templates';
-import { designer, preview, publish, update } from '@/routes/studio/templates';
+import {
+    access as accessRoute,
+    designer,
+    preview,
+    publish,
+    update,
+} from '@/routes/studio/templates';
+import type { BlockAccessSettings } from '@/types/blocks';
 import type {
     PublishedTemplateVersion,
     TemplateDetail,
@@ -28,11 +36,17 @@ export default function TemplateShow({
     siteTypes,
     checks,
     versions,
+    access,
+    accessModes,
+    accessEntitlements,
 }: {
     template: TemplateDetail;
     siteTypes: Choice[];
     checks: string[];
     versions: PublishedTemplateVersion[];
+    access: BlockAccessSettings;
+    accessModes: Choice[];
+    accessEntitlements: Choice[];
 }) {
     const backHref =
         template.owner_scope === 'developer'
@@ -183,6 +197,16 @@ export default function TemplateShow({
                             )}
                         </div>
                     </section>
+
+                    <CatalogAccessForm
+                        idPrefix="template-access"
+                        description="Как клиенты могут создавать сайты из опубликованного шаблона. Бесплатный шаблон и шаблон по тарифу доступны при создании сайта; лицензия на шаблон покрывает его блоки для одного сайта. Покупка лицензий в Landflow пока недоступна."
+                        access={access}
+                        modes={accessModes}
+                        entitlements={accessEntitlements}
+                        url={accessRoute.url(template.public_id)}
+                        className="lg:col-span-2"
+                    />
 
                     <section
                         aria-labelledby="template-settings-title"

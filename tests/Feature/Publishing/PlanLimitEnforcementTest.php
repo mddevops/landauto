@@ -92,7 +92,7 @@ class PlanLimitEnforcementTest extends TestCase
     {
         return $this->actingAs($this->owner)
             ->withSession([WorkspaceContext::SESSION_KEY => $this->workspace->public_id])
-            ->post(route('sites.store'), ['name' => $name, 'site_type' => SiteType::Landing->value, 'start' => 'template', 'template' => Template::factory()->create()->public_id]);
+            ->post(route('sites.store'), ['name' => $name, 'site_type' => SiteType::Landing->value, 'start' => 'template', 'template' => Template::factory()->published()->create()->public_id]);
     }
 
     /**

@@ -13,15 +13,23 @@ use App\Models\Template;
 use App\Models\Workspace;
 use App\Support\SiteSubdomain;
 use App\Support\WorkspaceEntitlements;
+use App\Templates\InstallTemplateVersion;
+use App\Templates\TemplateCatalogAccess;
 use Illuminate\Support\Facades\DB;
 
 /**
  * Creates a Site of a fixed type (D-119) in the given Workspace: blank start only for multi-page
- * and landing Sites, an official compatible Template otherwise; every type counts toward `max_sites`.
+ * and landing Sites, a published compatible Template otherwise; every type counts toward
+ * `max_sites`. A Template's latest published version is copied into independent Site content
+ * (P9-015); access to the Template and its Blocks is checked first (D-079).
  */
 final class CreateSite
 {
-    public function __construct(private WorkspaceEntitlements $entitlements) {}
+    public function __construct(
+        private WorkspaceEntitlements $entitlements,
+        private TemplateCatalogAccess $templateAccess,
+        private InstallTemplateVersion $installer,
+    ) {}
 
     /**
      * @throws SiteCreationRejectedException
@@ -33,7 +41,9 @@ final class CreateSite
             throw new SiteCreationRejectedException('template', 'Этот формат создаётся только из шаблона. Выберите шаблон.');
         }
 
-        if ($template !== null && ! $template->is_official) {
+        $version = $template?->versions()->latest('id')->first();
+
+        if ($template !== null && $version === null) {
             throw new SiteCreationRejectedException('template', 'Выбранный шаблон недоступен.');
         }
 
@@ -41,7 +51,15 @@ final class CreateSite
             throw new SiteCreationRejectedException('template', 'Шаблон не подходит для выбранного формата сайта.');
         }
 
-        return DB::transaction(function () use ($workspace, $name, $type): Site {
+        if ($version?->content_json !== null && ! $type->allowsPageCreation() && count($version->content_json['pages']) > 1) {
+            throw new SiteCreationRejectedException('template', 'Шаблон содержит несколько страниц и подходит только для многостраничного сайта.');
+        }
+
+        if ($template !== null && ($denial = $this->templateAccess->installDenial($workspace, $template, $version)) !== null) {
+            throw new SiteCreationRejectedException('template', $denial);
+        }
+
+        return DB::transaction(function () use ($workspace, $name, $type, $version): Site {
             $lockedWorkspace = Workspace::query()
                 ->whereKey($workspace->getKey())
                 ->lockForUpdate()
@@ -68,16 +86,25 @@ final class CreateSite
             $site->workspace()->associate($lockedWorkspace);
             $site->save();
 
-            $homePage = new Page([
-                'title' => Page::HOME_TITLE,
-                'slug' => Page::HOME_SLUG,
-                'sort_order' => 0,
-            ]);
-            $homePage->is_home = true;
-            $homePage->site()->associate($site);
-            $homePage->save();
+            if ($version?->content_json !== null) {
+                $this->installer->install($site, $version);
+            } else {
+                $this->createHomePage($site);
+            }
 
             return $site;
         });
+    }
+
+    private function createHomePage(Site $site): void
+    {
+        $homePage = new Page([
+            'title' => Page::HOME_TITLE,
+            'slug' => Page::HOME_SLUG,
+            'sort_order' => 0,
+        ]);
+        $homePage->is_home = true;
+        $homePage->site()->associate($site);
+        $homePage->save();
     }
 }

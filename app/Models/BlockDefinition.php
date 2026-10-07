@@ -7,7 +7,6 @@ use App\Enums\BlockOwnerScope;
 use App\Enums\CatalogAccessMode;
 use App\Enums\Entitlement;
 use App\Models\Concerns\HasImmutablePublicId;
-use App\Support\Money;
 use Database\Factories\BlockDefinitionFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -195,28 +194,9 @@ class BlockDefinition extends Model
         return $this->hasMany(SiteLicense::class);
     }
 
-    /**
-     * Exactly the fields of the access mode: a boolean entitlement for `entitlement`, a positive
-     * price in a supported currency for `paid`, nothing otherwise.
-     */
     private function assertAccessIsConsistent(): void
     {
-        $mode = $this->getAttribute('access_mode');
-        $entitlement = $this->getAttribute('access_entitlement');
-        $price = $this->price_minor;
-        $currency = $this->price_currency;
-
-        $valid = match ($mode instanceof CatalogAccessMode ? $mode : null) {
-            CatalogAccessMode::Entitlement => $entitlement instanceof Entitlement
-                && in_array($entitlement, Entitlement::catalogGates(), true)
-                && $price === null && $currency === null,
-            CatalogAccessMode::Paid => $entitlement === null && $price !== null && $price > 0
-                && $currency !== null && Money::supports($currency),
-            CatalogAccessMode::Free, CatalogAccessMode::AdminGrant => $entitlement === null && $price === null && $currency === null,
-            null => false,
-        };
-
-        if (! $valid) {
+        if (! CatalogAccessMode::fieldsMatch($this->getAttribute('access_mode'), $this->getAttribute('access_entitlement'), $this->price_minor, $this->price_currency)) {
             throw new LogicException('Block Definition access fields must match its access mode exactly.');
         }
     }

@@ -269,7 +269,7 @@ class CatalogAccessTest extends TestCase
                 ->component('platform/licenses/index')
                 ->has('licenses', 0)
                 ->where('items', fn ($items): bool => collect($items)->pluck('name')->sort()->values()->all() === ['Карточка по выдаче', 'Карточка по тарифу', 'Платная карточка'])
-                ->where('items.0', fn ($item): bool => array_keys($item->all()) === ['public_id', 'name', 'author', 'access'])
+                ->where('items.0', fn ($item): bool => array_keys($item->all()) === ['kind', 'public_id', 'name', 'author', 'access'])
                 ->missing('items.0.id'));
 
         $grant = $this->blocks['grant'];

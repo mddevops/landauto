@@ -389,6 +389,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('/', [TemplateController::class, 'show'])->name('show');
             Route::patch('/', [TemplateController::class, 'update'])->name('update');
+            Route::put('access', [TemplateController::class, 'access'])->name('access');
             Route::post('publish', [TemplateController::class, 'publish'])->middleware('throttle:30,1')->name('publish');
             Route::get('designer', [TemplateDesignerController::class, 'designer'])->name('designer');
             Route::get('preview', [TemplateDesignerController::class, 'preview'])->name('preview');

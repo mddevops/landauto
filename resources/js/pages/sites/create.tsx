@@ -3,12 +3,14 @@ import { FilePlus2, LayoutTemplate, Lock } from 'lucide-react';
 import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import { create, store } from '@/routes/sites';
+import type { CatalogAccessCard } from '@/types/blocks';
 
 type SiteTypeValue = 'multi_page' | 'landing' | 'quiz' | 'chat_selection';
 
@@ -24,6 +26,10 @@ type TemplateOption = {
     public_id: string;
     name: string;
     site_types: SiteTypeValue[];
+    author: string | null;
+    access: CatalogAccessCard;
+    available: boolean;
+    reason: string | null;
 };
 
 type CreateSiteProps = {
@@ -58,8 +64,10 @@ function defaultStart(
     }
 
     return (
-        templates.find((template) => template.site_types.includes(type.value))
-            ?.public_id ?? ''
+        templates.find(
+            (template) =>
+                template.available && template.site_types.includes(type.value),
+        )?.public_id ?? ''
     );
 }
 
@@ -241,6 +249,9 @@ export default function CreateSite({
                                                         start ===
                                                         template.public_id
                                                     }
+                                                    disabled={
+                                                        !template.available
+                                                    }
                                                     onChange={() =>
                                                         setStart(
                                                             template.public_id,
@@ -250,13 +261,41 @@ export default function CreateSite({
                                                     aria-invalid={Boolean(
                                                         errors.template,
                                                     )}
+                                                    aria-describedby={`template-${template.public_id}-hint`}
                                                 />
                                                 <LayoutTemplate
                                                     aria-hidden="true"
                                                     className="mt-0.5 size-5 shrink-0 text-muted-foreground"
                                                 />
-                                                <span className="min-w-0 font-medium break-words">
-                                                    {template.name}
+                                                <span className="min-w-0 space-y-1">
+                                                    <span className="flex flex-wrap items-center gap-2 font-medium break-words">
+                                                        {template.name}
+                                                        {template.access
+                                                            .restricted && (
+                                                            <Badge variant="outline">
+                                                                {
+                                                                    template
+                                                                        .access
+                                                                        .label
+                                                                }
+                                                            </Badge>
+                                                        )}
+                                                    </span>
+                                                    <span
+                                                        id={`template-${template.public_id}-hint`}
+                                                        className="block text-sm text-muted-foreground"
+                                                    >
+                                                        {[
+                                                            template.author
+                                                                ? `Автор: ${template.author}`
+                                                                : 'Шаблон Landflow',
+                                                            template.access
+                                                                .detail,
+                                                            template.reason,
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join('. ')}
+                                                    </span>
                                                 </span>
                                             </label>
                                         ))}

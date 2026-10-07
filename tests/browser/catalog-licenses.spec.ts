@@ -61,9 +61,11 @@ test('a Site license from a Super Admin unlocks a catalog Block for that Site on
     await expect(
         adminPage.getByRole('heading', { name: 'Лицензии сайтов', level: 1 }),
     ).toBeVisible();
-    await adminPage.getByLabel('Блок', { exact: true }).selectOption({
-        label: `${customer.block} · ${customer.author} · Выдаёт администратор`,
-    });
+    await adminPage
+        .getByLabel('Блок или шаблон', { exact: true })
+        .selectOption({
+            label: `Блок «${customer.block}» · ${customer.author} · Выдаёт администратор`,
+        });
     await adminPage
         .getByLabel('Сайт', { exact: true })
         .fill(customer.subdomain);

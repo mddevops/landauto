@@ -30,6 +30,16 @@ class TemplateFactory extends Factory
         return $this->state(['site_types' => array_map(fn (SiteType $type): string => $type->value, $types)]);
     }
 
+    /**
+     * With a published Template Version without content, like the seeded official Templates.
+     */
+    public function published(): static
+    {
+        return $this->afterCreating(function (Template $template): void {
+            $template->versions()->create(['version' => '1.0.0']);
+        });
+    }
+
     public function developer(?DeveloperProfile $profile = null): static
     {
         return $this->state([

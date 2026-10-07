@@ -13,19 +13,21 @@ use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
- * Right of one Site to use one catalog item (D-079). It never covers another Site; revoking deletes
- * it. The granting User is audit identity only.
+ * Right of one Site to use one catalog item (D-079): a Block Definition or a Template, never both.
+ * A Template license also covers the Blocks of that Template for the same Site. It never covers
+ * another Site; revoking deletes it. The granting User is audit identity only.
  *
  * @property int $id
  * @property string $public_id
  * @property int $site_id
- * @property int $block_definition_id
+ * @property int|null $block_definition_id
+ * @property int|null $template_id
  * @property SiteLicenseSource $source
  * @property int|null $granted_by_user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Hidden(['id', 'site_id', 'block_definition_id', 'granted_by_user_id'])]
+#[Hidden(['id', 'site_id', 'block_definition_id', 'template_id', 'granted_by_user_id'])]
 class SiteLicense extends Model
 {
     /** @use HasFactory<SiteLicenseFactory> */
@@ -41,6 +43,12 @@ class SiteLicense extends Model
 
     protected static function booted(): void
     {
+        static::saving(function (SiteLicense $license): void {
+            if (($license->block_definition_id === null) === ($license->template_id === null)) {
+                throw new LogicException('A Site license covers exactly one Block Definition or Template.');
+            }
+        });
+
         static::updating(function (): void {
             throw new LogicException('Site licenses are immutable; revoke and grant again instead.');
         });
@@ -60,6 +68,14 @@ class SiteLicense extends Model
     public function blockDefinition(): BelongsTo
     {
         return $this->belongsTo(BlockDefinition::class);
+    }
+
+    /**
+     * @return BelongsTo<Template, $this>
+     */
+    public function template(): BelongsTo
+    {
+        return $this->belongsTo(Template::class);
     }
 
     /**

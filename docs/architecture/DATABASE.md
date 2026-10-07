@@ -484,11 +484,12 @@ Site-scoped catalog license (D-079, P9-014): one Site may use one catalog item.
 - id
 - public_id ULID, unique
 - site_id FK (cascade)
-- block_definition_id FK (cascade)
+- block_definition_id nullable FK (cascade)
+- template_id nullable FK (cascade), P9-015 — exactly one of `block_definition_id` / `template_id` (model guard); a Template license also covers that Template's Blocks for the Site
 - source string(16), `App\Enums\SiteLicenseSource` (`purchase` / `admin_grant`); purchases are created only by the future billing flow (P10-005)
 - granted_by_user_id nullable FK (null on User delete), audit identity
 - timestamps
-- unique (site_id, block_definition_id); rows are never updated — revoke = delete
+- unique (site_id, block_definition_id), unique (site_id, template_id); rows are never updated — revoke = delete
 
 ## block_drafts
 
@@ -593,6 +594,8 @@ P9-007: `owner_scope` (`platform` | `developer`, default `platform`) + `develope
 
 - `template_pages`: `public_id`, `template_id` (cascade), `title`, `slug` (unique per Template), `sort_order`, `is_home` (TRUE / NULL, unique per Template).
 - `template_blocks`: `public_id`, `template_page_id` (cascade), `block_version_id` (restrict, never workspace-private), `sort_order`, `is_hidden`, `state_json` (validated by the Block Schema; references only to Pages / Blocks of the same Template).
+
+P9-015 (D-079): `access_mode` string(16) default `free`, `access_entitlement` string(64) nullable, `price_minor` unsigned bigint nullable, `price_currency` char(3) nullable — same consistency rules as `block_definitions` (`CatalogAccessMode::fieldsMatch`). A Template with at least one `template_versions` row is offered at Site creation; installing copies the latest version into new Pages / Block Instances.
 
 ## template_versions
 

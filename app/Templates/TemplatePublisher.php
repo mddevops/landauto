@@ -4,6 +4,7 @@ namespace App\Templates;
 
 use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockStateValidator;
+use App\Enums\SiteType;
 use App\Models\Template;
 use App\Models\TemplateBlock;
 use App\Models\TemplatePage;
@@ -44,6 +45,10 @@ final class TemplatePublisher
 
         if ($pages->every(fn (TemplatePage $page): bool => $page->blocks->isEmpty())) {
             $issues[] = 'Добавьте на страницы шаблона хотя бы один блок.';
+        }
+
+        if ($pages->count() > 1 && array_filter($template->siteTypes(), fn (SiteType $type): bool => ! $type->allowsPageCreation()) !== []) {
+            $issues[] = 'Шаблон с несколькими страницами подходит только для многостраничных сайтов: уберите другие типы сайта или лишние страницы.';
         }
 
         foreach ($pages as $page) {

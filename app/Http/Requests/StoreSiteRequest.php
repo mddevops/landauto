@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use App\Enums\SiteType;
 use App\Models\Site;
+use App\Models\Template;
+use Closure;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -34,7 +36,11 @@ class StoreSiteRequest extends FormRequest
                 'required',
                 'string',
                 'ulid',
-                Rule::exists('templates', 'public_id')->where('is_official', true),
+                function (string $attribute, mixed $value, Closure $fail): void {
+                    if (! Template::query()->availableForSites()->where('public_id', $value)->exists()) {
+                        $fail('Выбранный шаблон недоступен.');
+                    }
+                },
             ],
         ];
     }
@@ -57,7 +63,6 @@ class StoreSiteRequest extends FormRequest
             'template.required' => 'Выберите шаблон.',
             'template.string' => 'Выбран некорректный шаблон.',
             'template.ulid' => 'Выбран некорректный шаблон.',
-            'template.exists' => 'Выбранный шаблон недоступен.',
         ];
     }
 }

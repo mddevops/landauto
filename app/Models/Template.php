@@ -2,6 +2,8 @@
 
 namespace App\Models;
 
+use App\Enums\CatalogAccessMode;
+use App\Enums\Entitlement;
 use App\Enums\SiteType;
 use App\Enums\TemplateOwnerScope;
 use App\Models\Concerns\HasImmutablePublicId;
@@ -30,6 +32,10 @@ use LogicException;
  * @property TemplateOwnerScope $owner_scope
  * @property int|null $developer_profile_id
  * @property list<string>|null $site_types
+ * @property CatalogAccessMode $access_mode
+ * @property Entitlement|null $access_entitlement
+ * @property int|null $price_minor
+ * @property string|null $price_currency
  * @property bool $is_official
  * @property int|null $created_by_user_id
  * @property int|null $updated_by_user_id
@@ -52,7 +58,7 @@ class Template extends Model
     /**
      * @var array<string, mixed>
      */
-    protected $attributes = ['owner_scope' => 'platform'];
+    protected $attributes = ['owner_scope' => 'platform', 'access_mode' => CatalogAccessMode::Free->value];
 
     /**
      * @return array<string, string>
@@ -63,6 +69,9 @@ class Template extends Model
             'owner_scope' => TemplateOwnerScope::class,
             'is_official' => 'boolean',
             'site_types' => 'array',
+            'access_mode' => CatalogAccessMode::class,
+            'access_entitlement' => Entitlement::class,
+            'price_minor' => 'integer',
         ];
     }
 
@@ -74,6 +83,10 @@ class Template extends Model
 
             if (! ($scope === TemplateOwnerScope::Platform && ! $developer) && ! ($scope === TemplateOwnerScope::Developer && $developer)) {
                 throw new LogicException('Template ownership must match its owner scope exactly.');
+            }
+
+            if (! CatalogAccessMode::fieldsMatch($template->getAttribute('access_mode'), $template->getAttribute('access_entitlement'), $template->price_minor, $template->price_currency)) {
+                throw new LogicException('Template access fields must match its access mode exactly.');
             }
         });
 
@@ -109,13 +122,14 @@ class Template extends Model
     }
 
     /**
-     * Templates a customer may create a Site from.
+     * Customer catalog (P9-015): platform and Developer Templates with a published Template Version.
+     * Compatibility and access are checked per Site type and Workspace on installation.
      *
      * @param  Builder<Template>  $query
      */
     public function scopeAvailableForSites(Builder $query): void
     {
-        $query->where('is_official', true);
+        $query->whereHas('versions');
     }
 
     /**
@@ -175,6 +189,14 @@ class Template extends Model
     public function creator(): BelongsTo
     {
         return $this->belongsTo(User::class, 'created_by_user_id');
+    }
+
+    /**
+     * @return HasMany<SiteLicense, $this>
+     */
+    public function siteLicenses(): HasMany
+    {
+        return $this->hasMany(SiteLicense::class);
     }
 
     /**

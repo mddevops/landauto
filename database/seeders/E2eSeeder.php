@@ -185,6 +185,15 @@ class E2eSeeder extends Seeder
         $templateAuthor = $this->createUser('Тимур Шаблонов', 'template-developer@landflow.test');
         $this->createWorkspace($templateAuthor, 'Workspace Тимура');
         $this->createDeveloperProfile($templateAuthor, 'Студия шаблонов E2E', 'e2e-template-studio');
+
+        // Template installation (P9-015): a separate Developer publishes, a customer whose plan
+        // allows landing Sites installs; separate logins keep the specs independent.
+        $installAuthor = $this->createUser('Илья Установщиков', 'template-installer@landflow.test');
+        $this->createWorkspace($installAuthor, 'Workspace Ильи');
+        $this->createDeveloperProfile($installAuthor, 'Студия установки E2E', 'e2e-template-install');
+        $installPlan = Plan::factory()->create(['key' => 'e2e-template-install', 'name' => 'E2E Template Install']);
+        $installPlan->setEntitlement(Entitlement::MaxSites, 100);
+        $this->createWorkspace($this->createUser('Карина Шаблонова', 'template-customer@landflow.test'), 'Автосалон Шаблон', plan: $installPlan);
     }
 
     private function createGrantOnlyDeveloperBlock(DeveloperProfile $profile): void

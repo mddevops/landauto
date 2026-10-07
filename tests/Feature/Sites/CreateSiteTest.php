@@ -25,7 +25,7 @@ class CreateSiteTest extends TestCase
     public function test_owner_can_create_site_in_current_workspace_from_official_template(): void
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 2);
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $response = $this->postAsCurrent($user, $workspace, [
             'name' => 'Автосалон Север',
@@ -53,7 +53,7 @@ class CreateSiteTest extends TestCase
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 2);
         $foreignWorkspace = Workspace::factory()->create();
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->postAsCurrent($user, $workspace, [
             'name' => 'Безопасный сайт',
@@ -85,7 +85,7 @@ class CreateSiteTest extends TestCase
         $user = User::factory()->create();
         $workspace = $this->workspaceWithLimit(2);
         $workspace->addMember($user, WorkspaceRole::Owner, WorkspaceMemberStatus::Suspended);
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->postAsCurrent($user, $workspace, [
             'name' => 'Запрещённый сайт',
@@ -97,7 +97,7 @@ class CreateSiteTest extends TestCase
 
     public function test_zero_or_reached_active_site_limit_denies_creation_without_partial_site(): void
     {
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
         [$zeroLimitUser, $zeroLimitWorkspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 0);
 
         $this->postAsCurrent($zeroLimitUser, $zeroLimitWorkspace, [
@@ -120,7 +120,7 @@ class CreateSiteTest extends TestCase
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 1);
         Site::factory()->for($workspace)->archived()->create();
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->postAsCurrent($user, $workspace, [
             'name' => 'Новый активный сайт',
@@ -135,7 +135,7 @@ class CreateSiteTest extends TestCase
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 1);
         Site::factory()->create();
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->postAsCurrent($user, $workspace, [
             'name' => 'Сайт текущего пространства',
@@ -163,7 +163,7 @@ class CreateSiteTest extends TestCase
     public function test_site_name_is_validated_server_side_in_russian(): void
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 1);
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->postAsCurrent($user, $workspace, [
             'name' => '',
@@ -195,8 +195,8 @@ class CreateSiteTest extends TestCase
     public function test_quiz_and_chat_require_a_compatible_template_and_never_start_blank(): void
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 10);
-        $quiz = Template::factory()->forSiteTypes(SiteType::Quiz)->create();
-        $chat = Template::factory()->forSiteTypes(SiteType::ChatSelection)->create();
+        $quiz = Template::factory()->forSiteTypes(SiteType::Quiz)->published()->create();
+        $chat = Template::factory()->forSiteTypes(SiteType::ChatSelection)->published()->create();
 
         foreach ([SiteType::Quiz, SiteType::ChatSelection] as $type) {
             $this->postAsCurrent($user, $workspace, ['name' => 'Пустой', 'site_type' => $type->value])
@@ -222,8 +222,8 @@ class CreateSiteTest extends TestCase
 
     public function test_every_site_type_counts_toward_max_sites(): void
     {
-        $quiz = Template::factory()->forSiteTypes(SiteType::Quiz)->create();
-        $chat = Template::factory()->forSiteTypes(SiteType::ChatSelection)->create();
+        $quiz = Template::factory()->forSiteTypes(SiteType::Quiz)->published()->create();
+        $chat = Template::factory()->forSiteTypes(SiteType::ChatSelection)->published()->create();
         $requests = [
             ['site_type' => SiteType::MultiPage->value],
             ['site_type' => SiteType::Landing->value],
@@ -243,8 +243,8 @@ class CreateSiteTest extends TestCase
     public function test_unknown_type_or_start_is_rejected_and_create_page_exposes_safe_options(): void
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 3);
-        Template::factory()->forSiteTypes(SiteType::Quiz)->create(['name' => 'Квиз-шаблон']);
-        Template::factory()->forSiteTypes()->create(['name' => 'Без формата']);
+        Template::factory()->forSiteTypes(SiteType::Quiz)->published()->create(['name' => 'Квиз-шаблон']);
+        Template::factory()->forSiteTypes()->published()->create(['name' => 'Без формата']);
 
         $this->postAsCurrent($user, $workspace, ['name' => 'Сайт', 'site_type' => 'shop'])->assertSessionHasErrors('site_type');
         $this->postAsCurrent($user, $workspace, ['name' => 'Сайт', 'start' => 'copy'])->assertSessionHasErrors('start');
@@ -269,7 +269,7 @@ class CreateSiteTest extends TestCase
         $user = User::factory()->unverified()->create();
         $workspace = $this->workspaceWithLimit(1);
         $workspace->addMember($user, WorkspaceRole::Owner);
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->postAsCurrent($user, $workspace, [
             'name' => 'Не создан',

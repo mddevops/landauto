@@ -11,7 +11,7 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Catalog access of a Block (D-079). The price arrives as a human decimal string and is parsed into
+ * Catalog access of a Block or Template (D-079). The price arrives as a human decimal string and is parsed into
  * minor units on the server (ADR-004); the browser never sends authoritative minor units.
  */
 class UpdateBlockAccessRequest extends FormRequest
@@ -58,7 +58,7 @@ class UpdateBlockAccessRequest extends FormRequest
             'mode.enum' => 'Выберите режим доступа из списка.',
             'entitlement.required_if' => 'Выберите опцию тарифа.',
             'entitlement.in' => 'Выберите опцию тарифа из списка.',
-            'price.required_if' => 'Укажите цену для платного блока.',
+            'price.required_if' => 'Укажите цену для платного доступа.',
         ];
     }
 

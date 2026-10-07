@@ -2,6 +2,8 @@
 
 namespace App\Templates;
 
+use App\Enums\CatalogAccessMode;
+use App\Enums\Entitlement;
 use App\Enums\SiteType;
 use App\Enums\TemplateOwnerScope;
 use App\Models\DeveloperProfile;
@@ -9,6 +11,7 @@ use App\Models\Page;
 use App\Models\Template;
 use App\Models\TemplatePage;
 use App\Models\User;
+use App\Support\Money;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
@@ -59,6 +62,27 @@ final class TemplateAuthoring
         $template->lastEditor()->associate($actor);
         $template->save();
         $this->log('template_updated', $actor, $template);
+    }
+
+    /**
+     * Catalog access of the Template (D-079); prices are stored, never charged (P10-005).
+     */
+    public function updateAccess(User $actor, Template $template, CatalogAccessMode $mode, ?Entitlement $entitlement, ?int $priceMinor): void
+    {
+        $this->authorize($this->authorization->canEdit($actor, $template));
+
+        $template->access_mode = $mode;
+        $template->access_entitlement = $mode === CatalogAccessMode::Entitlement ? $entitlement : null;
+        $template->price_minor = $mode === CatalogAccessMode::Paid ? $priceMinor : null;
+        $template->price_currency = $mode === CatalogAccessMode::Paid ? Money::DEFAULT_CURRENCY : null;
+
+        if (! $template->isDirty()) {
+            return;
+        }
+
+        $template->lastEditor()->associate($actor);
+        $template->save();
+        $this->log('template_access_updated', $actor, $template, ['access_mode' => $mode->value]);
     }
 
     /**

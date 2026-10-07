@@ -216,6 +216,19 @@ export const users = {
         password: 'e2e-password',
         profile: 'Студия шаблонов E2E',
     },
+    // Template installation: Developer who publishes and a customer who creates Sites from it.
+    templateInstaller: {
+        name: 'Илья Установщиков',
+        email: 'template-installer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия установки E2E',
+    },
+    templateCustomer: {
+        name: 'Карина Шаблонова',
+        email: 'template-customer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Шаблон',
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).

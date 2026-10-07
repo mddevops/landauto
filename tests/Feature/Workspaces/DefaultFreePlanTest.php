@@ -57,7 +57,7 @@ class DefaultFreePlanTest extends TestCase
         $user = $this->register('creator@example.com');
         $user->markEmailAsVerified();
         $workspace = $user->workspaces()->sole();
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->createSite($user, $workspace, $template, 'Первый сайт')->assertSessionHasNoErrors();
         $this->createSite($user, $workspace, $template, 'Второй сайт')->assertSessionHasNoErrors();

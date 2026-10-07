@@ -51,6 +51,27 @@ class TemplateVersion extends Model
     }
 
     /**
+     * Pinned Block Versions of a snapshot.
+     *
+     * @param  array<string, mixed>|null  $content
+     * @return list<int>
+     */
+    public static function blockVersionIds(?array $content): array
+    {
+        $ids = [];
+
+        foreach (is_array($content['pages'] ?? null) ? $content['pages'] : [] as $page) {
+            foreach (is_array($page['blocks'] ?? null) ? $page['blocks'] : [] as $block) {
+                if (is_int($block['block_version_id'] ?? null)) {
+                    $ids[] = $block['block_version_id'];
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
+
+    /**
      * @return BelongsTo<Template, $this>
      */
     public function template(): BelongsTo

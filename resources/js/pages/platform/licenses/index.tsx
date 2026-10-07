@@ -19,7 +19,8 @@ import type { CatalogAccessCard } from '@/types/blocks';
 
 type License = {
     public_id: string;
-    block: string;
+    item: string;
+    kind: 'block' | 'template';
     access_label: string;
     site: string;
     subdomain: string | null;
@@ -29,6 +30,7 @@ type License = {
 };
 
 type LicenseItem = {
+    kind: 'block' | 'template';
     public_id: string;
     name: string;
     author: string;
@@ -45,10 +47,27 @@ function grantedAt(value: string | null): string {
         : '';
 }
 
+const kindLabels = { block: 'Блок', template: 'Шаблон' } as const;
+
 function itemLabel(item: LicenseItem): string {
-    return [item.name, item.author, item.access.label, item.access.detail]
+    return [
+        `${kindLabels[item.kind]} «${item.name}»`,
+        item.author,
+        item.access.label,
+        item.access.detail,
+    ]
         .filter(Boolean)
         .join(' · ');
+}
+
+function grantPayload(data: Record<string, unknown>): Record<string, string> {
+    const item = typeof data.item === 'string' ? data.item : '';
+    const [kind, publicId = ''] = item.split(':');
+
+    return {
+        [kind === 'template' ? 'template' : 'block']: publicId,
+        site: typeof data.site === 'string' ? data.site : '',
+    };
 }
 
 function RevokeLicense({ license }: { license: License }) {
@@ -60,7 +79,7 @@ function RevokeLicense({ license }: { license: License }) {
                 <Button
                     size="sm"
                     variant="outline"
-                    aria-label={`Отозвать лицензию на «${license.block}» у сайта «${license.site}»`}
+                    aria-label={`Отозвать лицензию на «${license.item}» у сайта «${license.site}»`}
                 >
                     Отозвать
                 </Button>
@@ -69,7 +88,9 @@ function RevokeLicense({ license }: { license: License }) {
                 <DialogHeader>
                     <DialogTitle>Отозвать лицензию?</DialogTitle>
                     <DialogDescription>
-                        {`Сайт «${license.site}» потеряет доступ к блоку «${license.block}». Уже добавленные блоки останутся в черновике, но опубликовать сайт с ними будет нельзя.`}
+                        {license.kind === 'template'
+                            ? `Сайт «${license.site}» потеряет доступ к блокам шаблона «${license.item}», если у них нет своего доступа. Уже добавленные блоки останутся в черновике, но опубликовать сайт с ними будет нельзя.`
+                            : `Сайт «${license.site}» потеряет доступ к блоку «${license.item}». Уже добавленные блоки останутся в черновике, но опубликовать сайт с ними будет нельзя.`}
                     </DialogDescription>
                 </DialogHeader>
                 <Form
@@ -117,9 +138,10 @@ export default function PlatformLicenses({
                     </h1>
                     <p className="text-sm text-muted-foreground">
                         Лицензия даёт одному сайту право использовать платный
-                        блок или блок, который выдаёт администратор. Другому
-                        сайту нужна своя лицензия. Покупка лицензий в Landflow
-                        пока недоступна.
+                        блок или шаблон либо тот, который выдаёт администратор.
+                        Лицензия на шаблон покрывает его блоки для этого сайта.
+                        Другому сайту нужна своя лицензия. Покупка лицензий в
+                        Landflow пока недоступна.
                     </p>
                 </header>
 
@@ -132,12 +154,13 @@ export default function PlatformLicenses({
                     </h2>
                     {items.length === 0 ? (
                         <p className="text-sm text-muted-foreground">
-                            В каталоге нет опубликованных блоков, для которых
-                            нужна лицензия.
+                            В каталоге нет опубликованных блоков и шаблонов, для
+                            которых нужна лицензия.
                         </p>
                     ) : (
                         <Form
                             {...store.form()}
+                            transform={grantPayload}
                             options={{ preserveScroll: true }}
                             disableWhileProcessing
                             resetOnSuccess
@@ -146,17 +169,17 @@ export default function PlatformLicenses({
                             {({ processing, errors }) => (
                                 <>
                                     <SelectField
-                                        id="license-block"
-                                        name="block"
-                                        label="Блок"
+                                        id="license-item"
+                                        name="item"
+                                        label="Блок или шаблон"
                                         required
-                                        emptyLabel="Выберите блок"
+                                        emptyLabel="Выберите блок или шаблон"
                                         defaultValue=""
                                         choices={items.map((item) => ({
-                                            value: item.public_id,
+                                            value: `${item.kind}:${item.public_id}`,
                                             label: itemLabel(item),
                                         }))}
-                                        error={errors.block}
+                                        error={errors.block ?? errors.template}
                                     />
                                     <TextField
                                         id="license-site"
@@ -199,7 +222,7 @@ export default function PlatformLicenses({
                             >
                                 <div className="min-w-0 flex-1 space-y-0.5">
                                     <p className="font-medium break-words">
-                                        {license.block}
+                                        {`${kindLabels[license.kind]} «${license.item}»`}
                                     </p>
                                     <p className="text-sm break-words text-muted-foreground">
                                         {`${license.site} · ${license.workspace}`}

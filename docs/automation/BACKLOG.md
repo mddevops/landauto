@@ -3549,7 +3549,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 - `templates` gain explicit ownership (`owner_scope` platform | developer + `developer_profile_id`, immutable like D-117) and `created_by` / `updated_by`; Draft content lives in `template_pages` / `template_blocks` (ULID `public_id`, pinned Block Versions, state validated by the Block Schema with Template-scoped references). No hidden workshop Site.
 - Creation: «Шаблоны Landflow» (`/platform/templates`, `manage_platform_content`) and Developer «Студия → Шаблоны» (`/developer/templates`, `create_templates`, own profile only). Editing: shared `studio/templates/{template}` routes; anyone other than the owner (incl. other Developers, Super Admin on Developer Templates, customers) gets 404.
 - The existing Designer is reused (Navigator / PagesPanel / PropertiesPanel / canvas now take route adapters); library = catalog Blocks with a published version; preview page with «Компьютер / Планшет / Телефон» renders the Draft in an iframe frame page.
-- Publishing (`studio/templates/{template}/publish`) runs automated checks only (site types, at least one Block, catalog availability, schema state, `BlockSourceChecker`) and creates an immutable `template_versions` row with a `content_json` snapshot (`1.0.0`, then minor bumps; unchanged Draft is refused). A new Template is not offered for Site creation (`is_official = false`) — installation and access are P9-015.
+- Publishing (`studio/templates/{template}/publish`) runs automated checks only (site types, at least one Block, catalog availability, schema state, `BlockSourceChecker`) and creates an immutable `template_versions` row with a `content_json` snapshot (`1.0.0`, then minor bumps; unchanged Draft is refused). Installation and access followed in P9-015.
 - Checks: `TemplateBuilderTest` (10), developer route inventory, `E2eSeederTest`; Playwright `template-builder.spec.ts` (create → add / edit Block → device preview → publish → «Изменений нет»).
 - Limitations: Template Drafts cannot reference images, vehicles or Popups (customer-owned; chosen on the Site); Template access modes / licenses are P9-015.
 
@@ -3563,8 +3563,17 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-015 — Template Installation and Access
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-007, P9-014
+
+### Result
+
+- Customer catalog = platform and Developer Templates with a published Template Version (`Template::availableForSites`; `StoreSiteRequest` uses the same rule). `CreateSite` copies the latest version (`InstallTemplateVersion`): new Pages / Block Instances with new `public_id`s, pinned Block Versions, hidden flags; `open_page` / `scroll_to` targets remapped to the new IDs, unknown targets → null. No sync afterwards. Legacy versions without content still start with a home Page.
+- Backend checks before the transaction: Template has a version, supports the Site type, multi-page content only for types that allow pages (publisher also refuses multi-page content with such types), access (`TemplateCatalogAccess`): free / entitlement on the Template and on every included Block.
+- Templates get `access_mode` / `access_entitlement` / `price_minor` / `price_currency` (same rules as Blocks, `CatalogAccessMode::fieldsMatch`), edited in «Публикация шаблона» → «Доступ в каталоге» (owner only, 404 otherwise). `site_licenses.template_id` (exactly one of Block / Template); a Template license covers that Template's Blocks for the same Site (D-079); Super Admin grants it on «Лицензии».
+- UI: «Новый сайт» shows author, access label and the denial reason, unavailable Templates are disabled.
+- Checks: `TemplateInstallationTest` (13), `TemplateBuilderTest`, create-site / catalog / plan tests; Playwright `template-install.spec.ts` (publish → customer creates landing Site → republish → Site unchanged), `catalog-licenses`, `site-formats`, `template-builder`.
+- Open product question: a Site license cannot exist before the Site, so `paid` / `admin_grant` Templates cannot start a new Site (backend refuses with a Russian reason); their license only unlocks the Template's Blocks on an existing Site. Purchase / install-into-existing-Site flow needs a decision.
 
 ### Acceptance Criteria
 
@@ -4325,8 +4334,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`.
-- Next: `P9-015 — Template Installation and Access`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`.
+- Next: `P9-016 — Quiz Site Flow`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---
