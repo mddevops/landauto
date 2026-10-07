@@ -320,6 +320,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('{block}', [PlatformBlockController::class, 'show'])->whereUlid('block')->name('show');
             Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
             Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:120,1')->name('draft');
+            Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
         });
 
     // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).
@@ -339,6 +340,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::get('{block}', [DeveloperBlockController::class, 'show'])->whereUlid('block')->name('show');
                     Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
                     Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:120,1')->name('draft');
+                    Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
                 });
         });
 });

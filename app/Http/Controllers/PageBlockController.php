@@ -30,13 +30,13 @@ class PageBlockController extends Controller
         Gate::authorize('editStructure', $site);
         $validated = $request->validate(['block' => ['required', 'string', 'max:'.BlockDefinition::SLUG_MAX]]);
 
-        // Same set as the Designer library: platform-owned Blocks that have a version.
+        // Same set as the Designer library: platform-owned Blocks with an official-runtime version.
         $definition = BlockDefinition::query()
             ->platformOwned()
-            ->whereHas('versions')
+            ->whereHas('versions', fn ($versions) => $versions->officialRuntime())
             ->where('slug', $validated['block'])
             ->first() ?? throw ValidationException::withMessages(['block' => 'Этот блок недоступен.']);
-        $version = $definition->versions()->latest('id')->firstOrFail();
+        $version = $definition->versions()->officialRuntime()->latest('id')->firstOrFail();
 
         $block = DB::transaction(function () use ($page, $version, $defaults): BlockInstance {
             $block = new BlockInstance([

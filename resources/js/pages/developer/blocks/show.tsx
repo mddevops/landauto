@@ -1,31 +1,25 @@
 import { Head } from '@inertiajs/react';
 import { BlockStudio } from '@/components/block-studio/block-studio';
-import type { Choice } from '@/components/platform/form-fields';
+import type { BlockStudioPageProps } from '@/components/block-studio/block-studio';
 import { dashboard } from '@/routes/developer';
-import { draft as draftRoute, index, update } from '@/routes/developer/blocks';
-import type { AuthoringBlockDetail, BlockDraft } from '@/types/blocks';
+import {
+    draft as draftRoute,
+    index,
+    publish,
+    update,
+} from '@/routes/developer/blocks';
 
-export default function DeveloperBlockStudio({
-    block,
-    draft,
-    categories,
-    sourceMaxBytes,
-}: {
-    block: AuthoringBlockDetail;
-    draft: BlockDraft;
-    categories: Choice[];
-    sourceMaxBytes: number;
-}) {
+export default function DeveloperBlockStudio(props: BlockStudioPageProps) {
+    const id = props.block.public_id;
+
     return (
         <>
-            <Head title={`${block.name} — Студия блоков`} />
+            <Head title={`${props.block.name} — Студия блоков`} />
             <BlockStudio
-                block={block}
-                draft={draft}
-                categories={categories}
-                sourceMaxBytes={sourceMaxBytes}
-                metadataAction={update.form(block.public_id)}
-                draftUrl={draftRoute.url(block.public_id)}
+                {...props}
+                metadataAction={update.form(id)}
+                draftUrl={draftRoute.url(id)}
+                publishUrl={publish.url(id)}
             />
         </>
     );

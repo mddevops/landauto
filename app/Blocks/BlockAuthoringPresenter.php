@@ -3,8 +3,10 @@
 namespace App\Blocks;
 
 use App\Enums\BlockCategory;
+use App\Enums\BlockRuntime;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
+use App\Models\BlockVersion;
 use stdClass;
 
 /**
@@ -54,9 +56,18 @@ final class BlockAuthoringPresenter
      */
     public function studio(BlockDefinition $block): array
     {
+        $versions = $block->versions()->latest('id')->get();
+        $official = $versions->contains(fn (BlockVersion $version): bool => $version->runtime === BlockRuntime::Official);
+
         return [
             'block' => $this->detail($block),
             'draft' => $this->draft($this->studio->draftFor($block)),
+            'versions' => $versions->map(fn (BlockVersion $version): array => [
+                'version' => $version->version,
+                'runtime_label' => $version->runtime->label(),
+                'published_at' => $version->created_at?->toIso8601String(),
+            ])->values()->all(),
+            'publishBlockedReason' => $official ? BlockPublisher::OFFICIAL_RUNTIME : null,
             'categories' => BlockCategory::options(),
             'sourceMaxBytes' => BlockStudio::SOURCE_MAX_BYTES,
         ];

@@ -4,6 +4,7 @@ namespace App\Models;
 
 use App\Blocks\BlockStateValidator;
 use App\Blocks\PageBlockReferences;
+use App\Enums\BlockRuntime;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\BlockInstanceFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
@@ -53,6 +54,10 @@ class BlockInstance extends Model
         static::creating(function (BlockInstance $instance): void {
             if (! $instance->version->definition->isPlatformOwned()) {
                 throw new LogicException('Only platform-owned Blocks can be placed until a safe runtime exists for other scopes.');
+            }
+
+            if ($instance->version->runtime !== BlockRuntime::Official) {
+                throw new LogicException('Sandboxed Block Versions cannot be placed until the sandboxed runtime exists (P9-009).');
             }
         });
 

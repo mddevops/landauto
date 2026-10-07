@@ -4,11 +4,14 @@ namespace App\Http\Controllers\Developer;
 
 use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockAuthoringPresenter;
+use App\Blocks\BlockPublisher;
 use App\Blocks\BlockStudio;
 use App\Enums\BlockCategory;
+use App\Http\Controllers\Concerns\PublishesBlockVersions;
 use App\Http\Controllers\Concerns\SavesBlockDrafts;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\EnsureActiveDeveloperProfile;
+use App\Http\Requests\Blocks\PublishBlockRequest;
 use App\Http\Requests\Blocks\SaveBlockDraftRequest;
 use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
@@ -28,7 +31,7 @@ use Inertia\Response;
  */
 class DeveloperBlockController extends Controller
 {
-    use SavesBlockDrafts;
+    use PublishesBlockVersions, SavesBlockDrafts;
 
     public function __construct(
         private BlockAuthoring $authoring,
@@ -97,6 +100,14 @@ class DeveloperBlockController extends Controller
     {
         $definition = $this->find($request, $block);
         $this->saveDraft($this->studio, $request, $this->actor($request), $definition);
+
+        return to_route('developer.blocks.show', $definition);
+    }
+
+    public function publish(PublishBlockRequest $request, string $block, BlockPublisher $publisher): RedirectResponse
+    {
+        $definition = $this->find($request, $block);
+        $this->publishVersion($publisher, $request, $this->actor($request), $definition);
 
         return to_route('developer.blocks.show', $definition);
     }

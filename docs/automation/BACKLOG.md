@@ -3474,8 +3474,16 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-006 — Block Version Publishing
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-005, P9-008
+
+### Result
+
+- Migration `2026_10_15_000001_add_sandboxed_block_versions`: `block_versions.runtime` (`BlockRuntime`, existing = `official`), `html` / `css` / `js` snapshot, `published_by_user_id`; model enforces sources ⇔ `sandboxed`, versions stay immutable.
+- `BlockPublisher` + `POST …/blocks/{block}/publish` (developer + platform, throttle 30/min, P9-003 404 / 403): saved Draft only, `revision` must match, `BlockSourceChecker` must pass, unchanged content refused («Изменений с версии … нет.»), never over an official renderer (ADR-008 §8); semantic version 1.0.0 → patch (sources) / minor (fields added) / major (field removed or retyped); logs `{platform|developer}.block_published`.
+- Until P9-009 sandboxed versions are excluded from the Designer library / placement (`officialRuntime` scope) and `BlockInstance` refuses them.
+- Studio: «Опубликовать» (enabled only for a saved Draft without check issues) with hint and «Версия не опубликована» alert; tab «Версии» (version, «Код студии» / «Встроенный», date).
+- Checks: `BlockPublishingTest` (7), `DeveloperPermissionsTest` route inventory, PHPStan, Pint, vp check; Playwright `block-authoring.spec.ts` split into code / schema and preview / publish tests (desktop / tablet / mobile).
 
 ### Acceptance Criteria
 
@@ -4291,8 +4299,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform IN_PROGRESS (P9-001 … P9-003 DONE; D-093, D-117, D-118 APPROVED; D-079, D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07).
-- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`.
-- Next: `P9-006 — Block Version Publishing`, then the Phase 9 re-plan order.
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`.
+- Next: `P9-009 — Sandboxed Block Runtime in Designer and Published Sites`, then the Phase 9 re-plan order.
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

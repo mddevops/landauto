@@ -88,7 +88,7 @@ class SiteDesignerController extends Controller
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
             'library' => BlockDefinition::query()
                 ->platformOwned()
-                ->whereHas('versions')
+                ->whereHas('versions', fn ($versions) => $versions->officialRuntime())
                 ->orderBy('id')
                 ->get(['slug', 'name'])
                 ->map(fn (BlockDefinition $definition): array => [

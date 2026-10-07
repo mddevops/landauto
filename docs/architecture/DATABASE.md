@@ -514,6 +514,8 @@ Fields may include:
 - created_by_user_id nullable
 - created_at
 
+Implemented (P9-006, ADR-008): `runtime` string(16) (`App\Enums\BlockRuntime`: `official` default / backfill, `sandboxed`); `html`, `css`, `js` mediumText nullable — the immutable source snapshot, set for every `sandboxed` version and null for `official`; `published_by_user_id` nullable FK (null on User delete), audit identity. Sandboxed versions are created only by Studio publishing (`BlockPublisher`, semantic version auto-incremented); until P9-009 they cannot be placed as Block Instances.
+
 Important:
 
 `schema_json` is a valid JSON use-case because Block Schema is intentionally dynamic and typed.

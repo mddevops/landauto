@@ -1,5 +1,5 @@
-import { Form } from '@inertiajs/react';
-import { CircleCheck, FileCode2, TriangleAlert } from 'lucide-react';
+import { Form, router } from '@inertiajs/react';
+import { CircleCheck, FileCode2, TriangleAlert, Upload } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
     formatBlockDate,
@@ -29,15 +29,17 @@ import type {
     BlockCheckIssue,
     BlockDraft,
     DraftSourceKey,
+    PublishedBlockVersion,
 } from '@/types/blocks';
 import type { RouteFormDefinition } from '@/wayfinder';
 
-type Mode = 'code' | 'schema' | 'preview' | 'settings';
+type Mode = 'code' | 'schema' | 'preview' | 'versions' | 'settings';
 
 const modes: { value: Mode; label: string }[] = [
     { value: 'code', label: 'Код' },
     { value: 'schema', label: 'Конструктор схемы' },
     { value: 'preview', label: 'Предпросмотр' },
+    { value: 'versions', label: 'Версии' },
     { value: 'settings', label: 'Настройки' },
 ];
 
@@ -66,26 +68,65 @@ function formatKilobytes(bytes: number): string {
     return `${(bytes / 1024).toLocaleString('ru-RU', { maximumFractionDigits: 1 })} КБ`;
 }
 
-type BlockStudioProps = {
+/** Server props of the platform and developer Block Studio pages. */
+export type BlockStudioPageProps = {
     block: AuthoringBlockDetail;
     draft: BlockDraft;
+    versions: PublishedBlockVersion[];
+    publishBlockedReason: string | null;
     categories: Choice[];
     sourceMaxBytes: number;
+};
+
+type BlockStudioProps = BlockStudioPageProps & {
     metadataAction: RouteFormDefinition<'post'>;
     draftUrl: string;
+    publishUrl: string;
 };
 
 export function BlockStudio({
     block,
     draft,
+    versions,
+    publishBlockedReason,
     categories,
     sourceMaxBytes,
     metadataAction,
     draftUrl,
+    publishUrl,
 }: BlockStudioProps) {
     const autosave = useDraftAutosave(draftUrl, draft);
     const { sources, status, errors } = autosave;
     const [mode, setMode] = useState<Mode>('code');
+    const [publishing, setPublishing] = useState(false);
+    const [publishError, setPublishError] = useState<string | null>(null);
+    const canPublish =
+        status === 'saved' &&
+        draft.saved_at !== null &&
+        draft.checks.length === 0 &&
+        publishBlockedReason === null &&
+        !publishing;
+
+    const publish = () => {
+        setPublishError(null);
+        router.post(
+            publishUrl,
+            { revision: draft.revision },
+            {
+                preserveScroll: true,
+                preserveState: true,
+                onStart: () => setPublishing(true),
+                onError: (failed) =>
+                    setPublishError(
+                        failed.publish ??
+                            failed.revision ??
+                            'Не удалось опубликовать блок.',
+                    ),
+                onSuccess: () => setMode('versions'),
+                onFinish: () => setPublishing(false),
+            },
+        );
+    };
     const [file, setFile] = useState<DraftSourceKey>('html');
     const current = files.find((item) => item.key === file) ?? files[0];
     const schema = useMemo(() => parseSchema(sources.schema), [sources.schema]);
@@ -125,6 +166,7 @@ export function BlockStudio({
                     </p>
                     <Button
                         type="button"
+                        variant="outline"
                         onClick={autosave.saveNow}
                         disabled={
                             status === 'saved' ||
@@ -135,8 +177,39 @@ export function BlockStudio({
                         {status === 'saving' && <Spinner />}
                         Сохранить черновик
                     </Button>
+                    <Button
+                        type="button"
+                        onClick={publish}
+                        disabled={!canPublish}
+                        aria-describedby="studio-publish-hint"
+                    >
+                        {publishing ? (
+                            <Spinner />
+                        ) : (
+                            <Upload aria-hidden="true" />
+                        )}
+                        Опубликовать
+                    </Button>
                 </div>
             </header>
+            <p
+                id="studio-publish-hint"
+                className="-mt-2 text-xs text-muted-foreground lg:text-right"
+            >
+                {publishHint({
+                    blockedReason: publishBlockedReason,
+                    saved: status === 'saved' && draft.saved_at !== null,
+                    issues: draft.checks.length,
+                })}
+            </p>
+
+            {publishError && (
+                <Alert variant="destructive">
+                    <TriangleAlert aria-hidden="true" />
+                    <AlertTitle>Версия не опубликована</AlertTitle>
+                    <AlertDescription>{publishError}</AlertDescription>
+                </Alert>
+            )}
 
             {errors.draft && (
                 <Alert variant="destructive">
@@ -260,6 +333,8 @@ export function BlockStudio({
                         />
                     )}
 
+                    {mode === 'versions' && <VersionList versions={versions} />}
+
                     {mode === 'settings' && (
                         <BlockSettings
                             block={block}
@@ -325,6 +400,75 @@ function SourceEditor({
                 </p>
             )}
         </div>
+    );
+}
+
+function publishHint({
+    blockedReason,
+    saved,
+    issues,
+}: {
+    blockedReason: string | null;
+    saved: boolean;
+    issues: number;
+}): string {
+    if (blockedReason !== null) {
+        return blockedReason;
+    }
+
+    if (!saved) {
+        return 'Опубликовать можно только сохранённый черновик.';
+    }
+
+    if (issues > 0) {
+        return 'Исправьте проблемы из панели проверок, чтобы опубликовать.';
+    }
+
+    return 'Публикация создаст новую неизменяемую версию; сайты, где блок уже используется, не изменятся.';
+}
+
+function VersionList({ versions }: { versions: PublishedBlockVersion[] }) {
+    return (
+        <section
+            aria-labelledby="studio-versions-title"
+            className="space-y-4 rounded-xl border bg-card p-4 shadow-sm sm:p-6"
+        >
+            <div>
+                <h2 id="studio-versions-title" className="font-semibold">
+                    Опубликованные версии
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                    Версии неизменяемы: черновик и автосохранение их не
+                    затрагивают.
+                </p>
+            </div>
+            {versions.length === 0 ? (
+                <p className="text-sm text-muted-foreground">
+                    Опубликованных версий пока нет. Версия появится после
+                    нажатия «Опубликовать».
+                </p>
+            ) : (
+                <ul className="divide-y rounded-md border">
+                    {versions.map((version) => (
+                        <li
+                            key={version.version}
+                            data-testid="block-version"
+                            className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
+                        >
+                            <span className="font-mono font-medium">
+                                {version.version}
+                            </span>
+                            <Badge variant="outline">
+                                {version.runtime_label}
+                            </Badge>
+                            <span className="text-muted-foreground">
+                                {formatBlockDate(version.published_at)}
+                            </span>
+                        </li>
+                    ))}
+                </ul>
+            )}
+        </section>
     );
 }
 

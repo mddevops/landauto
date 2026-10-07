@@ -29,6 +29,12 @@ export type BlockCheckIssue = {
     message: string;
 };
 
+export type PublishedBlockVersion = {
+    version: string;
+    runtime_label: string;
+    published_at: string | null;
+};
+
 export type BlockDraft = {
     revision: number;
     sources: DraftSources;

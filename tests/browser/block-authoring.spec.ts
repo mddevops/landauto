@@ -165,7 +165,6 @@ throw new Error('Проверка ошибки выполнения');
 
 test('developer writes code and builds the schema in the Block Studio @responsive', async ({
     page,
-    browserIssues,
 }, testInfo) => {
     const suffix = uniqueSuffix(testInfo);
     const name = `E2E студия ${suffix}`;
@@ -293,8 +292,30 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
     ]);
     expect(saved.fields[0]).toMatchObject({ type: 'number', min: 1, max: 4 });
     await expect(page.getByText('Нет версий', { exact: true })).toBeVisible();
+});
+
+test('developer previews a Block in the sandbox and publishes it @responsive', async ({
+    page,
+    browserIssues,
+}, testInfo) => {
+    const suffix = uniqueSuffix(testInfo);
+
+    await login(page, users.studioDeveloper);
+    await page.goto('/developer/blocks/create');
+    await createBlock(
+        page,
+        `E2E публикация ${suffix}`,
+        `e2e-publish-${suffix}`,
+        'Призыв к действию',
+        'Создать блок',
+    );
+    await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
+    const checks = page.getByRole('complementary', {
+        name: 'Проверки перед публикацией',
+    });
 
     // Live preview renders the Draft in the opaque-origin sandbox.
+    await page.getByRole('button', { name: 'schema.json' }).click();
     await page
         .getByRole('textbox', { name: 'schema.json', exact: true })
         .fill(
@@ -366,6 +387,44 @@ test('developer writes code and builds the schema in the Block Studio @responsiv
             .getByRole('region', { name: 'Данные предпросмотра' })
             .getByLabel('Заголовок'),
     ).toHaveValue('Летняя распродажа');
+
+    // Publishing: checks pass, so the saved Draft becomes immutable version 1.0.0.
+    const publish = page.getByRole('button', {
+        name: 'Опубликовать',
+        exact: true,
+    });
+    await expect(publish).toBeEnabled();
+    await publish.click();
+    await expect(page.getByText('Опубликована версия 1.0.0.')).toBeVisible();
+    await expect(
+        page.getByRole('tab', { name: 'Версии', selected: true }),
+    ).toBeVisible();
+    await expect(page.getByTestId('block-version')).toHaveCount(1);
+    await expect(page.getByTestId('block-version')).toContainText('1.0.0');
+    await expect(page.getByTestId('block-version')).toContainText('Код студии');
+    await expect(page.getByText('1 версия', { exact: true })).toBeVisible();
+    await expectNoHorizontalOverflow(page);
+
+    // Nothing changed since 1.0.0: publishing again is refused and creates nothing.
+    await publish.click();
+    await expect(page.getByText('Версия не опубликована')).toBeVisible();
+    await expect(page.getByText('Изменений с версии 1.0.0 нет.')).toBeVisible();
+    await expect(page.getByTestId('block-version')).toHaveCount(1);
+
+    // A failing check disables publishing until it is fixed.
+    await openMode(page, 'Код');
+    await page.getByRole('button', { name: 'index.html' }).click();
+    await page
+        .getByRole('textbox', { name: 'index.html', exact: true })
+        .fill('<h2>{{ title }}</h2>\n<form></form>');
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('Тег <form> запрещён в шаблоне блока.');
+    await expect(publish).toBeDisabled();
+    await expect(
+        page.getByText(
+            'Исправьте проблемы из панели проверок, чтобы опубликовать.',
+        ),
+    ).toBeVisible();
 });
 
 test('Block preview escapes sources and only trusts its own sandbox', async ({
