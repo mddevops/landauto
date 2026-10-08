@@ -5,9 +5,9 @@ namespace App\Enums;
 use App\Support\Money;
 
 /**
- * How a customer Site may use a published catalog item (D-079). Entitlements and Site licenses
- * stay separate: a license for the Site always grants access; an entitlement grants access only
- * in `entitlement` mode.
+ * How a customer Site may use a published catalog item (D-121). Entitlements and catalog licenses
+ * stay separate: a license for the Site or its Workspace always grants access; an entitlement
+ * grants access only in `entitlement` mode.
  */
 enum CatalogAccessMode: string
 {
@@ -35,18 +35,24 @@ enum CatalogAccessMode: string
     }
 
     /**
-     * Exactly the fields of the mode: a boolean catalog-gate entitlement for `entitlement`, a
-     * positive price in a supported currency for `paid`, nothing otherwise.
+     * Exactly the fields of the mode: a boolean catalog-gate entitlement for `entitlement`; for
+     * `paid` a Site and / or Workspace license price (each positive when set, at least one) in a
+     * supported currency (D-121); nothing otherwise.
      */
-    public static function fieldsMatch(mixed $mode, mixed $entitlement, ?int $priceMinor, ?string $currency): bool
+    public static function fieldsMatch(mixed $mode, mixed $entitlement, ?int $sitePriceMinor, ?int $workspacePriceMinor, ?string $currency): bool
     {
+        $noPrices = $sitePriceMinor === null && $workspacePriceMinor === null && $currency === null;
+
         return match ($mode instanceof self ? $mode : null) {
             self::Entitlement => $entitlement instanceof Entitlement
                 && in_array($entitlement, Entitlement::catalogGates(), true)
-                && $priceMinor === null && $currency === null,
-            self::Paid => $entitlement === null && $priceMinor !== null && $priceMinor > 0
+                && $noPrices,
+            self::Paid => $entitlement === null
+                && ($sitePriceMinor !== null || $workspacePriceMinor !== null)
+                && ($sitePriceMinor === null || $sitePriceMinor > 0)
+                && ($workspacePriceMinor === null || $workspacePriceMinor > 0)
                 && $currency !== null && Money::supports($currency),
-            self::Free, self::AdminGrant => $entitlement === null && $priceMinor === null && $currency === null,
+            self::Free, self::AdminGrant => $entitlement === null && $noPrices,
             null => false,
         };
     }

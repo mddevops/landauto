@@ -4,26 +4,27 @@ namespace Tests\Feature\Templates;
 
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
+use App\Blocks\BlockVersionGrants;
 use App\Enums\CatalogAccessMode;
 use App\Enums\Entitlement;
 use App\Enums\PlatformRole;
-use App\Enums\SiteLicenseSource;
 use App\Enums\SiteType;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
+use App\Models\CatalogLicense;
 use App\Models\DeveloperProfile;
 use App\Models\Page;
 use App\Models\Plan;
 use App\Models\PlatformRoleAssignment;
 use App\Models\Site;
-use App\Models\SiteLicense;
 use App\Models\Template;
 use App\Models\TemplateBlock;
 use App\Models\TemplatePage;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Publishing\PublishValidator;
 use App\Support\WorkspaceContext;
 use App\Templates\TemplatePublisher;
 use Database\Seeders\OfficialBlockSeeder;
@@ -31,12 +32,11 @@ use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
-use LogicException;
 use Tests\TestCase;
 
 /**
  * P9-015: a published Template Version is copied into independent Site Pages and Block
- * Instances; compatibility and catalog access (D-079) are checked by the backend.
+ * Instances; compatibility and catalog access (D-121, D-122) are checked by the backend.
  */
 class TemplateInstallationTest extends TestCase
 {
@@ -196,12 +196,12 @@ class TemplateInstallationTest extends TestCase
         $this->assertSame(1, Site::query()->count());
     }
 
-    public function test_paid_and_admin_grant_templates_cannot_start_a_new_site(): void
+    public function test_paid_and_admin_grant_templates_need_a_workspace_license(): void
     {
         $paid = $this->template([SiteType::Landing]);
         $this->placeBlock($paid->pages()->sole(), 'hero');
         $this->publish($paid);
-        $paid->forceFill(['access_mode' => CatalogAccessMode::Paid, 'price_minor' => 990_000, 'price_currency' => 'RUB'])->save();
+        $paid->forceFill(['access_mode' => CatalogAccessMode::Paid, 'site_price_minor' => 490_000, 'workspace_price_minor' => 1_490_000, 'price_currency' => 'RUB'])->save();
 
         $grant = $this->template([SiteType::Landing]);
         $this->placeBlock($grant->pages()->sole(), 'cta');
@@ -209,10 +209,22 @@ class TemplateInstallationTest extends TestCase
         $grant->forceFill(['access_mode' => CatalogAccessMode::AdminGrant])->save();
 
         $this->createSite($paid, SiteType::Landing)
-            ->assertSessionHasErrors(['template' => 'Платный шаблон: нужна лицензия для сайта. Покупка в Landflow пока недоступна.']);
+            ->assertSessionHasErrors(['template' => 'Платный шаблон: для нового сайта нужна лицензия на всё пространство. Покупка в Landflow пока недоступна.']);
         $this->createSite($grant, SiteType::Landing)
-            ->assertSessionHasErrors(['template' => 'Шаблон выдаёт администратор Landflow для конкретного сайта; создать из него новый сайт нельзя.']);
-        $this->assertSame(0, Site::query()->count());
+            ->assertSessionHasErrors(['template' => 'Шаблон выдаёт администратор Landflow; для нового сайта нужна лицензия на всё пространство.']);
+
+        // A Site-scoped Template license stays valid data but cannot start a new Site.
+        $existing = Site::factory()->create(['workspace_id' => $this->workspace->id]);
+        CatalogLicense::factory()->forSite($existing)->ofTemplate($grant)->create();
+        $this->createSite($grant, SiteType::Landing)->assertSessionHasErrors('template');
+        // Another Workspace's license does not count.
+        CatalogLicense::factory()->forWorkspace(Workspace::factory()->create())->ofTemplate($grant)->create();
+        $this->createSite($grant, SiteType::Landing)->assertSessionHasErrors('template');
+        $this->assertSame(1, Site::query()->count());
+
+        CatalogLicense::factory()->forWorkspace($this->workspace)->ofTemplate($grant)->create();
+        $this->createSite($grant, SiteType::Landing)->assertSessionHasNoErrors();
+        $this->assertSame(2, Site::query()->count());
     }
 
     public function test_template_with_a_restricted_block_is_denied(): void
@@ -223,45 +235,99 @@ class TemplateInstallationTest extends TestCase
         $this->publish($template);
 
         $this->createSite($template, SiteType::Landing)
-            ->assertSessionHasErrors(['template' => 'Шаблон содержит блок «Карточка по выдаче». Блок выдаёт администратор Landflow для конкретного сайта.']);
+            ->assertSessionHasErrors(['template' => 'Шаблон содержит блок «Карточка по выдаче». Блок выдаёт администратор Landflow для сайта или всего пространства.']);
         $this->assertSame(0, Site::query()->count());
+
+        // A Workspace license on the Block itself is enough.
+        CatalogLicense::factory()->forWorkspace($this->workspace)->ofBlock($block)->create();
+        $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
+        $this->assertSame(1, Site::query()->count());
     }
 
-    public function test_template_license_covers_the_template_blocks_for_that_site_only(): void
+    public function test_workspace_template_license_starts_an_independent_site_with_granted_versions(): void
     {
         $block = $this->catalogBlock(['access_mode' => CatalogAccessMode::AdminGrant]);
         $template = $this->template([SiteType::Landing]);
-        $this->placeVersion($template->pages()->sole(), $block->versions()->sole());
+        $templateBlock = $this->placeVersion($template->pages()->sole(), $block->versions()->sole());
+        $this->setState($templateBlock, ['title' => 'Из шаблона']);
+        $this->placeBlock($template->pages()->sole(), 'hero');
         $this->publish($template);
         $template->forceFill(['access_mode' => CatalogAccessMode::AdminGrant])->save();
-        [$licensed, $other] = Site::factory()->count(2)->create(['workspace_id' => $this->workspace->id])->all();
-        $access = app(BlockCatalogAccess::class);
+        CatalogLicense::factory()->forWorkspace($this->workspace)->ofTemplate($template)->create();
 
-        $this->assertNotNull($access->denial($licensed, $block));
-        $license = new SiteLicense;
-        $license->source = SiteLicenseSource::AdminGrant;
-        $license->site()->associate($licensed);
-        $license->template()->associate($template);
-        $license->save();
+        $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
+        $site = Site::query()->sole();
+        $instance = BlockInstance::query()->where('block_version_id', $block->versions()->sole()->id)->sole();
+        $this->assertSame($site->id, $instance->page->site_id);
+        $this->assertSame('Из шаблона', $instance->state_json['title']);
 
-        $this->assertNull($access->denial($licensed->fresh() ?? $licensed, $block));
-        $this->assertNotNull($access->denial($other, $block));
+        // Copied content is independent of the Template.
+        $this->setState($templateBlock, ['title' => 'Изменено в шаблоне']);
+        $this->assertSame('Из шаблона', $instance->fresh()?->state_json['title']);
+
+        // Every copied version is granted to this Site only; the Template license is not a Block license.
+        $grants = app(BlockVersionGrants::class);
+        $this->assertSame(
+            $site->pages()->with('blocks')->get()->flatMap->blocks->pluck('block_version_id')->unique()->sort()->values()->all(),
+            collect(array_keys($grants->grantedVersionIds($site)))->sort()->values()->all(),
+        );
+        $this->assertNotNull(app(BlockCatalogAccess::class)->denial($site, $block));
+        $this->assertNotContains('block_access_denied', app(PublishValidator::class)->validate($site)->errorCodes());
+
+        // Another Workspace without its own license is denied.
+        [$stranger, $strangerWorkspace] = $this->otherCustomer();
+        $this->createSiteAs($stranger, $strangerWorkspace, $template)
+            ->assertSessionHasErrors(['template' => 'Шаблон выдаёт администратор Landflow; для нового сайта нужна лицензия на всё пространство.']);
+        $this->assertSame(1, Site::query()->count());
     }
 
-    public function test_site_license_needs_exactly_one_item(): void
+    public function test_template_license_covers_only_the_installed_version_blocks(): void
     {
-        $template = Template::factory()->create();
-        $block = $this->catalogBlock(['access_mode' => CatalogAccessMode::AdminGrant]);
-        $site = Site::factory()->create(['workspace_id' => $this->workspace->id]);
+        $first = $this->catalogBlock(['access_mode' => CatalogAccessMode::AdminGrant]);
+        $template = $this->template([SiteType::Landing]);
+        $this->placeVersion($template->pages()->sole(), $first->versions()->sole());
+        $this->publish($template);
 
-        foreach ([[null, null], [$block->id, $template->id]] as [$blockId, $templateId]) {
-            try {
-                (new SiteLicense)->forceFill(['site_id' => $site->id, 'block_definition_id' => $blockId, 'template_id' => $templateId, 'source' => SiteLicenseSource::AdminGrant])->save();
-                $this->fail('a Site License must reference exactly one item');
-            } catch (LogicException) {
-                $this->assertSame(0, SiteLicense::query()->count());
-            }
-        }
+        // Version 2 swaps the block; the license must not union blocks across Template Versions.
+        $template->pages()->sole()->blocks()->delete();
+        $second = BlockDefinition::factory()->developer($this->profile)->create(['slug' => 'dev-second', 'name' => 'Вторая карточка', 'access_mode' => CatalogAccessMode::AdminGrant]);
+        BlockVersion::factory()->sandboxed('<p>{{ title }}</p>')->for($second, 'definition')->create([
+            'schema_json' => ['fields' => [['key' => 'title', 'type' => 'text', 'label' => 'Текст', 'default' => 'Привет']]],
+        ]);
+        $this->placeVersion($template->pages()->sole(), $second->versions()->sole());
+        $this->publish($template);
+        $template->forceFill(['access_mode' => CatalogAccessMode::AdminGrant])->save();
+        CatalogLicense::factory()->forWorkspace($this->workspace)->ofTemplate($template)->create();
+
+        $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
+        $site = Site::query()->sole();
+        $granted = app(BlockVersionGrants::class)->grantedVersionIds($site);
+        $this->assertArrayHasKey($second->versions()->sole()->id, $granted);
+        $this->assertArrayNotHasKey($first->versions()->sole()->id, $granted);
+        $this->assertNotNull(app(BlockCatalogAccess::class)->denial($site, $first));
+        $this->assertNotNull(app(BlockCatalogAccess::class)->workspaceDenial($this->workspace, $first));
+    }
+
+    public function test_installed_template_blocks_survive_later_restriction_and_revocation(): void
+    {
+        $block = $this->catalogBlock([]);
+        $template = $this->template([SiteType::Landing]);
+        $this->placeVersion($template->pages()->sole(), $block->versions()->sole());
+        $this->publish($template);
+        $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
+        $site = Site::query()->sole();
+        $instance = BlockInstance::query()->where('block_version_id', $block->versions()->sole()->id)->sole();
+
+        $block->forceFill(['access_mode' => CatalogAccessMode::AdminGrant])->save();
+        $template->forceFill(['access_mode' => CatalogAccessMode::AdminGrant])->save();
+
+        $this->assertNotContains('block_access_denied', app(PublishValidator::class)->validate($site)->errorCodes());
+        $this->asCustomer()->post(route('sites.blocks.duplicate', [$site, $instance]))->assertSessionHasNoErrors();
+        $this->assertSame(2, BlockInstance::query()->where('block_version_id', $block->versions()->sole()->id)->count());
+
+        // New installs follow current access.
+        $this->createSite($template, SiteType::Landing)->assertSessionHasErrors('template');
+        $this->assertSame(1, Site::query()->count());
     }
 
     public function test_author_sets_template_access_and_others_cannot(): void
@@ -271,15 +337,17 @@ class TemplateInstallationTest extends TestCase
 
         $this->actingAs($author)->get(route('studio.templates.show', $template))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('access', ['mode' => 'free', 'entitlement' => null, 'price' => ''])
+                ->where('access', ['mode' => 'free', 'entitlement' => null, 'site_price' => '', 'workspace_price' => ''])
                 ->has('accessModes', 4));
 
-        $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'paid', 'price' => '9 900'])
+        $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'paid', 'site_price' => '4 900', 'workspace_price' => '14 900'])
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('studio.templates.show', $template));
         $template->refresh();
-        $this->assertSame([CatalogAccessMode::Paid, 990_000, 'RUB'], [$template->access_mode, $template->price_minor, $template->price_currency]);
+        $this->assertSame([CatalogAccessMode::Paid, 490_000, 1_490_000, 'RUB'], [$template->access_mode, $template->site_price_minor, $template->workspace_price_minor, $template->price_currency]);
 
+        $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'paid'])
+            ->assertSessionHasErrors('site_price');
         $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'entitlement', 'entitlement' => 'max_sites'])
             ->assertSessionHasErrors('entitlement');
 
@@ -304,21 +372,28 @@ class TemplateInstallationTest extends TestCase
                 ->where('items', fn ($items): bool => collect($items)->contains(fn ($item): bool => $item['kind'] === 'template' && $item['public_id'] === $template->public_id))
                 ->missing('items.0.id'));
 
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'site' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'workspace', 'target' => 'dealer'])
             ->assertSessionHasNoErrors();
-        $license = SiteLicense::query()->sole();
-        $this->assertSame([$site->id, $template->id, null], [$license->site_id, $license->template_id, $license->block_definition_id]);
+        $license = CatalogLicense::query()->sole();
+        $this->assertSame([null, $this->workspace->id, $template->id, null], [$license->site_id, $license->workspace_id, $license->template_id, $license->block_definition_id]);
 
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'site' => 'dealer'])
-            ->assertSessionHasErrors(['site' => 'У этого сайта уже есть лицензия на этот шаблон.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'block' => (string) Str::ulid(), 'site' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'workspace', 'target' => $this->workspace->public_id])
+            ->assertSessionHasErrors(['target' => 'У этого пространства уже есть лицензия на этот шаблон.']);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'site', 'target' => 'dealer'])
+            ->assertSessionHasNoErrors();
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'site', 'target' => $site->public_id])
+            ->assertSessionHasErrors(['target' => 'У этого сайта уже есть лицензия на этот шаблон.']);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'block' => (string) Str::ulid(), 'scope' => 'site', 'target' => 'dealer'])
             ->assertSessionHasErrors('block');
+        $this->assertSame(2, CatalogLicense::query()->count());
 
         $this->actingAs($admin)->get(route('platform.licenses.index'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('licenses.0.kind', 'template')
                 ->where('licenses.0.item', 'Шаблон по выдаче')
                 ->missing('licenses.0.template_id'));
+
+        $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
     }
 
     public function test_create_page_lists_published_developer_templates_without_internal_ids(): void
@@ -411,6 +486,28 @@ class TemplateInstallationTest extends TestCase
         return $this->asCustomer()->post(route('sites.store'), [
             'name' => 'Автосалон из шаблона',
             'site_type' => $type->value,
+            'start' => 'template',
+            'template' => $template->public_id,
+        ]);
+    }
+
+    /**
+     * @return array{0: User, 1: Workspace}
+     */
+    private function otherCustomer(): array
+    {
+        $user = User::factory()->create();
+        $workspace = Workspace::factory()->create(['plan_id' => $this->plan->id]);
+        $workspace->addMember($user, WorkspaceRole::Owner);
+
+        return [$user, $workspace];
+    }
+
+    private function createSiteAs(User $user, Workspace $workspace, Template $template): TestResponse
+    {
+        return $this->actingAs($user)->withSession([WorkspaceContext::SESSION_KEY => $workspace->public_id])->post(route('sites.store'), [
+            'name' => 'Чужой сайт из шаблона',
+            'site_type' => SiteType::Landing->value,
             'start' => 'template',
             'template' => $template->public_id,
         ]);

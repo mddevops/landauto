@@ -106,8 +106,9 @@ class SiteDesignerController extends Controller
     }
 
     /**
-     * Customer catalog (D-079): official Landflow Blocks first, then Developer Blocks, each with its
-     * access card and whether this Site may add it. Identified by slug only.
+     * Customer catalog (D-121): official Landflow Blocks first, then Developer Blocks, each with its
+     * access card and whether this Site may add it under current access; installation grants (D-122)
+     * cover existing use only, never new acquisition. Identified by slug only.
      *
      * @return list<array{slug: string, name: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: string|null}>
      */

@@ -51,7 +51,7 @@ class BlockInstance extends Model
     protected static function booted(): void
     {
         static::creating(function (BlockInstance $instance): void {
-            // Catalog access (D-079) is checked by the callers; workspace-private Blocks have no runtime.
+            // Catalog access (D-121) is checked by the callers; workspace-private Blocks have no runtime.
             if ($instance->version->definition->isWorkspacePrivate()) {
                 throw new LogicException('Workspace-private Blocks cannot be placed until they have a customer runtime.');
             }

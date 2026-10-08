@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Actions\Designer\ArrangePageBlocks;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
+use App\Blocks\BlockVersionGrants;
 use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -24,6 +25,7 @@ class PageBlockController extends Controller
         private DesignerScope $scope,
         private ArrangePageBlocks $arrange,
         private BlockCatalogAccess $access,
+        private BlockVersionGrants $grants,
     ) {}
 
     public function store(Request $request, Site $site, Page $page, BlockStateDefaults $defaults): RedirectResponse
@@ -38,10 +40,10 @@ class PageBlockController extends Controller
             ->whereHas('versions')
             ->where('slug', $validated['block'])
             ->first() ?? throw ValidationException::withMessages(['block' => 'Этот блок недоступен.']);
-        $this->authorizeAccess($site, $definition);
         $version = $definition->versions()->latest('id')->firstOrFail();
+        $this->authorizeCurrentAccess($site, $definition);
 
-        $block = DB::transaction(function () use ($page, $version, $defaults): BlockInstance {
+        $block = DB::transaction(function () use ($site, $page, $version, $defaults): BlockInstance {
             $block = new BlockInstance([
                 'sort_order' => $page->blocks()->count(),
                 'state_json' => $defaults->fromSchema($version->schema_json),
@@ -49,6 +51,7 @@ class PageBlockController extends Controller
             $block->page()->associate($page);
             $block->version()->associate($version);
             $block->save();
+            $this->grants->grant($site, [$version->id]);
 
             return $block;
         });
@@ -84,14 +87,19 @@ class PageBlockController extends Controller
     public function duplicate(Site $site, BlockInstance $block): RedirectResponse
     {
         $this->authorizeStructure($site, $block);
-        $this->authorizeAccess($site, $block->version->definition);
 
-        $copy = DB::transaction(function () use ($block): BlockInstance {
+        // Reusing the exact version this Site already installed lawfully needs no new acquisition (D-122).
+        if (! $this->grants->has($site, $block->version)) {
+            $this->authorizeCurrentAccess($site, $block->version->definition);
+        }
+
+        $copy = DB::transaction(function () use ($site, $block): BlockInstance {
             $copy = new BlockInstance(['state_json' => $block->state_json, 'sort_order' => $block->sort_order]);
             $copy->is_hidden = $block->is_hidden;
             $copy->page()->associate($block->page);
             $copy->version()->associate($block->version);
             $copy->save();
+            $this->grants->grant($site, [$block->block_version_id]);
             $this->arrange->insertAfter($copy, $block);
 
             return $copy;
@@ -119,7 +127,7 @@ class PageBlockController extends Controller
         return $this->backTo($site, $page);
     }
 
-    private function authorizeAccess(Site $site, BlockDefinition $definition): void
+    private function authorizeCurrentAccess(Site $site, BlockDefinition $definition): void
     {
         $denial = $this->access->denial($site, $definition);
 

@@ -104,11 +104,11 @@ class Site extends Model
     }
 
     /**
-     * @return HasMany<SiteLicense, $this>
+     * @return HasMany<CatalogLicense, $this>
      */
-    public function licenses(): HasMany
+    public function catalogLicenses(): HasMany
     {
-        return $this->hasMany(SiteLicense::class);
+        return $this->hasMany(CatalogLicense::class);
     }
 
     /**

@@ -2,6 +2,7 @@
 
 namespace App\Templates;
 
+use App\Blocks\BlockVersionGrants;
 use App\Enums\BlockActionType;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
@@ -14,10 +15,13 @@ use LogicException;
  * Copies a published Template Version into independent Site Pages and Block Instances (P9-015).
  * New public IDs are minted; page and scroll targets are remapped from the Template keys. Later
  * Template changes never sync. Runs inside the caller's transaction; access is checked by callers.
+ * Every copied Block Version is granted to the Site (D-122), so later access changes never break it.
  */
 final class InstallTemplateVersion
 {
     private const REFERENCE_ACTIONS = [BlockActionType::OpenPage, BlockActionType::ScrollTo];
+
+    public function __construct(private BlockVersionGrants $grants) {}
 
     public function install(Site $site, TemplateVersion $version): void
     {
@@ -55,6 +59,8 @@ final class InstallTemplateVersion
                 $created[] = [$instance, $source['state']];
             }
         }
+
+        $this->grants->grant($site, $versions->keys()->all());
 
         // Scroll targets may point at Blocks created later on the same Page, so they are set last.
         foreach ($created as [$instance, $state]) {

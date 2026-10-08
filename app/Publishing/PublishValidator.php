@@ -8,6 +8,7 @@ use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockReferenceResolver;
 use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockStateValidator;
+use App\Blocks\BlockVersionGrants;
 use App\Enums\SiteStatus;
 use App\Http\Requests\SavePageRequest;
 use App\Models\BlockInstance;
@@ -49,6 +50,7 @@ final class PublishValidator
         private BlockStateValidator $states,
         private BlockSourceChecker $sources,
         private BlockCatalogAccess $access,
+        private BlockVersionGrants $grants,
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
     ) {}
@@ -117,6 +119,7 @@ final class PublishValidator
     private function validateBlocks(Site $site, Collection $pages): array
     {
         $licensed = $this->access->licensedBlockIds($site);
+        $granted = $this->grants->grantedVersionIds($site);
         $acceptAll = new class implements BlockReferenceResolver
         {
             public function existingAssets(array $ids): array
@@ -156,7 +159,9 @@ final class PublishValidator
                     continue;
                 }
 
-                $denial = $this->access->denial($site, $version->definition, $licensed);
+                // A lawfully installed exact version stays publishable (D-122); anything else must pass
+                // today's catalog access. Publishing itself never creates a grant.
+                $denial = isset($granted[$version->id]) ? null : $this->access->denial($site, $version->definition, $licensed);
 
                 if ($denial !== null) {
                     $this->error('block_access_denied', "«{$version->definition->name}»: {$denial}", page: $page->public_id, block: $block->public_id);

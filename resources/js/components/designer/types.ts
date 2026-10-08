@@ -69,7 +69,7 @@ export type DesignerPageRoutes = {
     seo: ((pageId: string) => RouteDefinition<'patch'>) | null;
 };
 
-/** Customer catalog item (D-079); `available` is decided by the backend for this Site. */
+/** Customer catalog item (D-121); `available` is decided by the backend for this Site. */
 export type DesignerLibraryBlock = {
     slug: string;
     name: string;

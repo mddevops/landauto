@@ -2,6 +2,7 @@
 
 namespace App\Publishing;
 
+use App\Blocks\BlockVersionGrants;
 use App\Catalog\CatalogReferences;
 use App\Enums\PublishedVersionStatus;
 use App\Models\BlockDefinition;
@@ -37,7 +38,10 @@ final class RestoreVersion
 
     private int $skippedOffers = 0;
 
-    public function __construct(private CatalogReferences $catalog) {}
+    public function __construct(
+        private CatalogReferences $catalog,
+        private BlockVersionGrants $grants,
+    ) {}
 
     /**
      * @return RestoreSummary
@@ -351,6 +355,9 @@ final class RestoreVersion
                 $block->saveQuietly();
             }
         }
+
+        // The Site's own historical versions were lawfully installed; current access is not re-checked (D-122).
+        $this->grants->grant($site, array_map(fn (array $target): int => $target['version']->id, array_values($targets)));
     }
 
     private function blockVersion(string $definition, string $version): BlockVersion

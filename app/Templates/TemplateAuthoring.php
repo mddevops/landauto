@@ -65,15 +65,16 @@ final class TemplateAuthoring
     }
 
     /**
-     * Catalog access of the Template (D-079); prices are stored, never charged (P10-005).
+     * Catalog access of the Template (D-121); prices are stored, never charged (P10-005).
      */
-    public function updateAccess(User $actor, Template $template, CatalogAccessMode $mode, ?Entitlement $entitlement, ?int $priceMinor): void
+    public function updateAccess(User $actor, Template $template, CatalogAccessMode $mode, ?Entitlement $entitlement, ?int $sitePriceMinor, ?int $workspacePriceMinor): void
     {
         $this->authorize($this->authorization->canEdit($actor, $template));
 
         $template->access_mode = $mode;
         $template->access_entitlement = $mode === CatalogAccessMode::Entitlement ? $entitlement : null;
-        $template->price_minor = $mode === CatalogAccessMode::Paid ? $priceMinor : null;
+        $template->site_price_minor = $mode === CatalogAccessMode::Paid ? $sitePriceMinor : null;
+        $template->workspace_price_minor = $mode === CatalogAccessMode::Paid ? $workspacePriceMinor : null;
         $template->price_currency = $mode === CatalogAccessMode::Paid ? Money::DEFAULT_CURRENCY : null;
 
         if (! $template->isDirty()) {

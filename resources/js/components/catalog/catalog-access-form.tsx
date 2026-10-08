@@ -6,7 +6,7 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { BlockAccessSettings } from '@/types/blocks';
 
-/** Catalog access (D-079) of a Block or Template: mode, entitlement or price per Site. */
+/** Catalog access (D-121) of a Block or Template: mode, entitlement or Site / Workspace license prices. */
 export function CatalogAccessForm({
     idPrefix,
     description,
@@ -27,11 +27,13 @@ export function CatalogAccessForm({
     const form = useForm<{
         mode: string;
         entitlement: string;
-        price: string;
+        site_price: string;
+        workspace_price: string;
     }>({
         mode: access.mode,
         entitlement: access.entitlement ?? '',
-        price: access.price,
+        site_price: access.site_price,
+        workspace_price: access.workspace_price,
     });
 
     return (
@@ -81,20 +83,37 @@ export function CatalogAccessForm({
                     />
                 )}
                 {form.data.mode === 'paid' && (
-                    <TextField
-                        id={`${idPrefix}-price`}
-                        label="Цена за сайт, ₽"
-                        inputMode="decimal"
-                        value={form.data.price}
-                        onChange={(event) =>
-                            form.setData('price', event.target.value)
-                        }
-                        required
-                        maxLength={32}
-                        autoComplete="off"
-                        hint="Например, 1500 или 1500,50."
-                        error={form.errors.price}
-                    />
+                    <>
+                        <TextField
+                            id={`${idPrefix}-site-price`}
+                            label="Лицензия на 1 сайт, ₽"
+                            inputMode="decimal"
+                            value={form.data.site_price}
+                            onChange={(event) =>
+                                form.setData('site_price', event.target.value)
+                            }
+                            maxLength={32}
+                            autoComplete="off"
+                            hint="Например, 4900. Пусто — не продаётся для одного сайта."
+                            error={form.errors.site_price}
+                        />
+                        <TextField
+                            id={`${idPrefix}-workspace-price`}
+                            label="Лицензия на всё пространство, ₽"
+                            inputMode="decimal"
+                            value={form.data.workspace_price}
+                            onChange={(event) =>
+                                form.setData(
+                                    'workspace_price',
+                                    event.target.value,
+                                )
+                            }
+                            maxLength={32}
+                            autoComplete="off"
+                            hint="Например, 14900. Действует на все сайты пространства."
+                            error={form.errors.workspace_price}
+                        />
+                    </>
                 )}
                 <div className="flex justify-end sm:col-span-3">
                     <Button type="submit" disabled={form.processing}>

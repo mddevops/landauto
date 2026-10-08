@@ -64,15 +64,16 @@ final class BlockAuthoring
     }
 
     /**
-     * Customer catalog access (D-079); applies to already published versions as well.
+     * Customer catalog access (D-121); applies to already published versions as well.
      */
-    public function updateAccess(User $actor, BlockDefinition $block, CatalogAccessMode $mode, ?Entitlement $entitlement, ?int $priceMinor): void
+    public function updateAccess(User $actor, BlockDefinition $block, CatalogAccessMode $mode, ?Entitlement $entitlement, ?int $sitePriceMinor, ?int $workspacePriceMinor): void
     {
         $this->authorize($this->authorization->canEdit($actor, $block));
 
         $block->access_mode = $mode;
         $block->access_entitlement = $mode === CatalogAccessMode::Entitlement ? $entitlement : null;
-        $block->price_minor = $mode === CatalogAccessMode::Paid ? $priceMinor : null;
+        $block->site_price_minor = $mode === CatalogAccessMode::Paid ? $sitePriceMinor : null;
+        $block->workspace_price_minor = $mode === CatalogAccessMode::Paid ? $workspacePriceMinor : null;
         $block->price_currency = $mode === CatalogAccessMode::Paid ? Money::DEFAULT_CURRENCY : null;
 
         if (! $block->isDirty()) {

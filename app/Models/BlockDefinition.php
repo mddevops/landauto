@@ -32,7 +32,8 @@ use LogicException;
  * @property BlockOwnerScope $owner_scope
  * @property CatalogAccessMode $access_mode
  * @property Entitlement|null $access_entitlement
- * @property int|null $price_minor
+ * @property int|null $site_price_minor
+ * @property int|null $workspace_price_minor
  * @property string|null $price_currency
  * @property int|null $developer_profile_id
  * @property int|null $workspace_id
@@ -68,7 +69,8 @@ class BlockDefinition extends Model
             'category' => BlockCategory::class,
             'access_mode' => CatalogAccessMode::class,
             'access_entitlement' => Entitlement::class,
-            'price_minor' => 'integer',
+            'site_price_minor' => 'integer',
+            'workspace_price_minor' => 'integer',
         ];
     }
 
@@ -187,16 +189,16 @@ class BlockDefinition extends Model
     }
 
     /**
-     * @return HasMany<SiteLicense, $this>
+     * @return HasMany<CatalogLicense, $this>
      */
-    public function siteLicenses(): HasMany
+    public function catalogLicenses(): HasMany
     {
-        return $this->hasMany(SiteLicense::class);
+        return $this->hasMany(CatalogLicense::class);
     }
 
     private function assertAccessIsConsistent(): void
     {
-        if (! CatalogAccessMode::fieldsMatch($this->getAttribute('access_mode'), $this->getAttribute('access_entitlement'), $this->price_minor, $this->price_currency)) {
+        if (! CatalogAccessMode::fieldsMatch($this->getAttribute('access_mode'), $this->getAttribute('access_entitlement'), $this->site_price_minor, $this->workspace_price_minor, $this->price_currency)) {
             throw new LogicException('Block Definition access fields must match its access mode exactly.');
         }
     }

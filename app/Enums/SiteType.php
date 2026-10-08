@@ -18,7 +18,7 @@ enum SiteType: string
             self::MultiPage => 'Многостраничный сайт',
             self::Landing => 'Лендинг',
             self::Quiz => 'Квиз',
-            self::ChatSelection => 'Чат-подбор с оператором',
+            self::ChatSelection => 'Чат-подбор',
         };
     }
 

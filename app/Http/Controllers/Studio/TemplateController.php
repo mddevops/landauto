@@ -44,7 +44,8 @@ class TemplateController extends Controller
             'access' => [
                 'mode' => $found->access_mode->value,
                 'entitlement' => $found->access_entitlement?->value,
-                'price' => $found->price_minor !== null ? Money::toInput($found->price_minor, $found->price_currency ?? Money::DEFAULT_CURRENCY) : '',
+                'site_price' => $found->site_price_minor !== null ? Money::toInput($found->site_price_minor, $found->price_currency ?? Money::DEFAULT_CURRENCY) : '',
+                'workspace_price' => $found->workspace_price_minor !== null ? Money::toInput($found->workspace_price_minor, $found->price_currency ?? Money::DEFAULT_CURRENCY) : '',
             ],
             'accessModes' => CatalogAccessMode::options(),
             'accessEntitlements' => array_map(
@@ -66,7 +67,7 @@ class TemplateController extends Controller
     public function access(UpdateBlockAccessRequest $request, string $template, TemplateAuthoring $authoring): RedirectResponse
     {
         $found = $this->editableTemplate($request, $template);
-        $authoring->updateAccess($this->actor($request), $found, $request->mode(), $request->entitlement(), $request->priceMinor());
+        $authoring->updateAccess($this->actor($request), $found, $request->mode(), $request->entitlement(), $request->sitePriceMinor(), $request->workspacePriceMinor());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Доступ в каталоге сохранён.']);
 
         return to_route('studio.templates.show', $found->public_id);

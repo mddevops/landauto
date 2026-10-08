@@ -22,7 +22,7 @@ use Illuminate\Support\Facades\DB;
  * Creates a Site of a fixed type (D-119) in the given Workspace: blank start only for multi-page
  * and landing Sites, a published compatible Template otherwise; every type counts toward
  * `max_sites`. A Template's latest published version is copied into independent Site content
- * (P9-015); access to the Template and its Blocks is checked first (D-079).
+ * (P9-015); access to the Template and its Blocks is checked first (D-121).
  */
 final class CreateSite
 {

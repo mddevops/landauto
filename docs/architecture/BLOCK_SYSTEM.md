@@ -108,7 +108,11 @@ Authoring covers only name and slug; no delete, review status, schema editing, p
 
 `OfficialBlockCatalog` only bootstraps official content: `OfficialBlockSeeder` creates missing platform definitions and appends missing immutable official versions, but never overwrites the metadata of an existing definition (names edited in «Блоки Landflow» survive reseeding). A catalog slug held by a non-platform Block makes the seeder fail instead of taking it over.
 
-Developer Block runtime is NOT enabled: the customer Designer library, adding a Block to a Page, Block Instances, publishing and restore accept only platform-owned definitions that have a version, and official renderers stay in the trusted application registry. No third-party code (HTML / CSS / JS) is stored or executed (D-080, D-081 remain ADR_REQUIRED).
+Authored HTML / CSS / JS Blocks (platform and Developer) run only in the ADR-008 sandbox: opaque-origin `srcdoc` iframe with `sandbox="allow-scripts"` (no `allow-same-origin`), Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge (D-080 / D-081, owner-confirmed 2026-10-08). Official renderers stay in the trusted application registry.
+
+Customer catalog access (D-121): each catalog Block / Template has one access mode — `free`, `entitlement` (typed entitlement), `paid` (Site and / or Workspace price, no checkout yet) or `admin_grant`. Restricted items need a `catalog_licenses` row for the Site or for its Workspace (covers current and future Sites of that Workspace; never account-wide). The Designer library card and the Add action follow current access for the current installable version.
+
+Installed version grandfathering (D-122): adding a Block or installing a Template records a Site + Block Version grant after the current access check; a version restore re-creates grants for the versions it brings back. Duplicating a granted version inside the same Site and publishing pass on the grant; without a grant, current access applies. Publishing never creates grants, and revoking a license or restricting a Block never breaks an installed version — only new installs, new versions and other Sites follow current access.
 
 ---
 
@@ -1349,6 +1353,8 @@ Before publication validate:
 ---
 
 # 80. Marketplace Review
+
+There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` is reserved for a future Marketplace listing, not approval.
 
 Review should evaluate:
 

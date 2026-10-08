@@ -98,7 +98,7 @@ class PlatformBlockController extends Controller
     public function access(UpdateBlockAccessRequest $request, string $block): RedirectResponse
     {
         $definition = $this->find($block);
-        $this->authoring->updateAccess($this->actor($request), $definition, $request->mode(), $request->entitlement(), $request->priceMinor());
+        $this->authoring->updateAccess($this->actor($request), $definition, $request->mode(), $request->entitlement(), $request->sitePriceMinor(), $request->workspacePriceMinor());
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Доступ в каталоге сохранён.']);
 
         return to_route('platform.blocks.show', $definition);

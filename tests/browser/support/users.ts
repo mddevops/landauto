@@ -194,15 +194,26 @@ export const users = {
         block: 'Промо из студии',
         publicUrl: 'http://sandbox-e2e.localhost:8200',
     },
-    // Customer catalog: Developer Block «Витрина партнёра» needs a Super Admin Site license.
+    // Customer catalog (D-121): Developer Block «Витрина партнёра» needs a Super Admin license for
+    // a Site or for the whole Workspace «Автосалон Лицензия» (two seeded Sites).
     licensee: {
         name: 'Лиана Лицензиатова',
         email: 'licensee@landflow.test',
         password: 'e2e-password',
+        workspace: 'Автосалон Лицензия',
         site: 'Сайт по лицензии',
         subdomain: 'license-e2e',
+        secondSite: 'Второй сайт по лицензии',
+        secondSubdomain: 'license-two-e2e',
         block: 'Витрина партнёра',
         author: 'Студия каталога E2E',
+    },
+    // Another Workspace that must never inherit «Автосалон Лицензия» licenses.
+    licenseeOther: {
+        name: 'Олег Сторонний',
+        email: 'licensee-other@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт другого пространства',
     },
     licensesAdmin: {
         name: 'Ольга Лицензиарова',

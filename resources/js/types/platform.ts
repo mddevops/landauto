@@ -4,7 +4,7 @@ export type PlatformPermission =
     | 'manage_catalog_media'
     | 'manage_developers'
     | 'manage_platform_content'
-    | 'manage_site_licenses';
+    | 'manage_catalog_licenses';
 
 export type PlatformContext = {
     permissions: PlatformPermission[];

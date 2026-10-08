@@ -1,6 +1,6 @@
 # ADR-008 — Sandboxed Runtime for Authored Block Code
 
-**Status:** Accepted (owner instruction «Landflow Creator Studio, Marketplace и форматы сайтов», 2026-10-07)
+**Status:** Accepted (owner instruction «Landflow Creator Studio, Marketplace и форматы сайтов», 2026-10-07); explicitly owner-APPROVED again 2026-10-08 with the sandbox unchanged (opaque-origin iframe, `sandbox="allow-scripts"` without `allow-same-origin`, Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge)
 **Resolves:** D-080 (Developer Block runtime / sandbox), D-081 (custom Developer code support)
 **Builds on:** D-117 / D-118 (ownership and creator permissions), ADR-006 (publishing runtime), BLOCK_SYSTEM.md §8–§28 (canonical Block Schema)
 **Leaves open:** third-party dependency bundles, a separate sandbox origin for production hardening (§9), AI-assisted schema drafts (P9-010)

@@ -74,7 +74,8 @@ final class BlockAuthoringPresenter
             'access' => [
                 'mode' => $block->access_mode->value,
                 'entitlement' => $block->access_entitlement?->value,
-                'price' => $block->price_minor !== null ? Money::toInput($block->price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
+                'site_price' => $block->site_price_minor !== null ? Money::toInput($block->site_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
+                'workspace_price' => $block->workspace_price_minor !== null ? Money::toInput($block->workspace_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
             ],
             'accessModes' => CatalogAccessMode::options(),
             'accessEntitlements' => array_map(

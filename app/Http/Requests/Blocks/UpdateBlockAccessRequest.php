@@ -11,11 +11,14 @@ use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 /**
- * Catalog access of a Block or Template (D-079). The price arrives as a human decimal string and is parsed into
- * minor units on the server (ADR-004); the browser never sends authoritative minor units.
+ * Catalog access of a Block or Template (D-121). A paid item offers a Site license, a Workspace
+ * license or both; prices arrive as human decimal strings and are parsed into minor units on the
+ * server (ADR-004); the browser never sends authoritative minor units.
  */
 class UpdateBlockAccessRequest extends FormRequest
 {
+    private const PRICES = ['site_price', 'workspace_price'];
+
     /**
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -28,7 +31,8 @@ class UpdateBlockAccessRequest extends FormRequest
                 'required_if:mode,'.CatalogAccessMode::Entitlement->value,
                 Rule::in(array_map(fn (Entitlement $entitlement): string => $entitlement->value, Entitlement::catalogGates())),
             ],
-            'price' => ['nullable', 'required_if:mode,'.CatalogAccessMode::Paid->value, 'string', 'max:32'],
+            'site_price' => ['nullable', 'string', 'max:32'],
+            'workspace_price' => ['nullable', 'string', 'max:32'],
         ];
     }
 
@@ -38,12 +42,20 @@ class UpdateBlockAccessRequest extends FormRequest
     public function after(): array
     {
         return [function (Validator $validator): void {
-            if ($validator->errors()->hasAny(['mode', 'price'])) {
+            if ($validator->errors()->hasAny(['mode', ...self::PRICES]) || $this->mode() !== CatalogAccessMode::Paid) {
                 return;
             }
 
-            if ($this->mode() === CatalogAccessMode::Paid && ($this->priceMinor() ?? 0) <= 0) {
-                $validator->errors()->add('price', 'Укажите цену больше нуля, например 1500 или 1500,50.');
+            if (! $this->filled('site_price') && ! $this->filled('workspace_price')) {
+                $validator->errors()->add('site_price', 'Укажите цену лицензии на сайт, на всё пространство или обе.');
+
+                return;
+            }
+
+            foreach (self::PRICES as $field) {
+                if ($this->filled($field) && ($this->priceMinor($field) ?? 0) <= 0) {
+                    $validator->errors()->add($field, 'Укажите цену больше нуля, например 1500 или 1500,50.');
+                }
             }
         }];
     }
@@ -58,7 +70,6 @@ class UpdateBlockAccessRequest extends FormRequest
             'mode.enum' => 'Выберите режим доступа из списка.',
             'entitlement.required_if' => 'Выберите опцию тарифа.',
             'entitlement.in' => 'Выберите опцию тарифа из списка.',
-            'price.required_if' => 'Укажите цену для платного доступа.',
         ];
     }
 
@@ -67,7 +78,12 @@ class UpdateBlockAccessRequest extends FormRequest
      */
     public function attributes(): array
     {
-        return ['mode' => 'Режим доступа', 'entitlement' => 'Опция тарифа', 'price' => 'Цена'];
+        return [
+            'mode' => 'Режим доступа',
+            'entitlement' => 'Опция тарифа',
+            'site_price' => 'Лицензия на 1 сайт',
+            'workspace_price' => 'Лицензия на всё пространство',
+        ];
     }
 
     public function mode(): CatalogAccessMode
@@ -80,8 +96,18 @@ class UpdateBlockAccessRequest extends FormRequest
         return $this->mode() === CatalogAccessMode::Entitlement ? Entitlement::from($this->string('entitlement')->toString()) : null;
     }
 
-    public function priceMinor(): ?int
+    public function sitePriceMinor(): ?int
     {
-        return $this->mode() === CatalogAccessMode::Paid ? Money::parse($this->string('price')->toString()) : null;
+        return $this->priceMinor('site_price');
+    }
+
+    public function workspacePriceMinor(): ?int
+    {
+        return $this->priceMinor('workspace_price');
+    }
+
+    private function priceMinor(string $field): ?int
+    {
+        return $this->mode() === CatalogAccessMode::Paid && $this->filled($field) ? Money::parse($this->string($field)->toString()) : null;
     }
 }

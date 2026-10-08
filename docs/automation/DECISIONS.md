@@ -1462,7 +1462,7 @@ Nothing in planned scope. Real subscription integration is `P7-009` (DEFERRED).
 
 ## D-079 — Marketplace License Scope
 
-**Status:** APPROVED (owner instruction «Landflow Creator Studio, Marketplace и форматы сайтов», 2026-10-07)
+**Status:** SUPERSEDED by D-121 (owner decision 2026-10-08). Originally APPROVED 2026-10-07 (owner instruction «Landflow Creator Studio, Marketplace и форматы сайтов»). Kept for history; its Site-only scope and Template-license union no longer apply.
 
 ### Decision
 
@@ -1479,13 +1479,13 @@ Not decided here (no invention): prices, commissions, payouts, taxes, refunds, t
 
 ### Resolved By
 
-Owner instruction 2026-10-07; implemented by P9-014 / P9-015.
+Owner instruction 2026-10-07; implemented by P9-014 / P9-015. Superseded by D-121 and D-122 (2026-10-08).
 
 ---
 
 ## D-080 — Marketplace Runtime / Sandbox
 
-**Status:** APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`
+**Status:** APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`; explicitly confirmed by the owner 2026-10-08 (sandbox unchanged)
 
 ### Decision
 
@@ -1495,7 +1495,7 @@ Authored Block HTML/CSS/JS runs only in an opaque-origin sandboxed iframe (`sand
 
 ## D-081 — Custom Developer Script Support
 
-**Status:** APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`
+**Status:** APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`; explicitly confirmed by the owner 2026-10-08
 
 ### Decision
 
@@ -1748,7 +1748,7 @@ Whether a Developer Profile is:
 
 - `TENANCY.md` §59: a Developer profile is not automatically a customer Workspace; creator ownership must not be confused with customer tenancy;
 - Workspace-private Blocks remain Workspace-owned;
-- Marketplace license scope (D-079) stays consistent with the chosen owner.
+- Catalog license scope (D-121, which superseded D-079) stays consistent with the chosen owner.
 
 ### Resolved By
 
@@ -1776,7 +1776,9 @@ Define for personal data (Submissions, contact fields, IP addresses, delivery pa
 
 - production launch;
 - Submission export (no BACKLOG task exists yet; the task must reference D-094 when created).
-- Persisting operator chat transcripts of Chat Selection Sites (P9-018): messages are personal data with no defined retention / deletion rule.
+- Persisting chat transcripts of Chat Selection Sites, if the DEFERRED P9-018 is ever resumed: messages are personal data with no defined retention / deletion rule.
+
+D-094 stays a production-launch blocker but no longer blocks Phase 9 (owner decision 2026-10-08).
 
 ---
 
@@ -2129,7 +2131,7 @@ Developer access:
 - Only a Super Admin grants / revokes Developer Profile access (platform permission `manage_developers`, which Catalog Managers do not have). It authorizes listing, granting, suspending and reactivating profiles, not Block / Template authoring (P9-002).
 - A Developer Profile is not a platform role; there is no `PlatformRole::Developer`. Developers are not Landflow staff merely because they create content.
 
-Future Marketplace distribution direction (approved direction only): free, entitlement-based, separately paid, private / admin grant. The architecture must not assume that a paid item is account-wide, that all premium items come from a plan, or that all Marketplace content is globally unlocked. The paid license scope is Site (D-079, APPROVED 2026-10-07).
+Future Marketplace distribution direction (approved direction only): free, entitlement-based, separately paid, private / admin grant. The architecture must not assume that a paid item is account-wide, that all premium items come from a plan, or that all Marketplace content is globally unlocked. License scopes are Site and Workspace, never account-wide (D-121, APPROVED 2026-10-08; it superseded D-079).
 
 ### Resolved By
 
@@ -2151,7 +2153,7 @@ Three authorization domains stay separate and never grant each other:
 - **Workspace permissions** stay customer tenant authority.
 - There is no Developer role (no `DeveloperRole`, `PlatformRole::Developer` or `WorkspaceRole::Developer`).
 
-MVP default: a new Super Admin-granted profile receives all current creator permissions as stored rows (existing profiles were backfilled), so a Super Admin can narrow them individually. A creator permission only ever covers content owned by the same Developer Profile; `submit_marketplace_item` means submitting own content to review, never approval, publication, pricing, payouts or licenses (P9-008, Phase 10, D-079).
+MVP default: a new Super Admin-granted profile receives all current creator permissions as stored rows (existing profiles were backfilled), so a Super Admin can narrow them individually. A creator permission only ever covers content owned by the same Developer Profile; `submit_marketplace_item` is reserved for a future Marketplace listing of own content (Phase 10). It is NOT manual moderation, review or publication approval (D-120) and never grants pricing, payouts or licenses (D-121). Wording corrected by the owner 2026-10-08.
 
 ### Resolved By
 
@@ -2172,7 +2174,7 @@ Owner instruction for P9-002 (2026-10-07); P9-002.
 | Многостраничный сайт | `multi_page` | blank or compatible Template | typed boolean entitlement `multi_page_sites` (absent on Free) |
 | Лендинг | `landing` | blank or compatible Template | all plans |
 | Квиз | `quiz` | compatible Template only | all plans |
-| Чат-подбор с оператором | `chat_selection` | compatible Template only | all plans |
+| Чат-подбор | `chat_selection` | compatible Template only | all plans |
 
 - Every type counts toward `max_sites` (D-099). No plan-name checks.
 - A Template declares its compatible Site types; the backend checks compatibility on create / clone.
@@ -2189,15 +2191,61 @@ Owner instruction 2026-10-07; P9-013.
 
 ## D-120 — Automated Checks Replace Manual Review
 
-**Status:** APPROVED (owner instruction 2026-10-07)
+**Status:** APPROVED (owner instruction 2026-10-07; confirmed by the owner 2026-10-08)
 
 ### Decision
 
-There is no manual moderation / approval queue for Blocks or Templates. The author (Super Admin for platform content, Developer for own content) publishes immediately after the automated security, schema and runtime checks of ADR-008 §7 pass. Autosave stores only the Draft and never publishes. `submit_marketplace_item` (D-118) is not an approval step; P9-008 "Review Workflow" is replaced by "Automated Block Checks".
+There is no manual moderation / approval queue for Blocks or Templates. The author (Super Admin for platform content, Developer for own content) publishes immediately after the automated security, schema and runtime checks of ADR-008 §7 pass. Autosave stores only the Draft and never publishes. `submit_marketplace_item` (D-118) is not an approval step; P9-008 "Review Workflow" is replaced by "Automated Block Checks". Owner confirmation 2026-10-08: publication is automatic after the checks; there is no manual review queue and no "submitted" state.
 
 ### Resolved By
 
 Owner instruction 2026-10-07; P9-008 / P9-006.
+
+---
+
+## D-121 — Catalog License Scope v2
+
+**Status:** APPROVED (owner decision 2026-10-08); supersedes D-079
+
+### Decision
+
+- Catalog items (Blocks, Templates) keep exactly one access mode: `free`, `entitlement` (typed entitlement, never a plan-name check), `paid` or `admin_grant`.
+- A license is an explicit Super Admin override that makes a restricted item usable. It has a **scope** and a **source**, which are separate:
+  - scope `site` — one Site; other Sites of the same Workspace are not covered;
+  - scope `workspace` — every current and future Site of that Workspace; Sites of other Workspaces never gain it, even when the same User belongs to both;
+  - source `purchase` (reserved for P10-005) or `admin_grant` (the only source created now).
+- There is no account-wide / User-wide license.
+- Effective access for a Site = a direct Site license OR a license on the Site's Workspace. License rows are never copied per Site.
+- One `catalog_licenses` row = exactly one item (Block XOR Template) × exactly one target (Site XOR Workspace, matching the scope). Rows are immutable with a ULID `public_id`; revoking deletes the row. Site+Block, Site+Template, Workspace+Block and Workspace+Template are each unique; a duplicate grant returns a Russian validation error.
+- Template license: it covers only the Block Versions of the Template Version being installed, never a union over historical versions. Creating a new Site from a `paid` / `admin_grant` Template requires a Workspace license (the Site does not exist yet). Site-scoped Template licenses are valid data for future flows; no such flow is built now.
+- Pricing: `site_price_minor`, `workspace_price_minor` and `price_currency` (ADR-004 minor units). `paid` requires at least one price, each > 0, a supported currency, and no entitlement. Non-paid modes keep all three null. Russian display, e.g. «Лицензия на 1 сайт — 4 900 ₽», «Лицензия на всё пространство — 14 900 ₽».
+- Licenses are managed by `manage_catalog_licenses` (Super Admin only), on the «Лицензии каталога» page.
+- Not in scope: checkout, purchase-license creation, commissions, earnings, payouts (P10-005 and later).
+
+### Resolved By
+
+Owner decision 2026-10-08 (Phase 9 final corrective pass); P9-014 / P9-015 / P10-004.
+
+---
+
+## D-122 — Installed Block Version Grandfathering
+
+**Status:** APPROVED (owner decision 2026-10-08)
+
+### Decision
+
+- The grandfathering unit is **Site + BlockVersion**, stored in `site_block_version_grants` (`site_id`, `block_version_id`, `created_at`; unique pair; Site delete cascades; Block Version delete is restricted). It is internal provenance with no `public_id` and no browser-controlled endpoint.
+- A grant is created only after the current access check succeeds, in the same transaction, on every path that introduces a Block Version into a Site: adding a Block, Template installation (every copied version), a legitimate upgrade to another version, and any other such path.
+- Duplicating a Block Instance inside the same Site needs no new access check when the Site holds the grant for that exact version. The grant never moves to another Site.
+- Publishing passes catalog-use authorization for a Block Instance when the grant exists; otherwise it applies the current access check. Publishing never creates grants.
+- Revoking a license deletes no Block Instances, Block Versions, published versions or grants: the installed pinned version keeps working, while new installs and upgrades to ungranted versions need current access.
+- A historical Site version restore ensures grants for the versions it brings back without re-checking current access; another Site never gains them.
+- Existing Block Instances were backfilled with grants by a cross-DB-safe migration.
+- The catalog card and its Add action follow current access for the current installable version; existing-use rights are not new-acquisition rights.
+
+### Resolved By
+
+Owner decision 2026-10-08 (Phase 9 final corrective pass); P9-014 / P9-015.
 
 ---
 
@@ -2206,6 +2254,7 @@ Owner instruction 2026-10-07; P9-008 / P9-006.
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).
 - D-023 — Automotive Colors May Be Multi-Tone → superseded by D-103 (no catalog color tables; Series Media Library).
 - D-024 — Automotive Images May Be Color-Specific → superseded by D-103.
+- D-079 — Marketplace License Scope (Site-only) → superseded by D-121 (Catalog License Scope v2).
 
 ---
 

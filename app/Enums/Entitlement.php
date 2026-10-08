@@ -30,7 +30,7 @@ enum Entitlement: string
     }
 
     /**
-     * Boolean entitlements a catalog item may require in `entitlement` access mode (D-079).
+     * Boolean entitlements a catalog item may require in `entitlement` access mode (D-121).
      *
      * @return list<self>
      */

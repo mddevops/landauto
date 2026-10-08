@@ -95,6 +95,16 @@ class Workspace extends Model
     }
 
     /**
+     * Workspace-scoped catalog licenses: effective for all current and future Sites (D-121).
+     *
+     * @return HasMany<CatalogLicense, $this>
+     */
+    public function catalogLicenses(): HasMany
+    {
+        return $this->hasMany(CatalogLicense::class);
+    }
+
+    /**
      * @return BelongsTo<Plan, $this>
      */
     public function plan(): BelongsTo

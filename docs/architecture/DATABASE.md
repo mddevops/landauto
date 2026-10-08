@@ -472,24 +472,37 @@ Implemented fields (P2-002, ownership P9-003):
 - created_by_user_id nullable FK (null on User delete), immutable audit identity
 - updated_by_user_id nullable FK (null on User delete), audit identity
 - category string(32), `App\Enums\BlockCategory`, default `other`, editable (P9-004; official Blocks backfilled)
-- access_mode string(16), `App\Enums\CatalogAccessMode` (`free` default / `entitlement` / `paid` / `admin_grant`), D-079 (P9-014)
+- access_mode string(16), `App\Enums\CatalogAccessMode` (`free` default / `entitlement` / `paid` / `admin_grant`), D-121 (P9-014)
 - access_entitlement string(64) nullable — boolean `App\Enums\Entitlement` key, set only for `entitlement`
-- price_minor unsigned bigint nullable + price_currency char(3) nullable — ADR-004, set only for `paid` (> 0, supported currency)
+- site_price_minor unsigned bigint nullable + workspace_price_minor unsigned bigint nullable + price_currency char(3) nullable — ADR-004; `paid` needs at least one price (each > 0) and a supported currency, other modes keep all three null
 - timestamps
 
-## site_licenses
+## catalog_licenses
 
-Site-scoped catalog license (D-079, P9-014): one Site may use one catalog item.
+Catalog license (D-121, P9-014 / P9-015): one catalog item for one Site or one Workspace. Effective access for a Site = its Site licenses OR its Workspace's licenses; rows are never copied per Site.
 
 - id
 - public_id ULID, unique
-- site_id FK (cascade)
+- scope string(16), `App\Enums\CatalogLicenseScope` (`site` / `workspace`)
+- site_id nullable FK (cascade) — set only for scope `site`
+- workspace_id nullable FK (cascade) — set only for scope `workspace`
 - block_definition_id nullable FK (cascade)
-- template_id nullable FK (cascade), P9-015 — exactly one of `block_definition_id` / `template_id` (model guard); a Template license also covers that Template's Blocks for the Site
-- source string(16), `App\Enums\SiteLicenseSource` (`purchase` / `admin_grant`); purchases are created only by the future billing flow (P10-005)
+- template_id nullable FK (cascade) — exactly one of `block_definition_id` / `template_id`; exactly one target matching the scope (model guard)
+- source string(16), `App\Enums\CatalogLicenseSource` (`purchase` / `admin_grant`), independent of scope; purchases are created only by the future billing flow (P10-005)
 - granted_by_user_id nullable FK (null on User delete), audit identity
 - timestamps
-- unique (site_id, block_definition_id), unique (site_id, template_id); rows are never updated — revoke = delete
+- unique (site_id, block_definition_id), (site_id, template_id), (workspace_id, block_definition_id), (workspace_id, template_id); rows are never updated — revoke = delete
+
+## site_block_version_grants
+
+Installed Block Version grandfathering (D-122): internal provenance, no `public_id`, no browser endpoint.
+
+- id
+- site_id FK (cascade)
+- block_version_id FK (restrict)
+- created_at nullable
+- unique (site_id, block_version_id)
+- created after a successful current access check on add / Template install (and on version restore without a re-check); publishing reads but never writes it; license revocation never deletes it; existing `page_blocks` were backfilled by the migration
 
 ## block_drafts
 
@@ -595,7 +608,7 @@ P9-007: `owner_scope` (`platform` | `developer`, default `platform`) + `develope
 - `template_pages`: `public_id`, `template_id` (cascade), `title`, `slug` (unique per Template), `sort_order`, `is_home` (TRUE / NULL, unique per Template).
 - `template_blocks`: `public_id`, `template_page_id` (cascade), `block_version_id` (restrict, never workspace-private), `sort_order`, `is_hidden`, `state_json` (validated by the Block Schema; references only to Pages / Blocks of the same Template).
 
-P9-015 (D-079): `access_mode` string(16) default `free`, `access_entitlement` string(64) nullable, `price_minor` unsigned bigint nullable, `price_currency` char(3) nullable — same consistency rules as `block_definitions` (`CatalogAccessMode::fieldsMatch`). A Template with at least one `template_versions` row is offered at Site creation; installing copies the latest version into new Pages / Block Instances.
+P9-015 (D-121): `access_mode` string(16) default `free`, `access_entitlement` string(64) nullable, `site_price_minor` / `workspace_price_minor` unsigned bigint nullable, `price_currency` char(3) nullable — same consistency rules as `block_definitions` (`CatalogAccessMode::fieldsMatch`). A Template with at least one `template_versions` row is offered at Site creation; installing copies the latest version into new Pages / Block Instances and records `site_block_version_grants` for every copied Block Version (D-122).
 
 ## template_versions
 
@@ -1905,9 +1918,8 @@ Future tables may include:
 
 ## marketplace_orders
 ## marketplace_order_items
-## marketplace_licenses
 
-Not required for MVP.
+Not required for MVP. Licenses already live in `catalog_licenses` (D-121); a future purchase creates a `purchase`-source row there instead of a separate license table.
 
 Architecture should avoid assumptions that all premium content is globally unlocked.
 

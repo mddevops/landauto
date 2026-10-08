@@ -3,18 +3,19 @@
 namespace Tests\Feature\Blocks;
 
 use App\Enums\CatalogAccessMode;
+use App\Enums\CatalogLicenseScope;
+use App\Enums\CatalogLicenseSource;
 use App\Enums\Entitlement;
 use App\Enums\PlatformRole;
-use App\Enums\SiteLicenseSource;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
+use App\Models\CatalogLicense;
 use App\Models\DeveloperProfile;
 use App\Models\Page;
 use App\Models\Plan;
 use App\Models\PlatformRoleAssignment;
 use App\Models\Site;
-use App\Models\SiteLicense;
 use App\Models\User;
 use App\Publishing\PublishValidator;
 use App\Support\WorkspaceContext;
@@ -29,8 +30,8 @@ use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
 
 /**
- * P9-014 / D-079: catalog access modes, Site-scoped licenses and the backend checks when adding a
- * Block Instance, duplicating it and publishing the Site.
+ * P9-014 / D-121: catalog access modes, Site / Workspace licenses and the backend checks when
+ * adding a Block Instance, duplicating it and publishing the Site.
  */
 class CatalogAccessTest extends TestCase
 {
@@ -63,7 +64,8 @@ class CatalogAccessTest extends TestCase
             ]),
             'paid' => $this->catalogBlock('dev-paid', 'Платная карточка', [
                 'access_mode' => CatalogAccessMode::Paid,
-                'price_minor' => 150_050,
+                'site_price_minor' => 150_050,
+                'workspace_price_minor' => 1_490_000,
                 'price_currency' => 'RUB',
             ]),
             'grant' => $this->catalogBlock('dev-grant', 'Карточка по выдаче', [
@@ -96,12 +98,12 @@ class CatalogAccessTest extends TestCase
                 $this->assertFalse($items['dev-plan']['available']);
                 $this->assertSame('Блок доступен на тарифе с опцией «Без брендинга Landflow».', $items['dev-plan']['reason']);
 
-                $this->assertSame("1\u{00A0}500,50\u{00A0}₽ за сайт", $items['dev-paid']['access']['detail']);
+                $this->assertSame("Лицензия на 1 сайт — 1\u{00A0}500,50\u{00A0}₽ · Лицензия на всё пространство — 14\u{00A0}900\u{00A0}₽", $items['dev-paid']['access']['detail']);
                 $this->assertSame('Платно', $items['dev-paid']['access']['label']);
                 $this->assertFalse($items['dev-paid']['available']);
 
                 $this->assertSame('Выдаёт администратор', $items['dev-grant']['access']['label']);
-                $this->assertSame('Блок выдаёт администратор Landflow для конкретного сайта.', $items['dev-grant']['reason']);
+                $this->assertSame('Блок выдаёт администратор Landflow для сайта или всего пространства.', $items['dev-grant']['reason']);
 
                 return true;
             }));
@@ -111,8 +113,8 @@ class CatalogAccessTest extends TestCase
     {
         $this->add('dev-free')->assertSessionHasNoErrors();
         $this->add('dev-plan')->assertSessionHasErrors(['block' => 'Блок доступен на тарифе с опцией «Без брендинга Landflow».']);
-        $this->add('dev-paid')->assertSessionHasErrors(['block' => 'Платный блок: нужна лицензия для этого сайта. Покупка в Landflow пока недоступна.']);
-        $this->add('dev-grant')->assertSessionHasErrors(['block' => 'Блок выдаёт администратор Landflow для конкретного сайта.']);
+        $this->add('dev-paid')->assertSessionHasErrors(['block' => 'Платный блок: нужна лицензия на этот сайт или на всё пространство. Покупка в Landflow пока недоступна.']);
+        $this->add('dev-grant')->assertSessionHasErrors(['block' => 'Блок выдаёт администратор Landflow для сайта или всего пространства.']);
         $this->assertSame(1, $this->placedCount());
 
         $this->plan->setEntitlement(Entitlement::RemoveBranding, true);
@@ -135,7 +137,7 @@ class CatalogAccessTest extends TestCase
 
         $this->add('dev-grant')->assertSessionHasNoErrors();
         $this->as()->post(route('sites.blocks.store', [$other, $otherHome]), ['block' => 'dev-grant'])
-            ->assertSessionHasErrors(['block' => 'Блок выдаёт администратор Landflow для конкретного сайта.']);
+            ->assertSessionHasErrors(['block' => 'Блок выдаёт администратор Landflow для сайта или всего пространства.']);
 
         $this->as()->get(route('sites.designer', $other))
             ->assertInertia(fn (Assert $page) => $page->where(
@@ -157,16 +159,22 @@ class CatalogAccessTest extends TestCase
         $this->assertSame(1, $this->placedCount());
     }
 
-    public function test_duplicating_rechecks_access(): void
+    public function test_duplicating_reuses_a_granted_version_and_rechecks_anything_else(): void
     {
         $license = $this->license($this->site, 'grant');
         $this->add('dev-grant')->assertSessionHasNoErrors();
         $block = BlockInstance::query()->latest('id')->firstOrFail();
 
+        // D-122: the Site installed this exact version lawfully, so reuse inside the Site survives revocation.
         $license->delete();
-        $this->as()->post(route('sites.blocks.duplicate', [$this->site, $block]))
-            ->assertSessionHasErrors(['block' => 'Блок выдаёт администратор Landflow для конкретного сайта.']);
-        $this->assertSame(1, $this->placedCount());
+        $this->as()->post(route('sites.blocks.duplicate', [$this->site, $block]))->assertSessionHasNoErrors();
+        $this->assertSame(2, $this->placedCount());
+
+        // A placement this Site never acquired is checked against current access.
+        $ungranted = $this->placeCatalog('paid');
+        $this->as()->post(route('sites.blocks.duplicate', [$this->site, $ungranted]))
+            ->assertSessionHasErrors(['block' => 'Платный блок: нужна лицензия на этот сайт или на всё пространство. Покупка в Landflow пока недоступна.']);
+        $this->assertSame(3, $this->placedCount());
     }
 
     public function test_publishing_rechecks_access_for_every_placed_block(): void
@@ -191,9 +199,13 @@ class CatalogAccessTest extends TestCase
         $invalid = [
             ['access_mode' => CatalogAccessMode::Entitlement],
             ['access_mode' => CatalogAccessMode::Entitlement, 'access_entitlement' => Entitlement::MaxSites],
-            ['access_mode' => CatalogAccessMode::Paid, 'price_minor' => 0, 'price_currency' => 'RUB'],
-            ['access_mode' => CatalogAccessMode::Paid, 'price_minor' => 100, 'price_currency' => 'XXX'],
-            ['access_mode' => CatalogAccessMode::Free, 'price_minor' => 100, 'price_currency' => 'RUB'],
+            ['access_mode' => CatalogAccessMode::Paid, 'price_currency' => 'RUB'],
+            ['access_mode' => CatalogAccessMode::Paid, 'site_price_minor' => 0, 'price_currency' => 'RUB'],
+            ['access_mode' => CatalogAccessMode::Paid, 'site_price_minor' => 100, 'workspace_price_minor' => 0, 'price_currency' => 'RUB'],
+            ['access_mode' => CatalogAccessMode::Paid, 'site_price_minor' => 100, 'price_currency' => 'XXX'],
+            ['access_mode' => CatalogAccessMode::Paid, 'workspace_price_minor' => 100],
+            ['access_mode' => CatalogAccessMode::Free, 'site_price_minor' => 100, 'price_currency' => 'RUB'],
+            ['access_mode' => CatalogAccessMode::Free, 'workspace_price_minor' => 100, 'price_currency' => 'RUB'],
             ['access_mode' => CatalogAccessMode::AdminGrant, 'access_entitlement' => Entitlement::RemoveBranding],
         ];
 
@@ -217,30 +229,47 @@ class CatalogAccessTest extends TestCase
 
         $this->actingAs($user)->get(route('developer.blocks.show', $block))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('access', ['mode' => 'free', 'entitlement' => null, 'price' => ''])
+                ->where('access', ['mode' => 'free', 'entitlement' => null, 'site_price' => '', 'workspace_price' => ''])
                 ->has('accessModes', 4)
                 ->where('accessEntitlements', fn ($choices): bool => collect($choices)->pluck('value')->all() === ['custom_domain', 'remove_branding', 'multi_page_sites']));
 
-        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'price' => '1 500,5'])
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '1 500,5'])
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('developer.blocks.show', $block));
         $block->refresh();
-        $this->assertSame([CatalogAccessMode::Paid, 150_050, 'RUB'], [$block->access_mode, $block->price_minor, $block->price_currency]);
+        $this->assertSame([CatalogAccessMode::Paid, 150_050, null, 'RUB'], [$block->access_mode, $block->site_price_minor, $block->workspace_price_minor, $block->price_currency]);
+
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '', 'workspace_price' => '14900'])
+            ->assertSessionHasNoErrors();
+        $block->refresh();
+        $this->assertSame([null, 1_490_000], [$block->site_price_minor, $block->workspace_price_minor]);
+        $this->actingAs($user)->get(route('developer.blocks.show', $block))
+            ->assertInertia(fn (Assert $page) => $page->where('access', ['mode' => 'paid', 'entitlement' => null, 'site_price' => '', 'workspace_price' => '14900']));
+
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '4900', 'workspace_price' => '14900'])
+            ->assertSessionHasNoErrors();
+        $block->refresh();
+        $this->assertSame([490_000, 1_490_000], [$block->site_price_minor, $block->workspace_price_minor]);
+
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid'])
+            ->assertSessionHasErrors(['site_price' => 'Укажите цену лицензии на сайт, на всё пространство или обе.']);
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '100', 'workspace_price' => '0'])
+            ->assertSessionHasErrors('workspace_price');
         Log::shouldHaveReceived('info')->with('developer.block_access_updated', Mockery::on(
             fn (array $context): bool => $context['block'] === $block->public_id && $context['access_mode'] === 'paid' && $context['actor_user_id'] === $user->id,
         ));
 
-        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'price' => '0'])
-            ->assertSessionHasErrors('price');
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '0'])
+            ->assertSessionHasErrors('site_price');
         $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement', 'entitlement' => 'max_sites'])
             ->assertSessionHasErrors('entitlement');
         $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'reseller'])
             ->assertSessionHasErrors('mode');
 
-        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement', 'entitlement' => 'multi_page_sites', 'price' => '900'])
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement', 'entitlement' => 'multi_page_sites', 'site_price' => '900', 'workspace_price' => '900'])
             ->assertSessionHasNoErrors();
         $block->refresh();
-        $this->assertSame([CatalogAccessMode::Entitlement, Entitlement::MultiPageSites, null, null], [$block->access_mode, $block->access_entitlement, $block->price_minor, $block->price_currency]);
+        $this->assertSame([CatalogAccessMode::Entitlement, Entitlement::MultiPageSites, null, null, null], [$block->access_mode, $block->access_entitlement, $block->site_price_minor, $block->workspace_price_minor, $block->price_currency]);
 
         $foreign = $this->catalogBlock('foreign-card', 'Чужая карточка', [], DeveloperProfile::factory()->withPermissions()->create());
         $this->actingAs($user)->put(route('developer.blocks.access', $foreign), ['mode' => 'admin_grant'])->assertNotFound();
@@ -258,7 +287,7 @@ class CatalogAccessTest extends TestCase
         $this->add('hero')->assertSessionHasErrors('block');
     }
 
-    public function test_super_admin_grants_and_revokes_site_licenses(): void
+    public function test_super_admin_grants_and_revokes_catalog_licenses(): void
     {
         Log::spy();
         $admin = $this->userWithRole(PlatformRole::SuperAdmin);
@@ -268,44 +297,71 @@ class CatalogAccessTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('platform/licenses/index')
                 ->has('licenses', 0)
+                ->where('scopes', [['value' => 'site', 'label' => 'Один сайт'], ['value' => 'workspace', 'label' => 'Всё пространство']])
                 ->where('items', fn ($items): bool => collect($items)->pluck('name')->sort()->values()->all() === ['Карточка по выдаче', 'Карточка по тарифу', 'Платная карточка'])
                 ->where('items.0', fn ($item): bool => array_keys($item->all()) === ['kind', 'public_id', 'name', 'author', 'access'])
                 ->missing('items.0.id'));
 
         $grant = $this->blocks['grant'];
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'site' => ' DEALER '])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => ' DEALER '])
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('platform.licenses.index'));
-        $license = SiteLicense::query()->sole();
-        $this->assertSame([$this->site->id, $grant->id, SiteLicenseSource::AdminGrant, $admin->id], [$license->site_id, $license->block_definition_id, $license->source, $license->granted_by_user_id]);
-        Log::shouldHaveReceived('info')->with('platform.site_license_granted', [
+        $license = CatalogLicense::query()->sole();
+        $this->assertSame(
+            [CatalogLicenseScope::Site, $this->site->id, null, $grant->id, null, CatalogLicenseSource::AdminGrant, $admin->id],
+            [$license->scope, $license->site_id, $license->workspace_id, $license->block_definition_id, $license->template_id, $license->source, $license->granted_by_user_id],
+        );
+        Log::shouldHaveReceived('info')->with('platform.catalog_license_granted', [
             'license' => $license->public_id,
             'block' => $grant->public_id,
+            'scope' => 'site',
             'site' => $this->site->public_id,
             'actor_user_id' => $admin->id,
         ]);
 
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'site' => $this->site->public_id])
-            ->assertSessionHasErrors(['site' => 'У этого сайта уже есть лицензия на этот блок.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $this->blocks['free']->public_id, 'site' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => $this->site->public_id])
+            ->assertSessionHasErrors(['target' => 'У этого сайта уже есть лицензия на этот блок.']);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $this->blocks['free']->public_id, 'scope' => 'site', 'target' => 'dealer'])
             ->assertSessionHasErrors(['block' => 'Этот блок бесплатный — лицензия не нужна.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'site' => 'missing'])
-            ->assertSessionHasErrors(['site' => 'Сайт не найден. Укажите поддомен или ID сайта.']);
-        $this->assertSame(1, SiteLicense::query()->count());
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => 'missing'])
+            ->assertSessionHasErrors(['target' => 'Сайт не найден. Укажите поддомен или ID сайта.']);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'account', 'target' => 'dealer'])
+            ->assertSessionHasErrors('scope');
+        $this->assertSame(1, CatalogLicense::query()->count());
+
+        // Workspace scope: addressed by the Workspace ID or a subdomain of any of its Sites.
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => 'dealer'])
+            ->assertSessionHasNoErrors();
+        $workspaceLicense = CatalogLicense::query()->where('scope', 'workspace')->sole();
+        $this->assertSame([null, $this->workspace->id], [$workspaceLicense->site_id, $workspaceLicense->workspace_id]);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => $this->workspace->public_id])
+            ->assertSessionHasErrors(['target' => 'У этого пространства уже есть лицензия на этот блок.']);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => 'missing'])
+            ->assertSessionHasErrors(['target' => 'Пространство не найдено. Укажите ID пространства или поддомен любого его сайта.']);
+        $this->assertSame(2, CatalogLicense::query()->count());
 
         $this->actingAs($admin)->get(route('platform.licenses.index'))
             ->assertInertia(fn (Assert $page) => $page
-                ->has('licenses', 1)
-                ->where('licenses.0.public_id', $license->public_id)
-                ->where('licenses.0.site', 'Дилер')
-                ->where('licenses.0.source_label', 'Выдана администратором')
+                ->has('licenses', 2)
+                ->where('licenses.0.scope', 'workspace')
+                ->where('licenses.0.scope_label', 'Всё пространство')
+                ->where('licenses.0.target', $this->workspace->name)
+                ->where('licenses.0.subdomain', null)
+                ->where('licenses.1.public_id', $license->public_id)
+                ->where('licenses.1.scope_label', 'Один сайт')
+                ->where('licenses.1.target', 'Дилер')
+                ->where('licenses.1.workspace', $this->workspace->name)
+                ->where('licenses.1.source_label', 'Выдана администратором')
                 ->missing('licenses.0.id')
-                ->missing('licenses.0.site_id'));
+                ->missing('licenses.0.workspace_id')
+                ->missing('licenses.1.site_id'));
 
         $this->actingAs($admin)->delete(route('platform.licenses.destroy', $license->public_id))
             ->assertRedirect(route('platform.licenses.index'));
-        $this->assertSame(0, SiteLicense::query()->count());
-        Log::shouldHaveReceived('info')->with('platform.site_license_revoked', Mockery::on(fn (array $context): bool => $context['license'] === $license->public_id));
+        $this->actingAs($admin)->delete(route('platform.licenses.destroy', $workspaceLicense->public_id))
+            ->assertRedirect(route('platform.licenses.index'));
+        $this->assertSame(0, CatalogLicense::query()->count());
+        Log::shouldHaveReceived('info')->with('platform.catalog_license_revoked', Mockery::on(fn (array $context): bool => $context['license'] === $license->public_id));
         $this->add('dev-grant')->assertSessionHasErrors('block');
     }
 
@@ -320,11 +376,11 @@ class CatalogAccessTest extends TestCase
 
         foreach ($forbidden as $user) {
             $this->actingAs($user)->get(route('platform.licenses.index'))->assertForbidden();
-            $this->actingAs($user)->post(route('platform.licenses.store'), ['block' => $this->blocks['paid']->public_id, 'site' => 'dealer'])->assertForbidden();
+            $this->actingAs($user)->post(route('platform.licenses.store'), ['block' => $this->blocks['paid']->public_id, 'scope' => 'site', 'target' => 'dealer'])->assertForbidden();
             $this->actingAs($user)->delete(route('platform.licenses.destroy', $license->public_id))->assertForbidden();
         }
 
-        $this->assertSame(1, SiteLicense::query()->count());
+        $this->assertSame(1, CatalogLicense::query()->count());
     }
 
     /**
@@ -340,9 +396,9 @@ class CatalogAccessTest extends TestCase
         return $definition;
     }
 
-    private function license(Site $site, string $block): SiteLicense
+    private function license(Site $site, string $block): CatalogLicense
     {
-        return SiteLicense::factory()->create(['site_id' => $site->id, 'block_definition_id' => $this->blocks[$block]->id]);
+        return CatalogLicense::factory()->forSite($site)->ofBlock($this->blocks[$block])->create();
     }
 
     private function placeCatalog(string $block): BlockInstance

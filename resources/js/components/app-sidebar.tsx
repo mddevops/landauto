@@ -123,10 +123,10 @@ export function AppSidebar() {
                   },
               ]
             : []),
-        ...(platform.permissions.includes('manage_site_licenses')
+        ...(platform.permissions.includes('manage_catalog_licenses')
             ? [
                   {
-                      title: 'Лицензии сайтов',
+                      title: 'Лицензии каталога',
                       href: licensesIndex(),
                       icon: KeyRound,
                   },

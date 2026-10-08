@@ -91,7 +91,7 @@ class DefaultFreePlanTest extends TestCase
         $allowed = [
             $this->normalize(app_path('Models/Plan.php')),
             $this->normalize(app_path('Support/DefaultWorkspacePlan.php')),
-            // Catalog access mode value (D-079), not a plan name.
+            // Catalog access mode value (D-121), not a plan name.
             $this->normalize(app_path('Enums/CatalogAccessMode.php')),
         ];
         $offenders = [];

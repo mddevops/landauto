@@ -4,27 +4,27 @@ namespace App\Blocks;
 
 use App\Enums\CatalogAccessMode;
 use App\Models\BlockDefinition;
-use App\Models\BlockVersion;
+use App\Models\CatalogLicense;
 use App\Models\Site;
-use App\Models\SiteLicense;
 use App\Models\Template;
-use App\Models\TemplateVersion;
 use App\Models\Workspace;
 use App\Support\Money;
 use App\Support\WorkspaceEntitlements;
+use Illuminate\Database\Eloquent\Builder;
 
 /**
- * Backend check whether a Site may use a catalog Block (D-079): when adding a Block Instance,
- * installing a Template and publishing, never only when rendering a card. A Site license (for the
- * Block, or for a Template that includes it) grants access for that Site only; a typed entitlement
- * grants access only in `entitlement` mode. No plan-name checks.
+ * Backend check whether a Site may newly acquire a catalog Block (D-121): when adding a Block
+ * Instance, installing a Template and publishing a version the Site holds no grant for, never only
+ * when rendering a card. A license for the Site itself or for its Workspace grants access; a typed
+ * entitlement grants access in `entitlement` mode. No plan-name checks. Versions the Site already
+ * installed lawfully stay usable through {@see BlockVersionGrants} (D-122).
  */
 final class BlockCatalogAccess
 {
     public function __construct(private WorkspaceEntitlements $entitlements) {}
 
     /**
-     * Russian reason why the Site may not use the Block; null when it may.
+     * Russian reason why the Site may not newly use the Block; null when it may.
      *
      * @param  array<int, true>|null  $licensed  preloaded {@see licensedBlockIds()} for batches
      */
@@ -40,72 +40,49 @@ final class BlockCatalogAccess
 
         $licensed ??= $this->licensedBlockIds($site);
 
-        return isset($licensed[$block->id]) ? null : $this->workspaceDenial($site->workspace, $block);
+        return isset($licensed[$block->id]) ? null : $this->modeDenial($site->workspace, $block);
     }
 
     /**
-     * Access of a Workspace without any Site license, e.g. for a Site that does not exist yet.
+     * Access of a Workspace through its Workspace licenses only, e.g. for a Site that does not exist yet.
+     *
+     * @param  array<int, true>|null  $licensed  preloaded {@see workspaceLicensedBlockIds()}
      */
-    public function workspaceDenial(Workspace $workspace, BlockDefinition $block): ?string
+    public function workspaceDenial(Workspace $workspace, BlockDefinition $block, ?array $licensed = null): ?string
     {
         if ($block->isWorkspacePrivate()) {
             return 'Этот блок недоступен.';
         }
 
-        return match ($block->access_mode) {
-            CatalogAccessMode::Free => null,
-            CatalogAccessMode::Entitlement => $block->access_entitlement !== null && $this->entitlements->allows($workspace, $block->access_entitlement)
-                ? null
-                : "Блок доступен на тарифе с опцией «{$block->access_entitlement?->label()}».",
-            CatalogAccessMode::Paid => 'Платный блок: нужна лицензия для этого сайта. Покупка в Landflow пока недоступна.',
-            CatalogAccessMode::AdminGrant => 'Блок выдаёт администратор Landflow для конкретного сайта.',
-        };
+        if ($block->access_mode === CatalogAccessMode::Free) {
+            return null;
+        }
+
+        $licensed ??= $this->workspaceLicensedBlockIds($workspace);
+
+        return isset($licensed[$block->id]) ? null : $this->modeDenial($workspace, $block);
     }
 
     /**
-     * Block Definitions licensed to the Site directly or through a licensed Template (D-079).
+     * Block Definitions licensed to the Site directly or through its Workspace (D-121).
      *
      * @return array<int, true>
      */
     public function licensedBlockIds(Site $site): array
     {
-        $licenses = $site->licenses()->get(['block_definition_id', 'template_id']);
-        $ids = array_values(array_filter($licenses->map(fn (SiteLicense $license): ?int => $license->block_definition_id)->all()));
-        $templateIds = array_values(array_filter($licenses->map(fn (SiteLicense $license): ?int => $license->template_id)->all()));
-
-        if ($templateIds !== []) {
-            $ids = [...$ids, ...self::templateBlockIds($templateIds)];
-        }
-
-        return array_fill_keys($ids, true);
+        return self::blockIds(CatalogLicense::query()->effectiveFor($site));
     }
 
     /**
-     * Block Definitions included in any published version of the Templates.
-     *
-     * @param  list<int>  $templateIds
-     * @return list<int>
+     * @return array<int, true>
      */
-    public static function templateBlockIds(array $templateIds): array
+    public function workspaceLicensedBlockIds(Workspace $workspace): array
     {
-        $versionIds = TemplateVersion::query()
-            ->whereIn('template_id', $templateIds)
-            ->whereNotNull('content_json')
-            ->get(['id', 'template_id', 'content_json'])
-            ->flatMap(fn (TemplateVersion $version): array => TemplateVersion::blockVersionIds($version->content_json))
-            ->unique()
-            ->values()
-            ->all();
-
-        return $versionIds === [] ? [] : array_values(BlockVersion::query()
-            ->whereIn('id', $versionIds)
-            ->distinct()
-            ->pluck('block_definition_id')
-            ->all());
+        return self::blockIds(CatalogLicense::query()->where('workspace_id', $workspace->id));
     }
 
     /**
-     * Public access card of a catalog item.
+     * Public access card of a catalog item: current acquisition rules, not existing-use rights.
      *
      * @return array{mode: string, restricted: bool, label: string, detail: string|null}
      */
@@ -117,11 +94,43 @@ final class BlockCatalogAccess
             'label' => $item->access_mode->label(),
             'detail' => match ($item->access_mode) {
                 CatalogAccessMode::Entitlement => "Опция тарифа: {$item->access_entitlement?->label()}",
-                CatalogAccessMode::Paid => $item->price_minor !== null
-                    ? Money::format($item->price_minor, $item->price_currency ?? Money::DEFAULT_CURRENCY).' за сайт'
-                    : null,
+                CatalogAccessMode::Paid => self::priceDetail($item),
                 CatalogAccessMode::Free, CatalogAccessMode::AdminGrant => null,
             },
         ];
+    }
+
+    private function modeDenial(Workspace $workspace, BlockDefinition $block): ?string
+    {
+        return match ($block->access_mode) {
+            CatalogAccessMode::Free => null,
+            CatalogAccessMode::Entitlement => $block->access_entitlement !== null && $this->entitlements->allows($workspace, $block->access_entitlement)
+                ? null
+                : "Блок доступен на тарифе с опцией «{$block->access_entitlement?->label()}».",
+            CatalogAccessMode::Paid => 'Платный блок: нужна лицензия на этот сайт или на всё пространство. Покупка в Landflow пока недоступна.',
+            CatalogAccessMode::AdminGrant => 'Блок выдаёт администратор Landflow для сайта или всего пространства.',
+        };
+    }
+
+    private static function priceDetail(BlockDefinition|Template $item): ?string
+    {
+        $currency = $item->price_currency ?? Money::DEFAULT_CURRENCY;
+        $options = array_filter([
+            $item->site_price_minor !== null ? 'Лицензия на 1 сайт — '.Money::format($item->site_price_minor, $currency) : null,
+            $item->workspace_price_minor !== null ? 'Лицензия на всё пространство — '.Money::format($item->workspace_price_minor, $currency) : null,
+        ]);
+
+        return $options === [] ? null : implode(' · ', $options);
+    }
+
+    /**
+     * @param  Builder<CatalogLicense>  $licenses
+     * @return array<int, true>
+     */
+    private static function blockIds(Builder $licenses): array
+    {
+        $ids = $licenses->whereNotNull('block_definition_id')->pluck('block_definition_id')->all();
+
+        return array_fill_keys(array_map(intval(...), $ids), true);
     }
 }

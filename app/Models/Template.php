@@ -34,7 +34,8 @@ use LogicException;
  * @property list<string>|null $site_types
  * @property CatalogAccessMode $access_mode
  * @property Entitlement|null $access_entitlement
- * @property int|null $price_minor
+ * @property int|null $site_price_minor
+ * @property int|null $workspace_price_minor
  * @property string|null $price_currency
  * @property bool $is_official
  * @property int|null $created_by_user_id
@@ -71,7 +72,8 @@ class Template extends Model
             'site_types' => 'array',
             'access_mode' => CatalogAccessMode::class,
             'access_entitlement' => Entitlement::class,
-            'price_minor' => 'integer',
+            'site_price_minor' => 'integer',
+            'workspace_price_minor' => 'integer',
         ];
     }
 
@@ -85,7 +87,7 @@ class Template extends Model
                 throw new LogicException('Template ownership must match its owner scope exactly.');
             }
 
-            if (! CatalogAccessMode::fieldsMatch($template->getAttribute('access_mode'), $template->getAttribute('access_entitlement'), $template->price_minor, $template->price_currency)) {
+            if (! CatalogAccessMode::fieldsMatch($template->getAttribute('access_mode'), $template->getAttribute('access_entitlement'), $template->site_price_minor, $template->workspace_price_minor, $template->price_currency)) {
                 throw new LogicException('Template access fields must match its access mode exactly.');
             }
         });
@@ -192,11 +194,11 @@ class Template extends Model
     }
 
     /**
-     * @return HasMany<SiteLicense, $this>
+     * @return HasMany<CatalogLicense, $this>
      */
-    public function siteLicenses(): HasMany
+    public function catalogLicenses(): HasMany
     {
-        return $this->hasMany(SiteLicense::class);
+        return $this->hasMany(CatalogLicense::class);
     }
 
     /**

@@ -166,7 +166,7 @@ class E2eSeeder extends Seeder
         $sandboxForm = Form::factory()->for($sandboxSite)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($sandboxSite)->create(['name' => 'Обратный звонок'])->form()->associate($sandboxForm)->save();
 
-        // Customer catalog (D-079): a Developer Block that only a Super Admin grants per Site, a
+        // Customer catalog (D-121): a Developer Block that only a Super Admin grants per Site, a
         // customer Site on `license-e2e` and a dedicated Super Admin with their own login throttle.
         $catalogAuthor = $this->createUser('Артём Каталожный', 'catalog-author@landflow.test');
         $this->createWorkspace($catalogAuthor, 'Workspace Артёма');
@@ -174,6 +174,10 @@ class E2eSeeder extends Seeder
         $licensee = $this->createUser('Лиана Лицензиатова', 'licensee@landflow.test');
         $licenseSite = app(CreateSite::class)->create($this->createWorkspace($licensee, 'Автосалон Лицензия', plan: $plan), 'Сайт по лицензии', SiteType::MultiPage);
         $licenseSite->forceFill(['subdomain' => 'license-e2e'])->save();
+        // D-121: a second Site of the same Workspace and a separate Workspace, for Site vs Workspace scope.
+        app(CreateSite::class)->create($licenseSite->workspace, 'Второй сайт по лицензии', SiteType::MultiPage)->forceFill(['subdomain' => 'license-two-e2e'])->save();
+        $otherLicensee = $this->createUser('Олег Сторонний', 'licensee-other@landflow.test');
+        app(CreateSite::class)->create($this->createWorkspace($otherLicensee, 'Автосалон Сторонний', plan: $plan), 'Сайт другого пространства', SiteType::MultiPage)->forceFill(['subdomain' => 'license-other-e2e'])->save();
         $licenseAdmin = $this->createUser('Ольга Лицензиарова', 'licenses-admin@landflow.test');
         $this->createWorkspace($licenseAdmin, 'Workspace Ольги');
         PlatformRoleAssignment::query()->create(['user_id' => $licenseAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);

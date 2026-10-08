@@ -35,7 +35,7 @@ export type PublishedBlockVersion = {
     published_at: string | null;
 };
 
-/** Public access card of a catalog item (D-079); mode values come from the backend enum. */
+/** Public access card of a catalog item (D-121); mode values come from the backend enum. */
 export type CatalogAccessCard = {
     mode: string;
     restricted: boolean;
@@ -43,11 +43,12 @@ export type CatalogAccessCard = {
     detail: string | null;
 };
 
-/** Catalog access settings of a Block; the price is a human decimal string. */
+/** Catalog access settings of a Block or Template; prices are human decimal strings, empty when not offered. */
 export type BlockAccessSettings = {
     mode: string;
     entitlement: string | null;
-    price: string;
+    site_price: string;
+    workspace_price: string;
 };
 
 export type BlockDraft = {
