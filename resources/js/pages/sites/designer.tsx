@@ -227,7 +227,7 @@ export default function Designer({
         <>
             <Head title={`Дизайнер — ${site.name}`} />
             <div className="flex min-h-svh flex-col bg-muted/40 lg:h-svh">
-                <header className="flex min-w-0 items-center gap-3 border-b bg-background px-3 py-2 sm:px-4">
+                <header className="flex min-w-0 items-center gap-2 border-b bg-background px-3 py-2 sm:gap-3 sm:px-4">
                     <Button asChild variant="ghost" size="icon">
                         <Link href={dashboard()} aria-label="Назад к сайтам">
                             <ArrowLeft aria-hidden="true" />
@@ -252,9 +252,16 @@ export default function Designer({
                     {can.preview &&
                         (autosave.status === 'pending' ||
                         autosave.status === 'saving' ? (
-                            <Button variant="outline" size="sm" disabled>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                aria-label="Предпросмотр"
+                            >
                                 <Eye aria-hidden="true" />
-                                Предпросмотр
+                                <span className="hidden sm:inline">
+                                    Предпросмотр
+                                </span>
                             </Button>
                         ) : (
                             <Button asChild variant="outline" size="sm">
@@ -264,9 +271,12 @@ export default function Designer({
                                     })}
                                     target="_blank"
                                     rel="noopener"
+                                    aria-label="Предпросмотр"
                                 >
                                     <Eye aria-hidden="true" />
-                                    Предпросмотр
+                                    <span className="hidden sm:inline">
+                                        Предпросмотр
+                                    </span>
                                 </a>
                             </Button>
                         ))}

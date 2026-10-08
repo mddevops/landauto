@@ -323,11 +323,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('/', [PlatformBlockController::class, 'index'])->name('index');
             Route::get('create', [PlatformBlockController::class, 'create'])->name('create');
-            Route::post('/', [PlatformBlockController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::post('/', [PlatformBlockController::class, 'store'])->middleware('throttle:block-create')->name('store');
             Route::get('{block}', [PlatformBlockController::class, 'show'])->whereUlid('block')->name('show');
             Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
-            Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:120,1')->name('draft');
-            Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
+            Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
+            Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
             Route::put('{block}/access', [PlatformBlockController::class, 'access'])->whereUlid('block')->name('access');
         });
 
@@ -338,7 +338,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('/', [PlatformTemplateController::class, 'index'])->name('index');
             Route::get('create', [PlatformTemplateController::class, 'create'])->name('create');
-            Route::post('/', [PlatformTemplateController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::post('/', [PlatformTemplateController::class, 'store'])->middleware('throttle:template-create')->name('store');
         });
 
     // Catalog licenses (D-121): Super Admin grants Site- or Workspace-scoped licenses and revokes them; purchases are P10-005.
@@ -364,11 +364,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->group(function () {
                     Route::get('/', [DeveloperBlockController::class, 'index'])->name('index');
                     Route::get('create', [DeveloperBlockController::class, 'create'])->name('create');
-                    Route::post('/', [DeveloperBlockController::class, 'store'])->middleware('throttle:30,1')->name('store');
+                    Route::post('/', [DeveloperBlockController::class, 'store'])->middleware('throttle:block-create')->name('store');
                     Route::get('{block}', [DeveloperBlockController::class, 'show'])->whereUlid('block')->name('show');
                     Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
-                    Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:120,1')->name('draft');
-                    Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:30,1')->name('publish');
+                    Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
+                    Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
                     Route::put('{block}/access', [DeveloperBlockController::class, 'access'])->whereUlid('block')->name('access');
                 });
 
@@ -378,7 +378,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                 ->group(function () {
                     Route::get('/', [DeveloperTemplateController::class, 'index'])->name('index');
                     Route::get('create', [DeveloperTemplateController::class, 'create'])->name('create');
-                    Route::post('/', [DeveloperTemplateController::class, 'store'])->middleware('throttle:30,1')->name('store');
+                    Route::post('/', [DeveloperTemplateController::class, 'store'])->middleware('throttle:template-create')->name('store');
                 });
         });
 
@@ -390,7 +390,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [TemplateController::class, 'show'])->name('show');
             Route::patch('/', [TemplateController::class, 'update'])->name('update');
             Route::put('access', [TemplateController::class, 'access'])->name('access');
-            Route::post('publish', [TemplateController::class, 'publish'])->middleware('throttle:30,1')->name('publish');
+            Route::post('publish', [TemplateController::class, 'publish'])->middleware('throttle:template-publish')->name('publish');
             Route::get('designer', [TemplateDesignerController::class, 'designer'])->name('designer');
             Route::get('preview', [TemplateDesignerController::class, 'preview'])->name('preview');
             Route::get('preview/frame', [TemplateDesignerController::class, 'frame'])->name('preview.frame');

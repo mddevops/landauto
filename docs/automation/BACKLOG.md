@@ -3687,6 +3687,7 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 - Remaining limitations (no code change): Template Drafts cannot reference images, vehicles or popups; official quiz / chat Templates reach production only when their seeders run.
 - Gates: `composer quality` (PHPUnit 1092/1092, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (89/89) passed on 2026-10-07.
 - Final owner-decision corrective pass 2026-10-08 (D-079 → D-121, D-122, P9-018 DEFERRED): `composer quality` (PHPUnit 1105/1105, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (90/90) passed on 2026-10-08; MySQL `landauto` migrated (six Phase 9 migrations, existing Sites / Workspaces / Block Definitions / Versions intact).
+- PR #6 CI corrective pass 2026-10-08: Creator Studio routes use named limiters keyed by User + Block / Template (`block-create`, `block-draft`, `block-publish`, `template-create`, `template-publish`) instead of the shared per-User numeric throttle, so Draft autosaves no longer exhaust publishing (`CreatorStudioRateLimitTest`); the Designer header Preview is icon-only below `sm` (no mobile overflow). `composer quality` (PHPUnit 1110/1110, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (90/90) passed.
 
 ---
 
