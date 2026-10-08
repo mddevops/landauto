@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Settings;
 
 use App\Actions\Accounts\DeleteUserAccount;
+use App\Exceptions\DeveloperProfileBlocksDeletionException;
 use App\Exceptions\LastWorkspaceOwnerException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
@@ -75,6 +76,8 @@ class ProfileController extends Controller
             return back()->withErrors([
                 'account' => __('Transfer ownership or remove the other workspace members before deleting your account.'),
             ]);
+        } catch (DeveloperProfileBlocksDeletionException $exception) {
+            return back()->withErrors(['account' => $exception->getMessage()]);
         }
 
         $request->session()->invalidate();

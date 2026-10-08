@@ -119,6 +119,10 @@ return [
         'login' => 'login',
     ],
 
+    // Login attempts per minute: per email + IP, and the IP-wide backstop across all emails.
+    'login_identity_per_minute' => max(1, (int) env('LOGIN_IDENTITY_PER_MINUTE', 5)),
+    'login_ip_per_minute' => max(1, (int) env('LOGIN_IP_PER_MINUTE', 20)),
+
     /*
     |--------------------------------------------------------------------------
     | Register View Routes

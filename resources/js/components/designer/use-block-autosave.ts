@@ -2,7 +2,6 @@ import type { FormDataConvertible } from '@inertiajs/core';
 import { router } from '@inertiajs/react';
 import { useEffect, useRef, useState } from 'react';
 import type { BlockState } from '@/blocks/state';
-import { state as stateUrl } from '@/routes/sites/blocks';
 
 export type AutosaveStatus = 'idle' | 'pending' | 'saving' | 'saved' | 'error';
 
@@ -12,7 +11,7 @@ const DELAY_MS = 700;
  * Debounced draft autosave of Block state. One request at a time; edits made while a request
  * is in flight are saved afterwards. Saving only touches draft state, never publishing.
  */
-export function useBlockAutosave(siteId: string) {
+export function useBlockAutosave(stateUrl: (blockId: string) => string) {
     const [drafts, setDrafts] = useState<Record<string, BlockState>>({});
     const [status, setStatus] = useState<AutosaveStatus>('idle');
     const latest = useRef<Record<string, BlockState>>({});
@@ -75,7 +74,7 @@ export function useBlockAutosave(siteId: string) {
         setStatus('saving');
 
         router.patch(
-            stateUrl.url({ site: siteId, block: blockId }),
+            stateUrl(blockId),
             { state: draft as FormDataConvertible },
             {
                 async: true,

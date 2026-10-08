@@ -2,7 +2,10 @@ import { Form, Link, useForm } from '@inertiajs/react';
 import { FileText, House, Pencil, Plus, Search, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
-import type { DesignerPage, DesignerSite } from '@/components/designer/types';
+import type {
+    DesignerPage,
+    DesignerPageRoutes,
+} from '@/components/designer/types';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -17,15 +20,14 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import { designer } from '@/routes/sites';
-import { destroy, store, update } from '@/routes/sites/pages';
-import { update as updateSeo } from '@/routes/sites/pages/seo';
+import type { RouteDefinition, RouteFormDefinition } from '@/wayfinder';
 
 type PagesPanelProps = {
-    site: DesignerSite;
+    routes: DesignerPageRoutes;
     pages: DesignerPage[];
     currentPageId: string;
     canEdit: boolean;
+    canAddPages: boolean;
     canEditSeo: boolean;
     canEditSeoIndexing: boolean;
 };
@@ -38,10 +40,11 @@ type DialogState =
     | null;
 
 export function PagesPanel({
-    site,
+    routes,
     pages,
     currentPageId,
     canEdit,
+    canAddPages,
     canEditSeo,
     canEditSeoIndexing,
 }: PagesPanelProps) {
@@ -57,9 +60,7 @@ export function PagesPanel({
                         className="flex items-center gap-1"
                     >
                         <Link
-                            href={designer(site.public_id, {
-                                query: { page: page.public_id },
-                            })}
+                            href={routes.href(page.public_id)}
                             aria-current={
                                 page.public_id === currentPageId
                                     ? 'page'
@@ -84,7 +85,7 @@ export function PagesPanel({
                             )}
                             <span className="truncate">{page.title}</span>
                         </Link>
-                        {canEditSeo && (
+                        {canEditSeo && routes.seo && (
                             <Button
                                 type="button"
                                 variant="ghost"
@@ -110,7 +111,7 @@ export function PagesPanel({
                                 >
                                     <Pencil aria-hidden="true" />
                                 </Button>
-                                {!page.is_home && (
+                                {canAddPages && !page.is_home && (
                                     <Button
                                         type="button"
                                         variant="ghost"
@@ -130,7 +131,7 @@ export function PagesPanel({
                 ))}
             </ul>
 
-            {canEdit && (
+            {canAddPages && (
                 <Button
                     type="button"
                     variant="outline"
@@ -149,10 +150,7 @@ export function PagesPanel({
                 <DialogContent>
                     {dialog?.mode === 'delete' ? (
                         <Form
-                            {...destroy.form({
-                                site: site.public_id,
-                                page: dialog.page.public_id,
-                            })}
+                            {...routes.destroy(dialog.page.public_id)}
                             onSuccess={close}
                             className="flex flex-col gap-4"
                         >
@@ -186,10 +184,10 @@ export function PagesPanel({
                                 </>
                             )}
                         </Form>
-                    ) : dialog?.mode === 'seo' ? (
+                    ) : dialog?.mode === 'seo' && routes.seo ? (
                         <SeoForm
                             key={dialog.page.public_id}
-                            site={site}
+                            action={routes.seo(dialog.page.public_id)}
                             page={dialog.page}
                             canEditIndexing={canEditSeoIndexing}
                             onDone={close}
@@ -201,7 +199,11 @@ export function PagesPanel({
                                     ? dialog.page.public_id
                                     : 'new'
                             }
-                            site={site}
+                            action={
+                                dialog.mode === 'edit'
+                                    ? routes.update(dialog.page.public_id)
+                                    : routes.store
+                            }
                             page={dialog.mode === 'edit' ? dialog.page : null}
                             onDone={close}
                         />
@@ -213,12 +215,12 @@ export function PagesPanel({
 }
 
 function SeoForm({
-    site,
+    action,
     page,
     canEditIndexing,
     onDone,
 }: {
-    site: DesignerSite;
+    action: RouteDefinition<'patch'>;
     page: DesignerPage;
     canEditIndexing: boolean;
     onDone: () => void;
@@ -239,7 +241,7 @@ function SeoForm({
                       seo_description: data.seo_description,
                   },
         );
-        form.submit(updateSeo({ site: site.public_id, page: page.public_id }), {
+        form.submit(action, {
             preserveScroll: true,
             onSuccess: onDone,
         });
@@ -318,18 +320,14 @@ function SeoForm({
 }
 
 function PageForm({
-    site,
+    action,
     page,
     onDone,
 }: {
-    site: DesignerSite;
+    action: RouteFormDefinition<'post'>;
     page: DesignerPage | null;
     onDone: () => void;
 }) {
-    const action = page
-        ? update.form({ site: site.public_id, page: page.public_id })
-        : store.form(site.public_id);
-
     return (
         <Form {...action} onSuccess={onDone} className="flex flex-col gap-4">
             {({ processing, errors }) => (
@@ -339,7 +337,7 @@ function PageForm({
                             {page ? 'Изменить страницу' : 'Новая страница'}
                         </DialogTitle>
                         <DialogDescription>
-                            Изменения сохраняются в черновике сайта.
+                            Изменения сохраняются в черновике.
                         </DialogDescription>
                     </DialogHeader>
                     <div className="grid gap-2">

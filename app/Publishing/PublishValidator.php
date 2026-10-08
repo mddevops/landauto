@@ -3,9 +3,12 @@
 namespace App\Publishing;
 
 use App\Automotive\VehicleBindings;
+use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockReferenceResolver;
+use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockStateValidator;
+use App\Blocks\BlockVersionGrants;
 use App\Enums\SiteStatus;
 use App\Http\Requests\SavePageRequest;
 use App\Models\BlockInstance;
@@ -45,6 +48,9 @@ final class PublishValidator
 
     public function __construct(
         private BlockStateValidator $states,
+        private BlockSourceChecker $sources,
+        private BlockCatalogAccess $access,
+        private BlockVersionGrants $grants,
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
     ) {}
@@ -68,7 +74,7 @@ final class PublishValidator
 
         $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
         $this->validatePages($pages);
-        $referenced = $this->validateBlocks($pages);
+        $referenced = $this->validateBlocks($site, $pages);
         $this->validateReferences($site);
         $this->validateAssetFiles($site, $referenced['assets']);
         $this->validateVehicles($site, $referenced['vehicles']);
@@ -110,8 +116,10 @@ final class PublishValidator
      * @param  Collection<int, Page>  $pages
      * @return array{assets: array<string, true>, vehicles: array<string, true>}
      */
-    private function validateBlocks(Collection $pages): array
+    private function validateBlocks(Site $site, Collection $pages): array
     {
+        $licensed = $this->access->licensedBlockIds($site);
+        $granted = $this->grants->grantedVersionIds($site);
         $acceptAll = new class implements BlockReferenceResolver
         {
             public function existingAssets(array $ids): array
@@ -145,8 +153,26 @@ final class PublishValidator
             foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) as $block) {
                 $version = $block->version;
 
-                if (! $version->definition->is_official) {
+                if ($version->definition->isWorkspacePrivate()) {
                     $this->error('block_version_unavailable', 'Блок недоступен для публикации.', page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
+                // A lawfully installed exact version stays publishable (D-122); anything else must pass
+                // today's catalog access. Publishing itself never creates a grant.
+                $denial = isset($granted[$version->id]) ? null : $this->access->denial($site, $version->definition, $licensed);
+
+                if ($denial !== null) {
+                    $this->error('block_access_denied', "«{$version->definition->name}»: {$denial}", page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
+                // Studio code passed the checks when it was published; re-checked so a version that
+                // fails today's rules never reaches a new Published Version.
+                if ($this->sources->checkVersion($version) !== []) {
+                    $this->error('block_source_rejected', 'Код блока не проходит автоматические проверки. Обратитесь к автору блока.', page: $page->public_id, block: $block->public_id);
 
                     continue;
                 }

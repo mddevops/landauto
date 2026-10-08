@@ -86,8 +86,8 @@ class FortifyServiceProvider extends ServiceProvider
             $throttleKey = Str::transliterate($email.'|'.$ip);
 
             return [
-                Limit::perMinute(5)->by($throttleKey),
-                Limit::perMinute(20)->by('ip:'.$ip),
+                Limit::perMinute(config()->integer('fortify.login_identity_per_minute'))->by($throttleKey),
+                Limit::perMinute(config()->integer('fortify.login_ip_per_minute'))->by('ip:'.$ip),
             ];
         });
 

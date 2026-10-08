@@ -10,6 +10,7 @@ export type TriggerContextValue = {
     vehicle?: string;
     offer?: string;
     media_set?: string;
+    answers?: string[];
 };
 
 const TriggerContext = createContext<TriggerContextValue>({});

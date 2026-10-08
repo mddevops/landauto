@@ -1,17 +1,35 @@
 import { Form, Head, Link } from '@inertiajs/react';
-import { LayoutTemplate } from 'lucide-react';
+import { FilePlus2, LayoutTemplate, Lock } from 'lucide-react';
+import { useState } from 'react';
 import InputError from '@/components/input-error';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
+import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
 import { create, store } from '@/routes/sites';
+import type { CatalogAccessCard } from '@/types/blocks';
+
+type SiteTypeValue = 'multi_page' | 'landing' | 'quiz' | 'chat_selection';
+
+type SiteTypeOption = {
+    value: SiteTypeValue;
+    label: string;
+    description: string;
+    allowed: boolean;
+    blank_allowed: boolean;
+};
 
 type TemplateOption = {
     public_id: string;
     name: string;
+    site_types: SiteTypeValue[];
+    author: string | null;
+    access: CatalogAccessCard;
+    available: boolean;
+    reason: string | null;
 };
 
 type CreateSiteProps = {
@@ -19,6 +37,7 @@ type CreateSiteProps = {
         public_id: string;
         name: string;
     };
+    siteTypes: SiteTypeOption[];
     templates: TemplateOption[];
     siteLimit: {
         active: number;
@@ -27,12 +46,57 @@ type CreateSiteProps = {
     };
 };
 
+const BLANK = 'blank';
+
+const cardClass =
+    'flex min-w-0 cursor-pointer items-start gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20 has-[:disabled]:cursor-not-allowed has-[:disabled]:opacity-60 has-[:disabled]:hover:bg-card has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring';
+
+function defaultStart(
+    type: SiteTypeOption | undefined,
+    templates: TemplateOption[],
+): string {
+    if (!type) {
+        return '';
+    }
+
+    if (type.blank_allowed) {
+        return BLANK;
+    }
+
+    return (
+        templates.find(
+            (template) =>
+                template.available && template.site_types.includes(type.value),
+        )?.public_id ?? ''
+    );
+}
+
 export default function CreateSite({
     currentWorkspace,
+    siteTypes,
     templates,
     siteLimit,
 }: CreateSiteProps) {
-    const canSubmit = !siteLimit.reached && templates.length > 0;
+    const initialType = siteTypes.find((type) => type.allowed);
+    const [siteType, setSiteType] = useState<SiteTypeValue | undefined>(
+        initialType?.value,
+    );
+    const [start, setStart] = useState(() =>
+        defaultStart(initialType, templates),
+    );
+
+    const selectedType = siteTypes.find((type) => type.value === siteType);
+    const compatible = templates.filter(
+        (template) =>
+            siteType !== undefined && template.site_types.includes(siteType),
+    );
+    const canSubmit =
+        !siteLimit.reached && selectedType?.allowed === true && start !== '';
+
+    const chooseType = (type: SiteTypeOption) => {
+        setSiteType(type.value);
+        setStart(defaultStart(type, templates));
+    };
 
     return (
         <>
@@ -46,8 +110,8 @@ export default function CreateSite({
                         Создание сайта
                     </h1>
                     <p className="text-sm text-muted-foreground">
-                        Выберите шаблон и укажите название. Сайт появится в
-                        текущем рабочем пространстве.
+                        Выберите формат, способ старта и укажите название. Сайт
+                        появится в текущем рабочем пространстве.
                     </p>
                 </header>
 
@@ -69,46 +133,169 @@ export default function CreateSite({
                         <>
                             <InputError message={errors.site} />
 
+                            <fieldset className="space-y-3">
+                                <legend className="mb-3 text-xl font-semibold">
+                                    1. Формат
+                                </legend>
+                                <div className="grid gap-3 sm:grid-cols-2">
+                                    {siteTypes.map((type) => (
+                                        <label
+                                            key={type.value}
+                                            className={cardClass}
+                                        >
+                                            <input
+                                                type="radio"
+                                                name="site_type"
+                                                value={type.value}
+                                                checked={
+                                                    siteType === type.value
+                                                }
+                                                disabled={!type.allowed}
+                                                onChange={() =>
+                                                    chooseType(type)
+                                                }
+                                                className="mt-1 size-4 shrink-0 accent-primary"
+                                                aria-describedby={`site-type-${type.value}-hint`}
+                                            />
+                                            <span className="min-w-0 space-y-1">
+                                                <span className="flex items-center gap-2 font-medium break-words">
+                                                    {type.label}
+                                                    {!type.allowed && (
+                                                        <Lock
+                                                            aria-hidden="true"
+                                                            className="size-4 shrink-0 text-muted-foreground"
+                                                        />
+                                                    )}
+                                                </span>
+                                                <span
+                                                    id={`site-type-${type.value}-hint`}
+                                                    className="block text-sm text-muted-foreground"
+                                                >
+                                                    {type.allowed
+                                                        ? type.description
+                                                        : 'Недоступно на текущем тарифе.'}
+                                                </span>
+                                            </span>
+                                        </label>
+                                    ))}
+                                </div>
+                                <InputError message={errors.site_type} />
+                            </fieldset>
+
                             <fieldset
                                 className="space-y-3"
                                 aria-describedby={
-                                    errors.template
+                                    errors.template || errors.start
                                         ? 'template-error'
                                         : undefined
                                 }
                             >
                                 <legend className="mb-3 text-xl font-semibold">
-                                    1. Шаблон
+                                    2. Старт
                                 </legend>
+                                <input
+                                    type="hidden"
+                                    name="start"
+                                    value={start === BLANK ? BLANK : 'template'}
+                                />
+                                {start !== BLANK && start !== '' && (
+                                    <input
+                                        type="hidden"
+                                        name="template"
+                                        value={start}
+                                    />
+                                )}
 
-                                {templates.length === 0 ? (
-                                    <p className="text-sm text-muted-foreground">
-                                        Сейчас нет доступных шаблонов.
+                                {!selectedType?.blank_allowed &&
+                                compatible.length === 0 ? (
+                                    <p className="rounded-xl border border-dashed p-4 text-sm text-muted-foreground">
+                                        Для этого формата пока нет шаблонов.
+                                        Пустой старт недоступен: квиз и
+                                        чат-подбор создаются только из шаблона.
                                     </p>
                                 ) : (
                                     <div className="grid gap-3 sm:grid-cols-2">
-                                        {templates.map((template, index) => (
+                                        {selectedType?.blank_allowed && (
+                                            <label className={cardClass}>
+                                                <input
+                                                    type="radio"
+                                                    name="start_option"
+                                                    value={BLANK}
+                                                    checked={start === BLANK}
+                                                    onChange={() =>
+                                                        setStart(BLANK)
+                                                    }
+                                                    className="mt-1 size-4 shrink-0 accent-primary"
+                                                />
+                                                <FilePlus2
+                                                    aria-hidden="true"
+                                                    className="mt-0.5 size-5 shrink-0 text-muted-foreground"
+                                                />
+                                                <span className="min-w-0 font-medium">
+                                                    Пустой старт
+                                                </span>
+                                            </label>
+                                        )}
+                                        {compatible.map((template) => (
                                             <label
                                                 key={template.public_id}
-                                                className="flex min-w-0 cursor-pointer items-center gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring"
+                                                className={cardClass}
                                             >
                                                 <input
                                                     type="radio"
-                                                    name="template"
+                                                    name="start_option"
                                                     value={template.public_id}
-                                                    defaultChecked={index === 0}
-                                                    required
-                                                    className="size-4 shrink-0 accent-primary"
+                                                    checked={
+                                                        start ===
+                                                        template.public_id
+                                                    }
+                                                    disabled={
+                                                        !template.available
+                                                    }
+                                                    onChange={() =>
+                                                        setStart(
+                                                            template.public_id,
+                                                        )
+                                                    }
+                                                    className="mt-1 size-4 shrink-0 accent-primary"
                                                     aria-invalid={Boolean(
                                                         errors.template,
                                                     )}
+                                                    aria-describedby={`template-${template.public_id}-hint`}
                                                 />
                                                 <LayoutTemplate
                                                     aria-hidden="true"
-                                                    className="size-5 shrink-0 text-muted-foreground"
+                                                    className="mt-0.5 size-5 shrink-0 text-muted-foreground"
                                                 />
-                                                <span className="min-w-0 font-medium break-words">
-                                                    {template.name}
+                                                <span className="min-w-0 space-y-1">
+                                                    <span className="flex flex-wrap items-center gap-2 font-medium break-words">
+                                                        {template.name}
+                                                        {template.access
+                                                            .restricted && (
+                                                            <Badge variant="outline">
+                                                                {
+                                                                    template
+                                                                        .access
+                                                                        .label
+                                                                }
+                                                            </Badge>
+                                                        )}
+                                                    </span>
+                                                    <span
+                                                        id={`template-${template.public_id}-hint`}
+                                                        className="block text-sm text-muted-foreground"
+                                                    >
+                                                        {[
+                                                            template.author
+                                                                ? `Автор: ${template.author}`
+                                                                : 'Шаблон Landflow',
+                                                            template.access
+                                                                .detail,
+                                                            template.reason,
+                                                        ]
+                                                            .filter(Boolean)
+                                                            .join('. ')}
+                                                    </span>
                                                 </span>
                                             </label>
                                         ))}
@@ -117,13 +304,13 @@ export default function CreateSite({
 
                                 <InputError
                                     id="template-error"
-                                    message={errors.template}
+                                    message={errors.template ?? errors.start}
                                 />
                             </fieldset>
 
                             <fieldset className="space-y-3">
                                 <legend className="mb-3 text-xl font-semibold">
-                                    2. Название
+                                    3. Название
                                 </legend>
                                 <div className="grid max-w-md gap-2">
                                     <Label htmlFor="name">Название сайта</Label>

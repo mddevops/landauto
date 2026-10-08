@@ -125,6 +125,7 @@ final class BlockSchemaValidator
             match ($type) {
                 BlockFieldType::Text => $this->validateText($field, $fieldPath, self::TEXT_MAX_LENGTH),
                 BlockFieldType::Textarea => $this->validateText($field, $fieldPath, self::TEXTAREA_MAX_LENGTH),
+                BlockFieldType::Number => $this->validateNumber($field, $fieldPath),
                 BlockFieldType::Boolean => $this->validateBoolean($field, $fieldPath),
                 BlockFieldType::Select => $this->validateSelect($field, $fieldPath),
                 BlockFieldType::Image, BlockFieldType::Action, BlockFieldType::Vehicle => null,
@@ -260,6 +261,45 @@ final class BlockSchemaValidator
         } elseif (mb_strlen($field['default']) > $maxLength) {
             $this->errors["{$path}.default"] = 'Значение по умолчанию превышает максимальную длину.';
         }
+    }
+
+    /**
+     * `min` / `max` bound the value; `step` is the editor increment.
+     *
+     * @param  array<string, mixed>  $field
+     */
+    private function validateNumber(array $field, string $path): void
+    {
+        foreach (['min', 'max', 'step', 'default'] as $option) {
+            if (array_key_exists($option, $field) && ! self::isNumber($field[$option])) {
+                $this->errors["{$path}.{$option}"] = 'Значение должно быть числом.';
+            }
+        }
+
+        $min = self::isNumber($field['min'] ?? null) ? $field['min'] : null;
+        $max = self::isNumber($field['max'] ?? null) ? $field['max'] : null;
+
+        if ($min !== null && $max !== null && $min > $max) {
+            $this->errors["{$path}.min"] = 'Минимум не может превышать максимум.';
+        }
+
+        if (self::isNumber($field['step'] ?? null) && $field['step'] <= 0) {
+            $this->errors["{$path}.step"] = 'Шаг должен быть больше 0.';
+        }
+
+        $default = $field['default'] ?? null;
+
+        if (self::isNumber($default) && (($min !== null && $default < $min) || ($max !== null && $default > $max))) {
+            $this->errors["{$path}.default"] = 'Значение по умолчанию выходит за допустимые границы.';
+        }
+    }
+
+    /**
+     * @phpstan-assert-if-true int|float $value
+     */
+    public static function isNumber(mixed $value): bool
+    {
+        return is_int($value) || (is_float($value) && is_finite($value));
     }
 
     /**

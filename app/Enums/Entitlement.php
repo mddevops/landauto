@@ -8,12 +8,34 @@ enum Entitlement: string
     case MaxMembers = 'max_members';
     case CustomDomain = 'custom_domain';
     case RemoveBranding = 'remove_branding';
+    case MultiPageSites = 'multi_page_sites';
 
     public function valueType(): EntitlementValueType
     {
         return match ($this) {
             self::MaxSites, self::MaxMembers => EntitlementValueType::Integer,
-            self::CustomDomain, self::RemoveBranding => EntitlementValueType::Boolean,
+            self::CustomDomain, self::RemoveBranding, self::MultiPageSites => EntitlementValueType::Boolean,
         };
+    }
+
+    public function label(): string
+    {
+        return match ($this) {
+            self::MaxSites => 'Количество сайтов',
+            self::MaxMembers => 'Количество участников',
+            self::CustomDomain => 'Собственный домен',
+            self::RemoveBranding => 'Без брендинга Landflow',
+            self::MultiPageSites => 'Многостраничные сайты',
+        };
+    }
+
+    /**
+     * Boolean entitlements a catalog item may require in `entitlement` access mode (D-121).
+     *
+     * @return list<self>
+     */
+    public static function catalogGates(): array
+    {
+        return array_values(array_filter(self::cases(), fn (self $entitlement): bool => $entitlement->valueType() === EntitlementValueType::Boolean));
     }
 }

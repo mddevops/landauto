@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Automotive\VehicleBindings;
+use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -19,7 +20,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -65,6 +66,7 @@ class SiteDesignerController extends Controller
                     'version' => $block->version->version,
                     'is_hidden' => $block->is_hidden,
                     'schema' => $block->version->schema_json,
+                    'sandbox' => $block->version->sandboxSource(),
                     'state' => (object) $block->state_json,
                 ])
                 ->values()
@@ -86,19 +88,11 @@ class SiteDesignerController extends Controller
             'popups' => $popups->forSite($site),
             'referenceIssues' => (object) $references->inspectPage($page, $blocks),
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
-            'library' => BlockDefinition::query()
-                ->where('is_official', true)
-                ->whereHas('versions')
-                ->orderBy('id')
-                ->get(['slug', 'name'])
-                ->map(fn (BlockDefinition $definition): array => [
-                    'slug' => $definition->slug,
-                    'name' => $definition->name,
-                ])
-                ->values()
-                ->all(),
+            'library' => $this->library($site, $access),
             'can' => [
                 'editDesign' => Gate::allows('editDesign', $site),
+                'editStructure' => Gate::allows('editStructure', $site),
+                'addPage' => Gate::allows('addPage', $site),
                 'editContent' => Gate::allows('editContent', $site),
                 'manageAssets' => Gate::allows('manageAssets', $site),
                 'preview' => Gate::allows('preview', $site),
@@ -109,5 +103,38 @@ class SiteDesignerController extends Controller
                 'editSeoIndexing' => Gate::allows('editSeoIndexing', $site),
             ],
         ]);
+    }
+
+    /**
+     * Customer catalog (D-121): official Landflow Blocks first, then Developer Blocks, each with its
+     * access card and whether this Site may add it under current access; installation grants (D-122)
+     * cover existing use only, never new acquisition. Identified by slug only.
+     *
+     * @return list<array{slug: string, name: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: string|null}>
+     */
+    private function library(Site $site, BlockCatalogAccess $access): array
+    {
+        $licensed = $access->licensedBlockIds($site);
+
+        return array_values(BlockDefinition::query()
+            ->inCatalog()
+            ->whereHas('versions')
+            ->with('developerProfile')
+            ->orderBy('id')
+            ->get()
+            ->sortBy(fn (BlockDefinition $definition): int => $definition->isPlatformOwned() ? 0 : 1)
+            ->map(function (BlockDefinition $definition) use ($site, $access, $licensed): array {
+                $reason = $access->denial($site, $definition, $licensed);
+
+                return [
+                    'slug' => $definition->slug,
+                    'name' => $definition->name,
+                    'author' => $definition->developerProfile?->display_name,
+                    'access' => BlockCatalogAccess::card($definition),
+                    'available' => $reason === null,
+                    'reason' => $reason,
+                ];
+            })
+            ->all());
     }
 }

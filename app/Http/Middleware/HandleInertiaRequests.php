@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Developers\DeveloperAccess;
 use App\Models\Site;
 use App\Models\Workspace;
 use App\Support\PlatformAuthorization;
@@ -17,6 +18,7 @@ class HandleInertiaRequests extends Middleware
         private WorkspaceContext $workspaceContext,
         private WorkspaceAuthorization $workspaceAuthorization,
         private PlatformAuthorization $platformAuthorization,
+        private DeveloperAccess $developerAccess,
     ) {}
 
     /**
@@ -71,6 +73,9 @@ class HandleInertiaRequests extends Middleware
                 'permissions' => $request->user() === null
                     ? []
                     : $this->platformAuthorization->permissionKeys($request->user()),
+            ],
+            'developer' => fn () => [
+                'active' => $this->developerAccess->activeProfile($request->user()) !== null,
             ],
             'siteContext' => fn () => $this->siteContext($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',

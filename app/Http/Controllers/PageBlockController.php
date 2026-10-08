@@ -3,7 +3,9 @@
 namespace App\Http\Controllers;
 
 use App\Actions\Designer\ArrangePageBlocks;
+use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
+use App\Blocks\BlockVersionGrants;
 use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -22,20 +24,26 @@ class PageBlockController extends Controller
     public function __construct(
         private DesignerScope $scope,
         private ArrangePageBlocks $arrange,
+        private BlockCatalogAccess $access,
+        private BlockVersionGrants $grants,
     ) {}
 
     public function store(Request $request, Site $site, Page $page, BlockStateDefaults $defaults): RedirectResponse
     {
         $this->scope->page($site, $page);
-        Gate::authorize('editDesign', $site);
-        $validated = $request->validate([
-            'block' => ['required', 'string', Rule::exists('block_definitions', 'slug')->where('is_official', true)],
-        ]);
+        Gate::authorize('editStructure', $site);
+        $validated = $request->validate(['block' => ['required', 'string', 'max:'.BlockDefinition::SLUG_MAX]]);
 
-        $definition = BlockDefinition::query()->where('slug', $validated['block'])->sole();
+        // Same set as the Designer library: catalog Blocks that have a published version.
+        $definition = BlockDefinition::query()
+            ->inCatalog()
+            ->whereHas('versions')
+            ->where('slug', $validated['block'])
+            ->first() ?? throw ValidationException::withMessages(['block' => 'Этот блок недоступен.']);
         $version = $definition->versions()->latest('id')->firstOrFail();
+        $this->authorizeCurrentAccess($site, $definition);
 
-        $block = DB::transaction(function () use ($page, $version, $defaults): BlockInstance {
+        $block = DB::transaction(function () use ($site, $page, $version, $defaults): BlockInstance {
             $block = new BlockInstance([
                 'sort_order' => $page->blocks()->count(),
                 'state_json' => $defaults->fromSchema($version->schema_json),
@@ -43,6 +51,7 @@ class PageBlockController extends Controller
             $block->page()->associate($page);
             $block->version()->associate($version);
             $block->save();
+            $this->grants->grant($site, [$version->id]);
 
             return $block;
         });
@@ -79,12 +88,18 @@ class PageBlockController extends Controller
     {
         $this->authorizeStructure($site, $block);
 
-        $copy = DB::transaction(function () use ($block): BlockInstance {
+        // Reusing the exact version this Site already installed lawfully needs no new acquisition (D-122).
+        if (! $this->grants->has($site, $block->version)) {
+            $this->authorizeCurrentAccess($site, $block->version->definition);
+        }
+
+        $copy = DB::transaction(function () use ($site, $block): BlockInstance {
             $copy = new BlockInstance(['state_json' => $block->state_json, 'sort_order' => $block->sort_order]);
             $copy->is_hidden = $block->is_hidden;
             $copy->page()->associate($block->page);
             $copy->version()->associate($block->version);
             $copy->save();
+            $this->grants->grant($site, [$block->block_version_id]);
             $this->arrange->insertAfter($copy, $block);
 
             return $copy;
@@ -112,10 +127,19 @@ class PageBlockController extends Controller
         return $this->backTo($site, $page);
     }
 
+    private function authorizeCurrentAccess(Site $site, BlockDefinition $definition): void
+    {
+        $denial = $this->access->denial($site, $definition);
+
+        if ($denial !== null) {
+            throw ValidationException::withMessages(['block' => $denial]);
+        }
+    }
+
     private function authorizeStructure(Site $site, BlockInstance $block): void
     {
         $this->scope->block($site, $block);
-        Gate::authorize('editDesign', $site);
+        Gate::authorize('editStructure', $site);
     }
 
     private function backTo(Site $site, Page $page, ?BlockInstance $block = null): RedirectResponse

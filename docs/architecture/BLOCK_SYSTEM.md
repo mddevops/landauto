@@ -90,6 +90,30 @@ Created for one Workspace and private by default.
 
 Scope must always be explicit.
 
+Implemented Block Definition ownership (D-093, D-117; P9-003). `block_definitions.owner_scope` (`App\Enums\BlockOwnerScope`) is the only ownership source; `is_official` was removed and every pre-existing definition was backfilled as `platform`:
+
+- `platform`: official Landflow content, owned by the platform (`developer_profile_id` and `workspace_id` empty); the Super Admin creator / editor is audit identity only and needs no Developer Profile;
+- `developer`: owned by exactly one Developer Profile (`developer_profile_id` set, `workspace_id` empty);
+- `workspace_private`: owned by exactly one Workspace (`workspace_id` set, `developer_profile_id` empty). The scope exists in the ownership model, but there is no Workspace-private authoring UI yet.
+
+The model rejects any other combination. Ownership, the slug and `created_by_user_id` never change after creation; `created_by_user_id` / `updated_by_user_id` are audit identity, never ownership. The slug stays globally unique across all scopes because the trusted official runtime uses it as a stable identifier.
+
+Authoring authorization (D-118), centralized in `App\Blocks\BlockAuthoringAuthorization` and enforced by `App\Blocks\BlockAuthoring`:
+
+- `platform` Blocks: «Блоки Landflow» (`/platform/blocks`), platform permission `manage_platform_content` (Super Admin); no Developer Profile needed.
+- `developer` Blocks: «Мои блоки» (`/developer/blocks`), the User's own active Developer Profile plus `create_blocks`; ownership is derived on the server, and another profile's Block returns 404.
+- `workspace_private` Blocks: denied in authoring (future separate Workspace-authorized path).
+
+Authoring covers only name and slug; no delete, review status, schema editing, preview or version publishing exists yet (P9-004 … P9-008). A new definition has no Block Version.
+
+`OfficialBlockCatalog` only bootstraps official content: `OfficialBlockSeeder` creates missing platform definitions and appends missing immutable official versions, but never overwrites the metadata of an existing definition (names edited in «Блоки Landflow» survive reseeding). A catalog slug held by a non-platform Block makes the seeder fail instead of taking it over.
+
+Authored HTML / CSS / JS Blocks (platform and Developer) run only in the ADR-008 sandbox: opaque-origin `srcdoc` iframe with `sandbox="allow-scripts"` (no `allow-same-origin`), Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge (D-080 / D-081, owner-confirmed 2026-10-08). Official renderers stay in the trusted application registry.
+
+Customer catalog access (D-121): each catalog Block / Template has one access mode — `free`, `entitlement` (typed entitlement), `paid` (Site and / or Workspace price, no checkout yet) or `admin_grant`. Restricted items need a `catalog_licenses` row for the Site or for its Workspace (covers current and future Sites of that Workspace; never account-wide). The Designer library card and the Add action follow current access for the current installable version.
+
+Installed version grandfathering (D-122): adding a Block or installing a Template records a Site + Block Version grant after the current access check; a version restore re-creates grants for the versions it brings back. Duplicating a granted version inside the same Site and publishing pass on the grant; without a grant, current access applies. Publishing never creates grants, and revoking a license or restricting a Block never breaks an installed version — only new installs, new versions and other Sites follow current access.
+
 ---
 
 # 5. Block Version
@@ -226,6 +250,8 @@ Initial field types should include:
 - date
 - group
 - repeater
+
+Implemented canonical types (`App\Enums\BlockFieldType`, P9-004): text, textarea, number (`min` / `max` bound the value, `step` is the editor increment), boolean, select, image, action, vehicle, group, repeater. Block Studio's Schema Builder and `schema.json` edit this same JSON.
 
 Automotive types:
 
@@ -1327,6 +1353,8 @@ Before publication validate:
 ---
 
 # 80. Marketplace Review
+
+There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` is reserved for a future Marketplace listing, not approval.
 
 Review should evaluate:
 

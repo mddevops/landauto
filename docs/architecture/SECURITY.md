@@ -602,15 +602,15 @@ They must not access:
 - other Workspace data;
 - authenticated admin tokens.
 
+Catalog licenses (D-121) are authorization data: only the backend resolves them (a Site license or the Site's Workspace license), only Super Admins with `manage_catalog_licenses` create or revoke them, and browser input never selects the Workspace or Site that benefits. Installation grants (`site_block_version_grants`, D-122) are internal provenance with no browser-controlled endpoint; they never move between Sites.
+
 ---
 
 # 37. Arbitrary JavaScript
 
 Unrestricted third-party JavaScript is high risk.
 
-Initial Marketplace should prefer controlled component/runtime APIs.
-
-If custom scripting is later allowed, it must be sandboxed/restricted with explicit review.
+Authored Block code runs only under ADR-008 (owner-confirmed 2026-10-08): opaque-origin iframe with `sandbox="allow-scripts"` and no `allow-same-origin`, Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge with source / origin / type checks. Automated checks replace manual review (D-120). Weakening any of these needs a new ADR.
 
 ---
 

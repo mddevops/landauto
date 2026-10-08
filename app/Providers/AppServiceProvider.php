@@ -142,6 +142,25 @@ class AppServiceProvider extends ServiceProvider
                     return back(303);
                 });
         });
+
+        $this->configureCreatorStudioLimiters();
+    }
+
+    /**
+     * Creator Studio limiters with semantic keys: numeric `throttle:N,1` shares one counter per User
+     * across every such route, so Draft autosaves would exhaust publishing. Block and Template keys
+     * use the route ULID string (bound before model resolution); the User is always the server identity.
+     */
+    private function configureCreatorStudioLimiters(): void
+    {
+        $actor = fn (Request $request): string => (string) ($request->user()?->getAuthIdentifier() ?? $request->ip() ?? 'unknown');
+        $item = fn (Request $request, string $parameter): string => is_string($request->route($parameter)) ? $request->route($parameter) : 'none';
+
+        RateLimiter::for('block-create', fn (Request $request) => Limit::perMinute(30)->by('block-create:'.$actor($request)));
+        RateLimiter::for('block-draft', fn (Request $request) => Limit::perMinute(120)->by('block-draft:'.$actor($request).':'.$item($request, 'block')));
+        RateLimiter::for('block-publish', fn (Request $request) => Limit::perMinute(30)->by('block-publish:'.$actor($request).':'.$item($request, 'block')));
+        RateLimiter::for('template-create', fn (Request $request) => Limit::perMinute(30)->by('template-create:'.$actor($request)));
+        RateLimiter::for('template-publish', fn (Request $request) => Limit::perMinute(30)->by('template-publish:'.$actor($request).':'.$item($request, 'template')));
     }
 
     private function usesE2eIntegrationFakes(): bool

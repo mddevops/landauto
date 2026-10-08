@@ -76,9 +76,9 @@ Phase 7 — Paid Site Features: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06`). P8-001 … P8-010 and review `P8-011` DONE.
 
-Phase 9 — Developer Platform: NOT_STARTED.
+Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/phase9-2026-10-07`; review `P9-012` DONE; P9-018 and P9-010 DEFERRED). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008). Final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed, P9-018 DEFERRED; D-094 stays OPEN as a production-launch blocker only.
 
-Next ready task: `P9-001 — Developer Profile`. Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `P10-001 — Marketplace Listings` (not started; outside the Creator Studio batch). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3325,89 +3325,370 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ## P9-001 — Developer Profile
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P8-011
+
+### Result
+
+- D-093 APPROVED (User-owned creator identity, one per User, not a Workspace, Super Admin-granted) and D-117 APPROVED (platform / developer / workspace_private ownership; controlled Developer access; D-079 stays ADR_REQUIRED).
+- `developer_profiles` (ULID `public_id`, unique immutable `user_id` with restricted delete, `display_name`, unique slug 3–60 `[a-z0-9]` with single inner hyphens, `active` / `suspended`, nullable `bio`; no Workspace / plan / payout fields). Accounts with a profile cannot be self-deleted.
+- Platform permission `manage_developers` (Super Admin only; no `PlatformRole::Developer`). «Разработчики» (`/platform/developers`): grant to an existing verified User found by normalized email, suspend / restore, no hard delete; `developer.profile_*` log events with public IDs.
+- «Панель разработчика» (`/developer`): auth + verified + the current User's own active profile (read fresh per request, 403 otherwise), no Workspace context, read-only profile plus empty «Мои блоки» / «Мои шаблоны» cards; the user menu shows the link only for an active profile. Developer self-edit is deferred.
+- A profile grants no Workspace membership, Site access, Workspace or platform permission; platform roles never create profiles. No Marketplace, billing or entitlement changes.
 
 ---
 
 ## P9-002 — Developer Permissions
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P9-001
+
+### Result
+
+- D-118 APPROVED: Developer Platform access = active Developer Profile (not a permission); creator permissions `create_blocks` / `create_templates` / `submit_marketplace_item` (`DeveloperPermission`); platform and Workspace permissions stay separate; no Developer role.
+- `developer_profile_permissions` (internal, unique profile + permission). Existing profiles backfilled with the defaults; new Super Admin-granted profiles get all three as stored rows.
+- `DeveloperAuthorization` resolves deny-by-default (missing / suspended profile, missing row, unknown key). Suspension keeps the rows and denies them; reactivation restores them; zero permissions is a valid active state.
+- «Разработчики»: permission badges and a «Права» dialog saving the full set atomically (`manage_developers` only; Catalog Managers, customers and the Developer themselves cannot); `developer.permissions_updated` log with public ID, keys and actor.
+- «Панель разработчика» shows the effective capability state per request (no authoring links or routes).
+- Platform permission `manage_platform_content` (Super Admin only) reserved for official platform content; grants no Developer Profile or permission.
+- No Block / Template schema changes, no Marketplace, billing or entitlement changes; D-079 stays ADR_REQUIRED.
 
 ---
 
 ## P9-003 — Block Authoring UI
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P2-003, P9-002
 
+### Result
+
+- D-117 Block ownership implemented: `block_definitions.owner_scope` (`platform` / `developer` / `workspace_private`) with `developer_profile_id` / `workspace_id` (restrict) and audit-only `created_by_user_id` / `updated_by_user_id` (null on delete). The model enforces exact scope ↔ owner combinations; ownership, slug and creator are immutable. `is_official` removed; existing definitions backfilled as `platform`. `OfficialBlockSeeder` stays idempotent: it creates missing platform definitions and appends missing immutable official versions, never overwrites existing definition metadata (a platform rename survives reseeding) and fails loudly on a non-platform slug collision.
+- Central `BlockAuthoringAuthorization` + `BlockAuthoring` service: platform Blocks need `manage_platform_content` (no Developer Profile); Developer Blocks need the own active profile + `create_blocks` and are server-owned; Workspace-private authoring denied. `platform.block_*` / `developer.block_*` logs with public IDs.
+- «Мои блоки» (`/developer/blocks`) and «Блоки Landflow» (`/platform/blocks`): list / create (name + globally unique slug) / editor shell (name editable, slug read-only, ownership, version count, disabled «Схема» / «Предпросмотр» / «Версии»). Another profile's Block or a non-platform Block on the platform surface → 404. No delete, review status, schema, preview or version creation.
+- Developer dashboard «Мои блоки» links to the list with `create_blocks`; platform sidebar «Блоки» for `manage_platform_content`.
+- Customer runtime unchanged: Designer library, adding Blocks, Block Instances, publishing and restore accept only platform-owned definitions with a version; the renderer registry is untouched. D-079, D-080, D-081 stay ADR_REQUIRED.
+- Browser coverage: `block-authoring.spec.ts` — Developer flow (`@responsive`, E2E user `developer@landflow.test` with an active profile + creator permissions, no platform role) and a desktop Super Admin Platform Block flow.
+
 ---
 
-## P9-004 — Schema Editor
+## Phase 9 re-plan (owner instruction 2026-10-07)
 
-**Status:** NOT_STARTED  
-**Dependencies:** P9-003
+«Landflow Creator Studio, Marketplace и форматы сайтов»: one Creator Studio («Блоки», «Шаблоны») for Super Admin (platform-owned) and Developers (own Developer Profile); authored HTML/CSS/JS Blocks in an opaque-origin sandbox (ADR-008, D-080 / D-081 APPROVED); instant publishing after automated checks (D-120, no review queue); Site types (D-119); customer catalog with free / entitlement / paid / admin_grant access and Site-scoped licenses (D-079, superseded 2026-10-08 by D-121 Site / Workspace scopes and D-122 grandfathering). Execution order: P9-013 → P9-004 → P9-005 → P9-008 → P9-006 → P9-009 → P9-014 → P9-007 → P9-015 → P9-016 → P9-017; P9-018 DEFERRED (2026-10-08); P9-010 DEFERRED; P9-011 → P9-012.
 
 ---
 
-## P9-005 — Developer Preview Data
+## P9-013 — Site Types and Creation Flow
 
-**Status:** NOT_STARTED  
-**Dependencies:** P9-003, P3-012
+**Status:** DONE
+**Dependencies:** P9-003 (D-119)
+
+### Result
+
+- `SiteType` enum + `sites.site_type` (immutable, pre-existing rows `multi_page`), `templates.site_types`; typed boolean entitlement `multi_page_sites` (Free has none).
+- `CreateSite(workspace, name, type, ?template)`: blank start only for multi-page / landing, official compatible Template required otherwise, entitlement and `max_sites` checked under the Workspace lock; Russian validation errors (`site_type`, `template`, `site`).
+- `SitePolicy::addPage` (multi-page only; Page create / delete) and `editStructure` (not Quiz / Chat; Block add / move / duplicate / hide / delete); Designer hides those controls; content editing stays.
+- «Создание сайта»: «1. Формат» / «2. Старт» / «3. Название»; multi-page disabled «Недоступно на текущем тарифе.»; Quiz / Chat list only compatible Templates.
+- Template content copy does not exist yet (Templates carry no content until P9-007 / P9-015), so Quiz / Chat Sites start with an empty home Page.
+- Checks: `CreateSiteTest`, `SiteTypeStructureTest`, `DefaultFreePlanTest`, PHPUnit 968 passed, PHPStan, vp check; Playwright `site-formats.spec.ts` (desktop / tablet / mobile) + updated creation specs.
+
+### Acceptance Criteria
+
+- `SiteType` enum (`multi_page`, `landing`, `quiz`, `chat_selection`; Russian labels) and `sites.site_type` (existing Sites backfilled `multi_page`); `templates.site_types` compatibility list (legacy `blank` Template: none).
+- Typed boolean entitlement `multi_page_sites`; Free has none → multi-page creation denied by the backend with a Russian message; no plan-name checks.
+- `CreateSite` takes type + optional Template: blank start only for `multi_page` / `landing`; `quiz` / `chat_selection` require a Template; a Template must be official, published for creation and compatible (server-checked); all types keep the `max_sites` lock / count, Workspace ownership and the home Page.
+- Landing keeps exactly one Page (Page creation rejected); Quiz / Chat structure locked (no Page create, Block add / remove / reorder) in backend and UI.
+- «Создание сайта»: 1. Формат (4 cards, multi-page disabled with explanation when not entitled), 2. Старт («Пустой старт» only where allowed + compatible Templates, empty state otherwise), 3. Название.
+- Tests: entitlement, `max_sites` for each type, blank / template rules, compatibility, structure locks; Playwright: all four variants (Quiz / Chat with a compatible E2E Template), Free multi-page denial, responsive.
+
+---
+
+## P9-004 — Block Studio (Draft Source and Schema Builder)
+
+**Status:** DONE
+**Dependencies:** P9-003, ADR-008
+
+### Result
+
+- «Студия»: developer home `/developer` (cards «Блоки» / «Шаблоны»), sidebar group «Студия» → «Блоки» for `manage_platform_content`; «Мои блоки» removed.
+- `block_definitions.category` (`BlockCategory`, chosen at creation, editable in «Настройки»); `block_drafts` (`BlockStudio`, `BlockDraft`); `PUT …/blocks/{block}/draft` (developer + platform, throttle 120/min) with P9-003 404 / 403 rules, byte limits, `revision` conflict → «Черновик уже изменён…», sources stored verbatim (trim exclusion), never a Block Version.
+- Studio UI: «Код» (file list + monospace editor + size counter), «Конструктор схемы» (add / edit / reorder / delete, nested group / repeater, options, defaults, limits), «Предпросмотр» placeholder until P9-005, «Настройки» (metadata / ownership); debounced autosave + «Сохранить черновик»; «Проверка схемы» panel with paths.
+- Canonical `number` field type (schema + state validators, Properties Editor).
+- Template Builder section «Шаблоны» stayed a placeholder until P9-007 (now DONE).
+- Checks: `BlockStudioDraftTest`, authoring tests (draft 404 / 403 / suspended), validator unit tests, PHPStan, vp check; Playwright `block-authoring.spec.ts` incl. Studio flow (desktop / tablet / mobile).
+
+### Acceptance Criteria
+
+- Creator Studio naming: «Студия» with «Блоки» / «Шаблоны» sections for Developers (`/developer/blocks`) and Super Admins (`/platform/blocks`); "Мои блоки" no longer used as the section title.
+- `block_definitions.category` (`BlockCategory`, Russian labels, e.g. «Меню»), chosen at creation and editable; official Blocks backfilled.
+- `block_drafts` (one per definition): `html`, `css`, `js`, `schema_source`, `preview_data` (P9-005), `revision`, audit editor. Created lazily; every source ≤ 64 KB.
+- Draft save endpoint (manual «Сохранить черновик» and debounced autosave): own Block only (P9-003 404 / 403 rules), optimistic `revision` conflict → Russian error, never creates a Block Version.
+- Studio editor modes «Код» (file list `index.html` / `styles.css` / `script.js` / `schema.json`, monospace editor), «Конструктор схемы» (add / edit / reorder / delete fields of the canonical schema: text, textarea, number, boolean, select, image, action, group, repeater; key / label / help / required / default / limits / options / nested fields), «Предпросмотр» (P9-005). Schema Builder and `schema.json` edit the same canonical JSON.
+- Canonical schema extended with `number` (`min`, `max`, `step`, `default`, `required`) across validator, defaults, state validator and Properties Editor.
+- Validation panel lists schema errors (Russian, with paths) after every change; Draft saves even when invalid, and reload restores the saved Draft.
+- Tests: authorization (Super Admin platform, own profile, foreign profile 404, suspended / no `create_blocks` deny), size limits, revision conflict, no Block Version from autosave, schema validation incl. repeaters / defaults / limits / number.
+
+---
+
+## P9-005 — Sandboxed Live Preview and Preview Data
+
+**Status:** DONE
+**Dependencies:** P9-004
+
+### Result
+
+- `BlockTemplateParser` (PHP): syntax (unknown construct, stray / unclosed `{{#if}}` / `{{#each}}` / `{{else}}`, unclosed `{{`) and schema paths (groups, image `.url` / `.alt`, repeater only via `{{#each}}`, action only via `data-landflow-action`, vehicle unsupported); Russian messages with line numbers in the Studio «Проверки» panel (`draft.template_errors`).
+- Sandbox: `resources/js/sandbox/{bootstrap,document,preview-data}.ts` + `SandboxFrame` — `srcdoc` iframe `sandbox="allow-scripts"`, CSP meta first (`default-src 'none'`, `connect-src 'none'`, …), JSON-escaped template / props, neutralized `</style` / `</script`, frozen `window.landflow` (`props`, `root`, `action`, `resize`), bridge accepts only `landflow:resize` / `action` (allowlisted keys) / `error` from its own frame with `null` origin; height clamped 40–4000.
+- `block_drafts.preview_data` saved with the Draft (JSON ≤ 64 KB); «Предпросмотр»: debounced live render of unsaved sources, «Компьютер» / «Планшет» / «Телефон», «Ошибки выполнения», action notice, «Данные предпросмотра» editor (schema defaults, nested group / repeater, image placeholders, «Сбросить по схеме»).
+- No JS unit runner exists (no new tooling): escaping, CSP / sandbox attributes and forged bridge messages are covered in Playwright.
+- Checks: `BlockTemplateParserTest`, `BlockStudioDraftTest` (preview round trip / limits, template errors), PHPStan, Pint, vp check; Playwright `block-authoring.spec.ts` (live preview, devices, action bridge, cookie / storage / parent / top navigation / fetch blocked, escaping, forged messages) on desktop / tablet / mobile; fixture `expectConsoleError` for intentionally provoked sandbox errors.
+
+### Acceptance Criteria
+
+- Landflow template renderer (`{{ path }}`, `{{#if}}…{{else}}…{{/if}}`, `{{#each}}…{{/each}}`) with a PHP parser for validation and a TS sandbox renderer; unbalanced / unknown paths reported.
+- Sandbox document builder (ADR-008 §2–§4): opaque-origin iframe (`sandbox="allow-scripts"` only), CSP meta first, escaped props / sources, `window.landflow` API, allowlisted bridge (`resize`, `action`, `error`) verified by source + `null` origin + type.
+- Preview data: generated from schema defaults, editable per field in the Studio (synthetic only, saved in the Draft); images use placeholders.
+- «Предпросмотр» updates live (debounced) from unsaved Draft state; Desktop / Tablet / Mobile widths; runtime errors shown without breaking the Studio.
+- Tests: wrapper escaping and CSP / sandbox attributes, bridge rejects foreign source / origin / type, template parser; Playwright: live preview updates, script cannot read parent cookies / navigate top.
+
+---
+
+## P9-008 — Automated Block Checks (replaces Review Workflow)
+
+**Status:** DONE
+**Dependencies:** P9-004 (D-120)
+
+### Result
+
+- `App\Blocks\BlockSourceChecker::check(sources)` → `list<{source, line, path, message}>`: UTF-8 and 64 KB per source (the JSON-safety precondition of the sandbox wrapper), empty / invalid / non-canonical schema (schema paths), `BlockTemplateParser` syntax + paths, `data-landflow-action` keys (literal, top-level `action` field), forbidden elements (`script`, `style`, `link`, `meta`, `base`, `iframe`, `frame`, `object`, `embed`, `form`, `portal`), external URLs (`http(s)://`, protocol-relative `//` in URL attributes / `url()`, `@import`) in HTML / CSS; SVG `xmlns` URIs exempt; ordered by file then line.
+- `BlockStudio::schemaErrors` / `templateErrors` replaced; Studio prop `draft.checks`; panel «Проверки перед публикацией» («Все проверки пройдены.» / «Найдено проблем: N…», grouped by file with line or schema path). P9-006 runs the same checker before publishing.
+- No approval state, queue or reviewer role exists in code (D-120).
+- Checks: `BlockSourceCheckerTest` (every rule, 31 cases), `BlockStudioDraftTest`, PHPStan, Pint, vp check; Playwright `block-authoring.spec.ts` (forbidden tag + external URL with lines) on desktop / tablet / mobile.
+
+### Acceptance Criteria
+
+- `BlockSourceChecker` (ADR-008 §7): size limits, canonical schema validity, template syntax and schema paths, action keys, forbidden HTML elements, external URLs / `@import` in HTML / CSS; Russian messages with source + location.
+- Studio shows check results; no manual approval state, queue or reviewer role exists.
+- Tests for every rule.
 
 ---
 
 ## P9-006 — Block Version Publishing
 
-**Status:** NOT_STARTED  
-**Dependencies:** P9-004
+**Status:** DONE
+**Dependencies:** P9-005, P9-008
+
+### Result
+
+- Migration `2026_10_15_000001_add_sandboxed_block_versions`: `block_versions.runtime` (`BlockRuntime`, existing = `official`), `html` / `css` / `js` snapshot, `published_by_user_id`; model enforces sources ⇔ `sandboxed`, versions stay immutable.
+- `BlockPublisher` + `POST …/blocks/{block}/publish` (developer + platform, throttle 30/min, P9-003 404 / 403): saved Draft only, `revision` must match, `BlockSourceChecker` must pass, unchanged content refused («Изменений с версии … нет.»), never over an official renderer (ADR-008 §8); semantic version 1.0.0 → patch (sources) / minor (fields added) / major (field removed or retyped); logs `{platform|developer}.block_published`.
+- Sandboxed versions became placeable in P9-009 (platform-owned only).
+- Studio: «Опубликовать» (enabled only for a saved Draft without check issues) with hint and «Версия не опубликована» alert; tab «Версии» (version, «Код студии» / «Встроенный», date).
+- Checks: `BlockPublishingTest` (7), `DeveloperPermissionsTest` route inventory, PHPStan, Pint, vp check; Playwright `block-authoring.spec.ts` split into code / schema and preview / publish tests (desktop / tablet / mobile).
+
+### Acceptance Criteria
+
+- «Опубликовать» (author only) runs P9-008 checks and creates the next immutable Block Version (`runtime = sandboxed`, source + schema snapshot, semantic version auto-incremented); failures publish nothing.
+- Existing versions and Block Instances never change; autosave never publishes; publishing is logged (`{platform|developer}.block_published`).
+- Studio «Версии» lists published versions.
+- Tests: immutability of earlier versions and instances, failed checks, foreign author denied.
 
 ---
 
-## P9-007 — Template Authoring
+## P9-009 — Sandboxed Block Runtime in Designer and Published Sites
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P9-006
 
+### Result
+
+- `BlockVersion::sandboxSource()` (`name`, `html`, `css`, `js`, `fields`) goes to Designer / draft preview props and, only for sandboxed blocks, into the Published Version manifest (`blocks[].sandbox`) and page payload; official-only manifests and hashes are unchanged.
+- Designer library / placement: platform-owned Blocks with any published version (latest wins); `BlockInstance` still refuses non-platform definitions (Developer Blocks via P9-014).
+- `SandboxedBlock` renders through the ADR-008 `SandboxFrame` in the Designer canvas, draft preview and published Site; props = Instance state limited to the published schema (`instanceProps`), images `{url, alt}`; `landflow:action` → that Instance's top-level `action` field → `actionPopupId` / `actionHref` (Popup, anchor, page, `tel:` / `mailto:`, http in a new tab).
+- `SandboxFrame` is SSR-safe: the stored publish-time HTML holds only an empty `sandbox="allow-scripts"` frame; `srcdoc` is built after hydration. Published Sites allow images only from the host origin (public cookie-free asset URLs); Designer / draft preview show the placeholder because draft assets need a session the opaque origin never has.
+- `PublishValidator` re-checks sandboxed sources (`BlockSourceChecker::checkVersion`, code `block_source_rejected`) besides the generic state / required / reference validation.
+- Checks: `SandboxedBlockRuntimeTest` (5), `NodePageRendererTest` (real SSR bundle), `E2eSeederTest`, block / publishing suites, PHPStan, Pint, vp check; Playwright `sandboxed-blocks.spec.ts` (Designer → preview Popup → publish → published render, host image, Popup) plus block-authoring / designer / publishing specs.
+
+### Acceptance Criteria
+
+- Designer canvas and published Site render `runtime = sandboxed` Block Versions only through the ADR-008 wrapper with validated Instance state; official renderers unchanged; Properties Editor built from the published schema.
+- `landflow:action` resolves only schema `action` fields of that Instance through the existing Action System.
+- Platform-owned published sandboxed Blocks appear in the Designer library; Developer Blocks only through P9-014 access.
+- Tests: snapshot / publish validation for sandboxed Blocks, no sources outside the iframe, Playwright Designer + published render.
+
 ---
 
-## P9-008 — Review Workflow
+## P9-014 — Customer Catalog, Access Modes and Catalog Licenses
 
-**Status:** NOT_STARTED  
-**Dependencies:** P9-006
+**Status:** DONE (corrected 2026-10-08 for D-121 / D-122)
+**Dependencies:** P9-009 (D-121, D-122; originally D-079, now SUPERSEDED)
+
+### Result
+
+- `block_definitions.access_mode` (`free` default, `entitlement`, `paid`, `admin_grant`) + `access_entitlement` (boolean catalog gates only: `custom_domain`, `remove_branding`, `multi_page_sites`) + `site_price_minor` / `workspace_price_minor` / `price_currency` (ADR-004, RUB; `paid` needs at least one price > 0, other modes none); the model refuses inconsistent combinations. Authors change access in Block Studio «Настройки → Доступ в каталоге» («Лицензия на 1 сайт, ₽», «Лицензия на всё пространство, ₽»; `PUT {platform|developer}/blocks/{block}/access`, own Blocks only, logged `*.block_access_updated`).
+- `catalog_licenses` (D-121): ULID `public_id`, exactly one item (Block XOR Template) × exactly one target by scope (`site` → Site, `workspace` → Workspace), source `purchase` | `admin_grant`, `granted_by_user_id`; unique Site+Block / Site+Template / Workspace+Block / Workspace+Template; immutable, revoke = delete. Super Admin page «Лицензии каталога» (`/platform/licenses`, platform permission `manage_catalog_licenses`, Super Admin only): scope «Один сайт» (subdomain or Site ID) / «Всё пространство» (Workspace ID or a subdomain of any of its Sites); table shows item, type, scope, target, Workspace, source and date without internal IDs; grants / revokes are logged (`platform.catalog_license_*`). Purchase creation stays DEFERRED (P10-005); no prices are charged.
+- Effective access for a Site = its Site license OR its Workspace license (no row copies; Sites created later are covered). No account-wide license; a User in two Workspaces never carries a license across.
+- `site_block_version_grants` (D-122): adding a Block, installing a Template and restoring a Site version record Site + Block Version grants in the same transaction (only after the current access check, except restore); duplicating a granted version needs no new check; publishing passes on the grant, otherwise applies current access, and never creates grants. Revoking a license or restricting a Block keeps installed versions editable and publishable; a new Block Version, a new install and other Sites follow current access. Existing Block Instances were backfilled by the migration.
+- Customer catalog = platform + Developer Blocks with a published version (workspace-private stays out). The Designer library shows author, Russian access card and the backend reason based on current access only; an entitlement only unlocks `entitlement` mode, never paid / admin_grant.
+- Checks: `CatalogAccessTest` (11), `CatalogLicenseScopeTest` (6), `BlockVersionGrandfatheringTest` (5), `BlockVersionGrantBackfillTest` (1), updated Block / Designer / developer route-inventory tests, `E2eSeederTest`; Playwright `catalog-licenses.spec.ts` (Site scope: Site A only, revoke keeps the installed Block; Workspace scope: both Sites, a newly created Site, another Workspace denied, revoke keeps the installed Block).
+
+### Acceptance Criteria
+
+- Author sets access mode on publish-ready items: `free`, `entitlement` (typed entitlement key), `paid` (Site and / or Workspace price per ADR-004; no checkout), `admin_grant`.
+- `catalog_licenses` (item × Site or Workspace, source `purchase` | `admin_grant`); Super Admin grants / revokes; purchase creation DEFERRED (P10-005).
+- Customer catalog in the Designer library with Russian access cards; backend checks access when adding a Block Instance and when publishing; a Site license covers one Site, a Workspace license all Sites of that Workspace.
+- Installed Block Versions are grandfathered per Site (D-122).
+- Tests: each access mode, both scopes, invariants, duplicates, grandfathering cases, entitlement vs license separation, no internal IDs in props; Playwright allowed / denied for both scopes.
 
 ---
 
-## P9-009 — Marketplace Runtime Security ADR
+## P9-007 — Template Builder
 
-**Status:** NOT_STARTED  
-**Dependencies:** P9-008
+**Status:** DONE
+**Dependencies:** P9-009, P9-013
+
+### Result
+
+- `templates` gain explicit ownership (`owner_scope` platform | developer + `developer_profile_id`, immutable like D-117) and `created_by` / `updated_by`; Draft content lives in `template_pages` / `template_blocks` (ULID `public_id`, pinned Block Versions, state validated by the Block Schema with Template-scoped references). No hidden workshop Site.
+- Creation: «Шаблоны Landflow» (`/platform/templates`, `manage_platform_content`) and Developer «Студия → Шаблоны» (`/developer/templates`, `create_templates`, own profile only). Editing: shared `studio/templates/{template}` routes; anyone other than the owner (incl. other Developers, Super Admin on Developer Templates, customers) gets 404.
+- The existing Designer is reused (Navigator / PagesPanel / PropertiesPanel / canvas now take route adapters); library = catalog Blocks with a published version; preview page with «Компьютер / Планшет / Телефон» renders the Draft in an iframe frame page.
+- Publishing (`studio/templates/{template}/publish`) runs automated checks only (site types, at least one Block, catalog availability, schema state, `BlockSourceChecker`) and creates an immutable `template_versions` row with a `content_json` snapshot (`1.0.0`, then minor bumps; unchanged Draft is refused). Installation and access followed in P9-015.
+- Checks: `TemplateBuilderTest` (10), developer route inventory, `E2eSeederTest`; Playwright `template-builder.spec.ts` (create → add / edit Block → device preview → publish → «Изменений нет»).
+- Limitations: Template Drafts cannot reference images, vehicles or Popups (customer-owned; chosen on the Site); Template access modes / licenses are P9-015.
+
+### Acceptance Criteria
+
+- Templates get explicit ownership (platform / developer, like D-117), compatible Site types, Draft content (Pages + Block Instances of published Blocks) edited with the existing Designer (no second page builder), Preview and Desktop / Tablet / Mobile.
+- Publishing a Template creates an immutable Template Version after automated validation; no review.
+- Tests: authorization by owner, only published Blocks, immutability.
+
+---
+
+## P9-015 — Template Installation and Access
+
+**Status:** DONE (corrected 2026-10-08 for D-121 / D-122)
+**Dependencies:** P9-007, P9-014
+
+### Result
+
+- Customer catalog = platform and Developer Templates with a published Template Version (`Template::availableForSites`; `StoreSiteRequest` uses the same rule). `CreateSite` copies the latest version (`InstallTemplateVersion`): new Pages / Block Instances with new `public_id`s, pinned Block Versions, hidden flags; `open_page` / `scroll_to` targets remapped to the new IDs, unknown targets → null. No sync afterwards. Legacy versions without content still start with a home Page.
+- Backend checks before the transaction: Template has a version, supports the Site type, multi-page content only for types that allow pages (publisher also refuses multi-page content with such types), access (`TemplateCatalogAccess`) against the Workspace: the Template's mode and every included Block, unless the Workspace holds a license for the Template.
+- Templates get `access_mode` / `access_entitlement` / `site_price_minor` / `workspace_price_minor` / `price_currency` (same rules as Blocks, `CatalogAccessMode::fieldsMatch`), edited in «Публикация шаблона» → «Доступ в каталоге» (owner only, 404 otherwise). `catalog_licenses.template_id` (D-121): a new Site from a `paid` / `admin_grant` Template requires a Workspace Template license, which covers exactly the Block Versions of the Template Version being installed (no union over historical versions). Site-scoped Template licenses are stored for future flows; none is built.
+- Installation grants every copied Block Version to the new Site in the same transaction (D-122); later Template / Block access changes and Template republishes never change the copied Site.
+- UI: «Новый сайт» shows author, access label and the denial reason, unavailable Templates are disabled.
+- Checks: `TemplateInstallationTest` (14), `TemplateBuilderTest`, create-site / catalog / plan tests; Playwright `template-install.spec.ts` (publish → customer creates landing Site → republish → Site unchanged), `catalog-licenses`, `site-formats`, `template-builder`.
+
+### Acceptance Criteria
+
+- Creating a Site from a Template copies the published Template Version into independent Site Pages / Block Instances; later Template changes never sync.
+- Compatibility and access mode (incl. a Workspace Template license covering the installed version's Blocks) checked by the backend; copied versions are grandfathered (D-122).
+- Tests and Playwright: build + publish Template, create Site of a compatible type, independent copy.
+
+---
+
+## P9-016 — Quiz Site Flow
+
+**Status:** DONE
+**Dependencies:** P9-015
+
+### Result
+
+- Official Block `quiz` («Квиз», category «Формы»): title / subtitle, `steps` (question + answer options, nested Repeaters), result title / text and «Кнопка заявки» (action button). Renderer shows one question at a time with «Назад», then the result with the answers and the lead button; the chosen option IDs travel as the `answers` trigger hint.
+- Official Template «Квиз: подбор автомобиля» (`OfficialQuizTemplateSeeder`, platform-owned, `site_types = [quiz]`, three car-selection questions) published through `TemplatePublisher::publishOfficial` (same automated checks, no actor); idempotent. Installable only into `quiz` Sites (type compatibility from P9-015).
+- Templates cannot own Forms / Popups, so installing into a quiz Site creates a Site-owned Form «Заявка с квиза» (Имя, Телефон) in a Popup and points every quiz button without an action at it (`ProvisionLeadPopup`). The customer edits the quiz through its Block Schema fields only (structure stays locked, D-119).
+- Submission: `context.answers` (one option ID per step, in order) is valid only with a quiz `block`; the backend resolves question / answer labels from the Draft Block (preview) or the Published Version manifest (public) into `trusted.answers.items`, otherwise the lead is rejected. Shown on «Заявки», mapping source `answers` («Ответы на вопросы») for integrations (names generalised in P9-017).
+- Checks: `QuizSiteFlowTest` (6), official block inventory tests, `E2eSeederTest`; Playwright `quiz-site.spec.ts` (create quiz Site → preview walk-through with «Назад» → popup lead → answers on «Заявки», desktop / tablet / mobile), `site-formats.spec.ts`.
+- Limitation: production gets the official Template only when `OfficialQuizTemplateSeeder` runs (like `OfficialBlockSeeder`).
+
+### Acceptance Criteria
+
+- Official quiz Template (steps, answer options, result, lead form) installable only for `quiz` Sites; customer edits only schema parameters; final step submits through the existing Submission pipeline.
+
+---
+
+## P9-017 — Chat Selection Site Flow (without operator persistence)
+
+**Status:** DONE
+**Dependencies:** P9-015
+
+### Result
+
+- Official Block `chat-selection` («Чат-подбор», category «Формы»): title, intro, the same `steps` structure as the quiz, optional vehicle question (`show_vehicles`), final message and «Кнопка заявки». Renderer is a conversation log (`role="log"`): scripted site questions, the visitor's choices as replies, then the Site's vehicles (from the render context) with «Пока не определился», final message and the lead button. A visible note says the questions are automatic and a manager answers after the lead; there are no operator replies, nothing is stored outside the Submission.
+- Official Template «Чат: подбор автомобиля» (`OfficialChatTemplateSeeder`, `site_types = [chat_selection]`); quiz and chat seeders share `OfficialFormatTemplateSeeder`. Installing into a chat Site provisions the Site-owned Form «Заявка из чата» in a Popup (`ProvisionLeadPopup`, shared with the quiz).
+- Submission: answers from both Blocks resolve into `trusted.answers.items` (`OfficialBlockCatalog::ANSWER_SLUGS`); the chosen vehicle goes through the existing `vehicle` hint and must belong to the Site. Mapping source `answers`.
+- Checks: `ChatSelectionSiteFlowTest` (3), `QuizSiteFlowTest`, official block inventory, `E2eSeederTest`; Playwright `chat-selection.spec.ts` (create chat Site → preview conversation → popup lead → answers on «Заявки», desktop / tablet / mobile), `quiz-site`, `site-formats`.
+- Live operator replies and transcript storage are not built (P9-018 DEFERRED by the owner 2026-10-08). The visible Site type is «Чат-подбор» (key `chat_selection`).
+
+### Acceptance Criteria
+
+- Official chat-style Template for `chat_selection` Sites: conversation UI where the visitor answers / picks a vehicle and finishes with the lead form through the existing Submission pipeline. No fake operator replies.
+
+---
+
+## P9-018 — Live Operator Messaging
+
+**Status:** DEFERRED (owner decision 2026-10-08; previously BLOCKED_DECISION)
+**Dependencies:** P9-017
+
+### Deferred
+
+Not part of Phase 9. No real-time chat code, WebSocket / broadcasting server, chat message tables, operator UI or conversation persistence exist or may be added without a new backlog task. Prerequisites if it is ever resumed:
+
+- D-094 — retention / deletion of personal data must cover chat messages before transcripts are stored.
+- Real-time transport is not part of the stack; adding one needs an owner decision.
+
+No call-center, telephony or internal team chat.
 
 ---
 
 ## P9-010 — AI Schema Assistant
 
-**Status:** DEFERRED  
+**Status:** DEFERRED
 **Dependencies:** P9-004
 
 ### Rule
 
-Only after deterministic Schema authoring works.
+Only after deterministic Schema authoring works. AI never publishes without the author.
 
 ---
 
 ## P9-011 — Developer Platform E2E
 
-**Status:** NOT_STARTED  
-**Dependencies:** P9-001 through P9-009
+**Status:** DONE
+**Dependencies:** P9-004 … P9-009, P9-013 … P9-017
+
+### Acceptance Criteria
+
+- Playwright proves every browser-visible requirement of the Creator Studio / catalog / Site formats re-plan on seeded E2E data, with no mocks; the cross-actor path (Developer publishes in Block Studio → customer catalog respects access) runs end to end.
+
+### Result
+
+- New `developer-platform.spec.ts`: a Developer creates a Block in Block Studio (schema + HTML), publishes 1.0.0 immediately after the automated checks, sets catalog access «По тарифу» / «Собственный домен»; a customer without the option sees author, access label and the Russian reason with adding disabled; a customer whose plan has it adds the Block, it renders in its `allow-scripts` sandbox frame and is edited through its schema; a later unpublished Draft edit never reaches the placed Instance. E2E data: `platform-developer@` / `platform-customer@` / `platform-premium@` (`E2eSeeder`).
+- Coverage map of the remaining requirements: Studio Code / Schema / Preview, errors, reload, publishing, sandbox isolation, Super Admin and Developer ownership — `block-authoring`; schema-driven Instance editing, Draft / published sandbox — `sandboxed-blocks`; admin_grant Site license for one Site only and Workspace license for current / new Sites of one Workspace (D-121) — `catalog-licenses`; Template build / publish / devices — `template-builder`; compatible install as an independent copy — `template-install`; the four formats, multi-page denied without `multi_page_sites`, no blank start for Quiz / Chat — `site-formats` + `core-platform`; quiz and chat flows — `quiz-site`, `chat-selection`. Tablet / mobile overflow checks run in the `@responsive` specs.
+- Live operator chat is not tested: it is not implemented (P9-018 DEFERRED).
 
 ---
 
 ## P9-012 — Phase 9 Review
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P9-011
+
+### Result
+
+- Phase 9 planned scope is DONE: P9-001 … P9-009, P9-011, P9-013 … P9-017 and this review. P9-018 DEFERRED (owner decision 2026-10-08), P9-010 DEFERRED (AI only after deterministic authoring). P9-008 was replaced by automated checks (D-120, no review queue; confirmed 2026-10-08).
+- Review (no regressions found):
+  - Ownership: Block Studio routes resolve only the current Developer Profile's Blocks (`ownedByDeveloper`) or platform Blocks for `manage_platform_content`; all 16 Template Studio actions go through `ResolvesEditableTemplates` (non-owner → 404), Template Pages / Blocks are scoped to that Template. Catalog licenses only with `manage_catalog_licenses`.
+  - Sandbox (ADR-008): authored HTML / CSS / JS runs only in `srcdoc` frames with `sandbox="allow-scripts"` (opaque origin, no `allow-same-origin`) and a CSP meta first; the parent accepts messages only from its own frame window with origin `null` and only `landflow:resize` / `landflow:action` (schema action keys) / `landflow:error` (truncated). No authored code in the app origin.
+  - Catalog access (D-121): checked by the backend when adding a Block Instance, installing a Template and publishing; entitlements are typed (`Entitlement::catalogGates`), no plan-name checks; paid / admin_grant need a Site or Workspace license; installed versions are grandfathered per Site (D-122).
+  - Props: no numeric internal IDs added to Inertia props in Phase 9 (public ULIDs only); no secrets.
+  - Public submissions: quiz / chat `answers` are bounded by the Block's steps and resolved from server state (Draft Block or Published manifest); question / answer text never comes from the browser.
+  - Versions: Block and Template Versions are immutable; autosave writes Drafts only; installed Sites are independent copies.
+- Resolved by the owner 2026-10-08: paid / admin_grant Templates start a new Site with a Workspace license (D-121); placed Blocks keep their installed version when access is later restricted (D-122).
+- Remaining limitations (no code change): Template Drafts cannot reference images, vehicles or popups; official quiz / chat Templates reach production only when their seeders run.
+- Gates: `composer quality` (PHPUnit 1092/1092, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (89/89) passed on 2026-10-07.
+- Final owner-decision corrective pass 2026-10-08 (D-079 → D-121, D-122, P9-018 DEFERRED): `composer quality` (PHPUnit 1105/1105, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (90/90) passed on 2026-10-08; MySQL `landauto` migrated (six Phase 9 migrations, existing Sites / Workspaces / Block Definitions / Versions intact).
+- PR #6 CI corrective pass 2026-10-08: Creator Studio routes use named limiters keyed by User + Block / Template (`block-create`, `block-draft`, `block-publish`, `template-create`, `template-publish`) instead of the shared per-User numeric throttle, so Draft autosaves no longer exhaust publishing (`CreatorStudioRateLimitTest`); the Designer header Preview is icon-only below `sm` (no mobile overflow). `composer quality` (PHPUnit 1110/1110, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (90/90) passed.
+- PR #6 CI login-limiter corrective pass 2026-10-08: CI run 37777121346 failed `designer.spec.ts` desktop with a login 429 — every E2E login comes from 127.0.0.1, exhausting the 20/min IP backstop. Login limits are now config-driven (`fortify.login_identity_per_minute` / `fortify.login_ip_per_minute`, env `LOGIN_IDENTITY_PER_MINUTE` / `LOGIN_IP_PER_MINUTE`, defaults 5 / 20); `.env.e2e.example` raises only the IP backstop to 200 (identity stays 5, throttling stays on; `LoginRateLimitTest`). `composer quality` (PHPUnit 1116/1116, PHPStan 0, Pint, vp check, build) and `npm run test:e2e` (90/90, no 429) passed. PR #6 is mergeable only after exact-head CI passes.
 
 ---
 
@@ -3417,7 +3698,7 @@ Only after deterministic Schema authoring works.
 
 ## P10-001 — Marketplace Listings
 
-**Status:** NOT_STARTED  
+**Status:** NOT_STARTED
 **Dependencies:** P9-012
 
 ---
@@ -3438,8 +3719,12 @@ Only after deterministic Schema authoring works.
 
 ## P10-004 — Licensing Model Decision
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Dependencies:** P10-003
+
+### Result
+
+Resolved early by D-079 (owner instruction 2026-10-07), which was SUPERSEDED on 2026-10-08 by D-121: license scopes `site` and `workspace` (a Workspace license covers current and future Sites of that Workspace; no account-wide license), sources `purchase` / `admin_grant` separate from scope, access modes free / entitlement / paid / admin_grant, Site and Workspace prices. Installed Block Versions are grandfathered per Site (D-122). The basic customer catalog and catalog licenses live in P9-014 / P9-015; P10-001 … P10-003 keep only public Marketplace listing, categories / search and detail pages beyond that. Purchase (creating `purchase` licenses through checkout) is P10-005.
 
 ---
 
@@ -3459,7 +3744,7 @@ Only after deterministic Schema authoring works.
 
 ## P10-007 — Ratings / Reviews
 
-**Status:** DEFERRED  
+**Status:** DEFERRED
 **Dependencies:** P10-003
 
 ---
@@ -4096,9 +4381,9 @@ Task statuses and results live in the phase sections above; this section only po
 
 - Completed: Phases 0–8.
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
-- Current: Phase 9 — Developer Platform NOT_STARTED.
-- Next: `P9-001 — Developer Profile`.
-- Open prerequisite for P9-001: D-093 — Developer Profile Ownership (OPEN).
+- Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
+- Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
+- Next: `P10-001 — Marketplace Listings` per order (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

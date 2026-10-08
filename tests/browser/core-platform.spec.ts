@@ -6,7 +6,7 @@ test.use({ storageState: guestStorageState });
 
 const ulidPattern = /^[0-9A-HJKMNP-TV-Z]{26}$/i;
 
-test('owner logs in, creates a Site from a Template and another Workspace cannot see it', async ({
+test('owner logs in, creates a multi-page Site and another Workspace cannot see it', async ({
     page,
 }) => {
     const creator = users.creator;
@@ -31,10 +31,16 @@ test('owner logs in, creates a Site from a Template and another Workspace cannot
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
-    const templates = page.getByRole('group', { name: '1. Шаблон' });
-    const template = templates.getByRole('radio', { name: creator.template });
-    await template.check();
-    await expect(template).toBeChecked();
+    const format = page
+        .getByRole('group', { name: '1. Формат' })
+        .getByRole('radio', { name: /Многостраничный сайт/ });
+    await format.check();
+    await expect(format).toBeChecked();
+    const start = page
+        .getByRole('group', { name: '2. Старт' })
+        .getByRole('radio', { name: creator.start });
+    await start.check();
+    await expect(start).toBeChecked();
     await page.getByLabel('Название сайта').fill(siteName);
     await page.getByRole('button', { name: 'Создать сайт' }).click();
 

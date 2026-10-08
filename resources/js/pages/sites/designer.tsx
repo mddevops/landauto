@@ -6,28 +6,31 @@ import {
     Rocket,
     TriangleAlert,
 } from 'lucide-react';
-import type { ReactNode } from 'react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
 import type { PopupRuntime } from '@/blocks/popup';
-import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
-import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { vehicleFullTitle } from '@/blocks/vehicles';
 import type { VehicleBinding } from '@/blocks/vehicles';
+import {
+    AutosaveIndicator,
+    CanvasBlock,
+    DesignerTabs as Tabs,
+} from '@/components/designer/canvas';
 import { DesignerContext } from '@/components/designer/designer-context';
 import { DesignPanel } from '@/components/designer/design-panel';
 import { useBlockAutosave } from '@/components/designer/use-block-autosave';
-import type { AutosaveStatus } from '@/components/designer/use-block-autosave';
 import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import { PropertiesPanel } from '@/components/designer/properties-panel';
 import type {
     DesignerAsset,
     DesignerBlock,
+    DesignerBlockRoutes,
     DesignerLibraryBlock,
     DesignerPage,
+    DesignerPageRoutes,
     DesignerSite,
     ReferenceIssue,
 } from '@/components/designer/types';
@@ -39,9 +42,22 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { cn } from '@/lib/utils';
 import { dashboard } from '@/routes';
 import { designer, preview } from '@/routes/sites';
+import {
+    destroy as destroyBlock,
+    duplicate as duplicateBlock,
+    move as moveBlock,
+    state as blockState,
+    store as storeBlock,
+    visibility as blockVisibility,
+} from '@/routes/sites/blocks';
+import {
+    destroy as destroyPage,
+    store as storePage,
+    update as updatePage,
+} from '@/routes/sites/pages';
+import { update as updatePageSeo } from '@/routes/sites/pages/seo';
 import { index as deliveriesIndex } from '@/routes/sites/deliveries';
 import { update as updateDesign } from '@/routes/sites/design';
 import { show as formSecurity } from '@/routes/sites/form-security';
@@ -65,6 +81,8 @@ type DesignerProps = {
     library: DesignerLibraryBlock[];
     can: {
         editDesign: boolean;
+        editStructure: boolean;
+        addPage: boolean;
         editContent: boolean;
         manageAssets: boolean;
         preview: boolean;
@@ -75,6 +93,27 @@ type DesignerProps = {
         editSeoIndexing: boolean;
     };
 };
+
+function siteBlockRoutes(site: string): DesignerBlockRoutes {
+    return {
+        add: (page) => storeBlock.url({ site, page }),
+        state: (block) => blockState.url({ site, block }),
+        move: (block) => moveBlock.url({ site, block }),
+        duplicate: (block) => duplicateBlock.url({ site, block }),
+        visibility: (block) => blockVisibility.url({ site, block }),
+        destroy: (block) => destroyBlock.url({ site, block }),
+    };
+}
+
+function sitePageRoutes(site: string): DesignerPageRoutes {
+    return {
+        href: (page) => designer.url(site, { query: { page } }),
+        store: storePage.form(site),
+        update: (page) => updatePage.form({ site, page }),
+        destroy: (page) => destroyPage.form({ site, page }),
+        seo: (page) => updatePageSeo({ site, page }),
+    };
+}
 
 type LeftTab = 'pages' | 'blocks';
 type RightTab = 'block' | 'design';
@@ -151,7 +190,8 @@ export default function Designer({
 
     const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
     const [rightTab, setRightTab] = useState<RightTab>('block');
-    const autosave = useBlockAutosave(site.public_id);
+    const blockRoutes = siteBlockRoutes(site.public_id);
+    const autosave = useBlockAutosave(blockRoutes.state);
     const [designDraft, setDesignDraft] = useState<DesignTokens | null>(null);
     const [saving, setSaving] = useState(false);
     const tokens = designDraft ?? design;
@@ -187,7 +227,7 @@ export default function Designer({
         <>
             <Head title={`Дизайнер — ${site.name}`} />
             <div className="flex min-h-svh flex-col bg-muted/40 lg:h-svh">
-                <header className="flex min-w-0 items-center gap-3 border-b bg-background px-3 py-2 sm:px-4">
+                <header className="flex min-w-0 items-center gap-2 border-b bg-background px-3 py-2 sm:gap-3 sm:px-4">
                     <Button asChild variant="ghost" size="icon">
                         <Link href={dashboard()} aria-label="Назад к сайтам">
                             <ArrowLeft aria-hidden="true" />
@@ -212,9 +252,16 @@ export default function Designer({
                     {can.preview &&
                         (autosave.status === 'pending' ||
                         autosave.status === 'saving' ? (
-                            <Button variant="outline" size="sm" disabled>
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                disabled
+                                aria-label="Предпросмотр"
+                            >
                                 <Eye aria-hidden="true" />
-                                Предпросмотр
+                                <span className="hidden sm:inline">
+                                    Предпросмотр
+                                </span>
                             </Button>
                         ) : (
                             <Button asChild variant="outline" size="sm">
@@ -224,9 +271,12 @@ export default function Designer({
                                     })}
                                     target="_blank"
                                     rel="noopener"
+                                    aria-label="Предпросмотр"
                                 >
                                     <Eye aria-hidden="true" />
-                                    Предпросмотр
+                                    <span className="hidden sm:inline">
+                                        Предпросмотр
+                                    </span>
                                 </a>
                             </Button>
                         ))}
@@ -262,23 +312,24 @@ export default function Designer({
                         >
                             {leftTab === 'pages' ? (
                                 <PagesPanel
-                                    site={site}
+                                    routes={sitePageRoutes(site.public_id)}
                                     pages={pages}
                                     currentPageId={page.public_id}
                                     canEdit={can.editDesign}
+                                    canAddPages={can.addPage}
                                     canEditSeo={can.editSeo}
                                     canEditSeoIndexing={can.editSeoIndexing}
                                 />
                             ) : (
                                 <Navigator
-                                    siteId={site.public_id}
+                                    routes={blockRoutes}
                                     pageId={page.public_id}
                                     blocks={blocks}
                                     referenceIssues={referenceIssues}
                                     library={library}
                                     selectedId={selectedId}
                                     onSelect={setSelectedId}
-                                    canEdit={can.editDesign}
+                                    canEdit={can.editStructure}
                                 />
                             )}
                         </div>
@@ -521,106 +572,5 @@ function SiteSectionsMenu({
                 )}
             </DropdownMenuContent>
         </DropdownMenu>
-    );
-}
-
-const autosaveLabels: Record<AutosaveStatus, string | null> = {
-    idle: null,
-    pending: 'Есть несохранённые изменения',
-    saving: 'Сохранение…',
-    saved: 'Сохранено',
-    error: 'Не удалось сохранить',
-};
-
-function AutosaveIndicator({ status }: { status: AutosaveStatus }) {
-    return (
-        <p
-            role="status"
-            aria-live="polite"
-            className={cn(
-                'hidden text-xs sm:block',
-                status === 'error'
-                    ? 'font-medium text-destructive'
-                    : 'text-muted-foreground',
-            )}
-        >
-            {autosaveLabels[status]}
-        </p>
-    );
-}
-
-function Tabs<T extends string>({
-    value,
-    onChange,
-    tabs,
-}: {
-    value: T;
-    onChange: (value: T) => void;
-    tabs: { value: T; label: ReactNode }[];
-}) {
-    return (
-        <div role="tablist" className="flex border-b">
-            {tabs.map((tab) => (
-                <button
-                    key={tab.value}
-                    type="button"
-                    role="tab"
-                    id={`designer-tab-${tab.value}`}
-                    aria-selected={tab.value === value}
-                    aria-controls={`designer-panel-${tab.value}`}
-                    onClick={() => onChange(tab.value)}
-                    className={cn(
-                        'flex-1 border-b-2 border-transparent px-3 py-2.5 text-sm text-muted-foreground hover:text-foreground focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none focus-visible:ring-inset',
-                        tab.value === value &&
-                            'border-primary font-medium text-foreground',
-                    )}
-                >
-                    {tab.label}
-                </button>
-            ))}
-        </div>
-    );
-}
-
-function CanvasBlock({
-    block,
-    state,
-    selected,
-    onSelect,
-}: {
-    block: DesignerBlock;
-    state: BlockState;
-    selected: boolean;
-    onSelect: () => void;
-}) {
-    const Renderer = blockRenderer(block.slug);
-
-    return (
-        <div className="relative">
-            {block.is_hidden && (
-                <span className="absolute top-2 right-2 z-10 rounded bg-neutral-900/80 px-2 py-0.5 text-xs text-white">
-                    Скрыт
-                </span>
-            )}
-            <div inert className={cn(block.is_hidden && 'opacity-40')}>
-                {Renderer ? (
-                    <Renderer state={state} />
-                ) : (
-                    <div className="p-6 text-sm text-neutral-500">
-                        {`Блок «${block.name}» не удаётся отобразить.`}
-                    </div>
-                )}
-            </div>
-            <button
-                type="button"
-                aria-label={`Выбрать блок «${block.name}»`}
-                aria-pressed={selected}
-                onClick={onSelect}
-                className={cn(
-                    'absolute inset-0 outline-none hover:ring-2 hover:ring-primary/40 hover:ring-inset focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                    selected && 'ring-2 ring-primary ring-inset',
-                )}
-            />
-        </div>
     );
 }

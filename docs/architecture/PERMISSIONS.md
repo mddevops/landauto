@@ -372,7 +372,9 @@ Permissions should be grouped conceptually.
 
 ## Developer
 
-- access_developer_platform
+Not Workspace permissions; a separate creator domain (D-118, see §65):
+
+- Developer Platform access: the active Developer Profile itself (historically `access_developer_platform`; not an assignable permission)
 - create_blocks
 - create_templates
 - submit_marketplace_item
@@ -1052,16 +1054,18 @@ Visitor cannot choose routing or integration.
 
 # 65. Developer Platform Permissions
 
-Potential permissions:
+Implemented (D-118, P9-002). Three domains stay separate and never grant each other:
 
-- access_developer_platform
-- create_blocks
-- create_templates
-- submit_marketplace_item
-- view_sales
-- manage_developer_profile
+- **Developer Platform access** (`/developer`): the authenticated User's own active Developer Profile. The former `access_developer_platform` idea is this gate, not a stored permission.
+- **Developer creator permissions** (`App\Enums\DeveloperPermission`): `create_blocks`, `create_templates`, `submit_marketplace_item`. Stored explicitly per profile in `developer_profile_permissions`; resolved deny-by-default by `App\Developers\DeveloperAuthorization` (missing / suspended profile, missing row or unknown key → deny). Suspension keeps the rows but denies all of them. Zero permissions is a valid active state. New Super Admin-granted profiles get all current permissions as stored rows.
+- **Platform permissions**: `manage_developers` (Super Admin) grants / suspends profiles and edits their creator permissions; `manage_platform_content` (Super Admin only) is reserved for official platform-owned Blocks / Templates and needs no Developer Profile; `manage_catalog_licenses` (Super Admin only, D-121) grants / revokes Site- and Workspace-scoped catalog licenses on «Лицензии каталога».
+- **Workspace permissions** remain customer tenant authority; no Developer role exists in any domain.
 
-Some may require developer account approval/entitlement.
+Block authoring (P9-003) applies this through `App\Blocks\BlockAuthoringAuthorization`: `/developer/blocks` requires the active profile plus `create_blocks` and only reaches that profile's Blocks; `/platform/blocks` requires `manage_platform_content`.
+
+A creator permission never authorizes content owned by another Developer Profile. `submit_marketplace_item` is reserved for a future Marketplace listing of own content (Phase 10); it is not manual moderation or publication approval (D-120) and grants no pricing, payouts or licenses.
+
+Later candidates (not implemented): `view_sales`, Developer self-edit of the profile.
 
 ---
 
@@ -1077,17 +1081,19 @@ Public Marketplace approval does not automatically expose source-level secrets/p
 
 # 67. Marketplace Purchase Rights
 
-Future purchase/licensing is an entitlement/license check.
+Catalog access is a mode / entitlement / license check, separate from permissions (D-121). Licenses are scoped to one Site or one Workspace (current and future Sites); never to a User or account.
 
 Example:
 
-User has permission to install templates.
+User has permission to create Sites.
 
-But Workspace lacks license.
+But the Workspace lacks a Workspace license for a paid Template.
 
 Result:
 
-cannot install paid Template.
+cannot create a Site from that Template.
+
+Installed Block Versions stay usable on their Site after a license is revoked (D-122); new installs need current access.
 
 ---
 

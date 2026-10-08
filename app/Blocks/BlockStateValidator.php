@@ -206,6 +206,7 @@ final class BlockStateValidator
         match ($type) {
             BlockFieldType::Text => $this->validateString($value, $path, (int) ($field['max_length'] ?? BlockSchemaValidator::TEXT_MAX_LENGTH)),
             BlockFieldType::Textarea => $this->validateString($value, $path, (int) ($field['max_length'] ?? BlockSchemaValidator::TEXTAREA_MAX_LENGTH)),
+            BlockFieldType::Number => $this->validateNumber($field, $value, $path),
             BlockFieldType::Boolean => $this->validateBoolean($value, $path),
             BlockFieldType::Select => $this->validateSelect($field, $value, $path),
             BlockFieldType::Image => $this->validateImage($value, $path),
@@ -214,6 +215,27 @@ final class BlockStateValidator
             BlockFieldType::Group => $this->validateObject($this->nestedFields($field), $value, $path, false),
             BlockFieldType::Repeater => $this->validateRepeater($field, $value, $path),
         };
+    }
+
+    /**
+     * @param  array<string, mixed>  $field
+     */
+    private function validateNumber(array $field, mixed $value, string $path): void
+    {
+        if (! BlockSchemaValidator::isNumber($value)) {
+            $this->errors[$path] = 'Значение должно быть числом.';
+
+            return;
+        }
+
+        $min = $field['min'] ?? null;
+        $max = $field['max'] ?? null;
+
+        if (BlockSchemaValidator::isNumber($min) && $value < $min) {
+            $this->errors[$path] = "Значение должно быть не меньше {$min}.";
+        } elseif (BlockSchemaValidator::isNumber($max) && $value > $max) {
+            $this->errors[$path] = "Значение должно быть не больше {$max}.";
+        }
     }
 
     private function validateBoolean(mixed $value, string $path): void

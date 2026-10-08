@@ -90,8 +90,8 @@ test('platform admin prepares the catalog, dealer adds a priced vehicle and show
 
     await page.getByRole('link', { name: 'Создать сайт' }).click();
     await page
-        .getByRole('group', { name: '1. Шаблон' })
-        .getByRole('radio', { name: dealer.template })
+        .getByRole('group', { name: '2. Старт' })
+        .getByRole('radio', { name: dealer.start })
         .check();
     await page.getByLabel('Название сайта').fill(siteName);
     await page.getByRole('button', { name: 'Создать сайт' }).click();

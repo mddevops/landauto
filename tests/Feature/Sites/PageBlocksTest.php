@@ -63,15 +63,24 @@ class PageBlocksTest extends TestCase
                 ->where('selectedBlock', $hero->public_id)
                 ->where('blocks.1.is_hidden', false)
                 ->has('library', count(array_unique(array_column(OfficialBlockCatalog::blocks(), 'slug'))))
-                ->where('library.1', ['slug' => 'hero', 'name' => 'Первый экран']));
+                ->where('library.1', [
+                    'slug' => 'hero',
+                    'name' => 'Первый экран',
+                    'author' => null,
+                    'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
+                    'available' => true,
+                    'reason' => null,
+                ]));
     }
 
-    public function test_only_existing_official_blocks_can_be_added(): void
+    public function test_only_existing_catalog_blocks_can_be_added(): void
     {
-        $private = BlockDefinition::factory()->create(['is_official' => false, 'slug' => 'private']);
-        BlockVersion::factory()->for($private, 'definition')->create();
+        $privateBlock = BlockDefinition::factory()->workspacePrivate($this->workspace)->create(['slug' => 'private']);
+        BlockVersion::factory()->for($privateBlock, 'definition')->create();
+        BlockDefinition::factory()->platform()->create(['slug' => 'unversioned']);
 
         $this->add('private')->assertSessionHasErrors('block');
+        $this->add('unversioned')->assertSessionHasErrors('block');
         $this->add('missing')->assertSessionHasErrors('block');
         $this->assertSame(0, BlockInstance::query()->count());
     }
@@ -110,7 +119,7 @@ class PageBlocksTest extends TestCase
 
         $asEditor()->get(route('sites.designer', $this->site))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('can', ['editDesign' => false, 'editContent' => true, 'manageAssets' => false, 'preview' => false, 'viewSubmissions' => false, 'viewIntegrations' => false, 'viewDeliveryLogs' => false, 'editSeo' => true, 'editSeoIndexing' => false])
+                ->where('can', ['editDesign' => false, 'editStructure' => false, 'addPage' => false, 'editContent' => true, 'manageAssets' => false, 'preview' => false, 'viewSubmissions' => false, 'viewIntegrations' => false, 'viewDeliveryLogs' => false, 'editSeo' => true, 'editSeoIndexing' => false])
                 ->where('blocks.0.schema.fields.1.key', 'title'));
 
         $asEditor()->patch(route('sites.blocks.state', [$this->site, $block]), ['state' => [

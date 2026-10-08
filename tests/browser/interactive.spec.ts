@@ -19,8 +19,8 @@ async function login(page: Page) {
 async function createSite(page: Page, siteName: string) {
     await page.getByRole('link', { name: 'Создать сайт' }).click();
     await page
-        .getByRole('group', { name: '1. Шаблон' })
-        .getByRole('radio', { name: owner.template })
+        .getByRole('group', { name: '2. Старт' })
+        .getByRole('radio', { name: owner.start })
         .check();
     await page.getByLabel('Название сайта').fill(siteName);
     await page.getByRole('button', { name: 'Создать сайт' }).click();

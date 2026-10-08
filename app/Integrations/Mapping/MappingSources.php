@@ -28,6 +28,7 @@ final class MappingSources
         'referrer' => ['Заявка', 'Источник перехода'],
         'popup.name' => ['Заявка', 'Попап'],
         'block.name' => ['Заявка', 'Блок'],
+        'answers' => ['Заявка', 'Ответы на вопросы'],
         'utm.source' => ['Метки UTM', 'utm_source'],
         'utm.medium' => ['Метки UTM', 'utm_medium'],
         'utm.campaign' => ['Метки UTM', 'utm_campaign'],
@@ -97,6 +98,7 @@ final class MappingSources
             'referrer' => $context->visitor['referrer'] ?? null,
             'popup.name' => $trusted['popup']['name'] ?? null,
             'block.name' => $trusted['block']['name'] ?? null,
+            'answers' => self::answers($trusted['answers']['items'] ?? null),
             'utm.source' => $context->visitor['utm_source'] ?? null,
             'utm.medium' => $context->visitor['utm_medium'] ?? null,
             'utm.campaign' => $context->visitor['utm_campaign'] ?? null,
@@ -123,6 +125,21 @@ final class MappingSources
         };
 
         return is_scalar($value) ? $value : null;
+    }
+
+    /**
+     * «Вопрос: ответ» lines of a quiz / chat Submission (P9-016, P9-017).
+     */
+    private static function answers(mixed $answers): ?string
+    {
+        if (! is_array($answers) || $answers === []) {
+            return null;
+        }
+
+        return implode("\n", array_map(
+            fn (mixed $answer): string => is_array($answer) ? ((string) ($answer['question'] ?? '')).': '.((string) ($answer['answer'] ?? '')) : '',
+            $answers,
+        ));
     }
 
     private static function suffix(string $source, string $prefix): ?string

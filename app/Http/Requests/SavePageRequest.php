@@ -20,7 +20,7 @@ class SavePageRequest extends FormRequest
         $page = $this->route('page');
         $page instanceof Page ? $scope->page($site, $page) : $scope->site($site);
 
-        return Gate::allows('editDesign', $site);
+        return Gate::allows($page instanceof Page ? 'editDesign' : 'addPage', $site);
     }
 
     /**

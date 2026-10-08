@@ -1,9 +1,13 @@
 import { Link, usePage } from '@inertiajs/react';
 import {
+    Blocks,
     Car,
     CarFront,
+    Code,
     Images,
+    KeyRound,
     LayoutGrid,
+    LayoutTemplate,
     Plug,
     Settings,
     Users,
@@ -25,7 +29,11 @@ import {
 import { dashboard } from '@/routes';
 import { index as integrationsIndex } from '@/routes/integrations';
 import { index as assetsIndex } from '@/routes/workspace/assets';
+import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
+import { index as developersIndex } from '@/routes/platform/developers';
+import { index as licensesIndex } from '@/routes/platform/licenses';
+import { index as platformTemplatesIndex } from '@/routes/platform/templates';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
 import { index as teamIndex } from '@/routes/workspace/team';
@@ -76,18 +84,55 @@ export function AppSidebar() {
           ]
         : [];
 
-    const platformItems: NavItem[] = platform.permissions.includes(
-        'view_catalog',
-    )
-        ? [
-              {
-                  title: 'Каталог автомобилей',
-                  href: catalogIndex(),
-                  icon: Car,
-                  matchPrefix: true,
-              },
-          ]
-        : [];
+    const platformItems: NavItem[] = [
+        ...(platform.permissions.includes('view_catalog')
+            ? [
+                  {
+                      title: 'Каталог автомобилей',
+                      href: catalogIndex(),
+                      icon: Car,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_developers')
+            ? [
+                  {
+                      title: 'Разработчики',
+                      href: developersIndex(),
+                      icon: Code,
+                  },
+              ]
+            : []),
+    ];
+
+    const studioItems: NavItem[] = [
+        ...(platform.permissions.includes('manage_platform_content')
+            ? [
+                  {
+                      title: 'Блоки',
+                      href: platformBlocksIndex(),
+                      icon: Blocks,
+                      matchPrefix: true,
+                  },
+                  {
+                      title: 'Шаблоны',
+                      href: platformTemplatesIndex(),
+                      icon: LayoutTemplate,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_catalog_licenses')
+            ? [
+                  {
+                      title: 'Лицензии каталога',
+                      href: licensesIndex(),
+                      icon: KeyRound,
+                  },
+              ]
+            : []),
+    ];
 
     return (
         <Sidebar collapsible="icon" variant="inset">
@@ -121,6 +166,7 @@ export function AppSidebar() {
                             </>
                         )}
                         <NavMain items={platformItems} label="Платформа" />
+                        <NavMain items={studioItems} label="Студия" />
                     </nav>
                 )}
             </SidebarContent>

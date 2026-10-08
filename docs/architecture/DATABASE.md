@@ -322,6 +322,8 @@ Suggested fields:
 
 P1-010 implements only the foundation subset: bigint `id` / required `workspace_id`, unique ULID `public_id` (ADR-001), `name`, `active` / `archived` status and timestamps. Workspace hard deletion is restricted while Sites exist. All other suggested fields remain deferred to their owning tasks.
 
+P9-013 (D-119) adds `site_type` (`multi_page` / `landing` / `quiz` / `chat_selection`, `App\Enums\SiteType`, default `multi_page` for pre-existing rows), fixed at creation (model-enforced).
+
 Important:
 
 Site owns commercial configuration.
@@ -458,24 +460,71 @@ Dynamic SEO templates can be added later.
 
 Represents reusable Block types.
 
-Fields may include:
+Implemented fields (P2-002, ownership P9-003):
 
 - id
-- developer_id nullable
-- workspace_id nullable for private Workspace blocks
+- public_id ULID, unique, immutable
 - name
-- slug
-- source_type
-- status
-- is_official
-- current_version_id nullable
+- slug unique across all scopes, immutable (lowercase ASCII, digits, single inner hyphens, 3–60 for new authoring)
+- owner_scope (`platform` / `developer` / `workspace_private`), immutable
+- developer_profile_id nullable FK (restrict), immutable
+- workspace_id nullable FK (restrict), immutable
+- created_by_user_id nullable FK (null on User delete), immutable audit identity
+- updated_by_user_id nullable FK (null on User delete), audit identity
+- category string(32), `App\Enums\BlockCategory`, default `other`, editable (P9-004; official Blocks backfilled)
+- access_mode string(16), `App\Enums\CatalogAccessMode` (`free` default / `entitlement` / `paid` / `admin_grant`), D-121 (P9-014)
+- access_entitlement string(64) nullable — boolean `App\Enums\Entitlement` key, set only for `entitlement`
+- site_price_minor unsigned bigint nullable + workspace_price_minor unsigned bigint nullable + price_currency char(3) nullable — ADR-004; `paid` needs at least one price (each > 0) and a supported currency, other modes keep all three null
 - timestamps
 
-Scope rules:
+## catalog_licenses
 
-- official/global block: workspace_id = null
-- Workspace-private block: workspace_id set
-- Marketplace block: global listing + version relationship
+Catalog license (D-121, P9-014 / P9-015): one catalog item for one Site or one Workspace. Effective access for a Site = its Site licenses OR its Workspace's licenses; rows are never copied per Site.
+
+- id
+- public_id ULID, unique
+- scope string(16), `App\Enums\CatalogLicenseScope` (`site` / `workspace`)
+- site_id nullable FK (cascade) — set only for scope `site`
+- workspace_id nullable FK (cascade) — set only for scope `workspace`
+- block_definition_id nullable FK (cascade)
+- template_id nullable FK (cascade) — exactly one of `block_definition_id` / `template_id`; exactly one target matching the scope (model guard)
+- source string(16), `App\Enums\CatalogLicenseSource` (`purchase` / `admin_grant`), independent of scope; purchases are created only by the future billing flow (P10-005)
+- granted_by_user_id nullable FK (null on User delete), audit identity
+- timestamps
+- unique (site_id, block_definition_id), (site_id, template_id), (workspace_id, block_definition_id), (workspace_id, template_id); rows are never updated — revoke = delete
+
+## site_block_version_grants
+
+Installed Block Version grandfathering (D-122): internal provenance, no `public_id`, no browser endpoint.
+
+- id
+- site_id FK (cascade)
+- block_version_id FK (restrict)
+- created_at nullable
+- unique (site_id, block_version_id)
+- created after a successful current access check on add / Template install (and on version restore without a re-check); publishing reads but never writes it; license revocation never deletes it; existing `page_blocks` were backfilled by the migration
+
+## block_drafts
+
+Block Studio Draft (P9-004, ADR-008), one per Block Definition, created on the first save:
+
+- id
+- block_definition_id unique FK (cascade)
+- html, css, js, schema_source mediumText — raw sources, ≤ 64 KB (bytes) each; `schema_source` may be invalid JSON while drafting
+- preview_data json nullable (P9-005)
+- revision unsigned int — optimistic concurrency, +1 per save
+- updated_by_user_id nullable FK (null on User delete), audit identity
+- timestamps
+
+Saving a Draft never creates or changes a Block Version.
+
+Scope rules (D-117), enforced by the model:
+
+- `platform`: developer_profile_id = null, workspace_id = null
+- `developer`: developer_profile_id set, workspace_id = null
+- `workspace_private`: workspace_id set, developer_profile_id = null
+
+`is_official` was removed; existing definitions were backfilled as `platform`. Later candidates (not implemented): status / review state, Marketplace listing relationship.
 
 ---
 
@@ -494,6 +543,8 @@ Fields may include:
 - status
 - created_by_user_id nullable
 - created_at
+
+Implemented (P9-006, ADR-008): `runtime` string(16) (`App\Enums\BlockRuntime`: `official` default / backfill, `sandboxed`); `html`, `css`, `js` mediumText nullable — the immutable source snapshot, set for every `sandboxed` version and null for `official`; `published_by_user_id` nullable FK (null on User delete), audit identity. Sandboxed versions are created only by Studio publishing (`BlockPublisher`, semantic version auto-incremented); since P9-009 platform-owned (and since P9-014 Developer-owned, subject to catalog access) sandboxed versions are placeable and their sources are copied into the Published Version manifest (`blocks[].sandbox`).
 
 Important:
 
@@ -550,6 +601,15 @@ Fields:
 - current_version_id nullable
 - timestamps
 
+Implemented so far: `public_id`, `name`, `slug`, `is_official`, timestamps and (P9-013, D-119) `site_types` — JSON list of compatible Site types; empty / null means the Template is not offered at Site creation (the legacy official `blank` Template).
+
+P9-007: `owner_scope` (`platform` | `developer`, default `platform`) + `developer_profile_id` (FK restrict, required iff developer), `created_by_user_id` / `updated_by_user_id` (FK null on delete). Ownership and slug are immutable. Draft content:
+
+- `template_pages`: `public_id`, `template_id` (cascade), `title`, `slug` (unique per Template), `sort_order`, `is_home` (TRUE / NULL, unique per Template).
+- `template_blocks`: `public_id`, `template_page_id` (cascade), `block_version_id` (restrict, never workspace-private), `sort_order`, `is_hidden`, `state_json` (validated by the Block Schema; references only to Pages / Blocks of the same Template).
+
+P9-015 (D-121): `access_mode` string(16) default `free`, `access_entitlement` string(64) nullable, `site_price_minor` / `workspace_price_minor` unsigned bigint nullable, `price_currency` char(3) nullable — same consistency rules as `block_definitions` (`CatalogAccessMode::fieldsMatch`). A Template with at least one `template_versions` row is offered at Site creation; installing copies the latest version into new Pages / Block Instances and records `site_block_version_grants` for every copied Block Version (D-122).
+
 ## template_versions
 
 Potential fields:
@@ -572,6 +632,8 @@ Potential fields:
 - Popups.
 
 When instantiated, data must become Site-owned.
+
+Implemented (P9-007): `template_id`, `version` (`1.0.0`, then minor bumps), `content_json` (snapshot `{pages: [{key, title, slug, is_home, blocks: [{key, block_version_id, is_hidden, state}]}]}`), `published_by_user_id`, timestamps. Rows are immutable (update / delete throw).
 
 ---
 
@@ -1779,15 +1841,27 @@ Exact publishing storage will be decided separately.
 Fields:
 
 - id
-- user_id or workspace relation
+- public_id ULID, unique, immutable
+- user_id required, unique, immutable (restrict on User delete)
 - display_name
-- slug
-- status
+- slug unique (lowercase ASCII, digits, single inner hyphens, 3–60)
+- status (`active` / `suspended`)
 - bio nullable
-- payout metadata later
+- payout metadata later (Marketplace work)
 - timestamps
 
-A User may be both customer and developer.
+No Workspace, plan or subscription relation (D-093). A User may be both customer and developer. Implemented in P9-001.
+
+## developer_profile_permissions
+
+Internal explicit creator grants (D-118, P9-002); no `public_id`.
+
+- id
+- developer_profile_id FK (cascade; profiles are not hard-deleted)
+- permission (`create_blocks` / `create_templates` / `submit_marketplace_item`)
+- timestamps
+
+Unique `developer_profile_id + permission`. Rows survive suspension. Unknown keys never grant access. Existing profiles were backfilled with the current defaults.
 
 ---
 
@@ -1844,9 +1918,8 @@ Future tables may include:
 
 ## marketplace_orders
 ## marketplace_order_items
-## marketplace_licenses
 
-Not required for MVP.
+Not required for MVP. Licenses already live in `catalog_licenses` (D-121); a future purchase creates a `purchase`-source row there instead of a separate license table.
 
 Architecture should avoid assumptions that all premium content is globally unlocked.
 

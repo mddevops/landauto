@@ -41,6 +41,9 @@ return Application::configure(basePath: dirname(__DIR__))
     ->withMiddleware(function (Middleware $middleware): void {
         $middleware->encryptCookies(except: ['appearance', 'sidebar_state']);
 
+        // Block Studio Draft sources are code and must be stored exactly as written.
+        $middleware->trimStrings(except: ['sources.html', 'sources.css', 'sources.js', 'sources.schema']);
+
         $middleware->web(append: [
             ValidateFortifyEmail::class,
             ResolveWorkspaceContext::class,

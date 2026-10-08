@@ -59,6 +59,7 @@ class SitePreviewController extends Controller
                     'public_id' => $block->public_id,
                     'slug' => $block->version->definition->slug,
                     'name' => $block->version->definition->name,
+                    'sandbox' => $block->version->sandboxSource(),
                     'state' => (object) $block->state_json,
                 ])
                 ->values()

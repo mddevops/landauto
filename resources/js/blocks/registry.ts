@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { ChatSelectionBlock } from '@/blocks/chat-selection-block';
 import {
     BenefitsBlock,
     ContactsBlock,
@@ -7,6 +8,7 @@ import {
     HeaderBlock,
     HeroBlock,
 } from '@/blocks/official-blocks';
+import { QuizBlock } from '@/blocks/quiz-block';
 import type { BlockRendererProps } from '@/blocks/state';
 import { VehicleCardBlock, VehicleGridBlock } from '@/blocks/vehicle-blocks';
 import {
@@ -33,6 +35,8 @@ const officialBlockRenderers: Record<
     'vehicle-offers': VehicleOffersBlock,
     'vehicle-characteristics': VehicleCharacteristicsBlock,
     'vehicle-equipment': VehicleEquipmentBlock,
+    quiz: QuizBlock,
+    'chat-selection': ChatSelectionBlock,
 };
 
 export function blockRenderer(

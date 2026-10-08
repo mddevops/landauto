@@ -25,7 +25,7 @@ export const users = {
         email: 'creator@landflow.test',
         password: 'e2e-password',
         workspaces: ['Автосалон Юг', 'Сервисный центр Юг'],
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Designer flow on its own Site (Workspace Owner, so preview is allowed).
     designer: {
@@ -33,7 +33,7 @@ export const users = {
         email: 'designer@landflow.test',
         password: 'e2e-password',
         workspace: 'Студия Дины',
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Automotive flow: platform super admin (catalog + Series media) and a dealer Owner.
     catalogAdmin: {
@@ -46,7 +46,7 @@ export const users = {
         email: 'dealer@landflow.test',
         password: 'e2e-password',
         workspace: 'Автосалон Восток',
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Interactive flow: Forms, Popups and submissions on its own Site.
     interactive: {
@@ -54,7 +54,7 @@ export const users = {
         email: 'interactive@landflow.test',
         password: 'e2e-password',
         workspace: 'Автосалон Запад',
-        template: 'Пустой шаблон',
+        start: 'Пустой старт',
     },
     // Publishing flow: Site «Сайт для публикации» on the `publish-e2e` subdomain.
     publisher: {
@@ -161,6 +161,119 @@ export const users = {
         name: 'Иван Связев',
         email: 'team-integrations@landflow.test',
         password: 'e2e-password',
+    },
+    // Site formats: plan without `multi_page_sites`; official Quiz / Chat Templates exist.
+    formats: {
+        name: 'Фёкла Форматова',
+        email: 'formats@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Формат',
+        quizTemplate: 'Квиз: подбор автомобиля',
+        chatTemplate: 'Чат: подбор автомобиля',
+    },
+    // Block authoring: active Developer Profile with `create_blocks`, no platform role.
+    developer: {
+        name: 'Девелопер Блоков',
+        email: 'developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия блоков E2E',
+    },
+    // Block Studio code / schema editing; same rights as `developer`, separate login throttle.
+    studioDeveloper: {
+        name: 'Сергей Студийный',
+        email: 'studio-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия кода E2E',
+    },
+    // Sandboxed runtime: platform Block «Промо из студии» and a Site on `sandbox-e2e` with a Popup.
+    sandbox: {
+        name: 'Сабина Песочникова',
+        email: 'sandbox@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт с блоком из студии',
+        block: 'Промо из студии',
+        publicUrl: 'http://sandbox-e2e.localhost:8200',
+    },
+    // Customer catalog (D-121): Developer Block «Витрина партнёра» needs a Super Admin license for
+    // a Site or for the whole Workspace «Автосалон Лицензия» (two seeded Sites).
+    licensee: {
+        name: 'Лиана Лицензиатова',
+        email: 'licensee@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Лицензия',
+        site: 'Сайт по лицензии',
+        subdomain: 'license-e2e',
+        secondSite: 'Второй сайт по лицензии',
+        secondSubdomain: 'license-two-e2e',
+        block: 'Витрина партнёра',
+        author: 'Студия каталога E2E',
+    },
+    // Another Workspace that must never inherit «Автосалон Лицензия» licenses.
+    licenseeOther: {
+        name: 'Олег Сторонний',
+        email: 'licensee-other@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт другого пространства',
+    },
+    licensesAdmin: {
+        name: 'Ольга Лицензиарова',
+        email: 'licenses-admin@landflow.test',
+        password: 'e2e-password',
+    },
+    // Template Builder: Developer Profile with `create_templates`, no Templates yet.
+    templateDeveloper: {
+        name: 'Тимур Шаблонов',
+        email: 'template-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия шаблонов E2E',
+    },
+    // Quiz flow: plan without `multi_page_sites`; the official quiz Template is seeded.
+    quiz: {
+        name: 'Зоя Квизова',
+        email: 'quiz@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Квиз',
+        template: 'Квиз: подбор автомобиля',
+    },
+    // Chat flow: plan without `multi_page_sites`; the official chat Template is seeded.
+    chat: {
+        name: 'Чеслав Чатов',
+        email: 'chat@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Чат',
+        template: 'Чат: подбор автомобиля',
+    },
+    // Template installation: Developer who publishes and a customer who creates Sites from it.
+    templateInstaller: {
+        name: 'Илья Установщиков',
+        email: 'template-installer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия установки E2E',
+    },
+    templateCustomer: {
+        name: 'Карина Шаблонова',
+        email: 'template-customer@landflow.test',
+        password: 'e2e-password',
+        workspace: 'Автосалон Шаблон',
+    },
+    // Developer platform E2E (P9-011): a Developer and two customers, only one with `custom_domain`.
+    platformDeveloper: {
+        name: 'Пётр Платформенный',
+        email: 'platform-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия платформы E2E',
+    },
+    platformCustomer: {
+        name: 'Вера Клиентова',
+        email: 'platform-customer@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт без опции домена',
+    },
+    platformPremium: {
+        name: 'Марк Премиумов',
+        email: 'platform-premium@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт с опцией домена',
     },
 } as const;
 

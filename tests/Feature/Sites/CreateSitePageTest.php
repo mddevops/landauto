@@ -22,8 +22,8 @@ class CreateSitePageTest extends TestCase
     public function test_owner_sees_only_official_templates_with_safe_fields(): void
     {
         [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 2);
-        $starter = Template::factory()->create(['name' => 'Стартовый шаблон']);
-        $blank = Template::factory()->create(['name' => 'Пустой шаблон']);
+        $starter = Template::factory()->published()->create(['name' => 'Стартовый шаблон']);
+        $blank = Template::factory()->published()->create(['name' => 'Пустой шаблон']);
         Template::factory()->create(['name' => 'Скрытый шаблон', 'is_official' => false]);
 
         $response = $this->createPage($user, $workspace);
@@ -38,11 +38,14 @@ class CreateSitePageTest extends TestCase
             ->where('templates.0', [
                 'public_id' => $blank->public_id,
                 'name' => 'Пустой шаблон',
+                'site_types' => ['multi_page', 'landing'],
+                'author' => null,
+                'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
+                'available' => true,
+                'reason' => null,
             ])
-            ->where('templates.1', [
-                'public_id' => $starter->public_id,
-                'name' => 'Стартовый шаблон',
-            ])
+            ->where('templates.1.public_id', $starter->public_id)
+            ->where('templates.1.name', 'Стартовый шаблон')
             ->missing('templates.0.id')
             ->missing('currentWorkspace.id')
             ->where('siteLimit', [

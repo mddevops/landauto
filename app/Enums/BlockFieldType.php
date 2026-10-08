@@ -6,6 +6,7 @@ enum BlockFieldType: string
 {
     case Text = 'text';
     case Textarea = 'textarea';
+    case Number = 'number';
     case Boolean = 'boolean';
     case Select = 'select';
     case Image = 'image';
@@ -28,6 +29,7 @@ enum BlockFieldType: string
 
         return match ($this) {
             self::Text, self::Textarea => [...$common, 'required', 'max_length', 'default'],
+            self::Number => [...$common, 'required', 'min', 'max', 'step', 'default'],
             self::Boolean => [...$common, 'default'],
             self::Select => [...$common, 'required', 'options', 'default'],
             self::Image, self::Action, self::Vehicle => [...$common, 'required'],

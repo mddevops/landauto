@@ -98,12 +98,20 @@ final class PublishedSnapshotBuilder
                     $assets[$assetId] = true;
                 }
 
-                $blocks[] = [
+                $entry = [
                     'public_id' => $block->public_id,
                     'definition' => $block->version->definition->slug,
                     'version' => $block->version->version,
                     'state' => $block->state_json,
                 ];
+                $sandbox = $block->version->sandboxSource();
+
+                // Present only for sandboxed versions, so official-only manifests keep their hash.
+                if ($sandbox !== null) {
+                    $entry['sandbox'] = $sandbox;
+                }
+
+                $blocks[] = $entry;
             }
 
             $manifestPages[] = [

@@ -16,6 +16,9 @@ void createInertiaApp({
             case name === 'welcome':
             case name === 'sites/designer':
             case name === 'sites/preview':
+            case name === 'studio/templates/designer':
+            case name === 'studio/templates/preview':
+            case name === 'studio/templates/frame':
                 return null;
             case name.startsWith('auth/'):
                 return AuthLayout;

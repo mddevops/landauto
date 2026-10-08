@@ -103,6 +103,7 @@ final class PublishedArtifactBuilder
                 'public_id' => $block['public_id'],
                 'slug' => $block['definition'],
                 'state' => (object) $block['state'],
+                ...(isset($block['sandbox']) ? ['sandbox' => $block['sandbox']] : []),
             ], $page['blocks']),
             'assets' => array_map(fn (string $assetId): array => [
                 'public_id' => $assetId,

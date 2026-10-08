@@ -4,6 +4,7 @@ namespace App\Actions\Accounts;
 
 use App\Enums\WorkspaceMemberStatus;
 use App\Enums\WorkspaceRole;
+use App\Exceptions\DeveloperProfileBlocksDeletionException;
 use App\Exceptions\LastWorkspaceOwnerException;
 use App\Models\User;
 use App\Models\WorkspaceMember;
@@ -15,6 +16,11 @@ class DeleteUserAccount
     public function delete(User $user, ?Closure $beforeDelete = null): void
     {
         DB::transaction(function () use ($user, $beforeDelete): void {
+            // Durable creator identity (D-093): future authored content depends on it.
+            if ($user->developerProfile()->exists()) {
+                throw new DeveloperProfileBlocksDeletionException;
+            }
+
             /** @var list<WorkspaceMember> $memberships */
             $memberships = $user->memberships()
                 ->with('workspace')

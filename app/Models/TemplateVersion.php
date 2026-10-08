@@ -9,20 +9,67 @@ use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Support\Carbon;
+use LogicException;
 
 /**
+ * Immutable published snapshot of a Template (P9-007). `content_json` holds the Pages and their
+ * Block Instances with pinned Block Versions; Sites copy it (P9-015) and never sync later changes.
+ * Internal storage only: never sent to the browser as-is.
+ *
  * @property int $id
  * @property int $template_id
  * @property string $version
+ * @property array{pages: list<array{key: string, title: string, slug: string, is_home: bool, blocks: list<array{key: string, block_version_id: int, is_hidden: bool, state: array<string, mixed>}>}>}|null $content_json
+ * @property int|null $published_by_user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
 #[Fillable(['version'])]
-#[Hidden(['id', 'template_id'])]
+#[Hidden(['id', 'template_id', 'content_json', 'published_by_user_id'])]
 class TemplateVersion extends Model
 {
     /** @use HasFactory<TemplateVersionFactory> */
     use HasFactory;
+
+    /**
+     * @return array<string, string>
+     */
+    protected function casts(): array
+    {
+        return ['content_json' => 'array'];
+    }
+
+    protected static function booted(): void
+    {
+        static::updating(function (): void {
+            throw new LogicException('Template Versions are immutable.');
+        });
+
+        static::deleting(function (): void {
+            throw new LogicException('Template Versions are immutable.');
+        });
+    }
+
+    /**
+     * Pinned Block Versions of a snapshot.
+     *
+     * @param  array<string, mixed>|null  $content
+     * @return list<int>
+     */
+    public static function blockVersionIds(?array $content): array
+    {
+        $ids = [];
+
+        foreach (is_array($content['pages'] ?? null) ? $content['pages'] : [] as $page) {
+            foreach (is_array($page['blocks'] ?? null) ? $page['blocks'] : [] as $block) {
+                if (is_int($block['block_version_id'] ?? null)) {
+                    $ids[] = $block['block_version_id'];
+                }
+            }
+        }
+
+        return array_values(array_unique($ids));
+    }
 
     /**
      * @return BelongsTo<Template, $this>
@@ -30,5 +77,13 @@ class TemplateVersion extends Model
     public function template(): BelongsTo
     {
         return $this->belongsTo(Template::class);
+    }
+
+    /**
+     * @return BelongsTo<User, $this>
+     */
+    public function publisher(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'published_by_user_id');
     }
 }

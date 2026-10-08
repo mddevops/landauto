@@ -4,6 +4,7 @@ namespace Tests\Feature\Workspaces;
 
 use App\Actions\Accounts\CreateNewAccount;
 use App\Enums\Entitlement;
+use App\Enums\SiteType;
 use App\Models\Plan;
 use App\Models\Site;
 use App\Models\Template;
@@ -56,7 +57,7 @@ class DefaultFreePlanTest extends TestCase
         $user = $this->register('creator@example.com');
         $user->markEmailAsVerified();
         $workspace = $user->workspaces()->sole();
-        $template = Template::factory()->create();
+        $template = Template::factory()->published()->create();
 
         $this->createSite($user, $workspace, $template, 'Первый сайт')->assertSessionHasNoErrors();
         $this->createSite($user, $workspace, $template, 'Второй сайт')->assertSessionHasNoErrors();
@@ -71,11 +72,27 @@ class DefaultFreePlanTest extends TestCase
         $this->assertSame(2, Site::query()->where('status', 'active')->count());
     }
 
+    public function test_free_plan_cannot_create_multi_page_sites(): void
+    {
+        $user = $this->register('landing@example.com');
+        $user->markEmailAsVerified();
+        $workspace = $user->workspaces()->sole();
+
+        $this->assertFalse(app(WorkspaceEntitlements::class)->allows($workspace, Entitlement::MultiPageSites));
+        $this->actingAs($user)
+            ->withSession([WorkspaceContext::SESSION_KEY => $workspace->public_id])
+            ->post(route('sites.store'), ['name' => 'Много страниц', 'site_type' => SiteType::MultiPage->value, 'start' => 'blank'])
+            ->assertSessionHasErrors('site_type');
+        $this->assertSame(0, $workspace->sites()->count());
+    }
+
     public function test_business_code_has_no_raw_plan_name_checks(): void
     {
         $allowed = [
             $this->normalize(app_path('Models/Plan.php')),
             $this->normalize(app_path('Support/DefaultWorkspacePlan.php')),
+            // Catalog access mode value (D-121), not a plan name.
+            $this->normalize(app_path('Enums/CatalogAccessMode.php')),
         ];
         $offenders = [];
 
@@ -122,7 +139,7 @@ class DefaultFreePlanTest extends TestCase
     {
         return $this->actingAs($user)
             ->withSession([WorkspaceContext::SESSION_KEY => $workspace->public_id])
-            ->post(route('sites.store'), ['name' => $name, 'template' => $template->public_id]);
+            ->post(route('sites.store'), ['name' => $name, 'site_type' => SiteType::Landing->value, 'start' => 'template', 'template' => $template->public_id]);
     }
 
     private function normalize(string $path): string

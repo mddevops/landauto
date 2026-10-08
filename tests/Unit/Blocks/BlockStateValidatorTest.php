@@ -21,6 +21,7 @@ class BlockStateValidatorTest extends TestCase
         return ['fields' => [
             ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'required' => true, 'max_length' => 10],
             ['key' => 'text', 'type' => 'textarea', 'label' => 'Текст'],
+            ['key' => 'columns', 'type' => 'number', 'label' => 'Колонки', 'min' => 1, 'max' => 4],
             ['key' => 'show', 'type' => 'boolean', 'label' => 'Показывать'],
             ['key' => 'align', 'type' => 'select', 'label' => 'Выравнивание', 'options' => [
                 ['value' => 'left', 'label' => 'Слева'],
@@ -44,6 +45,7 @@ class BlockStateValidatorTest extends TestCase
         $this->assertSame([], $validator->errors(self::schema(), [
             'title' => 'Акция',
             'text' => 'Описание',
+            'columns' => 2.5,
             'show' => false,
             'align' => 'center',
             'photo' => null,
@@ -93,6 +95,10 @@ class BlockStateValidatorTest extends TestCase
             'unknown key' => [['secret' => 'token'], 'state.secret'],
             'text type' => [['title' => 5], 'state.title'],
             'text too long' => [['title' => str_repeat('я', 11)], 'state.title'],
+            'number string' => [['columns' => '3'], 'state.columns'],
+            'number bool' => [['columns' => true], 'state.columns'],
+            'number below min' => [['columns' => 0], 'state.columns'],
+            'number above max' => [['columns' => 5], 'state.columns'],
             'boolean type' => [['show' => 'yes'], 'state.show'],
             'select option' => [['align' => 'right'], 'state.align'],
             'image url' => [['photo' => 'https://example.com/a.jpg'], 'state.photo'],

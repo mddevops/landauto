@@ -2,6 +2,7 @@
 
 namespace App\Forms;
 
+use App\Blocks\OfficialBlockCatalog;
 use App\Models\BlockDefinition;
 use App\Models\PublishedVersion;
 use App\Support\Money;
@@ -43,7 +44,7 @@ final class PublishedSubmissionContext
             $ids[$key] = strtolower($value);
         }
 
-        $trusted = $this->trusted($version, $formPublicId, $ids);
+        $trusted = $this->trusted($version, $formPublicId, $ids, $context[SubmissionContextResolver::ANSWERS_KEY] ?? null);
 
         return $trusted === null ? null : ['trusted' => $trusted, 'visitor' => $this->drafts->visitor($tracking ?? [])];
     }
@@ -52,7 +53,7 @@ final class PublishedSubmissionContext
      * @param  array<string, string>  $ids
      * @return array<string, array<string, mixed>>|null
      */
-    private function trusted(PublishedVersion $version, string $formPublicId, array $ids): ?array
+    private function trusted(PublishedVersion $version, string $formPublicId, array $ids, mixed $answers): ?array
     {
         $manifest = $version->public_manifest_json;
         $trusted = ['published_version' => ['public_id' => $version->public_id, 'version_number' => $version->version_number]];
@@ -83,6 +84,20 @@ final class PublishedSubmissionContext
                 'public_id' => $block['public_id'],
                 'name' => BlockDefinition::query()->where('slug', $block['definition'])->value('name') ?? $block['definition'],
             ];
+
+            if ($answers !== null) {
+                $resolved = in_array($block['definition'], OfficialBlockCatalog::ANSWER_SLUGS, true)
+                    ? QuizAnswers::resolve($block['state'] ?? null, $answers)
+                    : null;
+
+                if ($resolved === null) {
+                    return null;
+                }
+
+                $trusted['answers'] = ['items' => $resolved];
+            }
+        } elseif ($answers !== null) {
+            return null;
         }
 
         if (isset($ids['popup'])) {

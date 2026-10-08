@@ -40,6 +40,23 @@ final class SitePolicy
         return $this->can($user, $site, WorkspacePermission::EditDesign);
     }
 
+    /**
+     * Adding, removing, duplicating, hiding or reordering Blocks; Quiz / Chat Sites keep the
+     * Template structure (D-119).
+     */
+    public function editStructure(User $user, Site $site): bool
+    {
+        return ! $site->site_type->hasLockedStructure() && $this->editDesign($user, $site);
+    }
+
+    /**
+     * Only multi-page Sites get additional Pages (D-119).
+     */
+    public function addPage(User $user, Site $site): bool
+    {
+        return $site->site_type->allowsPageCreation() && $this->editDesign($user, $site);
+    }
+
     public function editContent(User $user, Site $site): bool
     {
         return $this->can($user, $site, WorkspacePermission::EditContent);

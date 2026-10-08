@@ -3,6 +3,7 @@
 namespace App\Forms;
 
 use App\Automotive\VehicleCatalog;
+use App\Blocks\OfficialBlockCatalog;
 use App\Models\BlockInstance;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoSeries;
@@ -26,6 +27,9 @@ use Illuminate\Support\Str;
 class SubmissionContextResolver
 {
     public const CONTEXT_KEYS = ['page', 'block', 'popup', 'vehicle', 'offer', 'media_set'];
+
+    /** Option IDs of a quiz / chat Block (P9-016, P9-017); valid only together with that `block`. */
+    public const ANSWERS_KEY = 'answers';
 
     public const URL_KEYS = ['page_url', 'referrer'];
 
@@ -58,7 +62,7 @@ class SubmissionContextResolver
             $ids[$key] = strtolower($value);
         }
 
-        $trusted = $this->trusted($form, $ids);
+        $trusted = $this->trusted($form, $ids, $context[self::ANSWERS_KEY] ?? null);
 
         return $trusted === null ? null : ['trusted' => $trusted, 'visitor' => $this->visitor($tracking ?? [])];
     }
@@ -67,7 +71,7 @@ class SubmissionContextResolver
      * @param  array<string, string>  $ids
      * @return array<string, array<string, mixed>>|null
      */
-    private function trusted(Form $form, array $ids): ?array
+    private function trusted(Form $form, array $ids, mixed $answers): ?array
     {
         $site = $form->site;
         $trusted = [];
@@ -96,6 +100,20 @@ class SubmissionContextResolver
             }
 
             $trusted['block'] = ['public_id' => $block->public_id, 'name' => $block->version->definition->name];
+
+            if ($answers !== null) {
+                $resolved = in_array($block->version->definition->slug, OfficialBlockCatalog::ANSWER_SLUGS, true)
+                    ? QuizAnswers::resolve($block->state_json, $answers)
+                    : null;
+
+                if ($resolved === null) {
+                    return null;
+                }
+
+                $trusted['answers'] = ['items' => $resolved];
+            }
+        } elseif ($answers !== null) {
+            return null;
         }
 
         if (isset($ids['popup'])) {

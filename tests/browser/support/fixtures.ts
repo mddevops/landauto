@@ -15,6 +15,11 @@ type BrowserIssues = {
         urlPart: string,
         times?: number,
     ) => void;
+    /**
+     * Declares an intentionally provoked console error or uncaught exception (e.g. authored Block
+     * code probing the sandbox): messages containing `fragment` are tolerated and must occur.
+     */
+    expectConsoleError: (fragment: string) => void;
 };
 
 // Every browser test fails on unexpected console errors, uncaught page errors
@@ -29,12 +34,29 @@ export const test = base.extend<{ browserIssues: BrowserIssues }>({
                 urlPart: string;
                 left: number;
             }[] = [];
+            const expectedConsole: { fragment: string; seen: boolean }[] = [];
             const issues: BrowserIssues = {
                 consoleErrors: [],
                 failedRequests: [],
                 expectFailedResponse: (status, urlPart, times = 1) => {
                     expected.push({ status, urlPart, left: times });
                 },
+                expectConsoleError: (fragment) => {
+                    expectedConsole.push({ fragment, seen: false });
+                },
+            };
+            const reportConsoleError = (text: string) => {
+                const match = expectedConsole.find((entry) =>
+                    text.includes(entry.fragment),
+                );
+
+                if (match) {
+                    match.seen = true;
+
+                    return;
+                }
+
+                issues.consoleErrors.push(text);
             };
             const watch = (target: Page) => {
                 target.on('console', (message) => {
@@ -55,11 +77,11 @@ export const test = base.extend<{ browserIssues: BrowserIssues }>({
                         return;
                     }
 
-                    issues.consoleErrors.push(message.text());
+                    reportConsoleError(message.text());
                 });
 
                 target.on('pageerror', (error) => {
-                    issues.consoleErrors.push(error.message);
+                    reportConsoleError(error.message);
                 });
 
                 target.on('response', (response) => {
@@ -120,6 +142,12 @@ export const test = base.extend<{ browserIssues: BrowserIssues }>({
             expect(
                 expected.filter((entry) => entry.left > 0),
                 'Declared failed responses that never happened',
+            ).toEqual([]);
+            expect(
+                expectedConsole
+                    .filter((entry) => !entry.seen)
+                    .map((entry) => entry.fragment),
+                'Declared console errors that never happened',
             ).toEqual([]);
         },
         { auto: true },
