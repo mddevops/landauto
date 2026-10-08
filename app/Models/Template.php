@@ -202,6 +202,14 @@ class Template extends Model
     }
 
     /**
+     * @return HasOne<MarketplaceListing, $this>
+     */
+    public function marketplaceListing(): HasOne
+    {
+        return $this->hasOne(MarketplaceListing::class);
+    }
+
+    /**
      * @return BelongsTo<User, $this>
      */
     public function lastEditor(): BelongsTo

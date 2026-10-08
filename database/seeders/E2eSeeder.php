@@ -203,6 +203,25 @@ class E2eSeeder extends Seeder
         $this->createDeveloperProfile($platformAuthor, 'Студия платформы E2E', 'e2e-platform-studio');
         app(CreateSite::class)->create($this->createWorkspace($this->createUser('Вера Клиентова', 'platform-customer@landflow.test'), 'Автосалон Платформа', plan: $plan), 'Сайт без опции домена', SiteType::MultiPage);
         app(CreateSite::class)->create($this->createWorkspace($this->createUser('Марк Премиумов', 'platform-premium@landflow.test'), 'Автосалон Премиум', plan: $domainsPlan), 'Сайт с опцией домена', SiteType::MultiPage);
+
+        // Marketplace Listings (P10-001): a Developer with only `submit_marketplace_item` and one
+        // already published own Block per browser project, so every project lists its own product.
+        $marketplaceAuthor = $this->createUser('Мирон Маркетов', 'marketplace-developer@landflow.test');
+        $this->createWorkspace($marketplaceAuthor, 'Workspace Мирона');
+        $marketplaceProfile = $this->createDeveloperProfile($marketplaceAuthor, 'Студия Marketplace E2E', 'e2e-marketplace-studio', [DeveloperPermission::SubmitMarketplaceItem]);
+        foreach (['desktop', 'tablet', 'mobile'] as $project) {
+            $definition = BlockDefinition::factory()->developer($marketplaceProfile)->create([
+                'slug' => "e2e-marketplace-{$project}",
+                'name' => "Витрина Marketplace {$project}",
+                'category' => BlockCategory::Cta,
+            ]);
+            BlockVersion::factory()
+                ->sandboxed('<section class="card"><h2>{{ title }}</h2></section>', '.card { padding: 24px; }')
+                ->for($definition, 'definition')
+                ->create(['schema_json' => ['fields' => [
+                    ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'default' => 'Витрина', 'max_length' => 80],
+                ]]]);
+        }
     }
 
     private function createGrantOnlyDeveloperBlock(DeveloperProfile $profile): void
@@ -238,7 +257,10 @@ class E2eSeeder extends Seeder
             ]]]);
     }
 
-    private function createDeveloperProfile(User $user, string $name, string $slug): DeveloperProfile
+    /**
+     * @param  list<DeveloperPermission>|null  $permissions  defaults to every current creator permission
+     */
+    private function createDeveloperProfile(User $user, string $name, string $slug, ?array $permissions = null): DeveloperProfile
     {
         $profile = new DeveloperProfile(['display_name' => $name, 'bio' => null]);
         $profile->slug = $slug;
@@ -246,7 +268,7 @@ class E2eSeeder extends Seeder
         $profile->user()->associate($user)->save();
         $profile->permissions()->createMany(array_map(
             fn (DeveloperPermission $permission): array => ['permission' => $permission->value],
-            DeveloperPermission::defaults(),
+            $permissions ?? DeveloperPermission::defaults(),
         ));
 
         return $profile;

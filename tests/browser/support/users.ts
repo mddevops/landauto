@@ -275,6 +275,19 @@ export const users = {
         password: 'e2e-password',
         site: 'Сайт с опцией домена',
     },
+    // Marketplace Listings (P10-001): only `submit_marketplace_item`; one published own Block per
+    // browser project, because a product has at most one listing.
+    marketplaceDeveloper: {
+        name: 'Мирон Маркетов',
+        email: 'marketplace-developer@landflow.test',
+        password: 'e2e-password',
+        profile: 'Студия Marketplace E2E',
+        blocks: {
+            desktop: 'Витрина Marketplace desktop',
+            tablet: 'Витрина Marketplace tablet',
+            mobile: 'Витрина Marketplace mobile',
+        },
+    },
 } as const;
 
 // Fixed public IDs of the foreign Workspace «Автосалон Чужой» (E2eSeeder::createTeamWorkspace).

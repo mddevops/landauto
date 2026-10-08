@@ -1354,7 +1354,7 @@ Before publication validate:
 
 # 80. Marketplace Review
 
-There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` is reserved for a future Marketplace listing, not approval.
+There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` authorizes Marketplace listings of own products (P10-001), not approval.
 
 Review should evaluate:
 

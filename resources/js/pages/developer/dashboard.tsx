@@ -1,9 +1,10 @@
 import { Head, Link } from '@inertiajs/react';
-import { ArrowRight, Blocks, LayoutTemplate } from 'lucide-react';
+import { ArrowRight, Blocks, LayoutTemplate, Store } from 'lucide-react';
 import type { LucideIcon } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
 import { dashboard } from '@/routes/developer';
 import { index as blocksIndex } from '@/routes/developer/blocks';
+import { index as marketplaceIndex } from '@/routes/developer/marketplace';
 import { index as templatesIndex } from '@/routes/developer/templates';
 import type { DeveloperPermission } from '@/types/platform';
 import type { RouteDefinition } from '@/wayfinder';
@@ -114,7 +115,7 @@ export default function DeveloperDashboard({
                         <dt className="text-muted-foreground">Статус</dt>
                         <dd>{profile.status_label}</dd>
                         <dt className="text-muted-foreground">
-                            Отправка на модерацию
+                            Публикация в Marketplace
                         </dt>
                         <dd>
                             {capabilities.submit_marketplace_item
@@ -166,6 +167,20 @@ export default function DeveloperDashboard({
                             title="Шаблоны"
                             icon={LayoutTemplate}
                             text="Нет разрешения на создание шаблонов."
+                        />
+                    )}
+                    {capabilities.submit_marketplace_item ? (
+                        <ToolLink
+                            title="Marketplace"
+                            icon={Store}
+                            href={marketplaceIndex()}
+                            text="Подготавливайте карточки своих блоков и шаблонов для публикации в Marketplace."
+                        />
+                    ) : (
+                        <ToolPlaceholder
+                            title="Marketplace"
+                            icon={Store}
+                            text="Нет разрешения на публикацию в Marketplace."
                         />
                     )}
                 </div>

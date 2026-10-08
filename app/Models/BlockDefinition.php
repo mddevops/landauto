@@ -196,6 +196,14 @@ class BlockDefinition extends Model
         return $this->hasMany(CatalogLicense::class);
     }
 
+    /**
+     * @return HasOne<MarketplaceListing, $this>
+     */
+    public function marketplaceListing(): HasOne
+    {
+        return $this->hasOne(MarketplaceListing::class);
+    }
+
     private function assertAccessIsConsistent(): void
     {
         if (! CatalogAccessMode::fieldsMatch($this->getAttribute('access_mode'), $this->getAttribute('access_entitlement'), $this->site_price_minor, $this->workspace_price_minor, $this->price_currency)) {

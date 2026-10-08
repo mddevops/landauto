@@ -78,7 +78,9 @@ Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06
 
 Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/phase9-2026-10-07`; review `P9-012` DONE; P9-018 and P9-010 DEFERRED). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008). Final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed, P9-018 DEFERRED; D-094 stays OPEN as a production-launch blocker only.
 
-Next ready task: `P10-001 — Marketplace Listings` (not started; outside the Creator Studio batch). Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 10 — Marketplace: IN_PROGRESS (branch `autopilot/phase10-2026-10-08`). P10-001 DONE (Marketplace Listings; D-120 no moderation, D-121 pricing stays on the product).
+
+Next ready task: `P10-002 — Categories / Search / Detail` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3698,8 +3700,26 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 
 ## P10-001 — Marketplace Listings
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-012
+
+### Result
+
+Branch `autopilot/phase10-2026-10-08` (base main `0cb5d56`).
+
+- **Schema:** one additive migration `2026_10_19_000001_create_marketplace_listings_table` (DATABASE.md §70). ULID `public_id`; `product_type` block / template; nullable unique `block_definition_id` XOR `template_id`; nullable `developer_profile_id` (NULL = official Landflow); title ≤ 120; immutable globally unique slug 3–80; plain-text description ≤ 5000; status draft / published; `published_at`; audit users. FKs: RESTRICT on product and profile, nullOnDelete on audit users. No pricing / currency / access / entitlement / version columns, no soft deletes.
+- **Ownership:** the server derives the owner from the selected canonical product; `workspace_private` Blocks are rejected; browser owner / scope / type fields are ignored. Foreign, platform (for Developers), private or unknown products get the same non-leaking validation error; foreign listings resolve to 404. Model invariants make slug, product, type and owner immutable.
+- **Lifecycle:** draft → published → draft. Drafts may exist before the product has a version; publishing requires ≥ 1 published product version and `access_mode != admin_grant`. `published_at` is the start of the current publication and is cleared on unpublish. Editing changes only title and description (HTML rejected).
+- **Visibility:** centralized fail-closed `MarketplaceListing::publiclyVisible()` (published, product exists with a version, not `admin_grant`, listable Block scope, active Developer Profile). Suspension hides Developer listings without mutating them; reactivation restores visibility.
+- **Authorization:** `/developer/marketplace` (index, store, show, update, publish, unpublish) requires an active Developer Profile + `submit_marketplace_item`, independent of `create_blocks` / `create_templates`. `/platform/marketplace` requires `manage_platform_content`; Developer listings are 404 there. Audit logs `developer.marketplace_listing_*` / `platform.marketplace_listing_*` (created, updated, published, unpublished) with public ids only.
+- **D-120:** no moderation queue, no `marketplace_reviews` table, no review status; listings publish directly. Developer dashboard copy «Отправка на модерацию» replaced by «Публикация в Marketplace» (Разрешена / Нет разрешения) plus a Marketplace tool card or «Нет разрешения на публикацию в Marketplace.».
+- **D-121:** pricing and access are read from the canonical Block / Template at render time; changing the product price does not touch the listing. D-121 / D-122 unchanged; customer catalog / license acquisition paths unchanged.
+- **Platform listings:** official Landflow listings for platform Blocks / Templates, author «Landflow», sidebar entry «Marketplace».
+- **Developer UI:** Russian list / create / edit pages with status badge, publication denial reason, read-only product facts (type, access mode, published version) and publish / unpublish actions; no numeric ids in props.
+- **Out of scope (not built):** public storefront / `/marketplace` routes, categories / search / detail (P10-002), install, checkout / orders, ratings / reviews, sales / payouts, featured.
+- **Tests:** `tests/Feature/Marketplace/*` (29 tests: model invariants and schema, Developer ownership / permissions / lifecycle, visibility, D-121 pricing source, Platform listings, no storefront); `E2eSeederTest` and `DeveloperPermissionsTest` updated. E2E fixture «Мирон Маркетов» (`marketplace-developer@landflow.test`, only `submit_marketplace_item`, one published Block per Playwright project); `tests/browser/marketplace-listings.spec.ts` (@responsive) — create, publish, unpublish.
+- **Migration evidence (2026-10-08):** `db:show` / `migrate:status` confirmed connection `mysql`, database `landauto`, only this migration pending; `php artisan migrate` DONE; counts unchanged before / after (users 3, workspaces 3, sites 1, block_definitions 12, block_versions 18, templates 1, template_versions 1, developer_profiles 0, catalog_licenses 0); `marketplace_listings` created empty.
+- **Gates (2026-10-08):** `composer quality` PASS (PHPUnit 1145 / 1145, 9504 assertions; PHPStan 0 errors; Pint; `vp check`; build). `npm run test:e2e` 93 / 93 PASS (an earlier full run hit a login-timeout flake in `chat-selection.spec.ts` desktop; the isolated rerun passed 4 / 4 and the full rerun passed). `git diff --check` clean.
 
 ---
 
@@ -4383,7 +4403,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
-- Next: `P10-001 — Marketplace Listings` per order (P9-018 and P9-010 DEFERRED).
+- Current: Phase 10 — Marketplace IN_PROGRESS (`P10-001` DONE on `autopilot/phase10-2026-10-08`).
+- Next: `P10-002 — Categories / Search / Detail` per order (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

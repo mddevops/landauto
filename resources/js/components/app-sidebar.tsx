@@ -10,6 +10,7 @@ import {
     LayoutTemplate,
     Plug,
     Settings,
+    Store,
     Users,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
@@ -33,6 +34,7 @@ import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
 import { index as licensesIndex } from '@/routes/platform/licenses';
+import { index as platformMarketplaceIndex } from '@/routes/platform/marketplace';
 import { index as platformTemplatesIndex } from '@/routes/platform/templates';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
@@ -119,6 +121,12 @@ export function AppSidebar() {
                       title: 'Шаблоны',
                       href: platformTemplatesIndex(),
                       icon: LayoutTemplate,
+                      matchPrefix: true,
+                  },
+                  {
+                      title: 'Marketplace',
+                      href: platformMarketplaceIndex(),
+                      icon: Store,
                       matchPrefix: true,
                   },
               ]

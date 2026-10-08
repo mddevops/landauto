@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 and P9-018 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED; final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed; D-094 stays OPEN as a production-launch blocker only). The next ready task is in §68.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 and P9-018 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED; final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed; D-094 stays OPEN as a production-launch blocker only). **Phase 10 — Marketplace: IN_PROGRESS** (branch `autopilot/phase10-2026-10-08`; P10-001 Marketplace Listings DONE). The next ready task is in §68.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -991,13 +991,14 @@ Future initial product types:
 Marketplace requires:
 
 - versioning;
-- review;
-- security;
+- automated security checks (ADR-008; no manual moderation, D-120);
 - compatibility;
-- licensing;
+- licensing (D-121);
 - later payments/earnings.
 
 Not MVP.
+
+Implemented (P10-001): `marketplace_listings` — one presentation card per canonical Block / Template (DATABASE.md §70). Owner derived from the product (official Landflow listings have no Developer Profile; workspace-private Blocks cannot be listed); draft / published lifecycle; publishing requires a published product version and non-`admin_grant` access; fail-closed `MarketplaceListing::publiclyVisible()` also hides listings of suspended Developers. Listings store no price or access data — the canonical product stays the pricing source (D-121). Management only: `/developer/marketplace` (active profile + `submit_marketplace_item`) and `/platform/marketplace` (`manage_platform_content`). No public storefront, categories / search / detail, install, checkout or reviews yet.
 
 ---
 
@@ -1218,7 +1219,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-Current next step: see §68 (Phase 9 — Developer Platform COMPLETED for planned scope: P9-001 … P9-009, P9-011 … P9-017 DONE except P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
+Current next step: see §68 (Phase 10 — Marketplace IN_PROGRESS: P10-001 DONE; Phase 9 COMPLETED for planned scope with P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
 
 No implementation task should be inferred from this alone.
 
@@ -1514,7 +1515,7 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate P6-015)
 Phase 7 — Paid Features: COMPLETED for planned scope (P7-008 ADR-007; P7-009 DEFERRED)
 Phase 8 — Team: COMPLETED
 Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 DEFERRED, P9-010 DEFERRED)
-Phase 10 — Marketplace: NOT_STARTED
+Phase 10 — Marketplace: IN_PROGRESS (P10-001 DONE)
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 
@@ -1776,7 +1777,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P10-001 — Marketplace Listings`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is COMPLETED for planned scope (P9-001 … P9-009, P9-011 … P9-017 DONE; P9-018 and P9-010 DEFERRED; final owner-decision corrective pass 2026-10-08: D-121, D-122).
+**`P10-002 — Categories / Search / Detail`**. Phase 10 — Marketplace is IN_PROGRESS (P10-001 Marketplace Listings DONE on `autopilot/phase10-2026-10-08`). Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is COMPLETED for planned scope (P9-001 … P9-009, P9-011 … P9-017 DONE; P9-018 and P9-010 DEFERRED; final owner-decision corrective pass 2026-10-08: D-121, D-122).
 
 ---
 
@@ -1829,7 +1830,7 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121, D-122 APPROVED; D-094, X-013, X-017 OPEN)
+Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; Phase 10 IN_PROGRESS, P10-001 DONE; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121, D-122 APPROVED; D-094, X-013, X-017 OPEN)
 ```
 
-**Current phase: Phase 9 — Developer Platform (COMPLETED for planned scope; P9-012 review DONE, P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED). Next step: §68.**
+**Current phase: Phase 10 — Marketplace (IN_PROGRESS; P10-001 DONE). Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED); Phases 0–8 COMPLETED, P7-009 DEFERRED. Next step: §68.**

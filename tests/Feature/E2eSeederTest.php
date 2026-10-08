@@ -10,9 +10,12 @@ use App\Enums\CatalogAccessMode;
 use App\Enums\Entitlement;
 use App\Enums\PlatformPermission;
 use App\Enums\WorkspaceRole;
+use App\Marketplace\MarketplaceListingAuthorization;
+use App\Models\BlockDefinition;
 use App\Models\BlockVersion;
 use App\Models\Catalog\AutoSeries;
 use App\Models\CatalogLicense;
+use App\Models\MarketplaceListing;
 use App\Models\PlatformRoleAssignment;
 use App\Models\Site;
 use App\Models\SiteOffer;
@@ -51,7 +54,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog-author@landflow.test', 'catalog@landflow.test', 'chat@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'formats@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'licensee-other@landflow.test', 'licensee@landflow.test', 'licenses-admin@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'platform-customer@landflow.test', 'platform-developer@landflow.test', 'platform-premium@landflow.test', 'publisher@landflow.test', 'quiz@landflow.test', 'sandbox@landflow.test', 'studio-developer@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test', 'template-customer@landflow.test', 'template-developer@landflow.test', 'template-installer@landflow.test'],
+            ['catalog-author@landflow.test', 'catalog@landflow.test', 'chat@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'formats@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'licensee-other@landflow.test', 'licensee@landflow.test', 'licenses-admin@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'marketplace-developer@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'platform-customer@landflow.test', 'platform-developer@landflow.test', 'platform-premium@landflow.test', 'publisher@landflow.test', 'quiz@landflow.test', 'sandbox@landflow.test', 'studio-developer@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test', 'template-customer@landflow.test', 'template-developer@landflow.test', 'template-installer@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -114,5 +117,12 @@ class E2eSeederTest extends TestCase
         $this->assertNotSame($licenseSite->workspace_id, Site::query()->where('subdomain', 'license-other-e2e')->sole()->workspace_id);
         $this->assertNotNull(app(BlockCatalogAccess::class)->denial($licenseSite, $showcase->definition));
         $this->assertTrue(Gate::forUser(User::query()->where('email', 'licenses-admin@landflow.test')->sole())->allows(PlatformPermission::ManageCatalogLicenses->value));
+
+        $marketplaceAuthor = User::query()->where('email', 'marketplace-developer@landflow.test')->sole();
+        $this->assertNotNull(app(MarketplaceListingAuthorization::class)->developerAuthor($marketplaceAuthor));
+        $this->assertNull($blockAuthoring->developerAuthor($marketplaceAuthor));
+        $marketplaceBlocks = BlockDefinition::query()->ownedByDeveloper($marketplaceAuthor->developerProfile()->sole())->whereHas('versions')->pluck('slug')->sort()->values()->all();
+        $this->assertSame(['e2e-marketplace-desktop', 'e2e-marketplace-mobile', 'e2e-marketplace-tablet'], $marketplaceBlocks);
+        $this->assertSame(0, MarketplaceListing::query()->count());
     }
 }

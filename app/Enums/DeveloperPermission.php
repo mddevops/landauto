@@ -18,7 +18,7 @@ enum DeveloperPermission: string
         return match ($this) {
             self::CreateBlocks => 'Создание блоков',
             self::CreateTemplates => 'Создание шаблонов',
-            self::SubmitMarketplaceItem => 'Отправка на модерацию',
+            self::SubmitMarketplaceItem => 'Публикация в Marketplace',
         };
     }
 
@@ -27,7 +27,7 @@ enum DeveloperPermission: string
         return match ($this) {
             self::CreateBlocks => 'Блоки',
             self::CreateTemplates => 'Шаблоны',
-            self::SubmitMarketplaceItem => 'Модерация',
+            self::SubmitMarketplaceItem => 'Marketplace',
         };
     }
 

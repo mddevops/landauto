@@ -1869,24 +1869,37 @@ Unique `developer_profile_id + permission`. Rows survive suspension. Unknown key
 
 ## marketplace_listings
 
+Implemented in P10-001 (`App\Models\MarketplaceListing`). A listing is the public Marketplace card of one canonical product; it owns presentation only.
+
 Fields:
 
-- id
-- product_type
-- template_id nullable
-- block_definition_id nullable
-- developer_profile_id
-- title
-- slug
-- description
-- status
-- pricing_type
-- price nullable
-- currency nullable
+- id (internal; never in routes or Inertia props)
+- public_id (ULID, unique, route key)
+- product_type (`block` / `template`, `App\Enums\MarketplaceProductType`; immutable)
+- block_definition_id nullable, unique, FK `block_definitions` RESTRICT (immutable)
+- template_id nullable, unique, FK `templates` RESTRICT (immutable)
+- developer_profile_id nullable, FK `developer_profiles` RESTRICT (immutable); NULL = official Landflow listing (no fake profile)
+- title (≤ 120, trimmed plain text)
+- slug (3–80, `^[a-z0-9]+(?:-[a-z0-9]+)*$`, globally unique, immutable)
+- description nullable (plain text ≤ 5000, HTML rejected)
+- status (`draft` / `published`, `App\Enums\MarketplaceListingStatus`; default `draft`, indexed)
 - published_at nullable
+- created_by_user_id / updated_by_user_id nullable, FK `users` nullOnDelete
 - timestamps
 
-Product types initially:
+Rules (enforced by the model `saving` / `updating` hooks plus unique indexes; no DB CHECK constraint for cross-database portability):
+
+- Exactly one of `block_definition_id` / `template_id` is set and matches `product_type`; the referenced product must exist.
+- At most one listing per product (unique FK columns).
+- The owner is derived from the product by the server: platform-owned product → `developer_profile_id = NULL`; developer-owned product → that product's profile. `workspace_private` Blocks cannot be listed. The browser never supplies an owner.
+- No pricing, currency, access mode, entitlement or version columns: price and access stay on the canonical product (`access_mode`, `site_price_minor`, `workspace_price_minor`, `currency`, `required_entitlement_key`) per D-121. Installed Versions follow D-122.
+- `published_at` is set exactly while `status = published` and holds the start of the current publication; unpublishing clears it.
+- Draft listings may exist before the product has a version. Publishing requires ≥ 1 published product version and `access_mode != admin_grant` (licence-only private distribution).
+- No soft deletes; listings are not deleted in P10-001.
+
+Public visibility (`MarketplaceListing::scopePubliclyVisible`, fail-closed, recomputed on every read): status `published`, the product exists, has ≥ 1 version, is not `admin_grant`, a listed Block is `platform` / `developer` scope, and the Developer Profile (if any) is `active`. A suspended Developer keeps the listing rows unchanged; they are just hidden until reactivation.
+
+Product types:
 
 - template
 - block
@@ -1895,20 +1908,9 @@ Product types initially:
 
 # 71. Marketplace Reviews / Moderation
 
-## marketplace_reviews
+Manual moderation is not part of the architecture (D-120): Blocks and Templates publish after the automated ADR-008 checks, and listings publish without an approval queue. There is no `marketplace_reviews` table and no moderation status.
 
-Internal moderation, not customer rating.
-
-Fields:
-
-- id
-- listing_id
-- reviewer_user_id
-- status
-- notes
-- created_at
-
-Later customer reviews/ratings should use separate tables.
+Customer reviews / ratings are `P10-007` (DEFERRED). If they are ever added, they get separate tables designed in that task.
 
 ---
 

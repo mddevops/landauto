@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Developer\DeveloperBlockController;
 use App\Http\Controllers\Developer\DeveloperDashboardController;
+use App\Http\Controllers\Developer\DeveloperMarketplaceController;
 use App\Http\Controllers\Developer\DeveloperTemplateController;
 use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
@@ -30,6 +31,7 @@ use App\Http\Controllers\Platform\CatalogEquipmentController;
 use App\Http\Controllers\Platform\CatalogLicenseController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
+use App\Http\Controllers\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Platform\PlatformTemplateController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
@@ -341,6 +343,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [PlatformTemplateController::class, 'store'])->middleware('throttle:template-create')->name('store');
         });
 
+    // Official Marketplace Listings (P10-001): platform-owned products only; no public storefront yet (P10-002).
+    Route::prefix('platform/marketplace')
+        ->name('platform.marketplace.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManagePlatformContent->value)
+        ->group(function () {
+            Route::get('/', [PlatformMarketplaceController::class, 'index'])->name('index');
+            Route::post('/', [PlatformMarketplaceController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::get('{listing}', [PlatformMarketplaceController::class, 'show'])->whereUlid('listing')->name('show');
+            Route::patch('{listing}', [PlatformMarketplaceController::class, 'update'])->whereUlid('listing')->name('update');
+            Route::post('{listing}/publish', [PlatformMarketplaceController::class, 'publish'])->whereUlid('listing')->name('publish');
+            Route::post('{listing}/unpublish', [PlatformMarketplaceController::class, 'unpublish'])->whereUlid('listing')->name('unpublish');
+        });
+
     // Catalog licenses (D-121): Super Admin grants Site- or Workspace-scoped licenses and revokes them; purchases are P10-005.
     Route::prefix('platform/licenses')
         ->name('platform.licenses.')
@@ -379,6 +394,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::get('/', [DeveloperTemplateController::class, 'index'])->name('index');
                     Route::get('create', [DeveloperTemplateController::class, 'create'])->name('create');
                     Route::post('/', [DeveloperTemplateController::class, 'store'])->middleware('throttle:template-create')->name('store');
+                });
+
+            // Marketplace Listings of own products (P10-001): `submit_marketplace_item`, never moderation (D-118, D-120).
+            Route::prefix('marketplace')
+                ->name('marketplace.')
+                ->middleware(EnsureDeveloperPermission::class.':'.DeveloperPermission::SubmitMarketplaceItem->value)
+                ->group(function () {
+                    Route::get('/', [DeveloperMarketplaceController::class, 'index'])->name('index');
+                    Route::post('/', [DeveloperMarketplaceController::class, 'store'])->middleware('throttle:30,1')->name('store');
+                    Route::get('{listing}', [DeveloperMarketplaceController::class, 'show'])->whereUlid('listing')->name('show');
+                    Route::patch('{listing}', [DeveloperMarketplaceController::class, 'update'])->whereUlid('listing')->name('update');
+                    Route::post('{listing}/publish', [DeveloperMarketplaceController::class, 'publish'])->whereUlid('listing')->name('publish');
+                    Route::post('{listing}/unpublish', [DeveloperMarketplaceController::class, 'unpublish'])->whereUlid('listing')->name('unpublish');
                 });
         });
 

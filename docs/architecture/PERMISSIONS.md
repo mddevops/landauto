@@ -1063,7 +1063,7 @@ Implemented (D-118, P9-002). Three domains stay separate and never grant each ot
 
 Block authoring (P9-003) applies this through `App\Blocks\BlockAuthoringAuthorization`: `/developer/blocks` requires the active profile plus `create_blocks` and only reaches that profile's Blocks; `/platform/blocks` requires `manage_platform_content`.
 
-A creator permission never authorizes content owned by another Developer Profile. `submit_marketplace_item` is reserved for a future Marketplace listing of own content (Phase 10); it is not manual moderation or publication approval (D-120) and grants no pricing, payouts or licenses.
+A creator permission never authorizes content owned by another Developer Profile. `submit_marketplace_item` authorizes Marketplace listings of own content (P10-001: `/developer/marketplace` create / edit / publish / unpublish, together with an active profile; `create_blocks` / `create_templates` are not required). It is not manual moderation or publication approval (D-120) and grants no pricing, payouts or licenses. Official Landflow listings (`/platform/marketplace`) require `manage_platform_content`.
 
 Later candidates (not implemented): `view_sales`, Developer self-edit of the profile.
 
