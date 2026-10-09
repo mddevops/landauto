@@ -4,6 +4,7 @@ namespace App\Publishing;
 
 use App\Blocks\Native\NativeBlockCompiler;
 use App\Blocks\Native\NativeCompileException;
+use App\Blocks\Native\NativeJavascriptCompiler;
 use App\Enums\PublishedAssetKind;
 use App\Enums\PublishedRuntimeAssetKind;
 use App\Enums\PublishedVersionStatus;
@@ -28,6 +29,7 @@ final class PublishedArtifactBuilder
     public function __construct(
         private PageRenderer $renderer,
         private NativeBlockCompiler $native,
+        private NativeJavascriptCompiler $javascript,
     ) {}
 
     /**
@@ -42,7 +44,9 @@ final class PublishedArtifactBuilder
         }
 
         $manifest = $version->public_manifest_json;
-        $payloads = array_values(array_map(fn (array $page): array => $this->payload($version, $page), $manifest['pages']));
+        $nativeJs = $this->javascript->compile($manifest['pages']);
+        $nativeJsUrl = $nativeJs === '' ? null : "/_landflow/runtime/{$version->public_id}/".hash('sha256', $nativeJs).'.js';
+        $payloads = array_values(array_map(fn (array $page): array => $this->payload($version, $page, $nativeJsUrl), $manifest['pages']));
         $nativeCss = $this->nativeStylesheet($manifest['pages']);
 
         // Rendering runs outside any database transaction.
@@ -54,7 +58,7 @@ final class PublishedArtifactBuilder
             }
         }
 
-        DB::transaction(function () use ($version, $manifest, $payloads, $html, $assetReferences, $nativeCss): void {
+        DB::transaction(function () use ($version, $manifest, $payloads, $html, $assetReferences, $nativeCss, $nativeJs): void {
             foreach ($manifest['pages'] as $index => $page) {
                 $rendered = $html[$page['public_id']];
                 $artifact = new PublishedPage;
@@ -91,6 +95,10 @@ final class PublishedArtifactBuilder
                     'byte_size' => strlen($nativeCss),
                 ])->save();
             }
+            if ($nativeJs !== '') {
+                $asset = new PublishedRuntimeAsset;
+                $asset->forceFill(['published_version_id' => $version->id, 'kind' => PublishedRuntimeAssetKind::NativeJs, 'content' => $nativeJs, 'content_hash' => hash('sha256', $nativeJs), 'byte_size' => strlen($nativeJs)])->save();
+            }
         });
     }
 
@@ -102,7 +110,7 @@ final class PublishedArtifactBuilder
      * @param  array<string, mixed>  $page
      * @return array<string, mixed>
      */
-    private function payload(PublishedVersion $version, array $page): array
+    private function payload(PublishedVersion $version, array $page, ?string $nativeJsUrl): array
     {
         $manifest = $version->public_manifest_json;
         $versionId = $version->public_id;
@@ -131,7 +139,7 @@ final class PublishedArtifactBuilder
                 'slug' => $block['definition'],
                 'state' => (object) $block['state'],
                 ...(isset($block['sandbox']) ? ['sandbox' => $block['sandbox']] : []),
-                ...(isset($block['native']) ? ['native' => $this->native($block, $assetUrls)] : []),
+                ...(isset($block['native']) ? ['native' => [...$this->native($block, $assetUrls), ...($nativeJsUrl !== null && trim((string) $block['native']['js']) !== '' ? ['script' => $nativeJsUrl] : [])]] : []),
             ], $page['blocks']),
             'assets' => array_map(fn (string $assetId): array => [
                 'public_id' => $assetId,
@@ -213,11 +221,6 @@ final class PublishedArtifactBuilder
     {
         /** @var array{html: string, css: string, js: string, fields: list<array<string, mixed>>} $source */
         $source = $block['native'];
-
-        // Defense in depth: Publish validation already refuses non-empty Native JavaScript.
-        if (trim($source['js']) !== '') {
-            throw new PageRenderException('Native JavaScript is not approved for publishing.');
-        }
 
         return [NativeBlockCompiler::scope((string) $block['definition'], (string) $block['version'], $source), $source];
     }

@@ -3,6 +3,7 @@
 namespace App\Blocks;
 
 use App\Blocks\Native\NativeBlockCompiler;
+use App\Blocks\Native\NativeJavascriptPolicy;
 use App\Enums\BlockFieldType;
 use App\Enums\BlockRuntime;
 use App\Models\BlockVersion;
@@ -24,6 +25,7 @@ final class BlockSourceChecker
         private BlockSchemaValidator $schemas,
         private BlockTemplateParser $templates,
         private NativeBlockCompiler $native,
+        private NativeJavascriptPolicy $javascript,
     ) {}
 
     /**
@@ -45,7 +47,7 @@ final class BlockSourceChecker
             'css' => $source['css'],
             'js' => $source['js'],
             'schema' => (string) json_encode($version->schema_json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
-        ]);
+        ], $version->runtime === BlockRuntime::Native);
 
         if ($issues !== [] || $version->runtime !== BlockRuntime::Native) {
             return $issues;
@@ -61,7 +63,7 @@ final class BlockSourceChecker
      * @param  array{html: string, css: string, js: string, schema: string}  $sources
      * @return list<array{source: string, line: int|null, path: string|null, message: string}>
      */
-    public function check(array $sources): array
+    public function check(array $sources, bool $nativeJavascript = true): array
     {
         $issues = [];
 
@@ -87,6 +89,12 @@ final class BlockSourceChecker
         $this->checkActions($sources['html'], $fields, $issues);
         $this->checkExternal('html', $sources['html'], $issues);
         $this->checkExternal('css', $sources['css'], $issues);
+
+        if ($nativeJavascript) {
+            foreach ($this->javascript->issues($sources['js']) as $message) {
+                $issues[] = self::issue('js', null, null, $message);
+            }
+        }
 
         $order = array_flip(array_keys(self::FILES));
         usort($issues, fn (array $a, array $b): int => [$order[$a['source']], $a['line'] ?? 0] <=> [$order[$b['source']], $b['line'] ?? 0]);

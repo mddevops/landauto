@@ -7,6 +7,7 @@ use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockReferenceResolver;
 use App\Blocks\BlockSourceChecker;
+use App\Blocks\BlockSourceFingerprint;
 use App\Blocks\BlockStateValidator;
 use App\Blocks\BlockVersionGrants;
 use App\Blocks\Native\NativeBlockCompiler;
@@ -57,6 +58,7 @@ final class PublishValidator
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
         private NativeBlockCompiler $native,
+        private BlockSourceFingerprint $fingerprint,
     ) {}
 
     public function validate(Site $site, ?User $actor = null): PublishValidation
@@ -175,10 +177,13 @@ final class PublishValidator
 
                 $native = NativeBlockCompiler::source($version);
 
-                // ADR-009 / D-123: X-024 has no trusted Native JavaScript runtime; such a version
-                // never publishes, never runs and never falls back to the sandbox.
-                if ($native !== null && trim($native['js']) !== '') {
-                    $this->error('native_js_not_approved', 'Нативный JavaScript этого блока ещё не одобрен. Опубликуйте версию после внедрения доверенного JS runtime.', page: $page->public_id, block: $block->public_id);
+                if ($native !== null && (
+                    $version->approved_revision === null || $version->approved_by_user_id === null || $version->approved_at === null
+                    || ! is_string($version->approved_source_hash)
+                    || preg_match('/^[a-f0-9]{64}$/', $version->approved_source_hash) !== 1
+                    || ! hash_equals($version->approved_source_hash, $this->fingerprint->fromVersion($version))
+                )) {
+                    $this->error('native_approval_invalid', 'Нативный блок не имеет действующего одобрения точной версии исходного кода.', page: $page->public_id, block: $block->public_id);
 
                     continue;
                 }

@@ -9,6 +9,7 @@ use App\Models\BlockDraft;
 use App\Models\BlockVersion;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LogicException;
@@ -26,6 +27,7 @@ final class BlockPublisher
     public function __construct(
         private BlockAuthoringAuthorization $authorization,
         private BlockSourceChecker $checker,
+        private BlockSourceFingerprint $fingerprint,
     ) {}
 
     /**
@@ -35,13 +37,17 @@ final class BlockPublisher
      */
     public function publish(User $actor, BlockDefinition $block, int $revision): BlockVersion
     {
-        if (! $this->authorization->canEdit($actor, $block)) {
+        if (! $this->authorization->canApproveNative($actor, $block)) {
             throw new AuthorizationException;
         }
 
         $version = DB::transaction(function () use ($actor, $block, $revision): BlockVersion {
             // Serializes publishing per Block so version numbers never collide.
             BlockDefinition::query()->whereKey($block->id)->lockForUpdate()->firstOrFail();
+
+            if (! $this->authorization->canApproveNative($actor, $block)) {
+                throw new AuthorizationException;
+            }
 
             $draft = BlockDraft::query()->where('block_definition_id', $block->id)->first();
 
@@ -73,18 +79,27 @@ final class BlockPublisher
             }
 
             $version = new BlockVersion(['version' => $this->nextVersion($latest, $schema), 'schema_json' => $schema]);
-            $version->runtime = BlockRuntime::Sandboxed;
+            $hash = $this->fingerprint->fromDraft($sources);
+            $version->runtime = BlockRuntime::Native;
             $version->html = $sources['html'];
             $version->css = $sources['css'];
             $version->js = $sources['js'];
             $version->definition()->associate($block);
             $version->publisher()->associate($actor);
+            $version->approved_revision = $revision;
+            $version->approved_source_hash = $hash;
+            $version->approver()->associate($actor);
+            $version->approved_at = Carbon::now();
             $version->save();
+
+            if (! hash_equals($hash, $this->fingerprint->fromVersion($version))) {
+                throw new LogicException('Native Block source fingerprint mismatch.');
+            }
 
             return $version;
         });
 
-        $context = ['block' => $block->public_id, 'version' => $version->version];
+        $context = ['block' => $block->public_id, 'version' => $version->version, 'source_hash' => $version->approved_source_hash];
 
         if ($block->isDeveloperOwned()) {
             $context['developer_profile'] = $block->developerProfile?->public_id;

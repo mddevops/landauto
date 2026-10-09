@@ -9,4 +9,5 @@ namespace App\Enums;
 enum PublishedRuntimeAssetKind: string
 {
     case NativeCss = 'native_css';
+    case NativeJs = 'native_js';
 }

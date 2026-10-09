@@ -19,10 +19,20 @@ class PublishedRuntimeAssetController extends Controller
 {
     public function stylesheet(Request $request, string $version, string $hash): Response
     {
+        return $this->asset($request, $version, $hash, PublishedRuntimeAssetKind::NativeCss, 'text/css; charset=utf-8');
+    }
+
+    public function javascript(Request $request, string $version, string $hash): Response
+    {
+        return $this->asset($request, $version, $hash, PublishedRuntimeAssetKind::NativeJs, 'text/javascript; charset=utf-8');
+    }
+
+    private function asset(Request $request, string $version, string $hash, PublishedRuntimeAssetKind $kind, string $contentType): Response
+    {
         $site = ResolvePublicSite::site($request);
 
         $asset = PublishedRuntimeAsset::query()
-            ->where('kind', PublishedRuntimeAssetKind::NativeCss->value)
+            ->where('kind', $kind->value)
             ->where('content_hash', $hash)
             ->whereHas('version', fn ($query) => $query
                 ->where('site_id', $site->id)
@@ -35,7 +45,7 @@ class PublishedRuntimeAssetController extends Controller
         }
 
         return response($asset->content, 200, [
-            'Content-Type' => 'text/css; charset=utf-8',
+            'Content-Type' => $contentType,
             'X-Content-Type-Options' => 'nosniff',
             'Cache-Control' => 'public, max-age=31536000, immutable',
         ]);

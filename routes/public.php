@@ -28,6 +28,8 @@ $runtime = function (string $name): void {
             ->whereUlid('version')
             ->where('hash', '[a-f0-9]{64}')
             ->name('runtime.css');
+        Route::get('_landflow/runtime/{version}/{hash}.js', [PublishedRuntimeAssetController::class, 'javascript'])
+            ->whereUlid('version')->where('hash', '[a-f0-9]{64}')->name('runtime.js');
         Route::post('_landflow/forms/{version}/{form}', PublishedFormController::class)
             ->whereUlid(['version', 'form'])
             ->middleware('throttle:form-submissions')

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Blocks;
 
 use App\Enums\BlockRuntime;
+use App\Enums\DeveloperPermission;
 use App\Enums\PlatformRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
@@ -35,6 +36,7 @@ class BlockPublishingTest extends TestCase
         parent::setUp();
 
         $this->profile = DeveloperProfile::factory()->withPermissions()->create();
+        $this->profile->permissions()->create(['permission' => DeveloperPermission::ApproveNativeBlocks]);
         $this->block = BlockDefinition::factory()->developer($this->profile)->create(['slug' => 'promo']);
     }
 
@@ -60,7 +62,7 @@ class BlockPublishingTest extends TestCase
         return $this->actingAs($user)->post(route("{$scope}.blocks.publish", $block), ['revision' => $revision]);
     }
 
-    public function test_studio_publish_never_creates_native_versions_before_the_approval_flow(): void
+    public function test_studio_publish_creates_native_versions_after_approval(): void
     {
         $user = $this->profile->user;
         $this->saveDraft($user, $this->block, 0);
@@ -68,31 +70,28 @@ class BlockPublishingTest extends TestCase
         $this->actingAs($user)->post(route('developer.blocks.publish', $this->block), ['revision' => 1, 'runtime' => 'native'])
             ->assertSessionHasNoErrors();
 
-        $this->assertSame(BlockRuntime::Sandboxed, BlockVersion::query()->sole()->runtime);
-        $this->assertSame(0, BlockVersion::query()->where('runtime', BlockRuntime::Native->value)->count());
+        $this->assertSame(BlockRuntime::Native, BlockVersion::query()->sole()->runtime);
+        $this->assertSame(1, BlockVersion::query()->where('runtime', BlockRuntime::Native->value)->count());
     }
 
-    public function test_author_publishes_the_saved_draft_as_an_immutable_sandboxed_version(): void
+    public function test_author_approves_the_saved_draft_as_an_immutable_native_version(): void
     {
         Log::spy();
         $user = $this->profile->user;
-        $this->saveDraft($user, $this->block, 0, ['js' => 'landflow.resize();']);
+        $this->saveDraft($user, $this->block, 0, ['js' => 'return () => {};']);
 
         $this->publish($user, $this->block, 1)
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('developer.blocks.show', $this->block));
 
         $version = BlockVersion::query()->sole();
-        $this->assertSame(['1.0.0', BlockRuntime::Sandboxed], [$version->version, $version->runtime]);
-        $this->assertSame(['<h2>{{ title }}</h2>', 'h2 { color: red; }', 'landflow.resize();'], [$version->html, $version->css, $version->js]);
+        $this->assertSame(['1.0.0', BlockRuntime::Native], [$version->version, $version->runtime]);
+        $this->assertSame(['<h2>{{ title }}</h2>', 'h2 { color: red; }', 'return () => {};'], [$version->html, $version->css, $version->js]);
         $this->assertSame(json_decode(self::SCHEMA, true), $version->schema_json);
         $this->assertSame($user->id, $version->published_by_user_id);
-        Log::shouldHaveReceived('info')->with('developer.block_published', Mockery::on(fn (array $context): bool => $context === [
-            'block' => $this->block->public_id,
-            'version' => '1.0.0',
-            'developer_profile' => $this->profile->public_id,
-            'actor_user_id' => $user->id,
-        ]));
+        Log::shouldHaveReceived('info')->with('developer.block_published', Mockery::on(fn (array $context): bool => $context['block'] === $this->block->public_id
+            && $context['version'] === '1.0.0' && $context['developer_profile'] === $this->profile->public_id
+            && $context['actor_user_id'] === $user->id && preg_match('/^[a-f0-9]{64}$/', $context['source_hash']) === 1));
 
         $this->actingAs($user)->get(route('developer.blocks.show', $this->block))
             ->assertInertia(fn (Assert $page) => $page
@@ -100,7 +99,7 @@ class BlockPublishingTest extends TestCase
                 ->where('publishBlockedReason', null)
                 ->has('versions', 1)
                 ->where('versions.0.version', '1.0.0')
-                ->where('versions.0.runtime_label', 'Код студии')
+                ->where('versions.0.runtime_label', 'Нативный')
                 ->missing('versions.0.html')
                 ->missing('versions.0.published_by_user_id'));
     }
@@ -182,7 +181,7 @@ class BlockPublishingTest extends TestCase
         $platform = BlockDefinition::factory()->platform()->create();
         $this->saveDraft($superAdmin, $platform, 0, [], 'platform');
         $this->publish($superAdmin, $platform, 1, 'platform')->assertSessionHasNoErrors();
-        $this->assertSame(BlockRuntime::Sandboxed, $platform->versions()->sole()->runtime);
+        $this->assertSame(BlockRuntime::Native, $platform->versions()->sole()->runtime);
         Log::shouldHaveReceived('info')->with('platform.block_published', Mockery::any())->once();
         $this->publish($this->profile->user, $platform, 1, 'platform')->assertForbidden();
 

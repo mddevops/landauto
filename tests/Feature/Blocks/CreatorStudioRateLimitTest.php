@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Blocks;
 
+use App\Enums\DeveloperPermission;
 use App\Models\BlockDefinition;
 use App\Models\BlockVersion;
 use App\Models\DeveloperProfile;
@@ -31,6 +32,7 @@ class CreatorStudioRateLimitTest extends TestCase
         parent::setUp();
 
         $this->profile = DeveloperProfile::factory()->withPermissions()->create();
+        $this->profile->permissions()->create(['permission' => DeveloperPermission::ApproveNativeBlocks]);
         $this->blockA = BlockDefinition::factory()->developer($this->profile)->create(['slug' => 'promo-a']);
         $this->blockB = BlockDefinition::factory()->developer($this->profile)->create(['slug' => 'promo-b']);
     }

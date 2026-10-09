@@ -15,6 +15,7 @@ export type SandboxSource = {
     css: string;
     js: string;
     fields: SchemaField[];
+    contract?: 'native' | 'legacy';
 };
 
 /**
@@ -35,8 +36,13 @@ export function SandboxedBlock({
     const context = useBlockRenderContext();
     const trigger = useTriggerContext();
     const sources = useMemo(
-        () => ({ html: source.html, css: source.css, js: source.js }),
-        [source.html, source.css, source.js],
+        () => ({
+            html: source.html,
+            css: source.css,
+            js: source.js,
+            contract: source.contract,
+        }),
+        [source.html, source.css, source.js, source.contract],
     );
     const actions = useMemo(() => actionKeys(source.fields), [source.fields]);
     const props = useMemo(

@@ -1,5 +1,7 @@
 # Landflow — Publishing Architecture
 
+> **X-025:** Site Publish recomputes Native approval fingerprints and source/compiler checks, then atomically emits at most one `native_css` and one `native_js` asset per Published Version. Hydration contains only the immutable JS URL, compiled HTML, safe props, scope and action keys—never authored source or approval metadata.
+
 **Document:** `docs/architecture/PUBLISHING.md`  
 **Status:** Core publishing source of truth  
 **Purpose:** Define Draft, Preview, Published snapshots, publication workflow, Landflow subdomains, custom domains, versioning, rollback, publication validation, caching, public runtime stability, and publishing permissions.

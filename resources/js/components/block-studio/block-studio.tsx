@@ -76,6 +76,7 @@ export type BlockStudioPageProps = {
     draft: BlockDraft;
     versions: PublishedBlockVersion[];
     publishBlockedReason: string | null;
+    canApproveNative: boolean;
     access: BlockAccessSettings;
     accessModes: Choice[];
     accessEntitlements: Choice[];
@@ -95,6 +96,7 @@ export function BlockStudio({
     draft,
     versions,
     publishBlockedReason,
+    canApproveNative,
     access,
     accessModes,
     accessEntitlements,
@@ -115,6 +117,7 @@ export function BlockStudio({
         draft.saved_at !== null &&
         draft.checks.length === 0 &&
         publishBlockedReason === null &&
+        canApproveNative &&
         !publishing;
 
     const publish = () => {
@@ -198,7 +201,7 @@ export function BlockStudio({
                         ) : (
                             <Upload aria-hidden="true" />
                         )}
-                        Опубликовать
+                        Одобрить и опубликовать
                     </Button>
                 </div>
             </header>
@@ -206,11 +209,13 @@ export function BlockStudio({
                 id="studio-publish-hint"
                 className="-mt-2 text-xs text-muted-foreground lg:text-right"
             >
-                {publishHint({
-                    blockedReason: publishBlockedReason,
-                    saved: status === 'saved' && draft.saved_at !== null,
-                    issues: draft.checks.length,
-                })}
+                {!canApproveNative
+                    ? 'Нет права одобрять нативные блоки.'
+                    : publishHint({
+                          blockedReason: publishBlockedReason,
+                          saved: status === 'saved' && draft.saved_at !== null,
+                          issues: draft.checks.length,
+                      })}
             </p>
 
             {publishError && (

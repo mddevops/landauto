@@ -13,6 +13,7 @@ enum PlatformPermission: string
     case ManageDevelopers = 'manage_developers';
     // Official platform-owned Blocks / Templates (D-117, D-118); needs no Developer Profile.
     case ManagePlatformContent = 'manage_platform_content';
+    case ApproveNativeBlocks = 'approve_native_blocks';
     // Grant / revoke Site- or Workspace-scoped catalog licenses (D-121); Super Admin only.
     case ManageCatalogLicenses = 'manage_catalog_licenses';
 }

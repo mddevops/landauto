@@ -76,9 +76,9 @@ class PlatformBlockController extends Controller
         return to_route('platform.blocks.show', $block);
     }
 
-    public function show(string $block): Response
+    public function show(Request $request, string $block): Response
     {
-        return Inertia::render('platform/blocks/show', $this->presenter->studio($this->find($block)));
+        return Inertia::render('platform/blocks/show', $this->presenter->studio($this->find($block), $this->actor($request)));
     }
 
     public function update(UpdateBlockDefinitionRequest $request, string $block): RedirectResponse

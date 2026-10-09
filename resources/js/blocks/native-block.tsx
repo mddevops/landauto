@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useMemo, useRef } from 'react';
 import type { MouseEvent } from 'react';
 import { runBlockAction } from '@/blocks/actions';
 import { useBlockRenderContext } from '@/blocks/render-context';
@@ -13,7 +13,38 @@ export type NativeOutput = {
     scope: string;
     html: string;
     actions: string[];
+    script?: string;
 };
+
+type NativeModule = {
+    mount: (
+        scope: string,
+        root: HTMLElement,
+        props: Readonly<BlockState>,
+        api: Readonly<{ action: (key: string, trigger?: HTMLElement) => void }>,
+    ) => unknown;
+};
+const modules = new Map<string, Promise<NativeModule>>();
+function loadModule(url: string): Promise<NativeModule> {
+    let promise = modules.get(url);
+    if (!promise) {
+        promise = import(/* @vite-ignore */ url) as Promise<NativeModule>;
+        modules.set(url, promise);
+    }
+    return promise;
+}
+
+function deepFreeze<T>(value: T): T {
+    if (
+        value !== null &&
+        typeof value === 'object' &&
+        !Object.isFrozen(value)
+    ) {
+        Object.freeze(value);
+        Object.values(value).forEach(deepFreeze);
+    }
+    return value;
+}
 
 /**
  * Renders a Native Block on the published Site as host DOM inside one controlled root. The
@@ -33,6 +64,7 @@ export function NativeBlock({
 }) {
     const context = useBlockRenderContext();
     const trigger = useTriggerContext();
+    const root = useRef<HTMLDivElement>(null);
 
     const onClick = useCallback(
         (event: MouseEvent<HTMLDivElement>) => {
@@ -64,8 +96,58 @@ export function NativeBlock({
         [native.actions, state, context, trigger],
     );
 
+    const api = useMemo(
+        () =>
+            Object.freeze({
+                action: (key: string, element?: HTMLElement) => {
+                    const current = root.current;
+                    if (!current || !native.actions.includes(key)) return;
+                    const safeTrigger =
+                        element instanceof HTMLElement &&
+                        current.contains(element)
+                            ? element
+                            : current;
+                    runBlockAction(state[key], context, trigger, safeTrigger);
+                },
+            }),
+        [native.actions, state, context, trigger],
+    );
+
+    useEffect(() => {
+        if (!native.script || !root.current) return;
+        let active = true;
+        let cleanup: (() => void) | undefined;
+        const element = root.current;
+        void loadModule(native.script)
+            .then((module) => {
+                if (!active) return;
+                try {
+                    const result = module.mount(
+                        native.scope,
+                        element,
+                        deepFreeze(structuredClone(state)),
+                        api,
+                    );
+                    if (typeof result === 'function')
+                        cleanup = result as () => void;
+                } catch {
+                    /* one instance must not break the page */
+                }
+            })
+            .catch(() => undefined);
+        return () => {
+            active = false;
+            try {
+                cleanup?.();
+            } catch {
+                /* isolate cleanup failure */
+            }
+        };
+    }, [native.script, native.scope, state, api]);
+
     return (
         <div
+            ref={root}
             data-landflow-native={native.scope}
             data-landflow-block={slug}
             data-landflow-instance={instance}

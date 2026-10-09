@@ -1,5 +1,7 @@
 # Landflow — Database Architecture
 
+> **X-025:** `block_versions` adds nullable `approved_revision`, lowercase SHA-256 `approved_source_hash`, nullable/null-on-delete `approved_by_user_id`, and `approved_at`. All are present only for Native versions. `published_runtime_assets.kind` now includes immutable `native_js` alongside `native_css`.
+
 **Document:** `docs/architecture/DATABASE.md`  
 **Status:** Database design source of truth  
 **Purpose:** Define primary entities, relationships, ownership, normalization rules, JSON boundaries, deletion behavior, and future-proofing requirements before migrations are written.

@@ -1,5 +1,7 @@
 # Landflow — Block System Architecture
 
+> **X-025:** New Studio publication is Native and requires both edit authority and the separate deny-by-default `approve_native_blocks` capability. Approval locks one Draft revision and canonical SHA-256 fingerprint. Authored `script.js` is a `mount(root, props, api)` body: authenticated surfaces run it only in the opaque-origin sandbox; published Sites load one immutable same-origin module and call cleanup per instance. Historical sandboxed versions keep ADR-008 behavior.
+
 **Document:** `docs/architecture/BLOCK_SYSTEM.md`  
 **Status:** Core Designer/Developer architecture source of truth  
 **Purpose:** Define Block Definitions, Block Versions, Block Schema, Block Instances, editable fields, repeaters/groups, actions, data binding, carousel/lightbox capabilities, developer authoring, AI-assisted schema generation, rendering boundaries, and safe extensibility.

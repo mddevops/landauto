@@ -9,6 +9,7 @@ use App\Enums\Entitlement;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
 use App\Models\BlockVersion;
+use App\Models\User;
 use App\Support\Money;
 use stdClass;
 
@@ -20,6 +21,7 @@ final class BlockAuthoringPresenter
     public function __construct(
         private BlockStudio $studio,
         private BlockSourceChecker $checker,
+        private BlockAuthoringAuthorization $authorization,
     ) {}
 
     /**
@@ -57,7 +59,7 @@ final class BlockAuthoringPresenter
      *
      * @return array<string, mixed>
      */
-    public function studio(BlockDefinition $block): array
+    public function studio(BlockDefinition $block, ?User $actor = null): array
     {
         $versions = $block->versions()->latest('id')->get();
         $official = $versions->contains(fn (BlockVersion $version): bool => $version->runtime === BlockRuntime::Official);
@@ -71,6 +73,7 @@ final class BlockAuthoringPresenter
                 'published_at' => $version->created_at?->toIso8601String(),
             ])->values()->all(),
             'publishBlockedReason' => $official ? BlockPublisher::OFFICIAL_RUNTIME : null,
+            'canApproveNative' => $this->authorization->canApproveNative($actor, $block),
             'access' => [
                 'mode' => $block->access_mode->value,
                 'entitlement' => $block->access_entitlement?->value,

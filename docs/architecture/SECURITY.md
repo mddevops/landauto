@@ -1,5 +1,7 @@
 # Landflow — Security Architecture
 
+> **X-025 Native boundary:** exact-source human approval is the trust boundary; token-aware JavaScript policy checks are defense-in-depth. Native code runs only on stateless published Site origins. Production rejects a `SESSION_DOMAIN` containing the published wildcard domain. The immutable same-origin module needs no `unsafe-eval`; the full Metrica/SmartCaptcha-compatible public CSP remains X-029.
+
 **Document:** `docs/architecture/SECURITY.md`  
 **Status:** Core security source of truth  
 **Purpose:** Define security boundaries for tenancy, authentication, authorization, public endpoints, forms, uploads, Blocks, RichText, integrations, secrets, admin access, publishing, Marketplace extensions, and auditing.

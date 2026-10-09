@@ -1,5 +1,7 @@
 # Landflow — Permissions and Authorization Model
 
+> **X-025:** `DeveloperPermission::ApproveNativeBlocks` is not defaulted or backfilled; an active exact-owner profile also needs `CreateBlocks`. Platform approval requires both `ManagePlatformContent` and `PlatformPermission::ApproveNativeBlocks`; Super Admin receives both, Catalog Manager does not. Workspace roles grant neither.
+
 **Document:** `docs/architecture/PERMISSIONS.md`  
 **Status:** Authorization source of truth  
 **Purpose:** Define roles, permissions, Site-level access, entitlement interaction, platform roles, and authorization resolution rules before implementation.

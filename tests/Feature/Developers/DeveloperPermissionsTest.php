@@ -31,7 +31,9 @@ class DeveloperPermissionsTest extends TestCase
 {
     use RefreshDatabase;
 
-    private const ALL = ['create_blocks', 'create_templates', 'submit_marketplace_item'];
+    private const DEFAULTS = ['create_blocks', 'create_templates', 'submit_marketplace_item'];
+
+    private const ALL = ['approve_native_blocks', 'create_blocks', 'create_templates', 'submit_marketplace_item'];
 
     private User $superAdmin;
 
@@ -44,8 +46,8 @@ class DeveloperPermissionsTest extends TestCase
 
     public function test_permission_catalog_has_no_access_or_foreign_domain_keys(): void
     {
-        $this->assertSame(self::ALL, array_map(fn (DeveloperPermission $permission): string => $permission->value, DeveloperPermission::cases()));
-        $this->assertSame(DeveloperPermission::cases(), DeveloperPermission::defaults());
+        $this->assertSame([...self::DEFAULTS, 'approve_native_blocks'], array_map(fn (DeveloperPermission $permission): string => $permission->value, DeveloperPermission::cases()));
+        $this->assertSame(self::DEFAULTS, array_map(fn (DeveloperPermission $permission): string => $permission->value, DeveloperPermission::defaults()));
 
         foreach (['access_developer_platform', 'manage_billing', 'manage_users', 'manage_workspaces', 'manage_catalog', 'manage_marketplace', 'approve_marketplace_item'] as $key) {
             $this->assertNull(DeveloperPermission::tryFrom($key), $key);
@@ -61,7 +63,7 @@ class DeveloperPermissionsTest extends TestCase
             ->assertSessionHasNoErrors();
 
         $profile = DeveloperProfile::query()->sole();
-        $this->assertSame(self::ALL, $this->storedKeys($profile));
+        $this->assertSame(self::DEFAULTS, $this->storedKeys($profile));
         $this->assertSame(3, DB::table('developer_profile_permissions')->count());
     }
 
@@ -75,23 +77,23 @@ class DeveloperPermissionsTest extends TestCase
         $migration->up();
 
         foreach (DeveloperProfile::query()->get() as $profile) {
-            $this->assertSame(self::ALL, $this->storedKeys($profile), $profile->slug);
+            $this->assertSame(self::DEFAULTS, $this->storedKeys($profile), $profile->slug);
         }
 
         // Rolling back and migrating again yields the same set without duplicates.
         $migration->down();
         $migration->up();
         $this->assertSame(9, DB::table('developer_profile_permissions')->count());
-        $this->assertSame(self::ALL, $this->storedKeys($profiles->first()));
+        $this->assertSame(self::DEFAULTS, $this->storedKeys($profiles->first()));
     }
 
     public function test_central_resolver_is_deny_by_default(): void
     {
         $authorization = app(DeveloperAuthorization::class);
-        $full = DeveloperProfile::factory()->withPermissions()->create();
+        $full = DeveloperProfile::factory()->withPermissions(...DeveloperPermission::cases())->create();
         $blocksOnly = DeveloperProfile::factory()->withPermissions(DeveloperPermission::CreateBlocks)->create();
         $none = DeveloperProfile::factory()->create();
-        $suspended = DeveloperProfile::factory()->suspended()->withPermissions()->create();
+        $suspended = DeveloperProfile::factory()->suspended()->withPermissions(...DeveloperPermission::cases())->create();
 
         $this->assertTrue($authorization->allows($full, DeveloperPermission::CreateTemplates));
         $this->assertTrue($authorization->allowsUser($full->user, DeveloperPermission::SubmitMarketplaceItem));
@@ -118,7 +120,7 @@ class DeveloperPermissionsTest extends TestCase
         // An unknown stored key never grants anything.
         DB::table('developer_profile_permissions')->insert(['developer_profile_id' => $none->id, 'permission' => 'manage_billing', 'created_at' => now(), 'updated_at' => now()]);
         $this->assertSame([], $authorization->permissions($none));
-        $this->assertSame(array_fill_keys(self::ALL, false), $authorization->capabilities($none));
+        $this->assertSame(['create_blocks' => false, 'create_templates' => false, 'submit_marketplace_item' => false, 'approve_native_blocks' => false], $authorization->capabilities($none));
     }
 
     public function test_super_admin_manages_the_explicit_permission_set(): void
@@ -128,7 +130,7 @@ class DeveloperPermissionsTest extends TestCase
 
         $this->actingAs($this->superAdmin)->get(route('platform.developers.index'))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('developers.0.permissions', self::ALL)
+                ->where('developers.0.permissions', self::DEFAULTS)
                 ->where('permissionOptions.1', ['value' => 'create_templates', 'label' => 'Создание шаблонов', 'short_label' => 'Шаблоны']));
 
         $this->updatePermissions($profile, ['create_blocks', 'submit_marketplace_item'])
@@ -138,7 +140,7 @@ class DeveloperPermissionsTest extends TestCase
         $this->assertSame(['create_blocks', 'submit_marketplace_item'], $this->storedKeys($profile));
 
         $this->updatePermissions($profile, ['create_templates', 'create_blocks', 'submit_marketplace_item'])->assertSessionHasNoErrors();
-        $this->assertSame(self::ALL, $this->storedKeys($profile));
+        $this->assertSame(self::DEFAULTS, $this->storedKeys($profile));
 
         $this->updatePermissions($profile, [])->assertSessionHasNoErrors();
         $this->assertSame([], $this->storedKeys($profile));
@@ -221,10 +223,10 @@ class DeveloperPermissionsTest extends TestCase
         $profile = DeveloperProfile::factory()->withPermissions()->create();
         $developer = $profile->user;
 
-        $this->assertCapabilities($developer, array_fill_keys(self::ALL, true));
+        $this->assertCapabilities($developer, ['approve_native_blocks' => false, 'create_blocks' => true, 'create_templates' => true, 'submit_marketplace_item' => true]);
 
         $this->updatePermissions($profile, ['create_templates', 'submit_marketplace_item']);
-        $this->assertCapabilities($developer, ['create_blocks' => false, 'create_templates' => true, 'submit_marketplace_item' => true]);
+        $this->assertCapabilities($developer, ['approve_native_blocks' => false, 'create_blocks' => false, 'create_templates' => true, 'submit_marketplace_item' => true]);
 
         $this->updatePermissions($profile, self::ALL);
         $this->assertCapabilities($developer, array_fill_keys(self::ALL, true));

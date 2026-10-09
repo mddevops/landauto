@@ -68,7 +68,7 @@ class SandboxedBlockRuntimeTest extends TestCase
         $this->assertSame($this->promo->id, $block->block_version_id);
         $this->assertSame('Промо', $block->state_json['title']);
 
-        $source = ['name' => 'Промо-карточка', 'html' => self::HTML, 'css' => 'h2 { color: #b91c1c; }', 'js' => self::JS, 'fields' => self::FIELDS];
+        $source = ['name' => 'Промо-карточка', 'html' => self::HTML, 'css' => 'h2 { color: #b91c1c; }', 'js' => self::JS, 'fields' => self::FIELDS, 'contract' => 'legacy'];
         $this->as()->get(route('sites.designer', $this->site))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('blocks.0.sandbox', null)

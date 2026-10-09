@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 and P9-018 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED; final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed; D-094 stays OPEN as a production-launch blocker only). **Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001** (branch `autopilot/phase10-2026-10-08`; P10-001 Marketplace Listings DONE and retained; P10-004 licensing decision DONE; P10-002 / P10-003 / P10-008 / P10-009 DEFERRED by D-125). **Native First-Party Block Runtime replan** (ADR-009 Accepted; D-123, D-124, D-125, owner decision 2026-10-08): X-023 DONE (documentation only), X-024 DONE (Native HTML / CSS / actions; no Native JS, no production path creating Native versions before X-025), X-025 … X-029 NOT_STARTED. The next ready task is in §68.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 and P9-018 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED; final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed; D-094 stays OPEN as a production-launch blocker only). **Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001** (branch `autopilot/phase10-2026-10-08`; P10-001 Marketplace Listings DONE and retained; P10-004 licensing decision DONE; P10-002 / P10-003 / P10-008 / P10-009 DEFERRED by D-125). **Native First-Party Block Runtime replan** (ADR-009 Accepted; D-123, D-124, D-125, owner decision 2026-10-08): X-023 DONE (documentation only), X-024 DONE (Native HTML / CSS / actions), X-025 DONE (Native approval and approved JavaScript); X-026 … X-029 NOT_STARTED. The next ready task is in §68.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -1004,8 +1004,8 @@ Scope since D-125 (2026-10-08): there is no open third-party Marketplace (no pub
 
 Block runtime truth (2026-10-09):
 
-- **Current (X-024 DONE):** `BlockRuntime` = `official` | `sandboxed` | `native`. Block Studio still publishes authored code as `sandboxed` versions (automated checks + Draft revision; no source hash, no separate approval) until X-025; published Sites render those inside an opaque-origin iframe (ADR-008). Native versions exist only through test factories / E2E fixtures (`BlockVersionFactory::native()`); when published they render in the host DOM without an iframe: publish-time compiled HTML (`app/Blocks/Native/*`, parser-based, context-aware escaping, allowlists), AST-scoped CSS stored as one immutable `native_css` asset per Published Version (`published_runtime_assets`, `/_landflow/runtime/{version}/{hash}.css`), delegated `data-landflow-action` through the shared host action / Popup runtime. Native JS is not supported: non-empty `js` blocks Publish (`native_js_not_approved`). Studio, Designer and authenticated Preview keep the sandbox frame for Native versions.
-- **Target (ADR-009, X-025):** approval capability and metadata (D-123: revision + source hash + approver + time, «Одобрить и опубликовать», separate deny-by-default capability), approved immutable Native JS artifacts, `mount(root, props, api) => cleanup`, CSP; `sandboxed` stays for preview, untrusted code and legacy versions; iframes otherwise only for genuine Embeds.
+- **Baseline (X-024 DONE):** `BlockRuntime` = `official` | `sandboxed` | `native`. Native versions render in the host DOM without an iframe: publish-time compiled HTML (`app/Blocks/Native/*`, parser-based, context-aware escaping, allowlists), AST-scoped CSS stored as one immutable `native_css` asset per Published Version (`published_runtime_assets`, `/_landflow/runtime/{version}/{hash}.css`), and delegated `data-landflow-action` through the shared host action / Popup runtime.
+- **Current (X-025 DONE):** Studio publication creates immutable `native` versions only for an actor with edit authority plus separate deny-by-default `approve_native_blocks`. Approval records the exact Draft revision, canonical SHA-256 source hash, actor and time. Published Sites load one immutable same-origin `native_js` module per Published Version and mount per instance with cleanup/failure isolation; authenticated surfaces use the Native mount-body contract only inside the opaque-origin sandbox. Legacy `sandboxed` versions remain unchanged. Final gates: `composer quality` PASS (1285 tests, 1283 passed, 2 skipped; PHPStan, Pint, `vp check`, production and SSR builds), `npm run test:e2e` PASS (95 / 95).
 
 Site Type editing (D-124): `landing` / `multi_page` — normal Block editing; `quiz` / `chat_selection` — Template only, customers edit only exposed fonts / colors / images. Today only structural locking exists (`SiteType::hasLockedStructure()`); the field-level restriction is X-027.
 
@@ -1228,7 +1228,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-Current next step: see §68 (Native runtime: X-023, X-024 DONE, X-025 next; Phase 10 public Marketplace expansion DEFERRED after P10-001 by D-125; Phase 9 COMPLETED for planned scope with P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
+Current next step: see §68 (Native runtime: X-023 through X-025 DONE, X-026 next; Phase 10 public Marketplace expansion DEFERRED after P10-001 by D-125; Phase 9 COMPLETED for planned scope with P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
 
 No implementation task should be inferred from this alone.
 
@@ -1525,7 +1525,7 @@ Phase 7 — Paid Features: COMPLETED for planned scope (P7-008 ADR-007; P7-009 D
 Phase 8 — Team: COMPLETED
 Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 DEFERRED, P9-010 DEFERRED)
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125; P10-001, P10-004 DONE)
-Cross-cutting — Native First-Party Block Runtime: X-023, X-024 DONE; X-025 … X-029 NOT_STARTED
+Cross-cutting — Native First-Party Block Runtime: X-023 through X-025 DONE; X-026 … X-029 NOT_STARTED
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 
@@ -1787,7 +1787,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`X-025 — Native Block Runtime: Approved JavaScript`**. `X-023 — Native First-Party Block Runtime Architecture` (ADR-009 Accepted; D-123, D-124, D-125) and `X-024 — Native Block Runtime: HTML / CSS / Actions` are DONE; the sequence continues X-026 → X-027 → X-028 → X-029. Phase 10 public Marketplace expansion is DEFERRED after P10-001 (DONE on `autopilot/phase10-2026-10-08`, retained) by D-125. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is COMPLETED for planned scope (P9-001 … P9-009, P9-011 … P9-017 DONE; P9-018 and P9-010 DEFERRED; final owner-decision corrective pass 2026-10-08: D-121, D-122).
+**`X-025 — Native Block Runtime: Approved JavaScript`** is DONE. The next ready task is `X-026 — Plan ↔ Catalog Access Matrix`; X-026 has not started.
 
 ---
 
@@ -1840,7 +1840,7 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; Phase 10 public expansion DEFERRED after P10-001 (D-125); Native runtime X-023, X-024 DONE, X-025 … X-029 NOT_STARTED; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121, D-122, D-123, D-124, D-125 APPROVED; ADR-009 Accepted; D-094, X-013, X-017 OPEN)
+Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; Phase 10 public expansion DEFERRED after P10-001 (D-125); Native runtime X-023 … X-025 DONE, X-026 … X-029 NOT_STARTED; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121, D-122, D-123, D-124, D-125 APPROVED; ADR-009 Accepted; D-094, X-013, X-017 OPEN)
 ```
 
-**Current phase: Native First-Party Block Runtime (X-023, X-024 DONE; next X-025). Phase 10 — Marketplace public expansion DEFERRED after P10-001 (D-125). Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED); Phases 0–8 COMPLETED, P7-009 DEFERRED. Next step: §68.**
+**Current phase: Native First-Party Block Runtime (X-023 through X-025 DONE; X-026 next). Phase 10 — Marketplace public expansion DEFERRED after P10-001 (D-125). Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED); Phases 0–8 COMPLETED, P7-009 DEFERRED. Next step: §68.**

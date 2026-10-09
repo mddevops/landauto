@@ -83,7 +83,10 @@ test('a Block published in Block Studio reaches customers according to its catal
         page.getByRole('complementary', { name: 'Проверки перед публикацией' }),
     ).toContainText('Все проверки пройдены.');
     await page
-        .getByRole('button', { name: 'Опубликовать', exact: true })
+        .getByRole('button', {
+            name: 'Одобрить и опубликовать',
+            exact: true,
+        })
         .click();
     await expect(page.getByText('Опубликована версия 1.0.0.')).toBeVisible();
 

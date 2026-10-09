@@ -167,6 +167,8 @@ Runtime mode does not change catalog access: `CatalogAccessMode`, `CatalogLicens
 
 ## Consequences
 
+X-025 is implemented: separate deny-by-default approval capabilities, exact revision/source-hash audit metadata, token-aware policy and Node syntax validation, sandboxed Native preview, and one immutable same-origin `native_js` module per Published Version. Native JS requires no `unsafe-eval`; complete integration-aware public CSP hardening remains X-029.
+
 - X-024: Native runtime model, HTML compiler, escaping / sanitization, scoped CSS compiler, host action integration, publish-time artifacts; no authored Native JS yet; sandbox preview stays.
 - X-025: approval capability and metadata, «Одобрить и опубликовать», immutable JS artifacts, `mount` contract, instance isolation, CSP.
 - X-026: Plan ↔ Catalog access matrix. X-027: D-124 server enforcement. X-028: legacy sandboxed migration. X-029: hardening and E2E review.

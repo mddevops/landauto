@@ -28,10 +28,14 @@ use LogicException;
  * @property string|null $css
  * @property string|null $js
  * @property int|null $published_by_user_id
+ * @property int|null $approved_revision
+ * @property string|null $approved_source_hash
+ * @property int|null $approved_by_user_id
+ * @property Carbon|null $approved_at
  * @property Carbon|null $created_at
  */
 #[Fillable(['version', 'schema_json'])]
-#[Hidden(['id', 'block_definition_id', 'published_by_user_id'])]
+#[Hidden(['id', 'block_definition_id', 'published_by_user_id', 'approved_by_user_id', 'approved_source_hash', 'approved_revision'])]
 class BlockVersion extends Model
 {
     /** @use HasFactory<BlockVersionFactory> */
@@ -52,6 +56,8 @@ class BlockVersion extends Model
         return [
             'runtime' => BlockRuntime::class,
             'schema_json' => 'array',
+            'approved_revision' => 'integer',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -65,6 +71,13 @@ class BlockVersion extends Model
 
             if ($version->runtime->hasAuthoredSource() ? ! $hasSources : ! $noSources) {
                 throw new LogicException('Only sandboxed and native Block Versions carry authored sources, and they carry all of them.');
+            }
+
+            $approval = [$version->approved_revision, $version->approved_source_hash, $version->approved_by_user_id, $version->approved_at];
+            $complete = ! in_array(null, $approval, true)
+                && preg_match('/^[a-f0-9]{64}$/', (string) $version->approved_source_hash) === 1;
+            if ($version->runtime === BlockRuntime::Native ? ! $complete : count(array_filter($approval, fn ($value) => $value !== null)) !== 0) {
+                throw new LogicException('Only native Block Versions carry complete approval metadata.');
             }
         });
 
@@ -92,7 +105,9 @@ class BlockVersion extends Model
      */
     public function previewSource(): ?array
     {
-        return $this->authoredSource();
+        $source = $this->authoredSource();
+
+        return $source === null ? null : [...$source, 'contract' => $this->runtime === BlockRuntime::Native ? 'native' : 'legacy'];
     }
 
     /**
@@ -142,5 +157,11 @@ class BlockVersion extends Model
     public function publisher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'published_by_user_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 }

@@ -80,9 +80,9 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125, owner decision 2026-10-08): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions; Block Studio still publishes sandboxed versions until X-025); order X-025 → X-026 → X-027 → X-028 → X-029.
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125, owner decision 2026-10-08): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript); order X-026 → X-027 → X-028 → X-029.
 
-Next ready task: `X-025 — Native Block Runtime: Approved JavaScript` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
+`X-025 — Native Block Runtime: Approved JavaScript` is DONE. The next ready task is X-026; it has not started. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1245,7 +1245,7 @@ Completed 2026-09-30 (uncommitted).
 
 ## P1-005 — Create Default Personal Workspace
 
-**Status:** DONE
+**Status:** PARTIAL
 **Dependencies:** P1-004
 
 ### Objective
@@ -4362,7 +4362,7 @@ Scope:
 
 ## X-025 — Native Block Runtime: Approved JavaScript
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** after X-024
 **Decision:** ADR-009 §2, §3, §4, §7; D-123
 
@@ -4375,6 +4375,10 @@ Scope:
 - CSP implications for published Sites; published host cookie / session isolation from the application host;
 - no `eval` / `new Function` / unvalidated dynamic imports; deterministic / security checks;
 - Designer / Studio / authenticated Preview never execute Native JS in the application origin.
+
+Result: deny-by-default Native approval is enforced for Developer and Platform authors, bound to the exact Draft revision and canonical source hash. Approved immutable Native versions publish scoped HTML/CSS plus one same-origin `native_js` asset, mount independently per instance, clean up safely and isolate failures. Authenticated previews retain the opaque-origin sandbox; legacy Sandboxed versions are unchanged.
+
+Gates: `composer quality` PASS (1285 tests, 1283 passed, 2 skipped; 9836 assertions; PHPStan 0 errors; Pint; `vp check`; production and SSR builds), `npm run test:e2e` PASS (95 / 95), `git diff --check` PASS.
 
 ---
 
@@ -4533,8 +4537,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
-- Native runtime replan (ADR-009; D-123, D-124, D-125): `X-023` DONE → `X-024` DONE → `X-025` → `X-026` → `X-027` → `X-028` → `X-029`.
-- Next: `X-025 — Native Block Runtime: Approved JavaScript` (P9-018 and P9-010 DEFERRED).
+- Native runtime replan (ADR-009; D-123, D-124, D-125): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` → `X-027` → `X-028` → `X-029`.
+- Next: `X-026 — Plan ↔ Catalog Access Matrix` (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

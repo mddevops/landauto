@@ -124,22 +124,20 @@ test('Native Blocks publish as host DOM with scoped CSS, hydrate cleanly and run
     ).toBeVisible();
 });
 
-test('a Native Block with JavaScript cannot be published and production stays unpublished', async ({
+test('approved Native JavaScript publishes and mounts on the public origin', async ({
     page,
-    browserIssues,
 }) => {
     await login(page);
     await openPublishing(page, owner.blockedSite);
 
-    await expect(page.getByTestId('publish-errors')).toContainText(
-        'Нативный JavaScript этого блока ещё не одобрен. Опубликуйте версию после внедрения доверенного JS runtime.',
-    );
     await expect(
         page.getByRole('button', { name: 'Опубликовать' }),
-    ).toBeDisabled();
+    ).toBeEnabled();
+    await page.getByRole('button', { name: 'Опубликовать' }).click();
+    await expect(page.getByText('Сайт опубликован.')).toBeVisible();
 
-    browserIssues.expectFailedResponse(404, 'native-js-e2e.localhost');
     const visitor = await page.context().newPage();
     const response = await visitor.goto(owner.blockedPublicUrl);
-    expect(response?.status()).toBe(404);
+    expect(response?.status()).toBe(200);
+    await expect(visitor.locator('[data-native-ready="true"]')).toBeVisible();
 });

@@ -70,7 +70,12 @@ export function BlockPreview({
     );
     const live = useDebounced(input, PREVIEW_DELAY_MS);
     const frameSources = useMemo(
-        () => ({ html: live.html, css: live.css, js: live.js }),
+        () => ({
+            html: live.html,
+            css: live.css,
+            js: live.js,
+            contract: 'native' as const,
+        }),
         [live.html, live.css, live.js],
     );
     const props = useMemo(

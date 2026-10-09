@@ -80,7 +80,7 @@ class DeveloperBlockController extends Controller
 
     public function show(Request $request, string $block): Response
     {
-        return Inertia::render('developer/blocks/show', $this->presenter->studio($this->find($request, $block)));
+        return Inertia::render('developer/blocks/show', $this->presenter->studio($this->find($request, $block), $this->actor($request)));
     }
 
     public function update(UpdateBlockDefinitionRequest $request, string $block): RedirectResponse

@@ -2,9 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Blocks\BlockSourceFingerprint;
 use App\Enums\BlockRuntime;
 use App\Models\BlockDefinition;
 use App\Models\BlockVersion;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -46,6 +48,12 @@ class BlockVersionFactory extends Factory
             'html' => $html,
             'css' => $css,
             'js' => $js,
-        ]);
+            'approved_revision' => 1,
+            'approved_by_user_id' => fn () => User::query()->value('id') ?? User::factory(),
+            'approved_at' => now(),
+            'approved_source_hash' => str_repeat('0', 64),
+        ])->afterMaking(function (BlockVersion $version): void {
+            $version->approved_source_hash = app(BlockSourceFingerprint::class)->fromVersion($version);
+        });
     }
 }

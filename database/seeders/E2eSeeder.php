@@ -296,7 +296,7 @@ class E2eSeeder extends Seeder
             '<section class="card"><h2>{{ title }}</h2></section>',
             '.card { padding: 8px; }',
             [$text('title', 'Заголовок', 'Блок с кодом')],
-            'document.title = "native";',
+            'root.dataset.nativeReady = "true"; return () => { delete root.dataset.nativeReady; };',
         );
     }
 
@@ -326,7 +326,7 @@ class E2eSeeder extends Seeder
     }
 
     /**
-     * @param  list<DeveloperPermission>|null  $permissions  defaults to every current creator permission
+     * @param  list<DeveloperPermission>|null  $permissions  defaults to ordinary creator permissions plus explicit Native approval for trusted E2E authors
      */
     private function createDeveloperProfile(User $user, string $name, string $slug, ?array $permissions = null): DeveloperProfile
     {
@@ -336,7 +336,7 @@ class E2eSeeder extends Seeder
         $profile->user()->associate($user)->save();
         $profile->permissions()->createMany(array_map(
             fn (DeveloperPermission $permission): array => ['permission' => $permission->value],
-            $permissions ?? DeveloperPermission::defaults(),
+            $permissions ?? [...DeveloperPermission::defaults(), DeveloperPermission::ApproveNativeBlocks],
         ));
 
         return $profile;

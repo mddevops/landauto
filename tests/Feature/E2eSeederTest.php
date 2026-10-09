@@ -109,7 +109,7 @@ class E2eSeederTest extends TestCase
 
         $this->assertSame(3, BlockVersion::query()->where('runtime', BlockRuntime::Native->value)->count());
         $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-e2e')->sole())->passes());
-        $this->assertSame(['native_js_not_approved'], app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-js-e2e')->sole())->errorCodes());
+        $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-js-e2e')->sole())->passes());
 
         $showcase = BlockVersion::query()->whereRelation('definition', 'slug', 'e2e-partner-showcase')->sole();
         $this->assertTrue($showcase->definition->isDeveloperOwned());
