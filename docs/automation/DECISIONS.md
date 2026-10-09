@@ -1491,6 +1491,8 @@ Owner instruction 2026-10-07; implemented by P9-014 / P9-015. Superseded by D-12
 
 Authored Block HTML/CSS/JS runs only in an opaque-origin sandboxed iframe (`sandbox="allow-scripts"`, Landflow-built `srcdoc`, strict CSP with `connect-src 'none'`), never in the application origin. Validated props are serialized by Landflow; the only channel back is an allowlisted `postMessage` bridge (`resize`, `action` by schema key, `error`) with source / origin / type checks. No external dependencies, CDNs or network access. Automated checks replace manual review (D-120).
 
+Narrowed by ADR-009 / D-123 (owner decision 2026-10-08): this sandbox remains the runtime for preview, untrusted / pre-approval code and legacy sandboxed Block Versions; approved first-party Native Block Versions render in the published Site host document without an iframe (target, X-024 / X-025). Native code still never runs in the Landflow application origin.
+
 ---
 
 ## D-081 — Custom Developer Script Support
@@ -1500,6 +1502,8 @@ Authored Block HTML/CSS/JS runs only in an opaque-origin sandboxed iframe (`sand
 ### Decision
 
 Super Admins (platform-owned Blocks) and Developers with an active Developer Profile and `create_blocks` (own Blocks) may author HTML / CSS / JS Block source under ADR-008. Workspace customers do not author code; they configure installed Blocks only through the published schema.
+
+Refined by D-123: authoring rights do not include Native trust approval; publishing a Native Block Version additionally requires the separate approval capability.
 
 ---
 
@@ -2153,7 +2157,9 @@ Three authorization domains stay separate and never grant each other:
 - **Workspace permissions** stay customer tenant authority.
 - There is no Developer role (no `DeveloperRole`, `PlatformRole::Developer` or `WorkspaceRole::Developer`).
 
-MVP default: a new Super Admin-granted profile receives all current creator permissions as stored rows (existing profiles were backfilled), so a Super Admin can narrow them individually. A creator permission only ever covers content owned by the same Developer Profile; `submit_marketplace_item` is reserved for a future Marketplace listing of own content (Phase 10). It is NOT manual moderation, review or publication approval (D-120) and never grants pricing, payouts or licenses (D-121). Wording corrected by the owner 2026-10-08.
+MVP default: a new Super Admin-granted profile receives all current creator permissions as stored rows (existing profiles were backfilled), so a Super Admin can narrow them individually. A creator permission only ever covers content owned by the same Developer Profile; `submit_marketplace_item` is reserved for a future Marketplace listing of own content (Phase 10). It is NOT manual moderation, review or publication approval (D-120) and never grants pricing, payouts or licenses (D-121). Wording corrected by the owner 2026-10-08. `submit_marketplace_item` is used by P10-001 for listings of own content.
+
+Note (D-123, 2026-10-08): the "all current creator permissions by default" MVP rule never applies to the future Native approval capability; it is deny-by-default and granted only deliberately.
 
 ### Resolved By
 
@@ -2187,6 +2193,8 @@ Owner instruction for P9-002 (2026-10-07); P9-002.
 
 Owner instruction 2026-10-07; P9-013.
 
+Refined by D-124 (customer editing matrix v2): in Quiz and Chat Sites customers edit only explicitly exposed fonts, colors and images, not every schema parameter. Enforcement is X-027; today `SiteType::hasLockedStructure()` blocks only structural changes.
+
 ---
 
 ## D-120 — Automated Checks Replace Manual Review
@@ -2196,6 +2204,8 @@ Owner instruction 2026-10-07; P9-013.
 ### Decision
 
 There is no manual moderation / approval queue for Blocks or Templates. The author (Super Admin for platform content, Developer for own content) publishes immediately after the automated security, schema and runtime checks of ADR-008 §7 pass. Autosave stores only the Draft and never publishes. `submit_marketplace_item` (D-118) is not an approval step; P9-008 "Review Workflow" is replaced by "Automated Block Checks". Owner confirmation 2026-10-08: publication is automatic after the checks; there is no manual review queue and no "submitted" state.
+
+**Partially refined by D-123 (2026-10-08):** automated checks remain mandatory, but first-party Native host-origin execution additionally requires explicit approval of the exact revision / source hash. That approval is a security trust step, not moderation: D-120 stays valid for the absence of Marketplace / content moderation queues (no `submitted`, `pending_review`, moderator approval or `rejected` status). Until X-025 lands, Block Studio keeps publishing `sandboxed` versions after the checks alone (current behaviour).
 
 ### Resolved By
 
@@ -2246,6 +2256,69 @@ Owner decision 2026-10-08 (Phase 9 final corrective pass); P9-014 / P9-015 / P10
 ### Resolved By
 
 Owner decision 2026-10-08 (Phase 9 final corrective pass); P9-014 / P9-015.
+
+---
+
+## D-123 — Native First-Party Block Trust and Approval
+
+**Status:** APPROVED (owner decision 2026-10-08; recorded by X-023) — `docs/architecture/decisions/ADR-009-native-first-party-block-runtime.md`
+
+### Decision
+
+- Ordinary first-party Blocks created by the Landflow team / internal authorized creators (AI is only a code-generation tool, never a trust principal), reviewed and explicitly approved by an authorized internal actor, render natively in the customer's published Site: HTML + scoped CSS + approved JS directly in the host DOM, without an iframe wrapper. iframes remain only for sandbox preview, legacy sandboxed versions until migrated, and genuine Embed / external widgets.
+- Native execution in the host document is privileged first-party execution. A Native Block Version requires: (1) a canonical Draft revision; (2) deterministic source checks; (3) a source hash; (4) a sandbox preview; (5) an explicit approval / publication action by an authorized internal actor; (6) an immutable Native Block Version with audit metadata `approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at` (exact database placement is implementation work, X-025).
+- Approval covers exactly one source state. A later Draft change invalidates it; each future version needs a new approval.
+- Preferred UX: one privileged action «Одобрить и опубликовать» for the current Draft revision / hash; the server re-checks revision, hash and permission. Autosave never publishes or approves.
+- Native approval is a separate, explicit, deny-by-default capability (preferred key `approve_native_blocks`). `create_blocks` / edit rights never imply it. If it becomes a `DeveloperPermission`, it is never backfilled or defaulted to Developer Profiles; a Super Admin grants it deliberately. Platform-owned content uses an explicit privileged platform authority.
+- Native JS is trusted, not sandboxed; `mount(root, props, api) => cleanup` is an engineering contract, not a security boundary. Static checks and AI generation do not make code trusted. Future third-party authors never receive Native host-origin trust automatically.
+- Legacy `sandboxed` Block Versions are never mutated into `native`; migration creates a new approved Native version (X-028).
+- This is not Marketplace moderation (D-120 stays valid for the absence of moderation queues).
+
+### Resolved By
+
+Owner decision 2026-10-08; ADR-009; X-023 (documentation). Implementation: X-024, X-025, X-028.
+
+---
+
+## D-124 — Site Type Customer Editing Matrix v2
+
+**Status:** APPROVED (owner decision 2026-10-08; recorded by X-023); extends / refines D-119
+
+### Decision
+
+| Type | Start | Customer Block / Page editing |
+|---|---|---|
+| `landing` | blank or compatible Template | add / remove / move / reorder Blocks; schema field editing; design and actions per permissions; one Page |
+| `multi_page` | blank or compatible Template; typed `multi_page_sites` entitlement at creation | same Block editing plus multiple Pages / navigation |
+| `quiz` | compatible Template only, no blank start | no Block add / remove / move / reorder / duplicate; only explicitly exposed presentation slots: **fonts, colors, images**; no full Block Designer |
+| `chat_selection` | compatible Template only, no blank start | same restriction as `quiz` |
+
+- `site_type` stays immutable after creation.
+- Backend endpoints enforce the matrix (Page mutations, Block add / remove / move / duplicate, Block state updates, copy / import, restore, Designer capabilities); hiding UI alone is insufficient.
+- D-124 governs Designer / Page / Block editing only; it does not change Site-level settings (publishing, domains, Forms routing, integrations, vehicles / offers), which follow existing permissions.
+- Current implementation (2026-10-09): `SiteType::hasLockedStructure()` + `SitePolicy::editStructure` block structural changes for Quiz / Chat; customers can still edit every schema field there. The fonts / colors / images restriction and the exposure mechanism are X-027.
+
+### Resolved By
+
+Owner decision 2026-10-08; X-023 (documentation). Enforcement: X-027.
+
+---
+
+## D-125 — Marketplace Scope During Native Runtime Work
+
+**Status:** APPROVED (owner decision 2026-10-08; recorded by X-023)
+
+### Decision
+
+- There is currently no open external third-party Marketplace: no public Developer registration, open author onboarding, third-party earnings, commissions or payouts.
+- Current priority: the Landflow-owned Block / Template catalog, plan availability (X-026) and customer use of approved content, on the Native runtime.
+- `P10-001 — Marketplace Listings` stays DONE as implemented infrastructure (listing metadata may serve future distribution); it is not a production priority and is not deleted.
+- Public Marketplace discovery / install work (P10-002, P10-003) and its dependents (P10-008, P10-009) are DEFERRED until the Native runtime and tariff access are correct. P10-005 … P10-007 stay DEFERRED.
+- `DeveloperProfile` stays for manually granted internal creators. D-121 / D-122 are unchanged.
+
+### Resolved By
+
+Owner decision 2026-10-08; X-023.
 
 ---
 

@@ -210,6 +210,15 @@ Each Site has independent:
 - draft state
 - published state
 
+Site types (D-119, refined by D-124; `site_type` is fixed at creation):
+
+- **Лендинг** (`landing`) — blank or compatible Template; one Page; the customer adds, removes, reorders and configures Blocks.
+- **Многостраничный сайт** (`multi_page`) — blank or compatible Template; Pages + Blocks; requires the typed `multi_page_sites` entitlement at creation.
+- **Квиз** (`quiz`) — compatible Template only; no structural editing; the customer changes only exposed fonts, colors and images.
+- **Чат-подбор** (`chat_selection`) — same restrictions as Квиз.
+
+The backend enforces these rules (X-027); today only structural locking for Квиз / Чат-подбор exists.
+
 ---
 
 # 9. Site Folders
@@ -737,6 +746,8 @@ These components distinguish Landflow from a generic website builder.
 # 30. Developer Platform
 
 Landflow will eventually provide a dedicated developer environment.
+
+Current direction (D-125, 2026-10-08): there is no open third-party Developer platform. Blocks and Templates are produced by the Landflow team and internal authorized developers / designers / admins (AI is a code-generation tool, not a trusted author). Developer Profiles are granted manually and serve these internal creators. Sales, earnings, commissions, payouts and public Developer registration are deferred. Approved first-party Blocks render natively on published Sites (ADR-009); future external authors would need a separate security model and never get that trust automatically.
 
 Developer Dashboard may include:
 
@@ -1726,6 +1737,8 @@ Marketplace items may include:
 
 Marketplace implementation is not required for initial MVP unless scheduled.
 
+Current scope (D-125): the public third-party Marketplace is deferred. The active product is Landflow's own Block / Template catalog with availability by plan (Free / Pro / Team and future plans through typed entitlements or an explicit plan ↔ catalog mapping, X-026), plus `paid` / `admin_grant` licenses (D-121) and grandfathered installed versions (D-122). Marketplace Listings (P10-001) exist as internal infrastructure only.
+
 ---
 
 # 81. Marketplace Security
@@ -1752,6 +1765,8 @@ Fields:
 
 Security boundaries must be defined before Marketplace launch.
 
+Defined so far: untrusted authored code runs only in the opaque-origin sandbox (ADR-008); approved first-party code may run natively in the published Site after explicit approval of the exact source (ADR-009, D-123).
+
 ---
 
 # 82. Developer Template Lifecycle
@@ -1764,6 +1779,8 @@ Draft
 → Landflow Review
 → Published
 → Marketplace
+
+Superseded direction: there is no review queue (D-120). Block lifecycle today: Draft → autosave → automated checks → sandbox preview → publish. Target for Native Blocks (D-123): the same, with an explicit «Одобрить и опубликовать» of the exact Draft revision / source hash by an authorized internal actor — a security trust step, not moderation.
 
 ---
 

@@ -612,6 +612,14 @@ Unrestricted third-party JavaScript is high risk.
 
 Authored Block code runs only under ADR-008 (owner-confirmed 2026-10-08): opaque-origin iframe with `sandbox="allow-scripts"` and no `allow-same-origin`, Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge with source / origin / type checks. Automated checks replace manual review (D-120). Weakening any of these needs a new ADR.
 
+ADR-009 (Accepted 2026-10-08, D-123) is that ADR for one case only. **Current:** all authored code is `sandboxed`. **Target (X-024 / X-025):** approved first-party Native Block Versions run HTML / scoped CSS / JS in the published Site host document. Native JS is trusted, not sandboxed: it can reach the host DOM and same-origin capabilities allowed by the page CSP, and `mount(root, props, api) => cleanup` is not a security boundary. Therefore:
+
+- static checks and AI generation never make code trusted; an authorized internal actor with a separate deny-by-default capability must approve the exact revision / source hash (`approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at`); any Draft change invalidates it;
+- Native JS never runs in the Landflow application origin (dashboard, Designer, Studio, authenticated Preview); published Site hosts stay cookie / session-isolated from the application host;
+- Native HTML is compiled with context-aware escaping, safe URLs, no inline handlers / `javascript:` / script-style-meta-base-embed injection; CSS is AST-scoped per Block;
+- third-party / untrusted authors never get Native trust automatically; their code stays in this sandbox;
+- legacy sandboxed versions keep the sandbox; Embeds may use iframes with provider allowlists, `sandbox`, `referrerpolicy` and CSP `frame-src`.
+
 ---
 
 # 38. Content Security Policy
@@ -625,7 +633,7 @@ Goals:
 - control iframe/media sources;
 - support required Yandex services.
 
-Exact CSP implementation depends on runtime architecture and must be tested carefully.
+Exact CSP implementation depends on runtime architecture and must be tested carefully. The published-Site CSP for approved Native JS and Embed `frame-src` is part of X-025 / X-029 (ADR-009).
 
 ---
 

@@ -5,6 +5,17 @@
 **Builds on:** D-117 / D-118 (ownership and creator permissions), ADR-006 (publishing runtime), BLOCK_SYSTEM.md §8–§28 (canonical Block Schema)
 **Leaves open:** third-party dependency bundles, a separate sandbox origin for production hardening (§9), AI-assisted schema drafts (P9-010)
 **Backlog:** P9-004 … P9-009
+**Scope narrowed by:** ADR-009 (owner decision 2026-10-08, recorded 2026-10-09)
+
+## Scope after ADR-009
+
+ADR-009 narrows this ADR; it does not delete it. This ADR remains authoritative for:
+
+- the Block Studio sandbox preview and every rendering of authored code before Native approval;
+- untrusted authored code, including any future third-party / external-author code;
+- legacy `sandboxed` Block Versions (immutable; they keep rendering in this sandbox until deliberately migrated, ADR-009 §10).
+
+It is **superseded** for the target public runtime of approved first-party authored Blocks: after the explicit D-123 approval of an exact source revision / hash, such a Block Version uses the `native` runtime and renders in the published Site host document without an iframe (ADR-009). Statements below that authored code never runs in the published Site document apply to `sandboxed` versions only. Native is not implemented yet (X-024 / X-025); today every authored version is `sandboxed`.
 
 ## Context
 
@@ -70,7 +81,7 @@ A runtime error, missing prop or failed render never breaks the host page: the i
 
 ### 7. Automated checks instead of review (D-120)
 
-Publishing runs deterministic server checks; there is no approval queue. Checks include: source size limits; canonical schema validity; template syntax and that every template path exists in the schema; forbidden HTML constructs (`<script>`, `<style>`, `<link>`, `<meta>`, `<base>`, `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<form>`, `<portal>`); external URLs in HTML/CSS (`http(s)://`, protocol-relative `//`, `@import`); and that the sandbox wrapper builds. Failures block publication with Russian messages. Passing checks publish immediately.
+Publishing runs deterministic server checks; there is no approval queue. (These checks stay mandatory. For the Native runtime, D-123 additionally requires an explicit trust approval of the exact revision / source hash — a security step, not a moderation queue; ADR-009 §2.) Checks include: source size limits; canonical schema validity; template syntax and that every template path exists in the schema; forbidden HTML constructs (`<script>`, `<style>`, `<link>`, `<meta>`, `<base>`, `<iframe>`, `<frame>`, `<object>`, `<embed>`, `<form>`, `<portal>`); external URLs in HTML/CSS (`http(s)://`, protocol-relative `//`, `@import`); and that the sandbox wrapper builds. Failures block publication with Russian messages. Passing checks publish immediately.
 
 ### 8. Trusted official renderers
 
@@ -80,7 +91,7 @@ Existing official Blocks rendered by the application's trusted React registry st
 
 - Authored code can navigate its own iframe (not the top window) and thereby send the props it received to an outside URL. Props are Block content the customer entered for that Block (published content on a public Site), never secrets or unrelated data. A dedicated sandbox origin with network-level egress controls is the production hardening path and requires infrastructure (DNS / TLS) — out of scope until then.
 - CPU-heavy or looping code can slow its own iframe; it cannot reach other origins' data. Browsers isolate opaque-origin frames per their process model.
-- iframe content is not indexed as part of the host page; authors are told to keep SEO-critical copy in official Blocks.
+- iframe content is not indexed as part of the host page; authors are told to keep SEO-critical copy in official Blocks. (Resolved for approved first-party Blocks by the Native runtime, ADR-009.)
 
 ## Consequences
 

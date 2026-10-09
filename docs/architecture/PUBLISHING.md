@@ -870,6 +870,8 @@ This supports atomic publication and rollback.
 
 **Resolved by ADR-006:** publish-time React SSR with stored HTML; no Node process on visitor requests.
 
+Block runtimes inside this pipeline (ADR-009). **Current:** `official` Blocks render through the React registry; `sandboxed` Blocks are copied into the manifest (`blocks[].sandbox`) and rendered as iframes in the stored page HTML. **Target (X-024 / X-025):** approved `native` Block Versions are compiled at Publish time (template + validated state + published Site context → host HTML, scoped CSS, approved immutable JS artifacts) inside `PublishedArtifactBuilder` / `NodePageRenderer`, with SEO-visible text in the initial HTML and no iframe wrapper. ADR-006 is not redesigned: Draft / Preview / `PublishSite` / `PublishValidator` / snapshots / `PublishedVersion` / `PublishedPage` / atomic pointer switch stay. A Native compilation failure never activates the new version, never changes the active one and never corrupts the Draft; all Native assets are complete before the switch. Active historical versions with sandboxed iframes keep serving unchanged; new publications get a legacy diagnostic (X-028).
+
 Exact rendering may eventually use:
 
 - Laravel server rendering;

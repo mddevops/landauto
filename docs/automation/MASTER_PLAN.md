@@ -1569,6 +1569,8 @@ Verify permissions end-to-end.
 
 Let approved developers create reusable Landflow Blocks/Templates.
 
+Re-planned: §105 / §107 moderation steps were replaced by automated checks (D-120); the public runtime of approved first-party authored Blocks moves to Native (ADR-009, D-123; cross-cutting tasks X-024 … X-029).
+
 ---
 
 # 101. Phase 9 — Developer Profile
@@ -1662,6 +1664,8 @@ Existing Sites remain version-pinned.
 ## Objective
 
 Distribute approved Blocks/Templates.
+
+Status (D-125, 2026-10-08): public third-party Marketplace expansion is deferred after P10-001 (Listings, retained) and P10-004 (licensing decision). Priority moved to the Native First-Party Block Runtime (ADR-009; X-024 … X-029) and plan-based availability of Landflow's own catalog (X-026).
 
 ---
 
@@ -1892,10 +1896,10 @@ Before enabling public production:
 
 # 127. Marketplace Gate
 
-Before public third-party distribution:
+Before public third-party distribution (deferred, D-125):
 
 - developer permissions;
-- moderation;
+- moderation (replaced by automated checks, D-120; Native host-origin execution additionally needs D-123 trust approval and is never automatic for third-party authors);
 - version pinning;
 - security review;
 - runtime restrictions;

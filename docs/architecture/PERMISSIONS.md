@@ -1065,6 +1065,8 @@ Block authoring (P9-003) applies this through `App\Blocks\BlockAuthoringAuthoriz
 
 A creator permission never authorizes content owned by another Developer Profile. `submit_marketplace_item` authorizes Marketplace listings of own content (P10-001: `/developer/marketplace` create / edit / publish / unpublish, together with an active profile; `create_blocks` / `create_templates` are not required). It is not manual moderation or publication approval (D-120) and grants no pricing, payouts or licenses. Official Landflow listings (`/platform/marketplace`) require `manage_platform_content`.
 
+Planned (D-123, X-025, not implemented): a separate Native trust approval capability (preferred key `approve_native_blocks`) for «Одобрить и опубликовать». Edit rights (`create_blocks`, `manage_platform_content`) never imply it. It is deny-by-default: if it becomes a `DeveloperPermission`, it is never backfilled or included in the "all current creator permissions" default for new profiles; a Super Admin grants it deliberately to an internal authorized developer. Platform-owned content uses an explicit privileged platform authority. Exact placement is X-025.
+
 Later candidates (not implemented): `view_sales`, Developer self-edit of the profile.
 
 ---

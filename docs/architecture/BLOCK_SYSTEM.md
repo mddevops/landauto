@@ -110,6 +110,8 @@ Authoring covers only name and slug; no delete, review status, schema editing, p
 
 Authored HTML / CSS / JS Blocks (platform and Developer) run only in the ADR-008 sandbox: opaque-origin `srcdoc` iframe with `sandbox="allow-scripts"` (no `allow-same-origin`), Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge (D-080 / D-081, owner-confirmed 2026-10-08). Official renderers stay in the trusted application registry.
 
+Runtime direction (ADR-009, D-123, owner decision 2026-10-08). **Current:** `BlockRuntime` = `official` | `sandboxed`; every authored version is `sandboxed` and renders in an iframe on published Sites. **Target (X-024 / X-025, not implemented):** a third runtime `native` — ordinary first-party Blocks whose exact Draft revision / source hash was explicitly approved by an authorized internal actor («Одобрить и опубликовать», separate deny-by-default capability, not moderation) render in the published host DOM as compiled HTML, scoped compiled CSS and approved JS (`mount(root, props, api) => cleanup`), without an iframe wrapper. The sandbox stays for Studio preview, pre-approval / untrusted code and legacy sandboxed versions (immutable; migrated only into new Native versions, X-028); iframes otherwise only for genuine Embed Blocks. Native JS never runs in the Landflow application origin.
+
 Customer catalog access (D-121): each catalog Block / Template has one access mode — `free`, `entitlement` (typed entitlement), `paid` (Site and / or Workspace price, no checkout yet) or `admin_grant`. Restricted items need a `catalog_licenses` row for the Site or for its Workspace (covers current and future Sites of that Workspace; never account-wide). The Designer library card and the Add action follow current access for the current installable version.
 
 Installed version grandfathering (D-122): adding a Block or installing a Template records a Site + Block Version grant after the current access check; a version restore re-creates grants for the versions it brings back. Duplicating a granted version inside the same Site and publishing pass on the grant; without a grant, current access applies. Publishing never creates grants, and revoking a license or restricting a Block never breaks an installed version — only new installs, new versions and other Sites follow current access.
@@ -1356,6 +1358,8 @@ Before publication validate:
 
 There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` authorizes Marketplace listings of own products (P10-001), not approval.
 
+Native trust approval (D-123) is not this review: it is a security step that approves one exact Draft revision / source hash before authored JS may run in a customer Site's host origin, performed by an actor with a separate approval capability. It adds no queue or moderation status.
+
 Review should evaluate:
 
 - visual quality;
@@ -1394,6 +1398,8 @@ This reduces bundle duplication and security risk.
 Marketplace Blocks should not rely on unrestricted arbitrary JavaScript execution.
 
 When custom scripting becomes necessary, use approved/sandboxed runtime APIs.
+
+Target (ADR-009): approved first-party Native JS follows `mount(root, props, api) => cleanup` — trusted code, not a sandbox; no `eval` / `new Function` / unvalidated dynamic imports; actions, popups and forms go through the Landflow host runtime. Untrusted or third-party code stays `sandboxed`.
 
 A Block must never access:
 

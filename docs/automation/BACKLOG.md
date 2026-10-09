@@ -78,9 +78,11 @@ Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06
 
 Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/phase9-2026-10-07`; review `P9-012` DONE; P9-018 and P9-010 DEFERRED). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008). Final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed, P9-018 DEFERRED; D-094 stays OPEN as a production-launch blocker only.
 
-Phase 10 — Marketplace: IN_PROGRESS (branch `autopilot/phase10-2026-10-08`). P10-001 DONE (Marketplace Listings; D-120 no moderation, D-121 pricing stays on the product).
+Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Next ready task: `P10-002 — Categories / Search / Detail` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125, owner decision 2026-10-08): `X-023` DONE (documentation); order X-024 → X-025 → X-026 → X-027 → X-028 → X-029.
+
+Next ready task: `X-024 — Native Block Runtime: HTML / CSS / Actions` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3720,20 +3722,25 @@ Branch `autopilot/phase10-2026-10-08` (base main `0cb5d56`).
 - **Tests:** `tests/Feature/Marketplace/*` (29 tests: model invariants and schema, Developer ownership / permissions / lifecycle, visibility, D-121 pricing source, Platform listings, no storefront); `E2eSeederTest` and `DeveloperPermissionsTest` updated. E2E fixture «Мирон Маркетов» (`marketplace-developer@landflow.test`, only `submit_marketplace_item`, one published Block per Playwright project); `tests/browser/marketplace-listings.spec.ts` (@responsive) — create, publish, unpublish.
 - **Migration evidence (2026-10-08):** `db:show` / `migrate:status` confirmed connection `mysql`, database `landauto`, only this migration pending; `php artisan migrate` DONE; counts unchanged before / after (users 3, workspaces 3, sites 1, block_definitions 12, block_versions 18, templates 1, template_versions 1, developer_profiles 0, catalog_licenses 0); `marketplace_listings` created empty.
 - **Gates (2026-10-08):** `composer quality` PASS (PHPUnit 1145 / 1145, 9504 assertions; PHPStan 0 errors; Pint; `vp check`; build). `npm run test:e2e` 93 / 93 PASS (an earlier full run hit a login-timeout flake in `chat-selection.spec.ts` desktop; the isolated rerun passed 4 / 4 and the full rerun passed). `git diff --check` clean.
+- **Retention note (X-023, D-125):** P10-001 is retained as implemented infrastructure (listing metadata for future distribution / internal use). Public third-party Marketplace expansion is deferred by D-125; P10-001 itself is not a production priority.
 
 ---
 
 ## P10-002 — Categories / Search / Detail
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-001
+
+Deferred by D-125 (X-023): public Marketplace discovery is postponed while the Native runtime (X-024 … X-029) and the internal tariff catalog work take priority.
 
 ---
 
 ## P10-003 — Free Install Flow
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-002
+
+Deferred by D-125 (X-023): depends on the deferred public Marketplace discovery. The existing customer Block / Template catalog (P9-014 / P9-015) is separate and stays active.
 
 ---
 
@@ -3771,15 +3778,19 @@ Resolved early by D-079 (owner instruction 2026-10-07), which was SUPERSEDED on 
 
 ## P10-008 — Marketplace E2E
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-001 through P10-004
+
+Deferred by D-125 (X-023): the public Marketplace sequence it tests is deferred.
 
 ---
 
 ## P10-009 — Phase 10 Review
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-008
+
+Deferred by D-125 (X-023): the Phase 10 public Marketplace review cannot complete while its public scope is deferred.
 
 ---
 
@@ -3791,6 +3802,8 @@ Resolved early by D-079 (owner instruction 2026-10-07), which was SUPERSEDED on 
 
 **Status:** NOT_STARTED  
 **Dependencies:** P10-009
+
+Note (X-023): P10-009 is DEFERRED by D-125; Phase 11 is not scheduled before the Native runtime sequence X-024 … X-029 completes and its start needs an explicit backlog update.
 
 ### Objective
 
@@ -4295,6 +4308,107 @@ Separate the Workspace context from the Site context and prepare the navigation 
 
 ---
 
+## X-023 — Native First-Party Block Runtime Architecture
+
+**Status:** DONE
+**Trigger:** owner decision 2026-10-08 (approved direction; documentation / replan only)
+**Decision:** ADR-009 (Accepted), D-123, D-124, D-125
+
+Reconcile the architecture with the owner-approved direction: ordinary approved first-party Blocks render natively (HTML + scoped CSS + approved JS in the host DOM, no iframe wrapper); iframes stay for sandbox preview, legacy sandboxed versions and genuine Embeds. Split the implementation into executable tasks. No application, migration, package, enum or runtime change.
+
+### Result
+
+- ADR-009 Accepted: target runtimes `official` / `sandboxed` / `native`; D-123 trust approval (revision + source hash + approver + time, «Одобрить и опубликовать», separate deny-by-default capability, not moderation); Native HTML / CSS / JS targets; actions / popups / forms stay host-owned; ADR-006 pipeline and atomicity kept; legacy sandboxed versions immutable with an explicit migration path; Embed distinction; Native JS never in the Landflow application origin.
+- ADR-008 narrowed (not deleted): authoritative for preview, untrusted code and legacy sandboxed versions; superseded only for the public runtime of approved first-party Blocks.
+- D-120 partially refined by D-123 (no moderation queue stays); D-080 / D-081 / D-118 / D-119 annotated; D-124 (Site Type editing matrix v2: quiz / chat — fonts, colors, images only) and D-125 (public Marketplace deferred) added. D-121 / D-122 unchanged.
+- Phase 10: P10-001 retained (DONE), P10-002 / P10-003 / P10-008 / P10-009 DEFERRED; P10-004 DONE.
+- Current implementation truth recorded: `BlockRuntime` = `official` / `sandboxed`; authored versions publish as `sandboxed` and render in an iframe on published Sites; Native is not implemented.
+- Docs: ADR-009, ADR-008, DECISIONS, BLOCK_SYSTEM, PUBLISHING, SECURITY, PERMISSIONS, DATABASE (planned fields only), PRODUCT, MASTER_PLAN, BACKLOG, PROJECT_STATE. Checks: `git diff --check`; documentation only, so PHPUnit / Playwright were not required and not run.
+
+---
+
+## X-024 — Native Block Runtime: HTML / CSS / Actions
+
+**Status:** NOT_STARTED
+**Trigger:** after X-023
+**Decision:** ADR-009 §1, §5, §6, §8, §9; D-123
+
+Scope:
+
+- Native runtime model (`native` alongside `official` / `sandboxed`; immutable per Block Version);
+- Native HTML compiler from the immutable template + validated Block Instance state + published Site context, with context-aware escaping / sanitization, safe URLs, no inline handlers / `javascript:` / script-style-meta-base-embed injection, validated `data-landflow-action` bindings, Block Instance identity on the root;
+- scoped CSS compiler (AST / parser based, dependency evaluated and approved inside this task) covering selectors, `*`, `:root`, `html` / `body`, `@media`, `@supports`, `@keyframes` / animation names, custom properties, `url()`, `@import`; no leakage into other Blocks, Popups, host shell or page;
+- host Action integration (`open_url`, `open_page`, `scroll_to`, `phone`, `email`, `open_popup`);
+- publish-time compilation inside the ADR-006 pipeline with atomic failure (no activation, previous version untouched, Draft intact, safe Russian error); HTML survives hydration;
+- **no authored Native JS yet**; sandbox preview stays; Native JS never runs in the application origin;
+- tests proving Native HTML appears in the initial host HTML without an iframe, escaping / CSS isolation, multiple instances, publish failure atomicity.
+
+---
+
+## X-025 — Native Block Runtime: Approved JavaScript
+
+**Status:** NOT_STARTED
+**Trigger:** after X-024
+**Decision:** ADR-009 §2, §3, §4, §7; D-123
+
+Scope:
+
+- explicit deny-by-default Native trust capability (preferred `approve_native_blocks`; never backfilled to Developer Profiles; platform authority for platform content);
+- approval metadata `approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at` (placement decided here);
+- «Одобрить и опубликовать» with server re-check of revision + hash + permission; a later Draft change invalidates approval;
+- trusted immutable, versioned JS artifacts; `mount(root, props, api) => cleanup`; multiple independent instances; failure isolation;
+- CSP implications for published Sites; published host cookie / session isolation from the application host;
+- no `eval` / `new Function` / unvalidated dynamic imports; deterministic / security checks;
+- Designer / Studio / authenticated Preview never execute Native JS in the application origin.
+
+---
+
+## X-026 — Plan ↔ Catalog Access Matrix
+
+**Status:** NOT_STARTED
+**Trigger:** after X-025, before customer Native catalog rollout
+**Decision:** D-121, D-122, ADR-009 §13
+
+Scope:
+
+- audit the actual Plan / Entitlement / `CatalogAccessMode` / `CatalogLicense` / `BlockCatalogAccess` / `TemplateCatalogAccess` model;
+- implement an explicit Plan ↔ Block Definition / Template mapping if the existing typed entitlement catalog cannot express it (e.g. Block A → Free + Premium + Team, Template C → Team); no plan-name branching;
+- internal admin UI for which plans contain a Block / Template; customer catalog locked state and upgrade messaging in Russian;
+- preserve `paid` / `admin_grant` / `CatalogLicense` / D-122 grandfathering; server-side enforcement;
+- no numeric plan values or tariff definitions invented without owner approval.
+
+---
+
+## X-027 — SiteType Locked Editing Enforcement
+
+**Status:** NOT_STARTED
+**Trigger:** after X-026
+**Decision:** D-124 (refines D-119)
+
+Scope: server-enforce D-124 across Site creation, blank start, Template compatibility, Page mutations, Block add / remove / move / duplicate, Block state update, copy / import, restore and Designer capabilities. `quiz` / `chat_selection`: only explicitly exposed fonts / colors / images (define the exposure mechanism); `landing` / `multi_page`: normal Block Designer per permissions / access. UI hiding alone is insufficient.
+
+---
+
+## X-028 — Legacy Sandboxed Block Migration
+
+**Status:** NOT_STARTED
+**Trigger:** after X-025, before final Native rollout
+**Decision:** ADR-009 §10; D-123; D-122
+
+Scope: detect legacy `sandboxed` Block Versions; copy-to-Draft migration workflow producing a new approved Native version only (never mutate an immutable version); controlled upgrades in Template Studio and Site Drafts; publishing diagnostic with Russian warning / blocker for ordinary legacy sandboxed Blocks in new publications; historical active Published Versions preserved.
+
+---
+
+## X-029 — Native Runtime Hardening and E2E Review
+
+**Status:** NOT_STARTED
+**Trigger:** after X-024 … X-028
+**Decision:** ADR-009; D-123; D-124; D-121; D-122
+
+Scope: security review; SSR / SEO assertions; multiple Block instances; CSS isolation; popups / forms / actions; Native JS cleanup; iframe only for Embed / sandbox / legacy; four Site types; tariff access; D-122 downgrade regression; publication atomicity; Playwright; documentation review.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---
@@ -4403,8 +4517,9 @@ Task statuses and results live in the phase sections above; this section only po
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
-- Current: Phase 10 — Marketplace IN_PROGRESS (`P10-001` DONE on `autopilot/phase10-2026-10-08`).
-- Next: `P10-002 — Categories / Search / Detail` per order (P9-018 and P9-010 DEFERRED).
+- Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
+- Native runtime replan (ADR-009; D-123, D-124, D-125): `X-023` DONE → `X-024` → `X-025` → `X-026` → `X-027` → `X-028` → `X-029`.
+- Next: `X-024 — Native Block Runtime: HTML / CSS / Actions` (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---
