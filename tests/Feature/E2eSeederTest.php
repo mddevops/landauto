@@ -54,7 +54,7 @@ class E2eSeederTest extends TestCase
         $this->seed(E2eSeeder::class);
 
         $this->assertSame(
-            ['catalog-author@landflow.test', 'catalog@landflow.test', 'chat@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'formats@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'licensee-other@landflow.test', 'licensee@landflow.test', 'licenses-admin@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'marketplace-developer@landflow.test', 'member@landflow.test', 'navigator@landflow.test', 'platform-customer@landflow.test', 'platform-developer@landflow.test', 'platform-premium@landflow.test', 'publisher@landflow.test', 'quiz@landflow.test', 'sandbox@landflow.test', 'studio-developer@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test', 'template-customer@landflow.test', 'template-developer@landflow.test', 'template-installer@landflow.test'],
+            ['catalog-author@landflow.test', 'catalog@landflow.test', 'chat@landflow.test', 'creator@landflow.test', 'dealer@landflow.test', 'designer@landflow.test', 'developer@landflow.test', 'domains-designer@landflow.test', 'domains@landflow.test', 'formats@landflow.test', 'integrations-admin@landflow.test', 'integrations-designer@landflow.test', 'integrations@landflow.test', 'interactive@landflow.test', 'licensee-other@landflow.test', 'licensee@landflow.test', 'licenses-admin@landflow.test', 'lifecycle-admin@landflow.test', 'lifecycle-designer@landflow.test', 'lifecycle@landflow.test', 'login@landflow.test', 'marketplace-developer@landflow.test', 'member@landflow.test', 'native@landflow.test', 'navigator@landflow.test', 'platform-customer@landflow.test', 'platform-developer@landflow.test', 'platform-premium@landflow.test', 'publisher@landflow.test', 'quiz@landflow.test', 'sandbox@landflow.test', 'studio-developer@landflow.test', 'team-designer@landflow.test', 'team-foreign@landflow.test', 'team-integrations@landflow.test', 'team-leads@landflow.test', 'team-owner@landflow.test', 'team-pricing@landflow.test', 'team-publisher@landflow.test', 'template-customer@landflow.test', 'template-developer@landflow.test', 'template-installer@landflow.test'],
             User::query()->whereNotNull('email_verified_at')->orderBy('email')->pluck('email')->all(),
         );
 
@@ -106,6 +106,10 @@ class E2eSeederTest extends TestCase
         $this->assertTrue($promo->definition->isPlatformOwned());
         $this->assertSame([], app(BlockSourceChecker::class)->checkVersion($promo));
         $this->assertTrue(Site::query()->where('subdomain', 'sandbox-e2e')->sole()->popups()->exists());
+
+        $this->assertSame(3, BlockVersion::query()->where('runtime', BlockRuntime::Native->value)->count());
+        $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-e2e')->sole())->passes());
+        $this->assertSame(['native_js_not_approved'], app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-js-e2e')->sole())->errorCodes());
 
         $showcase = BlockVersion::query()->whereRelation('definition', 'slug', 'e2e-partner-showcase')->sole();
         $this->assertTrue($showcase->definition->isDeveloperOwned());

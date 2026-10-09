@@ -2,7 +2,9 @@
 
 namespace App\Blocks;
 
+use App\Blocks\Native\NativeBlockCompiler;
 use App\Enums\BlockFieldType;
+use App\Enums\BlockRuntime;
 use App\Models\BlockVersion;
 use JsonException;
 
@@ -21,23 +23,38 @@ final class BlockSourceChecker
     public function __construct(
         private BlockSchemaValidator $schemas,
         private BlockTemplateParser $templates,
+        private NativeBlockCompiler $native,
     ) {}
 
     /**
-     * Re-checks the sources of a published sandboxed version; official versions have none.
+     * Re-checks the authored sources of a published sandboxed or native version; native versions
+     * also pass the Native compiler checks (ADR-009). Official versions have no sources.
      *
      * @return list<array{source: string, line: int|null, path: string|null, message: string}>
      */
     public function checkVersion(BlockVersion $version): array
     {
-        $source = $version->sandboxSource();
+        $source = $version->authoredSource();
 
-        return $source === null ? [] : $this->check([
+        if ($source === null) {
+            return [];
+        }
+
+        $issues = $this->check([
             'html' => $source['html'],
             'css' => $source['css'],
             'js' => $source['js'],
             'schema' => (string) json_encode($version->schema_json, JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES),
         ]);
+
+        if ($issues !== [] || $version->runtime !== BlockRuntime::Native) {
+            return $issues;
+        }
+
+        return array_map(
+            fn (array $issue): array => self::issue($issue['source'], $issue['line'], null, $issue['message']),
+            $this->native->issues($version),
+        );
     }
 
     /**

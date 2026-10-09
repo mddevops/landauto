@@ -43,6 +43,13 @@ final class FakePageRenderer implements PageRenderer
             $parts = [];
 
             foreach ($payload['blocks'] as $block) {
+                // Native output is trusted compiler HTML inside the controlled root, as NativeBlock renders it.
+                if (isset($block['native'])) {
+                    $parts[] = '<div data-landflow-native="'.e($block['native']['scope']).'" data-landflow-block="'.e($block['slug']).'" data-landflow-instance="'.e($block['public_id']).'">'.$block['native']['html'].'</div>';
+
+                    continue;
+                }
+
                 $parts[] = '<section>'.implode(' ', array_map(fn (string $text): string => e($text), self::strings((array) $block['state']))).'</section>';
             }
 

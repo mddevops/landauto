@@ -194,6 +194,17 @@ export const users = {
         block: 'Промо из студии',
         publicUrl: 'http://sandbox-e2e.localhost:8200',
     },
+    // Native runtime (X-024): seeded Native Blocks on `native-e2e` (mixed runtimes, a Popup) and an
+    // unapproved Native JavaScript Block on `native-js-e2e`.
+    native: {
+        name: 'Наиль Нативный',
+        email: 'native@landflow.test',
+        password: 'e2e-password',
+        site: 'Сайт с нативными блоками',
+        blockedSite: 'Сайт с неодобренным кодом',
+        publicUrl: 'http://native-e2e.localhost:8200',
+        blockedPublicUrl: 'http://native-js-e2e.localhost:8200',
+    },
     // Customer catalog (D-121): Developer Block «Витрина партнёра» needs a Super Admin license for
     // a Site or for the whole Workspace «Автосалон Лицензия» (two seeded Sites).
     licensee: {

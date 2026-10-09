@@ -548,7 +548,9 @@ Fields may include:
 
 Implemented (P9-006, ADR-008): `runtime` string(16) (`App\Enums\BlockRuntime`: `official` default / backfill, `sandboxed`); `html`, `css`, `js` mediumText nullable — the immutable source snapshot, set for every `sandboxed` version and null for `official`; `published_by_user_id` nullable FK (null on User delete), audit identity. Sandboxed versions are created only by Studio publishing (`BlockPublisher`, semantic version auto-incremented); since P9-009 platform-owned (and since P9-014 Developer-owned, subject to catalog access) sandboxed versions are placeable and their sources are copied into the Published Version manifest (`blocks[].sandbox`).
 
-Planned, NOT implemented (ADR-009 / D-123; X-024 / X-025): `runtime` gains `native`; a Native version carries approval audit metadata `approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at` (columns on `block_versions` or a separate table — decided in X-025). No such columns exist today and no migration was made by X-023. Existing `sandboxed` rows are never rewritten to `native`.
+Implemented (X-024): `runtime` value `native` (no schema change — `runtime` is a string column); Native versions carry `html` / `css` / `js` like sandboxed ones. No production path creates them before X-025 (test factories / E2E fixtures only).
+
+Planned, NOT implemented (ADR-009 / D-123; X-025): a Native version carries approval audit metadata `approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at` (columns on `block_versions` or a separate table — decided in X-025). No such columns exist today. Existing `sandboxed` rows are never rewritten to `native`.
 
 Important:
 

@@ -166,6 +166,12 @@ class E2eSeeder extends Seeder
         $sandboxForm = Form::factory()->for($sandboxSite)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($sandboxSite)->create(['name' => 'Обратный звонок'])->form()->associate($sandboxForm)->save();
 
+        // Native runtime (X-024): Native Block Versions exist only as fixtures until the D-123
+        // approval flow (X-025). One Site mixes runtimes, another holds unapproved Native JavaScript.
+        $this->createNativePlatformBlocks();
+        $nativeOwner = $this->createUser('Наиль Нативный', 'native@landflow.test');
+        $this->createNativeSites($this->createWorkspace($nativeOwner, 'Автосалон Натив', plan: $plan));
+
         // Customer catalog (D-121): a Developer Block that only a Super Admin grants per Site, a
         // customer Site on `license-e2e` and a dedicated Super Admin with their own login throttle.
         $catalogAuthor = $this->createUser('Артём Каталожный', 'catalog-author@landflow.test');
@@ -255,6 +261,68 @@ class E2eSeeder extends Seeder
                 ['key' => 'photo', 'type' => 'image', 'label' => 'Фото'],
                 ['key' => 'cta', 'type' => 'action', 'label' => 'Кнопка'],
             ]]]);
+    }
+
+    /**
+     * Two Native Blocks whose CSS deliberately collides (`.card`, `h2`, `@keyframes fade`) and one
+     * with Native JavaScript that must never publish.
+     */
+    private function createNativePlatformBlocks(): void
+    {
+        $text = fn (string $key, string $label, string $default = ''): array => ['key' => $key, 'type' => 'text', 'label' => $label, 'default' => $default, 'max_length' => 120];
+        $native = function (string $slug, string $name, string $html, string $css, array $fields, string $js = ''): void {
+            BlockVersion::factory()->native($html, $css, $js)
+                ->for(BlockDefinition::factory()->platform()->create(['slug' => $slug, 'name' => $name, 'category' => BlockCategory::Content]), 'definition')
+                ->create(['schema_json' => ['fields' => $fields]]);
+        };
+
+        $native(
+            'e2e-native-hero',
+            'Нативный герой',
+            '<section class="card"><h2>{{ title }}</h2><p>{{ text }}</p><button type="button" data-landflow-action="cta">Оставить заявку</button> <button type="button" data-landflow-action="more">К предложению</button></section>',
+            ':root { --hero-accent: rgb(185, 28, 28); } .card { padding: 32px; background: rgb(254, 243, 199); animation: fade 120ms ease-out; } h2 { color: var(--hero-accent); margin: 0 0 8px; } @keyframes fade { from { opacity: 0.5 } to { opacity: 1 } }',
+            [$text('title', 'Заголовок', 'Нативный герой'), $text('text', 'Текст'), ['key' => 'cta', 'type' => 'action', 'label' => 'Кнопка'], ['key' => 'more', 'type' => 'action', 'label' => 'Вторая кнопка']],
+        );
+        $native(
+            'e2e-native-offer',
+            'Нативное предложение',
+            '<section class="card"><h2>{{ title }}</h2><p>{{ text }}</p></section>',
+            '.card { padding: 8px; background: rgb(219, 234, 254); } h2 { color: rgb(29, 78, 216); } @keyframes fade { from { opacity: 0 } to { opacity: 1 } }',
+            [$text('title', 'Заголовок', 'Предложение'), $text('text', 'Текст')],
+        );
+        $native(
+            'e2e-native-script',
+            'Нативный блок с кодом',
+            '<section class="card"><h2>{{ title }}</h2></section>',
+            '.card { padding: 8px; }',
+            [$text('title', 'Заголовок', 'Блок с кодом')],
+            'document.title = "native";',
+        );
+    }
+
+    private function createNativeSites(Workspace $workspace): void
+    {
+        $site = app(CreateSite::class)->create($workspace, 'Сайт с нативными блоками', SiteType::MultiPage);
+        $site->forceFill(['subdomain' => 'native-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
+        $popup = Popup::factory()->for($site)->create(['name' => 'Обратный звонок', 'title' => 'Перезвоним за 5 минут']);
+        $popup->form()->associate($form)->save();
+
+        $home = $site->pages()->where('is_home', true)->firstOrFail();
+        $this->placeBlock($home, 'header', 10, []);
+        $offer = $this->placeBlock($home, 'e2e-native-offer', 13, ['title' => 'Нативное предложение', 'text' => 'Специальная цена до конца месяца']);
+        $this->placeBlock($home, 'e2e-native-hero', 11, [
+            'title' => 'Нативный герой',
+            'text' => 'Компилируется при публикации',
+            'cta' => ['type' => 'open_popup', 'popup' => $popup->public_id],
+            'more' => ['type' => 'scroll_to', 'block' => $offer->public_id],
+        ]);
+        $this->placeBlock($home, 'e2e-studio-promo', 12, ['title' => 'Старый блок студии']);
+        $this->placeBlock($home, 'footer', 14, []);
+
+        $blocked = app(CreateSite::class)->create($workspace, 'Сайт с неодобренным кодом', SiteType::MultiPage);
+        $blocked->forceFill(['subdomain' => 'native-js-e2e'])->save();
+        $this->placeBlock($blocked->pages()->where('is_home', true)->firstOrFail(), 'e2e-native-script', 10, []);
     }
 
     /**

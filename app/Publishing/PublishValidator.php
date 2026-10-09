@@ -9,9 +9,12 @@ use App\Blocks\BlockReferenceResolver;
 use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockStateValidator;
 use App\Blocks\BlockVersionGrants;
+use App\Blocks\Native\NativeBlockCompiler;
+use App\Blocks\Native\NativeCompileException;
 use App\Enums\SiteStatus;
 use App\Http\Requests\SavePageRequest;
 use App\Models\BlockInstance;
+use App\Models\BlockVersion;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\SeriesMediaImage;
@@ -53,6 +56,7 @@ final class PublishValidator
         private BlockVersionGrants $grants,
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
+        private NativeBlockCompiler $native,
     ) {}
 
     public function validate(Site $site, ?User $actor = null): PublishValidation
@@ -169,16 +173,40 @@ final class PublishValidator
                     continue;
                 }
 
+                $native = NativeBlockCompiler::source($version);
+
+                // ADR-009 / D-123: X-024 has no trusted Native JavaScript runtime; such a version
+                // never publishes, never runs and never falls back to the sandbox.
+                if ($native !== null && trim($native['js']) !== '') {
+                    $this->error('native_js_not_approved', 'Нативный JavaScript этого блока ещё не одобрен. Опубликуйте версию после внедрения доверенного JS runtime.', page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
                 // Studio code passed the checks when it was published; re-checked so a version that
                 // fails today's rules never reaches a new Published Version.
-                if ($this->sources->checkVersion($version) !== []) {
+                $sourceIssues = $this->sources->checkVersion($version);
+
+                if ($sourceIssues !== [] && $native !== null) {
+                    $this->error('native_block_invalid', "«{$version->definition->name}»: нативный блок не компилируется. {$sourceIssues[0]['message']}", page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
+                if ($sourceIssues !== []) {
                     $this->error('block_source_rejected', 'Код блока не проходит автоматические проверки. Обратитесь к автору блока.', page: $page->public_id, block: $block->public_id);
 
                     continue;
                 }
 
-                foreach ($this->states->errors($version->schema_json, $block->state_json, $acceptAll) as $path => $message) {
+                $stateErrors = $this->states->errors($version->schema_json, $block->state_json, $acceptAll);
+
+                foreach ($stateErrors as $path => $message) {
                     $this->error('block_state_invalid', $message, page: $page->public_id, block: $block->public_id, path: $path);
+                }
+
+                if ($native !== null && $stateErrors === []) {
+                    $this->validateNativeRender($version, $native, $block, $page);
                 }
 
                 foreach ($this->states->missing($version->schema_json, $block->state_json) as $path => $message) {
@@ -198,6 +226,23 @@ final class PublishValidator
         }
 
         return $referenced;
+    }
+
+    /**
+     * Renders the Native Block with its Draft state exactly as the artifact build will, so
+     * data-dependent failures (e.g. an unsafe link in a text field) block Publish up front.
+     *
+     * @param  array{html: string, css: string, js: string, fields: list<array<string, mixed>>}  $source
+     */
+    private function validateNativeRender(BlockVersion $version, array $source, BlockInstance $block, Page $page): void
+    {
+        $scope = NativeBlockCompiler::scope($version->definition->slug, $version->version, $source);
+
+        try {
+            $this->native->render($scope, $source, $block->state_json, fn (string $assetId): string => "/_landflow/assets/validation/{$assetId}");
+        } catch (NativeCompileException $exception) {
+            $this->error('native_block_invalid', "«{$version->definition->name}»: {$exception->getMessage()}", page: $page->public_id, block: $block->public_id);
+        }
     }
 
     private function validateReferences(Site $site): void

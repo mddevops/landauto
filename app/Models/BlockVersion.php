@@ -15,8 +15,9 @@ use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
- * Immutable: a change to a Block requires a new version (BLOCK_SYSTEM.md §6). A `sandboxed`
- * version carries its authored source snapshot (ADR-008); an `official` one carries none.
+ * Immutable: a change to a Block requires a new version (BLOCK_SYSTEM.md §6). `sandboxed`
+ * (ADR-008) and `native` (ADR-009) versions carry their authored source snapshot; an `official`
+ * one carries none.
  *
  * @property int $id
  * @property int $block_definition_id
@@ -62,8 +63,8 @@ class BlockVersion extends Model
             $hasSources = $version->html !== null && $version->css !== null && $version->js !== null;
             $noSources = $version->html === null && $version->css === null && $version->js === null;
 
-            if ($version->runtime === BlockRuntime::Sandboxed ? ! $hasSources : ! $noSources) {
-                throw new LogicException('Only sandboxed Block Versions carry authored sources, and they carry all of them.');
+            if ($version->runtime->hasAuthoredSource() ? ! $hasSources : ! $noSources) {
+                throw new LogicException('Only sandboxed and native Block Versions carry authored sources, and they carry all of them.');
             }
         });
 
@@ -73,13 +74,35 @@ class BlockVersion extends Model
     }
 
     /**
-     * What the ADR-008 wrapper needs to render a sandboxed version; null for official versions.
+     * What the ADR-008 wrapper needs to render a sandboxed version on any surface; null otherwise.
      *
      * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
      */
     public function sandboxSource(): ?array
     {
-        if ($this->runtime !== BlockRuntime::Sandboxed) {
+        return $this->runtime === BlockRuntime::Sandboxed ? $this->authoredSource() : null;
+    }
+
+    /**
+     * What application-origin previews (Studio, Designer, authenticated Site Preview) hand to the
+     * ADR-008 sandbox frame. Native versions preview there too: authored source never renders in
+     * the application origin; only the published Site uses compiled Native host DOM (ADR-009).
+     *
+     * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
+     */
+    public function previewSource(): ?array
+    {
+        return $this->authoredSource();
+    }
+
+    /**
+     * The immutable authored source snapshot of a sandboxed or native version; null for official.
+     *
+     * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
+     */
+    public function authoredSource(): ?array
+    {
+        if (! $this->runtime->hasAuthoredSource()) {
             return null;
         }
 

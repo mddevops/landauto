@@ -1,5 +1,6 @@
 import type { BlockRenderContextValue } from '@/blocks/render-context';
 import type { BlockState } from '@/blocks/state';
+import type { TriggerContextValue } from '@/blocks/trigger-context';
 
 export const actionTypes = {
     open_url: { label: 'Открыть ссылку', target: 'url' },
@@ -58,6 +59,44 @@ export function actionHref(
             return `mailto:${target}`;
         case 'open_popup':
             return null;
+    }
+}
+
+/**
+ * Runs a stored action requested by authored Block code (sandboxed or Native): the existing
+ * Popup runtime for `open_popup`, otherwise the checked link target. Unknown or empty actions
+ * do nothing.
+ */
+export function runBlockAction(
+    action: unknown,
+    context: BlockRenderContextValue,
+    trigger: TriggerContextValue,
+    element: HTMLElement,
+): void {
+    const popupId = actionPopupId(action);
+
+    if (
+        popupId !== null &&
+        context.openPopup !== null &&
+        context.hasPopup(popupId)
+    ) {
+        context.openPopup(popupId, trigger, element);
+
+        return;
+    }
+
+    const href = actionHref(action, context);
+
+    if (href === null) {
+        return;
+    }
+
+    if (href.startsWith('http')) {
+        window.open(href, '_blank', 'noopener,noreferrer');
+    } else if (href.startsWith('#')) {
+        window.location.hash = href;
+    } else {
+        window.location.assign(href);
     }
 }
 

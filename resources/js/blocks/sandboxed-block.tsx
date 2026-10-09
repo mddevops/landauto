@@ -1,5 +1,5 @@
 import { useCallback, useMemo } from 'react';
-import { actionHref, actionPopupId } from '@/blocks/actions';
+import { runBlockAction } from '@/blocks/actions';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import type { SchemaField } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
@@ -50,34 +50,8 @@ export function SandboxedBlock({
     );
 
     const runAction = useCallback(
-        (key: string, frame: HTMLIFrameElement) => {
-            const action = state[key];
-            const popupId = actionPopupId(action);
-
-            if (
-                popupId !== null &&
-                context.openPopup !== null &&
-                context.hasPopup(popupId)
-            ) {
-                context.openPopup(popupId, trigger, frame);
-
-                return;
-            }
-
-            const href = actionHref(action, context);
-
-            if (href === null) {
-                return;
-            }
-
-            if (href.startsWith('http')) {
-                window.open(href, '_blank', 'noopener,noreferrer');
-            } else if (href.startsWith('#')) {
-                window.location.hash = href;
-            } else {
-                window.location.assign(href);
-            }
-        },
+        (key: string, frame: HTMLIFrameElement) =>
+            runBlockAction(state[key], context, trigger, frame),
         [state, context, trigger],
     );
 

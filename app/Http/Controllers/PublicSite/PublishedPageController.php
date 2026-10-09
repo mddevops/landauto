@@ -46,6 +46,7 @@ class PublishedPageController extends Controller
             'robots' => ($seo['indexable'] ?? true) === true ? 'index, follow' : 'noindex, follow',
             'siteName' => is_object($payload) && is_object($payload->site ?? null) && is_string($payload->site->name ?? null) ? $payload->site->name : null,
             'html' => $artifact['html'],
+            'nativeStylesheet' => $pages->nativeStylesheet($site, $version),
             // Live entitlement, outside the stored HTML: upgrading or downgrading needs no republish.
             'branding' => ! $entitlements->allows($site->workspace, Entitlement::RemoveBranding),
             'data' => json_encode(

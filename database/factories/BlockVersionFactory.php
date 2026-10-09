@@ -33,4 +33,19 @@ class BlockVersionFactory extends Factory
             'js' => $js,
         ]);
     }
+
+    /**
+     * A Native version (ADR-009). No production path creates these until the D-123 approval flow
+     * exists (X-025); X-024 tests and fixtures use this state. Native JavaScript stays empty by
+     * default because non-empty Native JavaScript blocks Site publishing.
+     */
+    public function native(string $html = '<p>Блок</p>', string $css = '', string $js = ''): static
+    {
+        return $this->state(fn (): array => [
+            'runtime' => BlockRuntime::Native,
+            'html' => $html,
+            'css' => $css,
+            'js' => $js,
+        ]);
+    }
 }

@@ -2,8 +2,10 @@
 
 namespace App\Publishing\Runtime;
 
+use App\Enums\PublishedRuntimeAssetKind;
 use App\Enums\PublishedVersionStatus;
 use App\Models\PublishedPage;
+use App\Models\PublishedRuntimeAsset;
 use App\Models\PublishedVersion;
 use App\Models\Site;
 use App\Models\SiteAnalyticsSettings;
@@ -113,6 +115,23 @@ final class PublishedPages
                 ];
             },
         );
+    }
+
+    /**
+     * Version-scoped URL of the compiled Native CSS (ADR-009), or null when the version has none.
+     */
+    public function nativeStylesheet(Site $site, PublishedVersion $version): ?string
+    {
+        $hash = Cache::remember(
+            "published:{$site->public_id}:{$version->public_id}:native-css",
+            (int) config('publishing.cache_ttl'),
+            fn (): string => (string) PublishedRuntimeAsset::query()
+                ->where('published_version_id', $version->id)
+                ->where('kind', PublishedRuntimeAssetKind::NativeCss->value)
+                ->value('content_hash'),
+        );
+
+        return $hash === '' ? null : "/_landflow/runtime/{$version->public_id}/{$hash}.css";
     }
 
     /**

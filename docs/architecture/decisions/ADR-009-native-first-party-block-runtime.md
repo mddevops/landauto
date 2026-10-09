@@ -24,6 +24,13 @@ The owner therefore decided that ordinary approved first-party Blocks render nat
 
 Native runtime does not exist yet. Nothing in this ADR is implemented by X-023.
 
+## Implementation status (X-024, 2026-10-09)
+
+- **Implemented:** `BlockRuntime::Native` («Нативный»); §5 Native HTML and §6 Native CSS compilers (`app/Blocks/Native/*`, PHP, parser / AST based, no new package); §8 actions through the shared host action runtime (`resources/js/blocks/actions.ts` → `NativeBlock`); §9 publish-time compilation inside `PublishedArtifactBuilder` with atomic failure; one immutable deduplicated `native_css` runtime asset per Published Version (`published_runtime_assets`, `/_landflow/runtime/{version}/{hash}.css`).
+- **Not implemented (X-025):** §2 / §3 approval (`approve_native_blocks`, approval metadata, «Одобрить и опубликовать»), §7 Native JavaScript. A Native Block Version with non-empty `js` is refused at Publish (`native_js_not_approved`); its JS is never executed, stripped or iframe-wrapped.
+- **No production path creates Native versions yet.** Block Studio `BlockPublisher::publish()` still creates `sandboxed` versions; Native versions exist only through test factories / E2E fixtures (`BlockVersionFactory::native()`) until X-025.
+- §4 application origin: Block Studio, the Designer canvas and authenticated Site Preview render Native versions through the same sandbox frame as sandboxed ones (`BlockVersion::previewSource()`); Native host-DOM output exists only on published Sites.
+
 ## Decision
 
 ### 1. Runtime modes (target)
@@ -104,7 +111,7 @@ Authored CSS is compiled and scoped, never concatenated raw. The compiler (AST /
 - handle `.class`, element selectors, `*`, `:root`, `html` / `body`, `@media`, `@supports`, `@keyframes` with `animation` / `animation-name` renaming, CSS custom properties, `url()` and `@import`;
 - prevent a Block from styling another Block, a Popup view, the host shell or the global page.
 
-Parser / dependency selection is X-024 work (no dependency is chosen in X-023).
+Parser / dependency selection is X-024 work (no dependency is chosen in X-023). X-024 chose an in-repo PHP tokenizer / parser (CSS Syntax Level 3 subset) and libxml-based HTML parsing: no PHP CSS parser is installed, the Node CSS tools are build-time transitive dependencies (lightningcss is a native binary), and publish-time compilation stays in PHP without a Node call per Block.
 
 ### 7. Native JavaScript
 

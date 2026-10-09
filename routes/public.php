@@ -3,6 +3,7 @@
 use App\Http\Controllers\PublicSite\PublishedAssetController;
 use App\Http\Controllers\PublicSite\PublishedFormController;
 use App\Http\Controllers\PublicSite\PublishedPageController;
+use App\Http\Controllers\PublicSite\PublishedRuntimeAssetController;
 use App\Http\Controllers\PublicSite\PublishedSeoController;
 use App\Http\Middleware\ResolvePublicSite;
 use App\Publishing\Runtime\PublicSiteResolver;
@@ -23,6 +24,10 @@ $runtime = function (string $name): void {
         Route::get('_landflow/media/{version}/{image}', [PublishedAssetController::class, 'media'])
             ->whereUlid(['version', 'image'])
             ->name('media');
+        Route::get('_landflow/runtime/{version}/{hash}.css', [PublishedRuntimeAssetController::class, 'stylesheet'])
+            ->whereUlid('version')
+            ->where('hash', '[a-f0-9]{64}')
+            ->name('runtime.css');
         Route::post('_landflow/forms/{version}/{form}', PublishedFormController::class)
             ->whereUlid(['version', 'form'])
             ->middleware('throttle:form-submissions')

@@ -60,6 +60,18 @@ class BlockPublishingTest extends TestCase
         return $this->actingAs($user)->post(route("{$scope}.blocks.publish", $block), ['revision' => $revision]);
     }
 
+    public function test_studio_publish_never_creates_native_versions_before_the_approval_flow(): void
+    {
+        $user = $this->profile->user;
+        $this->saveDraft($user, $this->block, 0);
+
+        $this->actingAs($user)->post(route('developer.blocks.publish', $this->block), ['revision' => 1, 'runtime' => 'native'])
+            ->assertSessionHasNoErrors();
+
+        $this->assertSame(BlockRuntime::Sandboxed, BlockVersion::query()->sole()->runtime);
+        $this->assertSame(0, BlockVersion::query()->where('runtime', BlockRuntime::Native->value)->count());
+    }
+
     public function test_author_publishes_the_saved_draft_as_an_immutable_sandboxed_version(): void
     {
         Log::spy();

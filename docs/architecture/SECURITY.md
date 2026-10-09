@@ -620,6 +620,19 @@ ADR-009 (Accepted 2026-10-08, D-123) is that ADR for one case only. **Current:**
 - third-party / untrusted authors never get Native trust automatically; their code stays in this sandbox;
 - legacy sandboxed versions keep the sandbox; Embeds may use iframes with provider allowlists, `sandbox`, `referrerpolicy` and CSP `frame-src`.
 
+## Native HTML (X-024)
+
+Implemented: Native HTML / scoped CSS / host actions; no Native JS (a Native version with non-empty `js` is refused at Publish and never executed). No production path creates Native versions before the X-025 approval flow.
+
+`dangerouslySetInnerHTML` is used in exactly one place, `resources/js/blocks/native-block.tsx`, and only with `blocks[].native.html` from a Published Version payload — output of the server-side `NativeTemplateCompiler` / `NativeTemplateRenderer` built at Publish time. It is never fed Draft source, browser-supplied HTML, raw state or unsanitized authored HTML; a feature test fails if another file uses it. The compiler guarantees:
+
+- parser-based HTML (libxml) with an element / attribute allowlist; forbidden `script`, `style`, `link`, `meta`, `base`, `iframe`, `frame`, `object`, `embed`, `form`, `portal`; no `on*` or `style` attributes;
+- context-aware escaping of every substituted value (text, double-quoted attribute); URL attributes re-checked after substitution (`javascript:`, `vbscript:`, `data:`, protocol-relative and unknown schemes rejected); images only from trusted Published Media URLs;
+- reserved `data-landflow-*` / `id` namespaces so authored markup cannot impersonate the host root or block anchors;
+- CSS scoped by an AST-based compiler: no `@import`, `@font-face`, `url()`, `expression()`, `behavior`; `:root` / `html` / `body` map to the Block root; keyframes namespaced.
+
+Authenticated application surfaces (Studio, Designer, Site Preview) keep rendering Native versions in the ADR-008 sandbox frame. Raw Native source stays in the server-side manifest; the browser receives only compiled output.
+
 ---
 
 # 38. Content Security Policy

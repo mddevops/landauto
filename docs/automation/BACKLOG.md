@@ -80,9 +80,9 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125, owner decision 2026-10-08): `X-023` DONE (documentation); order X-024 → X-025 → X-026 → X-027 → X-028 → X-029.
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125, owner decision 2026-10-08): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions; Block Studio still publishes sandboxed versions until X-025); order X-025 → X-026 → X-027 → X-028 → X-029.
 
-Next ready task: `X-024 — Native Block Runtime: HTML / CSS / Actions` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
+Next ready task: `X-025 — Native Block Runtime: Approved JavaScript` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -4329,7 +4329,7 @@ Reconcile the architecture with the owner-approved direction: ordinary approved 
 
 ## X-024 — Native Block Runtime: HTML / CSS / Actions
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** after X-023
 **Decision:** ADR-009 §1, §5, §6, §8, §9; D-123
 
@@ -4342,6 +4342,21 @@ Scope:
 - publish-time compilation inside the ADR-006 pipeline with atomic failure (no activation, previous version untouched, Draft intact, safe Russian error); HTML survives hydration;
 - **no authored Native JS yet**; sandbox preview stays; Native JS never runs in the application origin;
 - tests proving Native HTML appears in the initial host HTML without an iframe, escaping / CSS isolation, multiple instances, publish failure atomicity.
+
+### Result
+
+- `BlockRuntime::Native` («Нативный»); `BlockVersion` source invariant (official: no sources; sandboxed / native: all three), `authoredSource()` / `previewSource()`; `sandboxSource()` stays sandboxed-only; `BlockSourceChecker::checkVersion` covers Native versions (sandbox checks + Native compiler issues).
+- **No production path creates Native versions:** `BlockPublisher::publish()` (Block Studio) still creates `sandboxed` versions until X-025 (regression test: a `runtime=native` request still yields `sandboxed`). Native versions come only from `BlockVersionFactory::native()` (tests, E2E fixtures). No `approve_native_blocks`, no approval metadata, no «Одобрить и опубликовать».
+- Native HTML compiler (`app/Blocks/Native/*`): libxml parse after replacing template tags with placeholders (no regex rewriting), element / attribute / URL allowlists, forbidden `script` / `style` / `link` / `meta` / `base` / `iframe` / `frame` / `object` / `embed` / `form` / `portal`, no `on*` / `style` attributes, `javascript:` / `vbscript:` / `data:` URLs rejected (also when they come from state), images only from trusted Published Media URLs, context-aware escaping, one controlled root per instance (`data-landflow-native` / `data-landflow-block` / `data-landflow-instance`).
+- Native CSS compiler: in-repo CSS Syntax L3 tokenizer / parser + selector scoper; `:root` / `html` / `body` → scope, `@media` / `@supports` kept and scoped, `@keyframes` namespaced with `animation` references renamed, `@import` / `@font-face` / `url()` rejected. Limits 512 KB HTML per instance, 256 KB CSS per version, 1 MB CSS per Published Version.
+- Compile boundary: Publish time only (`PublishValidator` checks + validation render; `PublishedArtifactBuilder` compiles instance HTML into the renderer payload and one deduplicated stylesheet). Public requests never compile; raw Native source stays in the server-side manifest, the browser payload carries only compiled `{scope, html, actions}`.
+- Non-empty Native JS blocks Publish (`native_js_not_approved`, «Нативный JavaScript этого блока ещё не одобрен. Опубликуйте версию после внедрения доверенного JS runtime.»); never executed, stripped or iframe-wrapped. Compile failure: `native_block_invalid`; atomic (no Published Version activated, active version and Draft untouched).
+- Runtime asset: new table `published_runtime_assets` (immutable `native_css` row per Published Version, sha256 hash, size), route `/_landflow/runtime/{version}/{hash}.css` (`text/css`, immutable cache, 404 for wrong hash / other Site), `<link>` only when the asset exists.
+- Frontend: `NativeBlock` (only `dangerouslySetInnerHTML` in `resources/js`, guarded by a test), delegated `data-landflow-action` through the shared `runBlockAction` (same Popup runtime as sandboxed Blocks); `published-site.tsx` mixes official / sandboxed / native. Studio, Designer and authenticated Preview keep the sandbox frame for Native versions.
+- Packages: none. No PHP CSS parser is installed; postcss / lightningcss are Node-only transitive dependencies (lightningcss is native) and Publish must not call Node per Block.
+- Migration (local MySQL `landauto`, MySQL 8.2.0; `db:show` / `migrate:status` checked, only `2026_10_20_000001_create_published_runtime_assets_table` pending, batch 15): counts unchanged before / after — users 3, workspaces 3, sites 1, pages 2, block_definitions 12, block_versions 18, page_blocks 3, published_versions 0, published_pages 0, marketplace_listings 0; `published_runtime_assets` 0.
+- Tests: `tests/Unit/Blocks/Native/*` (HTML / CSS compilers), `tests/Feature/Blocks/NativeBlockRuntimeTest.php` (mixed page, visitor HTML, asset route, JS blocking, atomicity, immutability, preview surfaces, `dangerouslySetInnerHTML` guard), `NodePageRendererTest` (real SSR bundle), `BlockPublishingTest` regression, `E2eSeederTest`; Playwright `tests/browser/native-blocks.spec.ts` (publish, host DOM without iframe, one root per instance, computed-style CSS isolation, `scroll_to` + `open_popup`, CSS asset headers, JS-blocked publish with production unpublished).
+- Gates: `composer quality` PASS (PHPUnit 1265 / 1265, PHPStan 0, Pint, `vp check`, build); `npm run test:e2e` PASS 95 / 95 (first full run: 1 failure in `block-authoring.spec.ts` — the new Native fixtures used the Hero category, whose label «Первый экран» matched that test's list filter; fixtures moved to the Content category, isolated rerun and full rerun PASS); `git diff --check` PASS.
 
 ---
 
@@ -4518,8 +4533,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
-- Native runtime replan (ADR-009; D-123, D-124, D-125): `X-023` DONE → `X-024` → `X-025` → `X-026` → `X-027` → `X-028` → `X-029`.
-- Next: `X-024 — Native Block Runtime: HTML / CSS / Actions` (P9-018 and P9-010 DEFERRED).
+- Native runtime replan (ADR-009; D-123, D-124, D-125): `X-023` DONE → `X-024` DONE → `X-025` → `X-026` → `X-027` → `X-028` → `X-029`.
+- Next: `X-025 — Native Block Runtime: Approved JavaScript` (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

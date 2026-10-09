@@ -96,7 +96,7 @@ class TemplateDesignerController extends Controller
                     'version' => $block->version->version,
                     'is_hidden' => $block->is_hidden,
                     'schema' => $block->version->schema_json,
-                    'sandbox' => $block->version->sandboxSource(),
+                    'sandbox' => $block->version->previewSource(),
                     'state' => (object) $block->state_json,
                 ])
                 ->values()
