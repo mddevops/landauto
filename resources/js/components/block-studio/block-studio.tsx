@@ -79,7 +79,6 @@ export type BlockStudioPageProps = {
     canApproveNative: boolean;
     access: BlockAccessSettings;
     accessModes: Choice[];
-    accessEntitlements: Choice[];
     categories: Choice[];
     sourceMaxBytes: number;
 };
@@ -99,7 +98,6 @@ export function BlockStudio({
     canApproveNative,
     access,
     accessModes,
-    accessEntitlements,
     categories,
     sourceMaxBytes,
     metadataAction,
@@ -357,7 +355,6 @@ export function BlockStudio({
                             action={metadataAction}
                             access={access}
                             accessModes={accessModes}
-                            accessEntitlements={accessEntitlements}
                             accessUrl={accessUrl}
                         />
                     )}
@@ -587,7 +584,6 @@ function BlockSettings({
     action,
     access,
     accessModes,
-    accessEntitlements,
     accessUrl,
 }: {
     block: AuthoringBlockDetail;
@@ -595,7 +591,6 @@ function BlockSettings({
     action: RouteFormDefinition<'post'>;
     access: BlockAccessSettings;
     accessModes: Choice[];
-    accessEntitlements: Choice[];
     accessUrl: string;
 }) {
     return (
@@ -682,7 +677,6 @@ function BlockSettings({
                 description="Как клиенты могут добавлять опубликованный блок на свои сайты. Платный блок продаётся лицензией на один сайт, на всё пространство или обеими; покупка лицензий в Landflow пока недоступна. Сайты, которые уже установили версию блока, сохраняют её при смене доступа."
                 access={access}
                 modes={accessModes}
-                entitlements={accessEntitlements}
                 url={accessUrl}
                 className="lg:col-span-2"
             />

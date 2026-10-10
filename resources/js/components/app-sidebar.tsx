@@ -8,6 +8,7 @@ import {
     KeyRound,
     LayoutGrid,
     LayoutTemplate,
+    ListChecks,
     Plug,
     Settings,
     Store,
@@ -34,6 +35,7 @@ import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
 import { index as licensesIndex } from '@/routes/platform/licenses';
+import { index as catalogAccessIndex } from '@/routes/platform/catalog-access';
 import { index as platformMarketplaceIndex } from '@/routes/platform/marketplace';
 import { index as platformTemplatesIndex } from '@/routes/platform/templates';
 import { edit as editProfile } from '@/routes/profile';
@@ -133,6 +135,11 @@ export function AppSidebar() {
             : []),
         ...(platform.permissions.includes('manage_catalog_licenses')
             ? [
+                  {
+                      title: 'Доступ по тарифам',
+                      href: catalogAccessIndex(),
+                      icon: ListChecks,
+                  },
                   {
                       title: 'Лицензии каталога',
                       href: licensesIndex(),

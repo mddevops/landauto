@@ -2219,7 +2219,7 @@ Owner instruction 2026-10-07; P9-008 / P9-006.
 
 ### Decision
 
-- Catalog items (Blocks, Templates) keep exactly one access mode: `free`, `entitlement` (typed entitlement, never a plan-name check), `paid` or `admin_grant`.
+- Catalog items (Blocks, Templates) keep exactly one access mode: `free`, `entitlement` (explicit Plan inclusion; see D-126), `paid` or `admin_grant`.
 - A license is an explicit Super Admin override that makes a restricted item usable. It has a **scope** and a **source**, which are separate:
   - scope `site` — one Site; other Sites of the same Workspace are not covered;
   - scope `workspace` — every current and future Site of that Workspace; Sites of other Workspaces never gain it, even when the same User belongs to both;
@@ -2319,6 +2319,26 @@ Owner decision 2026-10-08; X-023 (documentation). Enforcement: X-027.
 ### Resolved By
 
 Owner decision 2026-10-08; X-023.
+
+---
+
+## D-126 — Explicit Plan Access for Catalog Items
+
+**Status:** APPROVED (owner decision 2026-10-09; X-026)
+
+### Decision
+
+- `free` Block Definitions and Templates are usable by every Workspace.
+- `entitlement` (UI label «По тарифу») means the item is explicitly included in one or more Plans. It does not inspect the Plan's typed capability entitlements. A Workspace may use the item when its current Plan is active and is explicitly mapped to that item. No Plan names or keys are used as business-logic branches.
+- `paid` is independently purchasable on any Plan, including Free. Checkout and purchase-license creation remain deferred under D-121 / P10-005; while unavailable, a license must be issued administratively.
+- `admin_grant` is issued by a Super Admin to a Site or Workspace regardless of its Plan. CatalogLicense scope and provenance remain governed by D-121.
+- A valid Site or Workspace CatalogLicense overrides the catalog mode's acquisition check; D-122 installed Block Version grants remain unchanged.
+- A paid or administrator-issued Template still follows D-121's Workspace-license requirement when creating a new Site.
+- The Workspace's independent Plan entitlements continue to govern product capabilities (for example Site limits); catalog membership does not change those capabilities.
+
+### Resolved By
+
+Owner clarification 2026-10-09 during X-026.
 
 ---
 

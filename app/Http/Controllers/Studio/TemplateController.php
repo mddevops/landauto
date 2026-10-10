@@ -3,7 +3,6 @@
 namespace App\Http\Controllers\Studio;
 
 use App\Enums\CatalogAccessMode;
-use App\Enums\Entitlement;
 use App\Http\Controllers\Concerns\ResolvesEditableTemplates;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Blocks\UpdateBlockAccessRequest;
@@ -43,15 +42,10 @@ class TemplateController extends Controller
             'versions' => $presenter->versions($found),
             'access' => [
                 'mode' => $found->access_mode->value,
-                'entitlement' => $found->access_entitlement?->value,
                 'site_price' => $found->site_price_minor !== null ? Money::toInput($found->site_price_minor, $found->price_currency ?? Money::DEFAULT_CURRENCY) : '',
                 'workspace_price' => $found->workspace_price_minor !== null ? Money::toInput($found->workspace_price_minor, $found->price_currency ?? Money::DEFAULT_CURRENCY) : '',
             ],
             'accessModes' => CatalogAccessMode::options(),
-            'accessEntitlements' => array_map(
-                fn (Entitlement $entitlement): array => ['value' => $entitlement->value, 'label' => $entitlement->label()],
-                Entitlement::catalogGates(),
-            ),
         ]);
     }
 

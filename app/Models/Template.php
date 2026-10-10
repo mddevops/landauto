@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
@@ -199,6 +200,16 @@ class Template extends Model
     public function catalogLicenses(): HasMany
     {
         return $this->hasMany(CatalogLicense::class);
+    }
+
+    /**
+     * Plans that include this customer-catalog Template (X-026).
+     *
+     * @return BelongsToMany<Plan, $this>
+     */
+    public function plans(): BelongsToMany
+    {
+        return $this->belongsToMany(Plan::class, 'plan_templates')->withTimestamps();
     }
 
     /**

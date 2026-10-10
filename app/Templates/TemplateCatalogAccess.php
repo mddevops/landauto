@@ -3,25 +3,25 @@
 namespace App\Templates;
 
 use App\Blocks\BlockCatalogAccess;
+use App\Catalog\PlanCatalogAccess;
 use App\Enums\CatalogAccessMode;
 use App\Models\BlockVersion;
 use App\Models\CatalogLicense;
 use App\Models\Template;
 use App\Models\TemplateVersion;
 use App\Models\Workspace;
-use App\Support\WorkspaceEntitlements;
 
 /**
  * Backend access check for installing a Template Version into a new Site (D-121, P9-015). The Site
  * does not exist yet, so only Workspace licenses can apply: a restricted Template needs a Workspace
- * license (or its typed entitlement in `entitlement` mode). A Template license covers exactly the
+ * license (or its explicit Plan mapping in `entitlement` mode). A Template license covers exactly the
  * Block Versions of the version being installed; otherwise each included Block must be usable by
  * the Workspace on its own.
  */
 final class TemplateCatalogAccess
 {
     public function __construct(
-        private WorkspaceEntitlements $entitlements,
+        private PlanCatalogAccess $plans,
         private BlockCatalogAccess $blocks,
     ) {}
 
@@ -37,9 +37,9 @@ final class TemplateCatalogAccess
 
         $denial = $licensed ? null : match ($template->access_mode) {
             CatalogAccessMode::Free => null,
-            CatalogAccessMode::Entitlement => $template->access_entitlement !== null && $this->entitlements->allows($workspace, $template->access_entitlement)
+            CatalogAccessMode::Entitlement => $this->plans->includes($workspace, $template)
                 ? null
-                : "Шаблон доступен на тарифе с опцией «{$template->access_entitlement?->label()}».",
+                : $this->plans->denial($template, 'Шаблон'),
             CatalogAccessMode::Paid => 'Платный шаблон: для нового сайта нужна лицензия на всё пространство. Покупка в Landflow пока недоступна.',
             CatalogAccessMode::AdminGrant => 'Шаблон выдаёт администратор Landflow; для нового сайта нужна лицензия на всё пространство.',
         };

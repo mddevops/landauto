@@ -24,6 +24,7 @@ use App\Http\Controllers\Integrations\SiteIntegrationController;
 use App\Http\Controllers\Integrations\SubmissionDeliveryController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
+use App\Http\Controllers\Platform\CatalogAccessMatrixController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
 use App\Http\Controllers\Platform\CatalogEntryController;
@@ -364,6 +365,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [CatalogLicenseController::class, 'index'])->name('index');
             Route::post('/', [CatalogLicenseController::class, 'store'])->middleware('throttle:30,1')->name('store');
             Route::delete('{license}', [CatalogLicenseController::class, 'destroy'])->whereUlid('license')->name('destroy');
+        });
+
+    // Plan ↔ catalog access matrix (X-026), restricted to Super Admin catalog-license managers.
+    Route::prefix('platform/catalog-access')
+        ->name('platform.catalog-access.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageCatalogLicenses->value)
+        ->group(function () {
+            Route::get('/', [CatalogAccessMatrixController::class, 'index'])->name('index');
+            Route::put('blocks/{block}', [CatalogAccessMatrixController::class, 'block'])->whereUlid('block')->name('blocks.update');
+            Route::put('templates/{template}', [CatalogAccessMatrixController::class, 'template'])->whereUlid('template')->name('templates.update');
         });
 
     // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).

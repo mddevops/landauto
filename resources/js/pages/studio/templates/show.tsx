@@ -38,7 +38,6 @@ export default function TemplateShow({
     versions,
     access,
     accessModes,
-    accessEntitlements,
 }: {
     template: TemplateDetail;
     siteTypes: Choice[];
@@ -46,7 +45,6 @@ export default function TemplateShow({
     versions: PublishedTemplateVersion[];
     access: BlockAccessSettings;
     accessModes: Choice[];
-    accessEntitlements: Choice[];
 }) {
     const backHref =
         template.owner_scope === 'developer'
@@ -203,7 +201,6 @@ export default function TemplateShow({
                         description="Как клиенты могут создавать сайты из опубликованного шаблона. Бесплатный шаблон и шаблон по тарифу доступны при создании сайта; платный шаблон или шаблон от администратора — с лицензией на всё пространство. Лицензия на шаблон покрывает блоки устанавливаемой версии. Покупка лицензий в Landflow пока недоступна."
                         access={access}
                         modes={accessModes}
-                        entitlements={accessEntitlements}
                         url={accessRoute.url(template.public_id)}
                         className="lg:col-span-2"
                     />

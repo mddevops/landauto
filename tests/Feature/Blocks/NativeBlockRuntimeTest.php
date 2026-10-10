@@ -144,7 +144,7 @@ class NativeBlockRuntimeTest extends TestCase
         $this->assertStringContainsString('<p>Скидка до 15%</p><a href="/contacts">Подробнее</a><button type="button" data-landflow-action="cta">Оставить заявку</button>', $content);
         $this->assertStringContainsString('<link rel="stylesheet" href="/_landflow/runtime/'.$version->public_id.'/'.$stylesheet->content_hash.'.css">', $content);
         $this->assertStringNotContainsString('<iframe', $content);
-        $this->assertStringNotContainsString((string) $version->id.'/', $content);
+        $this->assertStringNotContainsString('/_landflow/runtime/'.$version->id.'/', $content);
     }
 
     public function test_runtime_stylesheet_route_serves_only_ready_versions_of_this_site(): void

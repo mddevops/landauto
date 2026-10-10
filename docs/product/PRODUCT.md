@@ -1737,7 +1737,7 @@ Marketplace items may include:
 
 Marketplace implementation is not required for initial MVP unless scheduled.
 
-Current scope (D-125): the public third-party Marketplace is deferred. The active product is Landflow's own Block / Template catalog with availability by plan (Free / Pro / Team and future plans through typed entitlements or an explicit plan ↔ catalog mapping, X-026), plus `paid` / `admin_grant` licenses (D-121) and grandfathered installed versions (D-122). Marketplace Listings (P10-001) exist as internal infrastructure only.
+Current scope (D-125, D-126): the public third-party Marketplace is deferred. The active product is Landflow's own Block / Template catalog. Free items are available to everyone; «По тарифу» items are available only to explicitly mapped active Plans; paid items may be purchased from any Plan, including Free; administrator grants work regardless of Plan. CatalogLicense scopes (D-121) and grandfathered installed versions (D-122) remain in force. Marketplace Listings (P10-001) exist as internal infrastructure only.
 
 ---
 

@@ -9,6 +9,7 @@ use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
@@ -46,6 +47,26 @@ class Plan extends Model
     public function entitlements(): HasMany
     {
         return $this->hasMany(PlanEntitlement::class);
+    }
+
+    /**
+     * Customer-catalog Blocks included in this Plan (X-026).
+     *
+     * @return BelongsToMany<BlockDefinition, $this>
+     */
+    public function blockDefinitions(): BelongsToMany
+    {
+        return $this->belongsToMany(BlockDefinition::class, 'plan_block_definitions')->withTimestamps();
+    }
+
+    /**
+     * Customer-catalog Templates included in this Plan (X-026).
+     *
+     * @return BelongsToMany<Template, $this>
+     */
+    public function templates(): BelongsToMany
+    {
+        return $this->belongsToMany(Template::class, 'plan_templates')->withTimestamps();
     }
 
     /**

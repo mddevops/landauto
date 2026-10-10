@@ -72,7 +72,8 @@ final class TemplateAuthoring
         $this->authorize($this->authorization->canEdit($actor, $template));
 
         $template->access_mode = $mode;
-        $template->access_entitlement = $mode === CatalogAccessMode::Entitlement ? $entitlement : null;
+        // Plan inclusion is maintained separately by the internal catalog access matrix (X-026).
+        $template->access_entitlement = null;
         $template->site_price_minor = $mode === CatalogAccessMode::Paid ? $sitePriceMinor : null;
         $template->workspace_price_minor = $mode === CatalogAccessMode::Paid ? $workspacePriceMinor : null;
         $template->price_currency = $mode === CatalogAccessMode::Paid ? Money::DEFAULT_CURRENCY : null;

@@ -281,6 +281,24 @@ Examples:
 - custom_domain = false
 - version_history = false
 
+## plan_block_definitions (X-026 / D-126)
+
+- `plan_id` → `plans.id`
+- `block_definition_id` → `block_definitions.id`
+- composite primary key (`plan_id`, `block_definition_id`)
+- timestamps
+
+This explicit membership is used only for catalog Blocks whose `access_mode = entitlement` («По тарифу»). The current active Plan of a Workspace must be mapped to the Block. Capability keys in `plan_entitlements` do not grant catalog access.
+
+## plan_templates (X-026 / D-126)
+
+- `plan_id` → `plans.id`
+- `template_id` → `templates.id`
+- composite primary key (`plan_id`, `template_id`)
+- timestamps
+
+The same explicit membership rule applies to Templates. The X-026 migration backfills these pivots from legacy boolean catalog entitlement rows, then current access checks use only the pivots. `free`, `paid`, `admin_grant`, CatalogLicense scopes and D-122 grants retain their separate behavior.
+
 ## subscriptions
 
 Suggested fields:

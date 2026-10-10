@@ -5,7 +5,6 @@ namespace App\Blocks;
 use App\Enums\BlockCategory;
 use App\Enums\BlockRuntime;
 use App\Enums\CatalogAccessMode;
-use App\Enums\Entitlement;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
 use App\Models\BlockVersion;
@@ -76,15 +75,10 @@ final class BlockAuthoringPresenter
             'canApproveNative' => $this->authorization->canApproveNative($actor, $block),
             'access' => [
                 'mode' => $block->access_mode->value,
-                'entitlement' => $block->access_entitlement?->value,
                 'site_price' => $block->site_price_minor !== null ? Money::toInput($block->site_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
                 'workspace_price' => $block->workspace_price_minor !== null ? Money::toInput($block->workspace_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
             ],
             'accessModes' => CatalogAccessMode::options(),
-            'accessEntitlements' => array_map(
-                fn (Entitlement $entitlement): array => ['value' => $entitlement->value, 'label' => $entitlement->label()],
-                Entitlement::catalogGates(),
-            ),
             'categories' => BlockCategory::options(),
             'sourceMaxBytes' => BlockStudio::SOURCE_MAX_BYTES,
         ];

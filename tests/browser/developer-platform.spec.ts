@@ -7,6 +7,7 @@ test.use({ storageState: guestStorageState });
 const developer = users.platformDeveloper;
 const customer = users.platformCustomer;
 const premium = users.platformPremium;
+const catalogAdmin = users.licensesAdmin;
 
 type Account = { email: string; password: string };
 
@@ -90,17 +91,26 @@ test('a Block published in Block Studio reaches customers according to its catal
         .click();
     await expect(page.getByText('Опубликована версия 1.0.0.')).toBeVisible();
 
-    // Catalog access: only plans with the «Собственный домен» option may add the Block.
+    // The author selects the «По тарифу» mode; Super Admin chooses the Plans that include it.
     await page.getByRole('tab', { name: 'Настройки', exact: true }).click();
     const access = page.getByRole('region', { name: 'Доступ в каталоге' });
     await access.getByLabel('Режим доступа').selectOption('entitlement');
-    await access
-        .getByLabel('Опция тарифа')
-        .selectOption({ label: 'Собственный домен' });
     await access.getByRole('button', { name: 'Сохранить доступ' }).click();
     await expect(page.getByText('Доступ в каталоге сохранён.')).toBeVisible();
 
-    // A customer without the option sees the card, the reason and a disabled add button.
+    const admin = await openAs(browser, catalogAdmin);
+    await admin.goto('/platform/catalog-access');
+    const item = admin
+        .getByRole('heading', { name })
+        .locator('xpath=ancestor::section[1]');
+    await item.getByRole('checkbox', { name: 'E2E Domains' }).check();
+    await item.getByRole('button', { name: 'Сохранить тарифы' }).click();
+    await expect(
+        admin.getByText('Доступ блока по тарифам сохранён.'),
+    ).toBeVisible();
+    await admin.context().close();
+
+    // A customer whose Plan is not mapped sees the Russian upgrade reason and a disabled Add button.
     const refused = await openAs(browser, customer);
     await openDesigner(refused, customer.site);
     const refusedCard = refused
@@ -108,18 +118,16 @@ test('a Block published in Block Studio reaches customers according to its catal
         .getByTestId('catalog-block')
         .filter({ hasText: name });
     await expect(refusedCard).toContainText(`Автор: ${developer.profile}`);
+    await expect(refusedCard).toContainText('По тарифу · Тарифы: E2E Domains');
     await expect(refusedCard).toContainText(
-        'По тарифу · Опция тарифа: Собственный домен',
-    );
-    await expect(refusedCard).toContainText(
-        'Блок доступен на тарифе с опцией «Собственный домен».',
+        'Для доступа к блоку нужен тариф «E2E Domains» или отдельная лицензия каталога.',
     );
     await expect(
         refusedCard.getByRole('button', { name: `Добавить блок «${name}»` }),
     ).toBeDisabled();
     await refused.context().close();
 
-    // A customer whose plan has the option adds the Block and edits it through its schema.
+    // A customer on the mapped Plan adds the Block and edits it through its schema.
     const allowed = await openAs(browser, premium);
     await openDesigner(allowed, premium.site);
     await allowed

@@ -80,9 +80,9 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125, owner decision 2026-10-08): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript); order X-026 → X-027 → X-028 → X-029.
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix); order X-027 → X-028 → X-029.
 
-`X-025 — Native Block Runtime: Approved JavaScript` is DONE. The next ready task is X-026; it has not started. Non-blocking follow-up: `X-017` (storage quota, before production).
+`X-025 — Native Block Runtime: Approved JavaScript` and `X-026 — Plan ↔ Catalog Access Matrix` are DONE. X-027 has not started. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -1245,7 +1245,7 @@ Completed 2026-09-30 (uncommitted).
 
 ## P1-005 — Create Default Personal Workspace
 
-**Status:** PARTIAL
+**Status:** DONE
 **Dependencies:** P1-004
 
 ### Objective
@@ -3528,7 +3528,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ### Result
 
-- `block_definitions.access_mode` (`free` default, `entitlement`, `paid`, `admin_grant`) + `access_entitlement` (boolean catalog gates only: `custom_domain`, `remove_branding`, `multi_page_sites`) + `site_price_minor` / `workspace_price_minor` / `price_currency` (ADR-004, RUB; `paid` needs at least one price > 0, other modes none); the model refuses inconsistent combinations. Authors change access in Block Studio «Настройки → Доступ в каталоге» («Лицензия на 1 сайт, ₽», «Лицензия на всё пространство, ₽»; `PUT {platform|developer}/blocks/{block}/access`, own Blocks only, logged `*.block_access_updated`).
+- `block_definitions.access_mode` (`free` default, `entitlement`, `paid`, `admin_grant`) + legacy `access_entitlement` (retained for old-row compatibility; current Plan mapping is D-126 / X-026) + `site_price_minor` / `workspace_price_minor` / `price_currency` (ADR-004, RUB; `paid` needs at least one price > 0, other modes none); the model refuses inconsistent combinations. Authors change mode and prices in Block Studio «Настройки → Доступ в каталоге»; Super Admin assigns Plans in «Доступ по тарифам».
 - `catalog_licenses` (D-121): ULID `public_id`, exactly one item (Block XOR Template) × exactly one target by scope (`site` → Site, `workspace` → Workspace), source `purchase` | `admin_grant`, `granted_by_user_id`; unique Site+Block / Site+Template / Workspace+Block / Workspace+Template; immutable, revoke = delete. Super Admin page «Лицензии каталога» (`/platform/licenses`, platform permission `manage_catalog_licenses`, Super Admin only): scope «Один сайт» (subdomain or Site ID) / «Всё пространство» (Workspace ID or a subdomain of any of its Sites); table shows item, type, scope, target, Workspace, source and date without internal IDs; grants / revokes are logged (`platform.catalog_license_*`). Purchase creation stays DEFERRED (P10-005); no prices are charged.
 - Effective access for a Site = its Site license OR its Workspace license (no row copies; Sites created later are covered). No account-wide license; a User in two Workspaces never carries a license across.
 - `site_block_version_grants` (D-122): adding a Block, installing a Template and restoring a Site version record Site + Block Version grants in the same transaction (only after the current access check, except restore); duplicating a granted version needs no new check; publishing passes on the grant, otherwise applies current access, and never creates grants. Revoking a license or restricting a Block keeps installed versions editable and publishable; a new Block Version, a new install and other Sites follow current access. Existing Block Instances were backfilled by the migration.
@@ -3537,11 +3537,11 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ### Acceptance Criteria
 
-- Author sets access mode on publish-ready items: `free`, `entitlement` (typed entitlement key), `paid` (Site and / or Workspace price per ADR-004; no checkout), `admin_grant`.
+- Author sets access mode on publish-ready items: `free`, `entitlement` (explicit Plan inclusion, D-126), `paid` (Site and / or Workspace price per ADR-004; no checkout), `admin_grant`.
 - `catalog_licenses` (item × Site or Workspace, source `purchase` | `admin_grant`); Super Admin grants / revokes; purchase creation DEFERRED (P10-005).
 - Customer catalog in the Designer library with Russian access cards; backend checks access when adding a Block Instance and when publishing; a Site license covers one Site, a Workspace license all Sites of that Workspace.
 - Installed Block Versions are grandfathered per Site (D-122).
-- Tests: each access mode, both scopes, invariants, duplicates, grandfathering cases, entitlement vs license separation, no internal IDs in props; Playwright allowed / denied for both scopes.
+- Tests: each access mode, both scopes, invariants, duplicates, grandfathering cases, Plan inclusion vs license separation, no internal IDs in props; Playwright allowed / denied for both scopes.
 
 ---
 
@@ -3576,7 +3576,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 - Customer catalog = platform and Developer Templates with a published Template Version (`Template::availableForSites`; `StoreSiteRequest` uses the same rule). `CreateSite` copies the latest version (`InstallTemplateVersion`): new Pages / Block Instances with new `public_id`s, pinned Block Versions, hidden flags; `open_page` / `scroll_to` targets remapped to the new IDs, unknown targets → null. No sync afterwards. Legacy versions without content still start with a home Page.
 - Backend checks before the transaction: Template has a version, supports the Site type, multi-page content only for types that allow pages (publisher also refuses multi-page content with such types), access (`TemplateCatalogAccess`) against the Workspace: the Template's mode and every included Block, unless the Workspace holds a license for the Template.
-- Templates get `access_mode` / `access_entitlement` / `site_price_minor` / `workspace_price_minor` / `price_currency` (same rules as Blocks, `CatalogAccessMode::fieldsMatch`), edited in «Публикация шаблона» → «Доступ в каталоге» (owner only, 404 otherwise). `catalog_licenses.template_id` (D-121): a new Site from a `paid` / `admin_grant` Template requires a Workspace Template license, which covers exactly the Block Versions of the Template Version being installed (no union over historical versions). Site-scoped Template licenses are stored for future flows; none is built.
+- Templates get `access_mode` / legacy `access_entitlement` / `site_price_minor` / `workspace_price_minor` / `price_currency`; «По тарифу» Templates use explicit Plan inclusion (D-126 / X-026). Owners edit mode and prices in «Публикация шаблона» → «Доступ в каталоге» (owner only, 404 otherwise); Super Admin assigns Plans in «Доступ по тарифам». `catalog_licenses.template_id` (D-121): a new Site from a `paid` / `admin_grant` Template requires a Workspace Template license, which covers exactly the Block Versions of the Template Version being installed (no union over historical versions). Site-scoped Template licenses are stored for future flows; none is built.
 - Installation grants every copied Block Version to the new Site in the same transaction (D-122); later Template / Block access changes and Template republishes never change the copied Site.
 - UI: «Новый сайт» shows author, access label and the denial reason, unavailable Templates are disabled.
 - Checks: `TemplateInstallationTest` (14), `TemplateBuilderTest`, create-site / catalog / plan tests; Playwright `template-install.spec.ts` (publish → customer creates landing Site → republish → Site unchanged), `catalog-licenses`, `site-formats`, `template-builder`.
@@ -3666,7 +3666,7 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 
 ### Result
 
-- New `developer-platform.spec.ts`: a Developer creates a Block in Block Studio (schema + HTML), publishes 1.0.0 immediately after the automated checks, sets catalog access «По тарифу» / «Собственный домен»; a customer without the option sees author, access label and the Russian reason with adding disabled; a customer whose plan has it adds the Block, it renders in its `allow-scripts` sandbox frame and is edited through its schema; a later unpublished Draft edit never reaches the placed Instance. E2E data: `platform-developer@` / `platform-customer@` / `platform-premium@` (`E2eSeeder`).
+- `developer-platform.spec.ts`: a Developer creates and publishes a Block; a Super Admin assigns it to an explicit Plan in «Доступ по тарифам»; a Workspace on another Plan gets the Russian reason and a disabled Add action; a Workspace on the mapped Plan installs it and edits its schema; unpublished Draft edits never reach the placed Instance. E2E data: `platform-developer@` / `platform-customer@` / `platform-premium@` / `licenses-admin@` (`E2eSeeder`).
 - Coverage map of the remaining requirements: Studio Code / Schema / Preview, errors, reload, publishing, sandbox isolation, Super Admin and Developer ownership — `block-authoring`; schema-driven Instance editing, Draft / published sandbox — `sandboxed-blocks`; admin_grant Site license for one Site only and Workspace license for current / new Sites of one Workspace (D-121) — `catalog-licenses`; Template build / publish / devices — `template-builder`; compatible install as an independent copy — `template-install`; the four formats, multi-page denied without `multi_page_sites`, no blank start for Quiz / Chat — `site-formats` + `core-platform`; quiz and chat flows — `quiz-site`, `chat-selection`. Tablet / mobile overflow checks run in the `@responsive` specs.
 - Live operator chat is not tested: it is not implemented (P9-018 DEFERRED).
 
@@ -3683,7 +3683,7 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 - Review (no regressions found):
   - Ownership: Block Studio routes resolve only the current Developer Profile's Blocks (`ownedByDeveloper`) or platform Blocks for `manage_platform_content`; all 16 Template Studio actions go through `ResolvesEditableTemplates` (non-owner → 404), Template Pages / Blocks are scoped to that Template. Catalog licenses only with `manage_catalog_licenses`.
   - Sandbox (ADR-008): authored HTML / CSS / JS runs only in `srcdoc` frames with `sandbox="allow-scripts"` (opaque origin, no `allow-same-origin`) and a CSP meta first; the parent accepts messages only from its own frame window with origin `null` and only `landflow:resize` / `landflow:action` (schema action keys) / `landflow:error` (truncated). No authored code in the app origin.
-  - Catalog access (D-121): checked by the backend when adding a Block Instance, installing a Template and publishing; entitlements are typed (`Entitlement::catalogGates`), no plan-name checks; paid / admin_grant need a Site or Workspace license; installed versions are grandfathered per Site (D-122).
+  - Catalog access (D-121 / D-126): checked by the backend when adding a Block Instance, installing a Template and publishing; `entitlement` mode uses explicit Plan inclusion, never typed capability entitlements or plan-name checks; paid / admin_grant need a Site or Workspace license; installed versions are grandfathered per Site (D-122).
   - Props: no numeric internal IDs added to Inertia props in Phase 9 (public ULIDs only); no secrets.
   - Public submissions: quiz / chat `answers` are bounded by the Block's steps and resolved from server state (Draft Block or Published manifest); question / answer text never comes from the browser.
   - Versions: Block and Template Versions are immutable; autosave writes Drafts only; installed Sites are independent copies.
@@ -4384,9 +4384,9 @@ Gates: `composer quality` PASS (1285 tests, 1283 passed, 2 skipped; 9836 asserti
 
 ## X-026 — Plan ↔ Catalog Access Matrix
 
-**Status:** NOT_STARTED
+**Status:** PARTIAL
 **Trigger:** after X-025, before customer Native catalog rollout
-**Decision:** D-121, D-122, ADR-009 §13
+**Decision:** D-121, D-122, D-126, ADR-009 §13
 
 Scope:
 
@@ -4395,6 +4395,13 @@ Scope:
 - internal admin UI for which plans contain a Block / Template; customer catalog locked state and upgrade messaging in Russian;
 - preserve `paid` / `admin_grant` / `CatalogLicense` / D-122 grandfathering; server-side enforcement;
 - no numeric plan values or tariff definitions invented without owner approval.
+
+### Result
+
+- Added explicit Plan ↔ Block Definition / Template pivots and a safe backfill from prior boolean catalog entitlements. «По тарифу» checks only the mapped active Workspace Plan; typed Plan entitlements remain separate capabilities.
+- Added the Super Admin «Доступ по тарифам» page for published Blocks and Templates, with backend validation and Russian catalog denial / upgrade reasons.
+- Preserved universal `free`, paid access independent of Plan (purchase flow remains deferred under P10-005), administrator-issued CatalogLicense overrides, license scopes and D-122 grandfathering.
+- Checks: PHPUnit 1,288 (1,283 passed, 5 skipped); PHPStan PASS; Pint PASS; frontend check PASS; canonical production / SSR build PASS; `npm run test:e2e` PASS (95 / 95); `git diff --check` PASS.
 
 ---
 
@@ -4537,8 +4544,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
-- Native runtime replan (ADR-009; D-123, D-124, D-125): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` → `X-027` → `X-028` → `X-029`.
-- Next: `X-026 — Plan ↔ Catalog Access Matrix` (P9-018 and P9-010 DEFERRED).
+- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` → `X-028` → `X-029`.
+- Next: `X-027 — SiteType Locked Editing Enforcement` remains queued and has not started (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---
