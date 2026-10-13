@@ -37,7 +37,7 @@ final class SitePolicy
 
     public function editDesign(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::EditDesign);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::EditDesign);
     }
 
     /**
@@ -92,7 +92,7 @@ final class SitePolicy
      */
     public function editSeo(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::EditSeo, WorkspacePermission::EditSeoBasic);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::EditSeo, WorkspacePermission::EditSeoBasic);
     }
 
     /**
@@ -100,7 +100,7 @@ final class SitePolicy
      */
     public function editSeoIndexing(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::EditSeo);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::EditSeo);
     }
 
     public function manageDomains(User $user, Site $site): bool
@@ -110,7 +110,7 @@ final class SitePolicy
 
     public function restoreVersion(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::RestoreVersion);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::RestoreVersion);
     }
 
     public function viewSubmissions(User $user, Site $site): bool
@@ -157,22 +157,22 @@ final class SitePolicy
 
     public function editVehicles(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::EditVehicles);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::EditVehicles);
     }
 
     public function importVehicles(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::ImportVehicles);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::ImportVehicles);
     }
 
     public function editPrices(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::EditPrices);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::EditPrices);
     }
 
     public function editBenefits(User $user, Site $site): bool
     {
-        return $this->can($user, $site, WorkspacePermission::EditBenefits);
+        return ! $site->site_type->hasLockedStructure() && $this->can($user, $site, WorkspacePermission::EditBenefits);
     }
 
     public function delete(User $user, Site $site): bool

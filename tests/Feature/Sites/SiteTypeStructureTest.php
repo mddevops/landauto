@@ -83,14 +83,48 @@ class SiteTypeStructureTest extends TestCase
             $this->assertSame(1, $page->blocks()->count(), $type->value);
 
             $state = [...$block->state_json, 'title' => 'Подберём автомобиль за 3 шага'];
-            $this->as()->patch(route('sites.blocks.state', [$site, $block]), ['state' => $state])->assertSessionHasNoErrors();
-            $this->assertSame('Подберём автомобиль за 3 шага', $block->fresh()?->state_json['title']);
+            $this->as()->patch(route('sites.blocks.state', [$site, $block]), ['state' => $state])->assertSessionHasErrors('state');
+            $this->assertArrayNotHasKey('title', $block->fresh()?->state_json ?? []);
 
             $this->as()->get(route('sites.designer', $site))->assertInertia(fn (Assert $designer) => $designer
-                ->where('can.editDesign', true)
+                ->where('can.editDesign', false)
                 ->where('can.editStructure', false)
-                ->where('can.addPage', false));
+                ->where('can.addPage', false)
+                ->where('can.editSeo', false)
+                ->where('library', []));
         }
+    }
+
+    public function test_locked_sites_only_update_fields_explicitly_exposed_by_the_template(): void
+    {
+        $site = $this->siteOf(SiteType::Quiz);
+        $page = $site->pages()->sole();
+        $version = BlockVersion::factory()->create(['schema_json' => ['fields' => [
+            ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок'],
+            ['key' => 'accent', 'type' => 'color', 'label' => 'Цвет', 'default' => '#112233', 'exposed' => true],
+            ['key' => 'font', 'type' => 'font', 'label' => 'Шрифт', 'default' => 'sans', 'exposed' => true],
+        ]]]);
+        $block = BlockInstance::factory()->for($page)->for($version, 'version')->create([
+            'state_json' => ['title' => 'Скрытый текст', 'accent' => '#112233', 'font' => 'sans'],
+        ]);
+
+        $this->as()->patch(route('sites.blocks.state', [$site, $block]), [
+            'state' => ['accent' => '#AABBCC', 'font' => 'serif'],
+        ])->assertSessionHasNoErrors();
+
+        $this->assertSame(
+            ['title' => 'Скрытый текст', 'accent' => '#AABBCC', 'font' => 'serif'],
+            $block->fresh()?->state_json,
+        );
+        $this->as()->get(route('sites.designer', $site))->assertInertia(fn (Assert $designer) => $designer
+            ->where('blocks.0.schema.fields.0.key', 'accent')
+            ->where('blocks.0.schema.fields.1.key', 'font')
+            ->where('blocks.0.state', ['accent' => '#AABBCC', 'font' => 'serif'])
+            ->where('blocks.0.renderState', [
+                'title' => 'Скрытый текст',
+                'accent' => '#AABBCC',
+                'font' => 'serif',
+            ]));
     }
 
     private function siteOf(SiteType $type): Site

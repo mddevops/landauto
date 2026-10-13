@@ -39,6 +39,8 @@ function resolveValue(field: SchemaField, saved: unknown): unknown {
     switch (field.type) {
         case 'text':
         case 'textarea':
+        case 'color':
+        case 'font':
             return typeof saved === 'string'
                 ? saved
                 : typeof field.default === 'string'

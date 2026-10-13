@@ -6,6 +6,7 @@ use App\Actions\Designer\ArrangePageBlocks;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
 use App\Blocks\BlockVersionGrants;
+use App\Blocks\SiteTypeBlockAccess;
 use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -59,14 +60,14 @@ class PageBlockController extends Controller
         return $this->backTo($site, $page, $block);
     }
 
-    public function state(Request $request, Site $site, BlockInstance $block): RedirectResponse
+    public function state(Request $request, Site $site, BlockInstance $block, SiteTypeBlockAccess $siteTypeAccess): RedirectResponse
     {
         $this->scope->block($site, $block);
         Gate::authorize('editContent', $site);
         $validated = $request->validate(['state' => ['present', 'array']]);
 
         try {
-            $block->update(['state_json' => $validated['state']]);
+            $block->update(['state_json' => $siteTypeAccess->merge($site, $block->version->schema_json, $block->state_json, $validated['state'])]);
         } catch (InvalidBlockStateException $exception) {
             throw ValidationException::withMessages($exception->errors);
         }

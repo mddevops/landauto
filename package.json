@@ -7,7 +7,7 @@
         "dev": "vp dev",
         "check": "vp check",
         "check:fix": "vp check --fix",
-        "test:e2e": "playwright test"
+        "test:e2e": "node tests/browser/support/run-e2e.mjs"
     },
     "dependencies": {
         "@inertiajs/react": "^3.0.0",

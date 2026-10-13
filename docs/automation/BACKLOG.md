@@ -80,9 +80,9 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix); order X-027 → X-028 → X-029.
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement); order X-028 → X-029.
 
-`X-025 — Native Block Runtime: Approved JavaScript` and `X-026 — Plan ↔ Catalog Access Matrix` are DONE. X-027 has not started. Non-blocking follow-up: `X-017` (storage quota, before production).
+`X-025 — Native Block Runtime: Approved JavaScript`, `X-026 — Plan ↔ Catalog Access Matrix` and `X-027 — SiteType Locked Editing Enforcement` are DONE. Next ready task: `X-028 — Legacy Sandboxed Block Migration` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -4384,7 +4384,7 @@ Gates: `composer quality` PASS (1285 tests, 1283 passed, 2 skipped; 9836 asserti
 
 ## X-026 — Plan ↔ Catalog Access Matrix
 
-**Status:** PARTIAL
+**Status:** DONE
 **Trigger:** after X-025, before customer Native catalog rollout
 **Decision:** D-121, D-122, D-126, ADR-009 §13
 
@@ -4407,11 +4407,20 @@ Scope:
 
 ## X-027 — SiteType Locked Editing Enforcement
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** after X-026
 **Decision:** D-124 (refines D-119)
 
 Scope: server-enforce D-124 across Site creation, blank start, Template compatibility, Page mutations, Block add / remove / move / duplicate, Block state update, copy / import, restore and Designer capabilities. `quiz` / `chat_selection`: only explicitly exposed fonts / colors / images (define the exposure mechanism); `landing` / `multi_page`: normal Block Designer per permissions / access. UI hiding alone is insufficient.
+
+### Result
+
+- Added immutable Block Schema exposure for top-level `image`, `color` (`#RRGGBB`) and `font` (`sans` / `serif`) fields; the Block Studio can explicitly expose those fields to Quiz / Chat customers.
+- Quiz / Chat state updates preserve every unexposed field; the Designer receives only exposed schema fields and no full Block catalog / Site design controls. Page / SEO mutations, Site design token updates and full-version restore are denied server-side. Existing creation, blank-start and Template compatibility guards remain covered by their existing tests.
+- Added focused feature and browser assertions. `npm run check` PASS; `git diff --check` PASS.
+- E2E runner: `npm run test:e2e` now runs `tests/browser/support/run-e2e.mjs`, which owns the isolated PHP server process and stops that exact PID (Playwright no longer wraps the server on Windows).
+- Custom-domain E2E stabilised without timeout changes: its Artisan steps (`domains:fake-dns` ×2, `queue:work`, `tinker` entitlement change) run in order through one booted PHP process (`tests/browser/support/artisan-worker.php` / `.ts`) instead of four `php artisan` processes; failures report exit code, stdout and stderr (bounded). The test took 31 s (30 s timeout) under full-suite load before, 12.6 s after.
+- Checks (PHP-enabled Landauto environment): `composer quality` PASS (PHPUnit 1,293: 1,291 passed, 2 skipped; PHPStan PASS; Pint PASS; frontend check PASS; production / SSR build PASS); `npm run test:e2e` PASS (95 / 95); `git diff --check` PASS.
 
 ---
 
@@ -4544,8 +4553,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
-- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` → `X-028` → `X-029`.
-- Next: `X-027 — SiteType Locked Editing Enforcement` remains queued and has not started (P9-018 and P9-010 DEFERRED).
+- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` → `X-029`.
+- Next: `X-028 — Legacy Sandboxed Block Migration` (not started; P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

@@ -29,7 +29,11 @@ enum Entitlement: string
         };
     }
 
-    /** Boolean keys retained only for reading legacy D-121 catalog rows during rollback windows. @return list<self> */
+    /**
+     * Boolean keys retained only for reading legacy D-121 catalog rows during rollback windows.
+     *
+     * @return list<self>
+     */
     public static function catalogGates(): array
     {
         return array_values(array_filter(self::cases(), fn (self $entitlement): bool => $entitlement->valueType() === EntitlementValueType::Boolean));

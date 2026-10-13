@@ -31,6 +31,8 @@ export type DesignerBlock = {
     /** Present for sandboxed Block Versions (ADR-008); null for official renderers. */
     sandbox: SandboxSource | null;
     state: BlockState;
+    /** Full persisted state used only by the canvas when SiteType limits editable fields. */
+    renderState?: BlockState;
 };
 
 /** A saved reference whose target was deleted, hidden or disabled afterwards (X-018). */

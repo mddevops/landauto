@@ -202,6 +202,10 @@ export default function Designer({
         : [];
     const stateOf = (block: DesignerBlock) =>
         autosave.drafts[block.public_id] ?? block.state;
+    const renderStateOf = (block: DesignerBlock) => ({
+        ...(block.renderState ?? block.state),
+        ...stateOf(block),
+    });
 
     const saveDesign = () => {
         const draft = designDraft;
@@ -351,7 +355,7 @@ export default function Designer({
                                             <CanvasBlock
                                                 key={block.public_id}
                                                 block={block}
-                                                state={stateOf(block)}
+                                                state={renderStateOf(block)}
                                                 selected={
                                                     block.public_id ===
                                                     selectedId
@@ -385,7 +389,14 @@ export default function Designer({
                                 onChange={setRightTab}
                                 tabs={[
                                     { value: 'block', label: 'Блок' },
-                                    { value: 'design', label: 'Стиль сайта' },
+                                    ...(can.editDesign
+                                        ? [
+                                              {
+                                                  value: 'design' as const,
+                                                  label: 'Стиль сайта',
+                                              },
+                                          ]
+                                        : []),
                                 ]}
                             />
                         </div>
