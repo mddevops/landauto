@@ -80,9 +80,9 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement); order X-028 → X-029.
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement), `X-028` DONE (legacy sandboxed migration); X-029 not started.
 
-`X-025 — Native Block Runtime: Approved JavaScript`, `X-026 — Plan ↔ Catalog Access Matrix` and `X-027 — SiteType Locked Editing Enforcement` are DONE. Next ready task: `X-028 — Legacy Sandboxed Block Migration` (not started). Non-blocking follow-up: `X-017` (storage quota, before production).
+`X-025 — Native Block Runtime: Approved JavaScript`, `X-026 — Plan ↔ Catalog Access Matrix`, `X-027 — SiteType Locked Editing Enforcement` and `X-028 — Legacy Sandboxed Block Migration` are DONE. X-029 is not started. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -4205,7 +4205,7 @@ Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/
 
 ## X-017 — Workspace Asset Storage Quota
 
-**Status:** NOT_STARTED
+**Status:** PARTIAL
 **Trigger:** before the first public production deployment
 **Decision:** D-106
 
@@ -4426,11 +4426,18 @@ Scope: server-enforce D-124 across Site creation, blank start, Template compatib
 
 ## X-028 — Legacy Sandboxed Block Migration
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** after X-025, before final Native rollout
 **Decision:** ADR-009 §10; D-123; D-122
 
 Scope: detect legacy `sandboxed` Block Versions; copy-to-Draft migration workflow producing a new approved Native version only (never mutate an immutable version); controlled upgrades in Template Studio and Site Drafts; publishing diagnostic with Russian warning / blocker for ordinary legacy sandboxed Blocks in new publications; historical active Published Versions preserved.
+
+### Result (2026-10-13)
+
+- Backend migration, explicit Block Studio copy-to-Draft, deliberate Site / Template Draft upgrade UI, D-122 transactional Site grant, publication warning / blocker, Quiz / Chat restriction and focused tests are implemented in the working tree.
+- `composer quality` PASS (PHPUnit 1,297: 1,295 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS).
+- The legacy-version label, isolated E2E PsySH history and post-copy Studio transition are fixed: successful copy-to-Draft opens the copied Draft on «Код» while publication still opens «Версии».
+- Final gates PASS: `composer quality` (PHPUnit 1,297: 1,295 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS), focused migration Playwright 2 / 2, full `npm run test:e2e` 96 / 96.
 
 ---
 
@@ -4553,8 +4560,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
-- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` → `X-029`.
-- Next: `X-028 — Legacy Sandboxed Block Migration` (not started; P9-018 and P9-010 DEFERRED).
+- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029`.
+- Current: `X-029 — Native Runtime Hardening and E2E Review` (NOT_STARTED; P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

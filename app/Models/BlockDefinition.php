@@ -142,6 +142,20 @@ class BlockDefinition extends Model
     }
 
     /**
+     * Adds `latest_runtime`, the runtime of the newest version, for authoring lists.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeWithLatestRuntime(Builder $query): void
+    {
+        $query->addSelect(['latest_runtime' => BlockVersion::query()
+            ->select('runtime')
+            ->whereColumn('block_definition_id', 'block_definitions.id')
+            ->latest('id')
+            ->limit(1)]);
+    }
+
+    /**
      * @return HasMany<BlockVersion, $this>
      */
     public function versions(): HasMany

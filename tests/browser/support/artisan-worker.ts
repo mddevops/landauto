@@ -1,4 +1,7 @@
 import { spawn } from 'node:child_process';
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 
 const PROTOCOL_PREFIX = '\u001eartisan-worker ';
 const OUTPUT_LIMIT = 4_000;
@@ -32,8 +35,11 @@ function tail(output: string): string {
  * separate `php artisan` per command cost seconds per call under full-suite load.
  */
 export function startArtisanWorker(): ArtisanWorker {
+    // Keep PsySH/Tinker state inside a writable E2E-only directory. On Windows PsySH gives
+    // APPDATA precedence over XDG_CONFIG_HOME, so overriding APPDATA is the supported isolation.
+    const e2eAppData = mkdtempSync(join(tmpdir(), 'landflow-e2e-appdata-'));
     const child = spawn('php', ['tests/browser/support/artisan-worker.php'], {
-        env: { ...process.env, APP_ENV: 'e2e' },
+        env: { ...process.env, APP_ENV: 'e2e', APPDATA: e2eAppData },
         stdio: 'pipe',
     });
     const pending: Pending[] = [];

@@ -51,6 +51,7 @@ import {
     state as blockState,
     store as storeBlock,
     visibility as blockVisibility,
+    upgrade as upgradeBlock,
 } from '@/routes/sites/blocks';
 import {
     destroy as destroyPage,
@@ -100,6 +101,7 @@ function siteBlockRoutes(site: string): DesignerBlockRoutes {
         state: (block) => blockState.url({ site, block }),
         move: (block) => moveBlock.url({ site, block }),
         duplicate: (block) => duplicateBlock.url({ site, block }),
+        upgrade: (block) => upgradeBlock.url({ site, block }),
         visibility: (block) => blockVisibility.url({ site, block }),
         destroy: (block) => destroyBlock.url({ site, block }),
     };

@@ -15,9 +15,9 @@ use Illuminate\Support\Facades\Log;
 use LogicException;
 
 /**
- * Publishes the saved Block Draft as the next immutable `sandboxed` Block Version (D-120): the
- * automated checks run first and are the only gate — there is no review queue. Earlier versions
- * and the Block Instances pinned to them never change.
+ * Approves the saved Block Draft as the next immutable `native` Block Version (D-123): the automated
+ * checks run first, then the explicit approval of the exact revision — there is no review queue
+ * (D-120). Earlier versions and the Block Instances pinned to them never change.
  */
 final class BlockPublisher
 {
@@ -74,7 +74,8 @@ final class BlockPublisher
             $schema = json_decode($sources['schema'], true, 64, JSON_THROW_ON_ERROR);
             $latest = $block->versions()->latest('id')->first();
 
-            if ($latest !== null && $this->sameContent($latest, $sources, $schema)) {
+            // Unchanged sources of a legacy sandboxed version are a migration, not a duplicate (ADR-009 §10).
+            if ($latest !== null && $latest->runtime === BlockRuntime::Native && $this->sameContent($latest, $sources, $schema)) {
                 throw new BlockPublishException("Изменений с версии {$latest->version} нет.");
             }
 

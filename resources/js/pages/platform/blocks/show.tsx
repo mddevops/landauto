@@ -8,6 +8,7 @@ import {
     publish,
     update,
 } from '@/routes/platform/blocks';
+import versions from '@/routes/platform/blocks/versions';
 
 export default function PlatformBlockStudio(props: BlockStudioPageProps) {
     const id = props.block.public_id;
@@ -21,6 +22,9 @@ export default function PlatformBlockStudio(props: BlockStudioPageProps) {
                 draftUrl={draftRoute.url(id)}
                 publishUrl={publish.url(id)}
                 accessUrl={access.url(id)}
+                copyLegacyVersionUrl={(version) =>
+                    versions.draft.url({ block: id, version })
+                }
             />
         </>
     );

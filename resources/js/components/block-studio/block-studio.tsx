@@ -88,6 +88,7 @@ type BlockStudioProps = BlockStudioPageProps & {
     draftUrl: string;
     publishUrl: string;
     accessUrl: string;
+    copyLegacyVersionUrl: (version: string) => string;
 };
 
 export function BlockStudio({
@@ -104,6 +105,7 @@ export function BlockStudio({
     draftUrl,
     publishUrl,
     accessUrl,
+    copyLegacyVersionUrl,
 }: BlockStudioProps) {
     const autosave = useDraftAutosave(draftUrl, draft);
     const { sources, status, errors } = autosave;
@@ -346,7 +348,14 @@ export function BlockStudio({
                         />
                     )}
 
-                    {mode === 'versions' && <VersionList versions={versions} />}
+                    {mode === 'versions' && (
+                        <VersionList
+                            versions={versions}
+                            revision={draft.revision}
+                            copyLegacyVersionUrl={copyLegacyVersionUrl}
+                            onCopied={() => setMode('code')}
+                        />
+                    )}
 
                     {mode === 'settings' && (
                         <BlockSettings
@@ -443,7 +452,17 @@ function publishHint({
     return 'Публикация создаст новую неизменяемую версию; сайты, где блок уже используется, не изменятся.';
 }
 
-function VersionList({ versions }: { versions: PublishedBlockVersion[] }) {
+function VersionList({
+    versions,
+    revision,
+    copyLegacyVersionUrl,
+    onCopied,
+}: {
+    versions: PublishedBlockVersion[];
+    revision: number;
+    copyLegacyVersionUrl: (version: string) => string;
+    onCopied: () => void;
+}) {
     return (
         <section
             aria-labelledby="studio-versions-title"
@@ -477,6 +496,28 @@ function VersionList({ versions }: { versions: PublishedBlockVersion[] }) {
                             <Badge variant="outline">
                                 {version.runtime_label}
                             </Badge>
+                            {version.legacy && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        router.post(
+                                            copyLegacyVersionUrl(
+                                                version.version,
+                                            ),
+                                            { revision },
+                                            {
+                                                preserveScroll: true,
+                                                onSuccess: onCopied,
+                                            },
+                                        )
+                                    }
+                                >
+                                    <FileCode2 aria-hidden="true" />
+                                    Скопировать в черновик
+                                </Button>
+                            )}
                             <span className="text-muted-foreground">
                                 {formatBlockDate(version.published_at)}
                             </span>

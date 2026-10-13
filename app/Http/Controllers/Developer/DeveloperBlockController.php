@@ -46,6 +46,7 @@ class DeveloperBlockController extends Controller
             'blocks' => BlockDefinition::query()
                 ->ownedByDeveloper($this->profile($request))
                 ->withCount('versions')
+                ->withLatestRuntime()
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
                 ->get()
@@ -114,6 +115,14 @@ class DeveloperBlockController extends Controller
         return to_route('developer.blocks.show', $definition);
     }
 
+    public function copyVersion(Request $request, string $block, string $version): RedirectResponse
+    {
+        $definition = $this->find($request, $block);
+        $this->copyLegacyVersionToDraft($this->studio, $request, $this->actor($request), $definition, $version);
+
+        return to_route('developer.blocks.show', $definition);
+    }
+
     public function publish(PublishBlockRequest $request, string $block, BlockPublisher $publisher): RedirectResponse
     {
         $definition = $this->find($request, $block);
@@ -129,6 +138,7 @@ class DeveloperBlockController extends Controller
             ->where('public_id', $publicId)
             ->with(['developerProfile', 'draft'])
             ->withCount('versions')
+            ->withLatestRuntime()
             ->firstOrFail();
     }
 

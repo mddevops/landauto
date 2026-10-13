@@ -5,6 +5,8 @@ namespace App\Http\Controllers;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
+use App\Blocks\BlockVersionGrants;
+use App\Blocks\LegacyBlockMigration;
 use App\Blocks\SiteTypeBlockAccess;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -21,7 +23,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess, BlockVersionGrants $grants, LegacyBlockMigration $legacy): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -34,6 +36,8 @@ class SiteDesignerController extends Controller
 
         $blocks = $page->blocks()->with('version.definition')->get();
         $vehicles = $vehicleBindings->forSite($site);
+        $licensed = $access->licensedBlockIds($site);
+        $granted = $grants->grantedVersionIds($site);
 
         return Inertia::render('sites/designer', [
             'site' => [
@@ -70,6 +74,9 @@ class SiteDesignerController extends Controller
                     'sandbox' => $block->version->previewSource(),
                     'state' => (object) $siteTypeAccess->visibleState($site, $block->version->schema_json, $block->state_json),
                     'renderState' => (object) $block->state_json,
+                    'legacy' => LegacyBlockMigration::isLegacy($block->version)
+                        ? LegacyBlockMigration::props($legacy->forSite($site, $block->setRelation('page', $page), $licensed, $granted))
+                        : null,
                 ])
                 ->values()
                 ->all(),

@@ -10,6 +10,7 @@ use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockSourceFingerprint;
 use App\Blocks\BlockStateValidator;
 use App\Blocks\BlockVersionGrants;
+use App\Blocks\LegacyBlockMigration;
 use App\Blocks\Native\NativeBlockCompiler;
 use App\Blocks\Native\NativeCompileException;
 use App\Enums\SiteStatus;
@@ -59,6 +60,7 @@ final class PublishValidator
         private VehicleBindings $vehicles,
         private NativeBlockCompiler $native,
         private BlockSourceFingerprint $fingerprint,
+        private LegacyBlockMigration $legacy,
     ) {}
 
     public function validate(Site $site, ?User $actor = null): PublishValidation
@@ -175,6 +177,10 @@ final class PublishValidator
                     continue;
                 }
 
+                if (LegacyBlockMigration::isLegacy($version)) {
+                    $this->validateLegacy($site, $block->setRelation('page', $page), $licensed, $granted);
+                }
+
                 $native = NativeBlockCompiler::source($version);
 
                 if ($native !== null && (
@@ -231,6 +237,29 @@ final class PublishValidator
         }
 
         return $referenced;
+    }
+
+    /**
+     * A legacy sandboxed Block never silently stays the final runtime of a new publication
+     * (ADR-009 §10): Publish is blocked while this Site can move it to its Native version, and
+     * warns when it cannot (no Native version yet, no access, Quiz / Chat, incompatible data).
+     *
+     * @param  array<int, true>  $licensed
+     * @param  array<int, true>  $granted
+     */
+    private function validateLegacy(Site $site, BlockInstance $block, array $licensed, array $granted): void
+    {
+        $version = $block->version;
+        $upgrade = $this->legacy->forSite($site, $block, $licensed, $granted);
+        $prefix = "«{$version->definition->name}» использует устаревшую изолированную версию {$version->version}";
+
+        if ($upgrade->possible()) {
+            $this->error('legacy_block_upgrade_required', "{$prefix}. Обновите блок до нативной версии {$upgrade->target->version} в редакторе и опубликуйте сайт.", page: $block->page->public_id, block: $block->public_id);
+
+            return;
+        }
+
+        $this->warning('legacy_block_sandboxed', "{$prefix} и будет показан во встроенном фрейме. {$upgrade->reason}", page: $block->page->public_id, block: $block->public_id);
     }
 
     /**

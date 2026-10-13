@@ -219,6 +219,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');
             Route::post('blocks/{block}/move', [PageBlockController::class, 'move'])->whereUlid('block')->name('blocks.move');
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
+            Route::post('blocks/{block}/upgrade', [PageBlockController::class, 'upgrade'])->whereUlid('block')->name('blocks.upgrade');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [PageBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
 
@@ -330,6 +331,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('{block}', [PlatformBlockController::class, 'show'])->whereUlid('block')->name('show');
             Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
             Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
+            Route::post('{block}/versions/{version}/draft', [PlatformBlockController::class, 'copyVersion'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.draft');
             Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
             Route::put('{block}/access', [PlatformBlockController::class, 'access'])->whereUlid('block')->name('access');
         });
@@ -394,6 +396,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::get('{block}', [DeveloperBlockController::class, 'show'])->whereUlid('block')->name('show');
                     Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
                     Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
+                    Route::post('{block}/versions/{version}/draft', [DeveloperBlockController::class, 'copyVersion'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.draft');
                     Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
                     Route::put('{block}/access', [DeveloperBlockController::class, 'access'])->whereUlid('block')->name('access');
                 });
@@ -440,6 +443,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('blocks/{block}/state', [TemplateBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');
             Route::post('blocks/{block}/move', [TemplateBlockController::class, 'move'])->whereUlid('block')->name('blocks.move');
             Route::post('blocks/{block}/duplicate', [TemplateBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
+            Route::post('blocks/{block}/upgrade', [TemplateBlockController::class, 'upgrade'])->whereUlid('block')->name('blocks.upgrade');
             Route::patch('blocks/{block}/visibility', [TemplateBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [TemplateBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
         });

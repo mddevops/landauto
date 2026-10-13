@@ -531,6 +531,36 @@ test('Block preview escapes sources and only trusts its own sandbox', async ({
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
 });
 
+test('legacy sandboxed version can be copied into a migration draft', async ({
+    page,
+}, testInfo) => {
+    test.skip(
+        testInfo.project.name !== 'desktop',
+        'Один desktop-сценарий изменяет общий черновик фикстуры.',
+    );
+
+    await login(page, users.catalogAdmin);
+    await page.goto('/platform/blocks');
+    await page.getByRole('link', { name: /Промо из студии/ }).click();
+    await openMode(page, 'Версии');
+
+    const legacy = page.getByTestId('block-version').filter({
+        hasText: 'Изолированный',
+    });
+    await expect(legacy).toContainText('1.0.0');
+    await legacy
+        .getByRole('button', { name: 'Скопировать в черновик' })
+        .click();
+    await expect(
+        page.getByText(
+            'Код версии 1.0.0 скопирован в черновик. Проверьте предпросмотр и одобрите нативную версию.',
+        ),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('tab', { name: 'Код', selected: true }),
+    ).toBeVisible();
+});
+
 test('super admin creates and renames a Platform Block', async ({
     page,
 }, testInfo) => {

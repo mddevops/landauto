@@ -24,7 +24,10 @@ final class BlockAuthoringPresenter
     ) {}
 
     /**
-     * @return array{public_id: string, name: string, slug: string, category: string, category_label: string, versions_count: int, updated_at: string|null}
+     * `needs_migration`: the latest version is legacy sandboxed (ADR-009 §10); needs the
+     * {@see BlockDefinition::scopeWithLatestRuntime()} column.
+     *
+     * @return array{public_id: string, name: string, slug: string, category: string, category_label: string, versions_count: int, needs_migration: bool, updated_at: string|null}
      */
     public function listItem(BlockDefinition $block): array
     {
@@ -35,12 +38,13 @@ final class BlockAuthoringPresenter
             'category' => $block->category->value,
             'category_label' => $block->category->label(),
             'versions_count' => (int) $block->getAttribute('versions_count'),
+            'needs_migration' => $block->getAttribute('latest_runtime') === BlockRuntime::Sandboxed->value,
             'updated_at' => $block->updated_at?->toIso8601String(),
         ];
     }
 
     /**
-     * @return array<string, string|int|null>
+     * @return array<string, string|int|bool|null>
      */
     public function detail(BlockDefinition $block): array
     {
@@ -68,7 +72,8 @@ final class BlockAuthoringPresenter
             'draft' => $this->draft($this->studio->draftFor($block)),
             'versions' => $versions->map(fn (BlockVersion $version): array => [
                 'version' => $version->version,
-                'runtime_label' => $version->runtime->label(),
+                'runtime_label' => LegacyBlockMigration::isLegacy($version) ? 'Изолированный' : $version->runtime->label(),
+                'legacy' => LegacyBlockMigration::isLegacy($version),
                 'published_at' => $version->created_at?->toIso8601String(),
             ])->values()->all(),
             'publishBlockedReason' => $official ? BlockPublisher::OFFICIAL_RUNTIME : null,
