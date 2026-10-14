@@ -17,6 +17,8 @@ export const fieldTypeLabels: Record<SchemaFieldType, string> = {
     boolean: 'Переключатель',
     select: 'Список',
     image: 'Изображение',
+    color: 'Цвет',
+    font: 'Шрифт',
     action: 'Действие',
     vehicle: 'Автомобиль',
     group: 'Группа',
@@ -30,6 +32,8 @@ const builderTypes: SchemaFieldType[] = [
     'boolean',
     'select',
     'image',
+    'color',
+    'font',
     'action',
     'group',
     'repeater',
@@ -41,6 +45,8 @@ const requirable: SchemaFieldType[] = [
     'number',
     'select',
     'image',
+    'color',
+    'font',
     'action',
     'vehicle',
 ];
@@ -379,6 +385,17 @@ function FieldEditor({
                             }
                         />
                     )}
+                    {depth === 0 &&
+                        ['image', 'color', 'font'].includes(field.type) && (
+                            <CheckboxInput
+                                id={`${id}-exposed`}
+                                label="Доступно клиенту в Quiz/Chat"
+                                checked={field.exposed === true}
+                                onChange={(checked) =>
+                                    set('exposed', checked ? true : undefined)
+                                }
+                            />
+                        )}
                     <TypeOptions
                         field={field}
                         id={id}
@@ -484,6 +501,36 @@ function TypeOptions({
             );
         case 'select':
             return <SelectOptions field={field} id={id} onChange={onChange} />;
+        case 'color':
+            return (
+                <TextInput
+                    id={`${id}-default`}
+                    label="Цвет по умолчанию (#RRGGBB)"
+                    value={
+                        typeof field.default === 'string' ? field.default : ''
+                    }
+                    onChange={(value) => set('default', value)}
+                />
+            );
+        case 'font':
+            return (
+                <div className="grid gap-1.5">
+                    <Label htmlFor={`${id}-default`}>Шрифт по умолчанию</Label>
+                    <NativeSelect
+                        id={`${id}-default`}
+                        value={
+                            typeof field.default === 'string'
+                                ? field.default
+                                : ''
+                        }
+                        onChange={(event) => set('default', event.target.value)}
+                    >
+                        <option value="">Не выбран</option>
+                        <option value="sans">Без засечек</option>
+                        <option value="serif">С засечками</option>
+                    </NativeSelect>
+                </div>
+            );
         case 'repeater':
             return (
                 <>

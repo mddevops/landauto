@@ -7,6 +7,7 @@ export type AuthoringBlock = {
     category: string;
     category_label: string;
     versions_count: number;
+    needs_migration: boolean;
     updated_at: string | null;
 };
 
@@ -32,6 +33,7 @@ export type BlockCheckIssue = {
 export type PublishedBlockVersion = {
     version: string;
     runtime_label: string;
+    legacy: boolean;
     published_at: string | null;
 };
 
@@ -46,7 +48,6 @@ export type CatalogAccessCard = {
 /** Catalog access settings of a Block or Template; prices are human decimal strings, empty when not offered. */
 export type BlockAccessSettings = {
     mode: string;
-    entitlement: string | null;
     site_price: string;
     workspace_price: string;
 };

@@ -37,7 +37,7 @@ class BlockSourceCheckerTest extends TestCase
             </section>
             HTML;
 
-        $this->assertSame([], $this->check(['html' => $html, 'js' => 'fetch("https://example.com"); // JS is isolated by CSP']));
+        $this->assertSame([], $this->check(['html' => $html, 'js' => 'root.classList.add("ready");']));
     }
 
     /**

@@ -31,6 +31,7 @@ import {
     state as blockState,
     store as storeBlock,
     visibility as blockVisibility,
+    upgrade as upgradeBlock,
 } from '@/routes/studio/templates/blocks';
 import {
     destroy as destroyPage,
@@ -54,6 +55,7 @@ function templateBlockRoutes(template: string): DesignerBlockRoutes {
         state: (block) => blockState.url({ template, block }),
         move: (block) => moveBlock.url({ template, block }),
         duplicate: (block) => duplicateBlock.url({ template, block }),
+        upgrade: (block) => upgradeBlock.url({ template, block }),
         visibility: (block) => blockVisibility.url({ template, block }),
         destroy: (block) => destroyBlock.url({ template, block }),
     };

@@ -4,6 +4,8 @@ import type { CaptchaConfig } from '@/blocks/captcha';
 import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
 import { currentTracking, submitForm } from '@/blocks/form-submit';
+import { NativeBlock } from '@/blocks/native-block';
+import type { NativeOutput } from '@/blocks/native-block';
 import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
@@ -33,6 +35,8 @@ export type PublishedPagePayload = {
         slug: string;
         state: BlockState;
         sandbox?: SandboxSource;
+        /** Compiled Native output only; Native source never reaches the browser. */
+        native?: NativeOutput;
     }[];
     assets: { public_id: string; url: string }[];
     vehicles: VehicleBinding[];
@@ -103,7 +107,14 @@ export function PublishedSite({
                                     <TriggerScope
                                         value={{ block: block.public_id }}
                                     >
-                                        {block.sandbox ? (
+                                        {block.native ? (
+                                            <NativeBlock
+                                                instance={block.public_id}
+                                                slug={block.slug}
+                                                native={block.native}
+                                                state={block.state}
+                                            />
+                                        ) : block.sandbox ? (
                                             <SandboxedBlock
                                                 source={block.sandbox}
                                                 state={block.state}

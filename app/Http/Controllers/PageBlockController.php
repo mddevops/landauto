@@ -6,6 +6,8 @@ use App\Actions\Designer\ArrangePageBlocks;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
 use App\Blocks\BlockVersionGrants;
+use App\Blocks\LegacyBlockMigration;
+use App\Blocks\SiteTypeBlockAccess;
 use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -18,6 +20,7 @@ use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class PageBlockController extends Controller
 {
@@ -59,14 +62,14 @@ class PageBlockController extends Controller
         return $this->backTo($site, $page, $block);
     }
 
-    public function state(Request $request, Site $site, BlockInstance $block): RedirectResponse
+    public function state(Request $request, Site $site, BlockInstance $block, SiteTypeBlockAccess $siteTypeAccess): RedirectResponse
     {
         $this->scope->block($site, $block);
         Gate::authorize('editContent', $site);
         $validated = $request->validate(['state' => ['present', 'array']]);
 
         try {
-            $block->update(['state_json' => $validated['state']]);
+            $block->update(['state_json' => $siteTypeAccess->merge($site, $block->version->schema_json, $block->state_json, $validated['state'])]);
         } catch (InvalidBlockStateException $exception) {
             throw ValidationException::withMessages($exception->errors);
         }
@@ -106,6 +109,19 @@ class PageBlockController extends Controller
         });
 
         return $this->backTo($site, $block->page, $copy);
+    }
+
+    /**
+     * Moves a legacy sandboxed Block to its approved Native version (ADR-009 §10); Quiz / Chat Sites
+     * only get upgrades through a new Template version.
+     */
+    public function upgrade(Site $site, BlockInstance $block, LegacyBlockMigration $migration): RedirectResponse
+    {
+        $this->authorizeStructure($site, $block);
+        $version = $migration->upgradeSiteBlock($site, $block);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Блок обновлён до нативной версии {$version->version}."]);
+
+        return $this->backTo($site, $block->page, $block);
     }
 
     public function visibility(Request $request, Site $site, BlockInstance $block): RedirectResponse

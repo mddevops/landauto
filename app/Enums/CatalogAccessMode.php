@@ -5,9 +5,8 @@ namespace App\Enums;
 use App\Support\Money;
 
 /**
- * How a customer Site may use a published catalog item (D-121). Entitlements and catalog licenses
- * stay separate: a license for the Site or its Workspace always grants access; an entitlement
- * grants access only in `entitlement` mode.
+ * How a customer Site may acquire a published catalog item. In `entitlement` mode, X-026 maps the
+ * item explicitly to eligible Plans; Plan entitlements remain separate product capabilities.
  */
 enum CatalogAccessMode: string
 {
@@ -35,8 +34,8 @@ enum CatalogAccessMode: string
     }
 
     /**
-     * Exactly the fields of the mode: a boolean catalog-gate entitlement for `entitlement`; for
-     * `paid` a Site and / or Workspace license price (each positive when set, at least one) in a
+     * Exactly the fields of the mode: no scalar entitlement for `entitlement` (Plan inclusion is
+     * relational); for `paid` a Site and / or Workspace license price (each positive when set, at least one) in a
      * supported currency (D-121); nothing otherwise.
      */
     public static function fieldsMatch(mixed $mode, mixed $entitlement, ?int $sitePriceMinor, ?int $workspacePriceMinor, ?string $currency): bool
@@ -44,9 +43,10 @@ enum CatalogAccessMode: string
         $noPrices = $sitePriceMinor === null && $workspacePriceMinor === null && $currency === null;
 
         return match ($mode instanceof self ? $mode : null) {
-            self::Entitlement => $entitlement instanceof Entitlement
-                && in_array($entitlement, Entitlement::catalogGates(), true)
-                && $noPrices,
+            // Keep valid legacy entitlement values readable for rollback safety; X-026 access is
+            // resolved exclusively through the explicit Plan pivot.
+            self::Entitlement => ($entitlement === null
+                || ($entitlement instanceof Entitlement && in_array($entitlement, Entitlement::catalogGates(), true))) && $noPrices,
             self::Paid => $entitlement === null
                 && ($sitePriceMinor !== null || $workspacePriceMinor !== null)
                 && ($sitePriceMinor === null || $sitePriceMinor > 0)

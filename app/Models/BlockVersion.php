@@ -15,8 +15,9 @@ use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
- * Immutable: a change to a Block requires a new version (BLOCK_SYSTEM.md §6). A `sandboxed`
- * version carries its authored source snapshot (ADR-008); an `official` one carries none.
+ * Immutable: a change to a Block requires a new version (BLOCK_SYSTEM.md §6). `sandboxed`
+ * (ADR-008) and `native` (ADR-009) versions carry their authored source snapshot; an `official`
+ * one carries none.
  *
  * @property int $id
  * @property int $block_definition_id
@@ -27,10 +28,14 @@ use LogicException;
  * @property string|null $css
  * @property string|null $js
  * @property int|null $published_by_user_id
+ * @property int|null $approved_revision
+ * @property string|null $approved_source_hash
+ * @property int|null $approved_by_user_id
+ * @property Carbon|null $approved_at
  * @property Carbon|null $created_at
  */
 #[Fillable(['version', 'schema_json'])]
-#[Hidden(['id', 'block_definition_id', 'published_by_user_id'])]
+#[Hidden(['id', 'block_definition_id', 'published_by_user_id', 'approved_by_user_id', 'approved_source_hash', 'approved_revision'])]
 class BlockVersion extends Model
 {
     /** @use HasFactory<BlockVersionFactory> */
@@ -51,6 +56,8 @@ class BlockVersion extends Model
         return [
             'runtime' => BlockRuntime::class,
             'schema_json' => 'array',
+            'approved_revision' => 'integer',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -62,8 +69,15 @@ class BlockVersion extends Model
             $hasSources = $version->html !== null && $version->css !== null && $version->js !== null;
             $noSources = $version->html === null && $version->css === null && $version->js === null;
 
-            if ($version->runtime === BlockRuntime::Sandboxed ? ! $hasSources : ! $noSources) {
-                throw new LogicException('Only sandboxed Block Versions carry authored sources, and they carry all of them.');
+            if ($version->runtime->hasAuthoredSource() ? ! $hasSources : ! $noSources) {
+                throw new LogicException('Only sandboxed and native Block Versions carry authored sources, and they carry all of them.');
+            }
+
+            $approval = [$version->approved_revision, $version->approved_source_hash, $version->approved_by_user_id, $version->approved_at];
+            $complete = ! in_array(null, $approval, true)
+                && preg_match('/^[a-f0-9]{64}$/', (string) $version->approved_source_hash) === 1;
+            if ($version->runtime === BlockRuntime::Native ? ! $complete : count(array_filter($approval, fn ($value) => $value !== null)) !== 0) {
+                throw new LogicException('Only native Block Versions carry complete approval metadata.');
             }
         });
 
@@ -73,13 +87,37 @@ class BlockVersion extends Model
     }
 
     /**
-     * What the ADR-008 wrapper needs to render a sandboxed version; null for official versions.
+     * What the ADR-008 wrapper needs to render a sandboxed version on any surface; null otherwise.
      *
      * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
      */
     public function sandboxSource(): ?array
     {
-        if ($this->runtime !== BlockRuntime::Sandboxed) {
+        return $this->runtime === BlockRuntime::Sandboxed ? $this->authoredSource() : null;
+    }
+
+    /**
+     * What application-origin previews (Studio, Designer, authenticated Site Preview) hand to the
+     * ADR-008 sandbox frame. Native versions preview there too: authored source never renders in
+     * the application origin; only the published Site uses compiled Native host DOM (ADR-009).
+     *
+     * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
+     */
+    public function previewSource(): ?array
+    {
+        $source = $this->authoredSource();
+
+        return $source === null ? null : [...$source, 'contract' => $this->runtime === BlockRuntime::Native ? 'native' : 'legacy'];
+    }
+
+    /**
+     * The immutable authored source snapshot of a sandboxed or native version; null for official.
+     *
+     * @return array{name: string, html: string, css: string, js: string, fields: list<array<string, mixed>>}|null
+     */
+    public function authoredSource(): ?array
+    {
+        if (! $this->runtime->hasAuthoredSource()) {
             return null;
         }
 
@@ -119,5 +157,11 @@ class BlockVersion extends Model
     public function publisher(): BelongsTo
     {
         return $this->belongsTo(User::class, 'published_by_user_id');
+    }
+
+    /** @return BelongsTo<User, $this> */
+    public function approver(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by_user_id');
     }
 }

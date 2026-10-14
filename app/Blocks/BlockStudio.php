@@ -5,10 +5,12 @@ namespace App\Blocks;
 use App\Exceptions\BlockDraftConflictException;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
+use App\Models\BlockVersion;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Support\Facades\DB;
+use LogicException;
 
 /**
  * Block Studio Draft (ADR-008): one editable set of sources per Block Definition. Saving (manual
@@ -115,6 +117,29 @@ final class BlockStudio
             // Two first saves raced; the other one won.
             throw new BlockDraftConflictException;
         }
+    }
+
+    /**
+     * Migration start for a legacy sandboxed version (ADR-009 §10): its immutable sources become the
+     * Draft, which then goes through the checks, sandbox preview and Native approval like any edit.
+     * The version itself never changes.
+     *
+     * @throws BlockDraftConflictException when `$revision` is not the latest saved revision
+     */
+    public function copyLegacyVersion(User $actor, BlockDefinition $block, BlockVersion $version, int $revision): BlockDraft
+    {
+        if ($version->block_definition_id !== $block->id || ! LegacyBlockMigration::isLegacy($version)) {
+            throw new LogicException('Only a legacy sandboxed version of this Block can be copied into its Draft.');
+        }
+
+        $preview = $this->draftFor($block)->preview_data;
+
+        return $this->save($actor, $block, [
+            'html' => (string) $version->html,
+            'css' => (string) $version->css,
+            'js' => (string) $version->js,
+            'schema' => json_encode($version->schema_json, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR),
+        ], is_array($preview) ? $preview : [], $revision);
     }
 
     /**

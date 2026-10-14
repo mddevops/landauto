@@ -4,6 +4,7 @@ namespace App\Templates;
 
 use App\Blocks\BlockSourceChecker;
 use App\Blocks\BlockStateValidator;
+use App\Blocks\LegacyBlockMigration;
 use App\Enums\SiteType;
 use App\Models\Template;
 use App\Models\TemplateBlock;
@@ -26,6 +27,7 @@ final class TemplatePublisher
         private TemplateAuthoring $authoring,
         private BlockStateValidator $states,
         private BlockSourceChecker $sources,
+        private LegacyBlockMigration $legacy,
     ) {}
 
     /**
@@ -67,6 +69,15 @@ final class TemplatePublisher
 
                 if ($this->sources->checkVersion($block->version) !== []) {
                     $issues[] = "Код блока «{$definition->name}» не проходит автоматические проверки.";
+                }
+
+                // A legacy sandboxed Block may stay only while its Block has no Native version (ADR-009 §10).
+                $upgrade = $this->legacy->forTemplate($block);
+
+                if ($upgrade->target !== null) {
+                    $issues[] = $upgrade->possible()
+                        ? "Блок «{$definition->name}» на странице «{$page->title}» использует устаревшую изолированную версию: обновите его до нативной версии {$upgrade->target->version}."
+                        : "Блок «{$definition->name}» на странице «{$page->title}» использует устаревшую изолированную версию, а его данные не подходят к нативной версии {$upgrade->target->version}: замените блок.";
                 }
             }
         }

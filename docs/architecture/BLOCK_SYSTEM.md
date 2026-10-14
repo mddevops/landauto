@@ -1,5 +1,7 @@
 # Landflow — Block System Architecture
 
+> **X-025:** New Studio publication is Native and requires both edit authority and the separate deny-by-default `approve_native_blocks` capability. Approval locks one Draft revision and canonical SHA-256 fingerprint. Authored `script.js` is a `mount(root, props, api)` body: authenticated surfaces run it only in the opaque-origin sandbox; published Sites load one immutable same-origin module and call cleanup per instance. Historical sandboxed versions keep ADR-008 behavior.
+
 **Document:** `docs/architecture/BLOCK_SYSTEM.md`  
 **Status:** Core Designer/Developer architecture source of truth  
 **Purpose:** Define Block Definitions, Block Versions, Block Schema, Block Instances, editable fields, repeaters/groups, actions, data binding, carousel/lightbox capabilities, developer authoring, AI-assisted schema generation, rendering boundaries, and safe extensibility.
@@ -109,6 +111,18 @@ Authoring covers only name and slug; no delete, review status, schema editing, p
 `OfficialBlockCatalog` only bootstraps official content: `OfficialBlockSeeder` creates missing platform definitions and appends missing immutable official versions, but never overwrites the metadata of an existing definition (names edited in «Блоки Landflow» survive reseeding). A catalog slug held by a non-platform Block makes the seeder fail instead of taking it over.
 
 Authored HTML / CSS / JS Blocks (platform and Developer) run only in the ADR-008 sandbox: opaque-origin `srcdoc` iframe with `sandbox="allow-scripts"` (no `allow-same-origin`), Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge (D-080 / D-081, owner-confirmed 2026-10-08). Official renderers stay in the trusted application registry.
+
+Runtime direction (ADR-009, D-123, owner decision 2026-10-08). **Current:** `BlockRuntime` = `official` | `sandboxed`; every authored version is `sandboxed` and renders in an iframe on published Sites. **Target (X-024 / X-025, not implemented):** a third runtime `native` — ordinary first-party Blocks whose exact Draft revision / source hash was explicitly approved by an authorized internal actor («Одобрить и опубликовать», separate deny-by-default capability, not moderation) render in the published host DOM as compiled HTML, scoped compiled CSS and approved JS (`mount(root, props, api) => cleanup`), without an iframe wrapper. The sandbox stays for Studio preview, pre-approval / untrusted code and legacy sandboxed versions (immutable; migrated only into new Native versions, X-028); iframes otherwise only for genuine Embed Blocks. Native JS never runs in the Landflow application origin.
+
+Native runtime, X-024 (HTML / CSS / actions; implemented 2026-10-09):
+
+- `BlockRuntime::Native` («Нативный»). Source invariant: `official` has no `html` / `css` / `js`; `sandboxed` and `native` carry all three (`BlockVersion::authoredSource()`; `sandboxSource()` stays sandboxed-only). No production path creates Native versions: Block Studio still publishes `sandboxed` versions until the X-025 approval flow; Native versions come only from `BlockVersionFactory::native()` (tests / E2E fixtures).
+- Template language is the sandbox one (`{{ path }}`, `{{#if}}`, `{{#each}}`, `{{else}}`), compiled by `NativeTemplateCompiler` into a node tree from an HTML parse (libxml, template tags replaced by placeholders first), never by regex rewriting. Templates are allowed only in text and attribute values; sections must balance within one parent or one attribute.
+- HTML policy (`NativeHtmlPolicy`): element allowlist (HTML phrasing / flow / table / media subset plus a static SVG subset); forbidden `script`, `style`, `link`, `meta`, `base`, `iframe`, `frame`, `object`, `embed`, `form`, `portal`, … ; no `on*` / `style` attributes; navigation URLs only fragment, relative, `http(s)`, `mailto`, `tel` (`javascript:`, `vbscript:`, `data:` and protocol-relative rejected after control-character stripping); `img src` must be exactly an image field `{{ x.url }}` and resolves only to a trusted Published Media URL; reserved `id` prefixes (`lf-`, `landflow`, `block-`) and `data-landflow-*` (except `data-landflow-action`, which must name a schema `action` field). Values coming from state are re-checked after substitution and escaped per context (text / double-quoted attribute).
+- CSS (`NativeCssCompiler`): CSS Syntax L3 tokenizer + rule parser + selector scoper. Every selector is prefixed with the version scope `[data-landflow-native="{slug}--{version}--{hash10}"]`; `:root`, `html`, `body` map to the scope itself; `@media` / `@supports` are kept and their rules scoped; `@keyframes` names get the `lf-{hash10}-` prefix and `animation` / `animation-name` references follow. Rejected: `@import`, `@font-face`, other at-rules, nesting, `url()` / `image-set()` / `expression()` and similar, `behavior` / `-moz-binding`. Limits: 512 KB rendered HTML per instance, 256 KB CSS per version, 1 MB CSS per Published Version.
+- Each instance renders as one root `<div data-landflow-native data-landflow-block data-landflow-instance>` inside the usual `#block-{public_id}` wrapper. Actions: delegated click on `[data-landflow-action]` within that root, resolved by the shared host runtime (`runBlockAction`, the same Popup runtime as sandboxed / official Blocks); `<form>` stays forbidden (Forms remain host-owned).
+- Native JS is not supported yet: a Native version with non-empty `js` cannot be published (`native_js_not_approved`).
+- Block Studio, the Designer canvas and authenticated Site Preview render Native versions through the sandbox frame (`BlockVersion::previewSource()`); Native host DOM exists only on published Sites.
 
 Customer catalog access (D-121): each catalog Block / Template has one access mode — `free`, `entitlement` (typed entitlement), `paid` (Site and / or Workspace price, no checkout yet) or `admin_grant`. Restricted items need a `catalog_licenses` row for the Site or for its Workspace (covers current and future Sites of that Workspace; never account-wide). The Designer library card and the Add action follow current access for the current installable version.
 
@@ -1354,7 +1368,9 @@ Before publication validate:
 
 # 80. Marketplace Review
 
-There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` is reserved for a future Marketplace listing, not approval.
+There is no manual moderation queue: Blocks and Templates publish immediately after the automated ADR-008 §7 checks (D-120, owner-confirmed 2026-10-08). The list below describes what the automated checks and future quality signals should cover; `submit_marketplace_item` authorizes Marketplace listings of own products (P10-001), not approval.
+
+Native trust approval (D-123) is not this review: it is a security step that approves one exact Draft revision / source hash before authored JS may run in a customer Site's host origin, performed by an actor with a separate approval capability. It adds no queue or moderation status.
 
 Review should evaluate:
 
@@ -1394,6 +1410,8 @@ This reduces bundle duplication and security risk.
 Marketplace Blocks should not rely on unrestricted arbitrary JavaScript execution.
 
 When custom scripting becomes necessary, use approved/sandboxed runtime APIs.
+
+Target (ADR-009): approved first-party Native JS follows `mount(root, props, api) => cleanup` — trusted code, not a sandbox; no `eval` / `new Function` / unvalidated dynamic imports; actions, popups and forms go through the Landflow host runtime. Untrusted or third-party code stays `sandboxed`.
 
 A Block must never access:
 

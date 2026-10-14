@@ -388,9 +388,20 @@ test('developer previews a Block in the sandbox and publishes it @responsive', a
             .getByLabel('Заголовок'),
     ).toHaveValue('Летняя распродажа');
 
+    // Native approval rejects the sandbox escape probe; replace it with local instance code.
+    await openMode(page, 'Код');
+    await page.getByRole('button', { name: 'script.js' }).click();
+    await page
+        .getByRole('textbox', { name: 'script.js', exact: true })
+        .fill(
+            "const button = root.querySelector('[data-landflow-action]'); return () => button?.removeAttribute('data-preview');",
+        );
+    await expectDraftSaved(page);
+    await expect(checks).toContainText('Все проверки пройдены.');
+
     // Publishing: checks pass, so the saved Draft becomes immutable version 1.0.0.
     const publish = page.getByRole('button', {
-        name: 'Опубликовать',
+        name: 'Одобрить и опубликовать',
         exact: true,
     });
     await expect(publish).toBeEnabled();
@@ -401,7 +412,7 @@ test('developer previews a Block in the sandbox and publishes it @responsive', a
     ).toBeVisible();
     await expect(page.getByTestId('block-version')).toHaveCount(1);
     await expect(page.getByTestId('block-version')).toContainText('1.0.0');
-    await expect(page.getByTestId('block-version')).toContainText('Код студии');
+    await expect(page.getByTestId('block-version')).toContainText('Нативный');
     await expect(page.getByText('1 версия', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
@@ -518,6 +529,36 @@ test('Block preview escapes sources and only trusts its own sandbox', async ({
     ).toBe(heightBefore);
     await expect(page.getByText(/Вызвано действие/)).toHaveCount(0);
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
+});
+
+test('legacy sandboxed version can be copied into a migration draft', async ({
+    page,
+}, testInfo) => {
+    test.skip(
+        testInfo.project.name !== 'desktop',
+        'Один desktop-сценарий изменяет общий черновик фикстуры.',
+    );
+
+    await login(page, users.catalogAdmin);
+    await page.goto('/platform/blocks');
+    await page.getByRole('link', { name: /Промо из студии/ }).click();
+    await openMode(page, 'Версии');
+
+    const legacy = page.getByTestId('block-version').filter({
+        hasText: 'Изолированный',
+    });
+    await expect(legacy).toContainText('1.0.0');
+    await legacy
+        .getByRole('button', { name: 'Скопировать в черновик' })
+        .click();
+    await expect(
+        page.getByText(
+            'Код версии 1.0.0 скопирован в черновик. Проверьте предпросмотр и одобрите нативную версию.',
+        ),
+    ).toBeVisible();
+    await expect(
+        page.getByRole('tab', { name: 'Код', selected: true }),
+    ).toBeVisible();
 });
 
 test('super admin creates and renames a Platform Block', async ({

@@ -4,6 +4,7 @@ namespace App\Publishing;
 
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockStateValidator;
+use App\Blocks\Native\NativeBlockCompiler;
 use App\Enums\PublishedAssetKind;
 use App\Forms\SiteSecurityPolicy;
 use App\Models\BlockInstance;
@@ -105,10 +106,14 @@ final class PublishedSnapshotBuilder
                     'state' => $block->state_json,
                 ];
                 $sandbox = $block->version->sandboxSource();
+                $native = NativeBlockCompiler::source($block->version);
 
-                // Present only for sandboxed versions, so official-only manifests keep their hash.
+                // Present only for sandboxed / native versions, so official-only manifests keep their hash.
+                // Native source stays in this server-side manifest; pages carry only compiled output.
                 if ($sandbox !== null) {
                     $entry['sandbox'] = $sandbox;
+                } elseif ($native !== null) {
+                    $entry['native'] = $native;
                 }
 
                 $blocks[] = $entry;

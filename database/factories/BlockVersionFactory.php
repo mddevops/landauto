@@ -2,9 +2,11 @@
 
 namespace Database\Factories;
 
+use App\Blocks\BlockSourceFingerprint;
 use App\Enums\BlockRuntime;
 use App\Models\BlockDefinition;
 use App\Models\BlockVersion;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Factories\Factory;
 
 /**
@@ -32,5 +34,26 @@ class BlockVersionFactory extends Factory
             'css' => $css,
             'js' => $js,
         ]);
+    }
+
+    /**
+     * A Native version (ADR-009). No production path creates these until the D-123 approval flow
+     * exists (X-025); X-024 tests and fixtures use this state. Native JavaScript stays empty by
+     * default because non-empty Native JavaScript blocks Site publishing.
+     */
+    public function native(string $html = '<p>Блок</p>', string $css = '', string $js = ''): static
+    {
+        return $this->state(fn (): array => [
+            'runtime' => BlockRuntime::Native,
+            'html' => $html,
+            'css' => $css,
+            'js' => $js,
+            'approved_revision' => 1,
+            'approved_by_user_id' => fn () => User::query()->value('id') ?? User::factory(),
+            'approved_at' => now(),
+            'approved_source_hash' => str_repeat('0', 64),
+        ])->afterMaking(function (BlockVersion $version): void {
+            $version->approved_source_hash = app(BlockSourceFingerprint::class)->fromVersion($version);
+        });
     }
 }

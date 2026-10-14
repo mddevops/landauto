@@ -7,6 +7,7 @@ use App\Http\Controllers\Auth\YandexOAuthController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Developer\DeveloperBlockController;
 use App\Http\Controllers\Developer\DeveloperDashboardController;
+use App\Http\Controllers\Developer\DeveloperMarketplaceController;
 use App\Http\Controllers\Developer\DeveloperTemplateController;
 use App\Http\Controllers\Domains\SiteDomainController;
 use App\Http\Controllers\Forms\FormFieldController;
@@ -23,6 +24,7 @@ use App\Http\Controllers\Integrations\SiteIntegrationController;
 use App\Http\Controllers\Integrations\SubmissionDeliveryController;
 use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
+use App\Http\Controllers\Platform\CatalogAccessMatrixController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogDictionaryController;
 use App\Http\Controllers\Platform\CatalogEntryController;
@@ -30,6 +32,7 @@ use App\Http\Controllers\Platform\CatalogEquipmentController;
 use App\Http\Controllers\Platform\CatalogLicenseController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
+use App\Http\Controllers\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Platform\PlatformTemplateController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
@@ -216,6 +219,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');
             Route::post('blocks/{block}/move', [PageBlockController::class, 'move'])->whereUlid('block')->name('blocks.move');
             Route::post('blocks/{block}/duplicate', [PageBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
+            Route::post('blocks/{block}/upgrade', [PageBlockController::class, 'upgrade'])->whereUlid('block')->name('blocks.upgrade');
             Route::patch('blocks/{block}/visibility', [PageBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [PageBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
 
@@ -327,6 +331,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('{block}', [PlatformBlockController::class, 'show'])->whereUlid('block')->name('show');
             Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
             Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
+            Route::post('{block}/versions/{version}/draft', [PlatformBlockController::class, 'copyVersion'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.draft');
             Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
             Route::put('{block}/access', [PlatformBlockController::class, 'access'])->whereUlid('block')->name('access');
         });
@@ -341,6 +346,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('/', [PlatformTemplateController::class, 'store'])->middleware('throttle:template-create')->name('store');
         });
 
+    // Official Marketplace Listings (P10-001): platform-owned products only; no public storefront yet (P10-002).
+    Route::prefix('platform/marketplace')
+        ->name('platform.marketplace.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManagePlatformContent->value)
+        ->group(function () {
+            Route::get('/', [PlatformMarketplaceController::class, 'index'])->name('index');
+            Route::post('/', [PlatformMarketplaceController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::get('{listing}', [PlatformMarketplaceController::class, 'show'])->whereUlid('listing')->name('show');
+            Route::patch('{listing}', [PlatformMarketplaceController::class, 'update'])->whereUlid('listing')->name('update');
+            Route::post('{listing}/publish', [PlatformMarketplaceController::class, 'publish'])->whereUlid('listing')->name('publish');
+            Route::post('{listing}/unpublish', [PlatformMarketplaceController::class, 'unpublish'])->whereUlid('listing')->name('unpublish');
+        });
+
     // Catalog licenses (D-121): Super Admin grants Site- or Workspace-scoped licenses and revokes them; purchases are P10-005.
     Route::prefix('platform/licenses')
         ->name('platform.licenses.')
@@ -349,6 +367,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [CatalogLicenseController::class, 'index'])->name('index');
             Route::post('/', [CatalogLicenseController::class, 'store'])->middleware('throttle:30,1')->name('store');
             Route::delete('{license}', [CatalogLicenseController::class, 'destroy'])->whereUlid('license')->name('destroy');
+        });
+
+    // Plan ↔ catalog access matrix (X-026), restricted to Super Admin catalog-license managers.
+    Route::prefix('platform/catalog-access')
+        ->name('platform.catalog-access.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageCatalogLicenses->value)
+        ->group(function () {
+            Route::get('/', [CatalogAccessMatrixController::class, 'index'])->name('index');
+            Route::put('blocks/{block}', [CatalogAccessMatrixController::class, 'block'])->whereUlid('block')->name('blocks.update');
+            Route::put('templates/{template}', [CatalogAccessMatrixController::class, 'template'])->whereUlid('template')->name('templates.update');
         });
 
     // Developer Platform: the current User's own active Developer Profile, never Workspace context (D-093).
@@ -368,6 +396,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::get('{block}', [DeveloperBlockController::class, 'show'])->whereUlid('block')->name('show');
                     Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
                     Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
+                    Route::post('{block}/versions/{version}/draft', [DeveloperBlockController::class, 'copyVersion'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.draft');
                     Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
                     Route::put('{block}/access', [DeveloperBlockController::class, 'access'])->whereUlid('block')->name('access');
                 });
@@ -379,6 +408,19 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::get('/', [DeveloperTemplateController::class, 'index'])->name('index');
                     Route::get('create', [DeveloperTemplateController::class, 'create'])->name('create');
                     Route::post('/', [DeveloperTemplateController::class, 'store'])->middleware('throttle:template-create')->name('store');
+                });
+
+            // Marketplace Listings of own products (P10-001): `submit_marketplace_item`, never moderation (D-118, D-120).
+            Route::prefix('marketplace')
+                ->name('marketplace.')
+                ->middleware(EnsureDeveloperPermission::class.':'.DeveloperPermission::SubmitMarketplaceItem->value)
+                ->group(function () {
+                    Route::get('/', [DeveloperMarketplaceController::class, 'index'])->name('index');
+                    Route::post('/', [DeveloperMarketplaceController::class, 'store'])->middleware('throttle:30,1')->name('store');
+                    Route::get('{listing}', [DeveloperMarketplaceController::class, 'show'])->whereUlid('listing')->name('show');
+                    Route::patch('{listing}', [DeveloperMarketplaceController::class, 'update'])->whereUlid('listing')->name('update');
+                    Route::post('{listing}/publish', [DeveloperMarketplaceController::class, 'publish'])->whereUlid('listing')->name('publish');
+                    Route::post('{listing}/unpublish', [DeveloperMarketplaceController::class, 'unpublish'])->whereUlid('listing')->name('unpublish');
                 });
         });
 
@@ -401,6 +443,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('blocks/{block}/state', [TemplateBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');
             Route::post('blocks/{block}/move', [TemplateBlockController::class, 'move'])->whereUlid('block')->name('blocks.move');
             Route::post('blocks/{block}/duplicate', [TemplateBlockController::class, 'duplicate'])->whereUlid('block')->name('blocks.duplicate');
+            Route::post('blocks/{block}/upgrade', [TemplateBlockController::class, 'upgrade'])->whereUlid('block')->name('blocks.upgrade');
             Route::patch('blocks/{block}/visibility', [TemplateBlockController::class, 'visibility'])->whereUlid('block')->name('blocks.visibility');
             Route::delete('blocks/{block}', [TemplateBlockController::class, 'destroy'])->whereUlid('block')->name('blocks.destroy');
         });

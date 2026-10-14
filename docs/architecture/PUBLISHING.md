@@ -1,5 +1,7 @@
 # Landflow — Publishing Architecture
 
+> **X-025:** Site Publish recomputes Native approval fingerprints and source/compiler checks, then atomically emits at most one `native_css` and one `native_js` asset per Published Version. Hydration contains only the immutable JS URL, compiled HTML, safe props, scope and action keys—never authored source or approval metadata.
+
 **Document:** `docs/architecture/PUBLISHING.md`  
 **Status:** Core publishing source of truth  
 **Purpose:** Define Draft, Preview, Published snapshots, publication workflow, Landflow subdomains, custom domains, versioning, rollback, publication validation, caching, public runtime stability, and publishing permissions.
@@ -869,6 +871,16 @@ This supports atomic publication and rollback.
 # 54. Public Rendering Strategy
 
 **Resolved by ADR-006:** publish-time React SSR with stored HTML; no Node process on visitor requests.
+
+Block runtimes inside this pipeline (ADR-009). **Current:** `official` Blocks render through the React registry; `sandboxed` Blocks are copied into the manifest (`blocks[].sandbox`) and rendered as iframes in the stored page HTML. **Target (X-024 / X-025):** approved `native` Block Versions are compiled at Publish time (template + validated state + published Site context → host HTML, scoped CSS, approved immutable JS artifacts) inside `PublishedArtifactBuilder` / `NodePageRenderer`, with SEO-visible text in the initial HTML and no iframe wrapper. ADR-006 is not redesigned: Draft / Preview / `PublishSite` / `PublishValidator` / snapshots / `PublishedVersion` / `PublishedPage` / atomic pointer switch stay. A Native compilation failure never activates the new version, never changes the active one and never corrupts the Draft; all Native assets are complete before the switch. Active historical versions with sandboxed iframes keep serving unchanged; new publications get a legacy diagnostic (X-028).
+
+Native HTML / CSS, X-024 (implemented; JS is X-025). Compile boundary — Native sources are compiled only at Publish time, never on a public request:
+
+- `PublishedSnapshotBuilder` copies the raw Native source into the server-side manifest (`blocks[].native` = `html` / `css` / `js` / `fields`), stored in `published_versions.manifest_json` and never sent to the browser.
+- `PublishValidator` blocks Publish on non-empty Native JS (`native_js_not_approved`), on compile errors (`native_block_invalid`) and on a validation render with the current state (e.g. a `javascript:` URL coming from state).
+- `PublishedArtifactBuilder` compiles each Native instance (template + validated state + trusted Published Media URLs) into `{scope, html, actions}` in the renderer payload, compiles each distinct Native version's CSS once (dedup by scope, first-use order) into one stylesheet and stores it as an immutable `published_runtime_assets` row (`native_css`, sha256 `content_hash`, `byte_size`) inside the same transaction as the Published Pages; any compile failure throws before anything is written, so the version never activates and the active version stays untouched. `PublishSite::verifyArtifacts` re-checks asset content / hash / size before the pointer switch.
+- Public serving: `published/page.blade.php` adds `<link rel="stylesheet" href="/_landflow/runtime/{version_public_id}/{hash}.css">` only when the active version has a `native_css` asset; `PublishedRuntimeAssetController` serves it as `text/css` with `public, max-age=31536000, immutable` and `nosniff`, and answers 404 for an unknown hash or a version of another Site.
+- `published-site.tsx` renders `blocks[].native` through `NativeBlock` (host DOM, no iframe); sandboxed and official Blocks keep their existing paths, so mixed pages work.
 
 Exact rendering may eventually use:
 

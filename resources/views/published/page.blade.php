@@ -29,6 +29,10 @@
 
         @viteReactRefresh
         @vite(['resources/css/app.css', 'resources/js/public-runtime/hydrate-client.tsx'])
+@if ($nativeStylesheet)
+        {{-- Compiled, version-scoped Native Block CSS (ADR-009); loaded after the app CSS. --}}
+        <link rel="stylesheet" href="{{ $nativeStylesheet }}">
+@endif
 @if ($metricaCounter)
         {{-- Official Yandex Metrica loader (P6-012). Counter ID is digits only, validated server-side. --}}
         <script type="text/javascript">

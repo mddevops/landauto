@@ -113,6 +113,11 @@ export function BlockList({
                                     <Badge variant="outline">
                                         {versionsLabel(block.versions_count)}
                                     </Badge>
+                                    {block.needs_migration && (
+                                        <Badge variant="destructive">
+                                            Нужна миграция
+                                        </Badge>
+                                    )}
                                     <span>
                                         Обновлён{' '}
                                         {formatBlockDate(block.updated_at)}

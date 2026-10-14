@@ -12,13 +12,15 @@ enum DeveloperPermission: string
     case CreateBlocks = 'create_blocks';
     case CreateTemplates = 'create_templates';
     case SubmitMarketplaceItem = 'submit_marketplace_item';
+    case ApproveNativeBlocks = 'approve_native_blocks';
 
     public function label(): string
     {
         return match ($this) {
             self::CreateBlocks => 'Создание блоков',
             self::CreateTemplates => 'Создание шаблонов',
-            self::SubmitMarketplaceItem => 'Отправка на модерацию',
+            self::SubmitMarketplaceItem => 'Публикация в Marketplace',
+            self::ApproveNativeBlocks => 'Одобрение нативных блоков',
         };
     }
 
@@ -27,7 +29,8 @@ enum DeveloperPermission: string
         return match ($this) {
             self::CreateBlocks => 'Блоки',
             self::CreateTemplates => 'Шаблоны',
-            self::SubmitMarketplaceItem => 'Модерация',
+            self::SubmitMarketplaceItem => 'Marketplace',
+            self::ApproveNativeBlocks => 'Native',
         };
     }
 
@@ -38,7 +41,7 @@ enum DeveloperPermission: string
      */
     public static function defaults(): array
     {
-        return self::cases();
+        return [self::CreateBlocks, self::CreateTemplates, self::SubmitMarketplaceItem];
     }
 
     /**

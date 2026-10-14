@@ -76,5 +76,10 @@ test('formats: landing, quiz and chat on a plan without multi-page sites @respon
     await expect(
         page.getByRole('button', { name: 'Добавить страницу' }),
     ).toHaveCount(0);
+    await left.getByRole('tab', { name: 'Блоки' }).click();
+    await expect(
+        page.getByRole('button', { name: 'Добавить блок' }),
+    ).toHaveCount(0);
+    await expect(page.getByRole('tab', { name: 'Стиль сайта' })).toHaveCount(0);
     await expectNoHorizontalOverflow(page);
 });

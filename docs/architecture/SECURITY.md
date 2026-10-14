@@ -1,5 +1,7 @@
 # Landflow — Security Architecture
 
+> **X-025 Native boundary:** exact-source human approval is the trust boundary; token-aware JavaScript policy checks are defense-in-depth. Native code runs only on stateless published Site origins. Production rejects a `SESSION_DOMAIN` containing the published wildcard domain. The immutable same-origin module needs no `unsafe-eval`; the full Metrica/SmartCaptcha-compatible public CSP remains X-029.
+
 **Document:** `docs/architecture/SECURITY.md`  
 **Status:** Core security source of truth  
 **Purpose:** Define security boundaries for tenancy, authentication, authorization, public endpoints, forms, uploads, Blocks, RichText, integrations, secrets, admin access, publishing, Marketplace extensions, and auditing.
@@ -612,6 +614,27 @@ Unrestricted third-party JavaScript is high risk.
 
 Authored Block code runs only under ADR-008 (owner-confirmed 2026-10-08): opaque-origin iframe with `sandbox="allow-scripts"` and no `allow-same-origin`, Landflow-built `srcdoc` with CSP `connect-src 'none'`, allowlisted `postMessage` bridge with source / origin / type checks. Automated checks replace manual review (D-120). Weakening any of these needs a new ADR.
 
+ADR-009 (Accepted 2026-10-08, D-123) is that ADR for one case only. **Current:** all authored code is `sandboxed`. **Target (X-024 / X-025):** approved first-party Native Block Versions run HTML / scoped CSS / JS in the published Site host document. Native JS is trusted, not sandboxed: it can reach the host DOM and same-origin capabilities allowed by the page CSP, and `mount(root, props, api) => cleanup` is not a security boundary. Therefore:
+
+- static checks and AI generation never make code trusted; an authorized internal actor with a separate deny-by-default capability must approve the exact revision / source hash (`approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at`); any Draft change invalidates it;
+- Native JS never runs in the Landflow application origin (dashboard, Designer, Studio, authenticated Preview); published Site hosts stay cookie / session-isolated from the application host;
+- Native HTML is compiled with context-aware escaping, safe URLs, no inline handlers / `javascript:` / script-style-meta-base-embed injection; CSS is AST-scoped per Block;
+- third-party / untrusted authors never get Native trust automatically; their code stays in this sandbox;
+- legacy sandboxed versions keep the sandbox; Embeds may use iframes with provider allowlists, `sandbox`, `referrerpolicy` and CSP `frame-src`.
+
+## Native HTML (X-024)
+
+Implemented: Native HTML / scoped CSS / host actions; no Native JS (a Native version with non-empty `js` is refused at Publish and never executed). No production path creates Native versions before the X-025 approval flow.
+
+`dangerouslySetInnerHTML` is used in exactly one place, `resources/js/blocks/native-block.tsx`, and only with `blocks[].native.html` from a Published Version payload — output of the server-side `NativeTemplateCompiler` / `NativeTemplateRenderer` built at Publish time. It is never fed Draft source, browser-supplied HTML, raw state or unsanitized authored HTML; a feature test fails if another file uses it. The compiler guarantees:
+
+- parser-based HTML (libxml) with an element / attribute allowlist; forbidden `script`, `style`, `link`, `meta`, `base`, `iframe`, `frame`, `object`, `embed`, `form`, `portal`; no `on*` or `style` attributes;
+- context-aware escaping of every substituted value (text, double-quoted attribute); URL attributes re-checked after substitution (`javascript:`, `vbscript:`, `data:`, protocol-relative and unknown schemes rejected); images only from trusted Published Media URLs;
+- reserved `data-landflow-*` / `id` namespaces so authored markup cannot impersonate the host root or block anchors;
+- CSS scoped by an AST-based compiler: no `@import`, `@font-face`, `url()`, `expression()`, `behavior`; `:root` / `html` / `body` map to the Block root; keyframes namespaced.
+
+Authenticated application surfaces (Studio, Designer, Site Preview) keep rendering Native versions in the ADR-008 sandbox frame. Raw Native source stays in the server-side manifest; the browser receives only compiled output.
+
 ---
 
 # 38. Content Security Policy
@@ -625,7 +648,7 @@ Goals:
 - control iframe/media sources;
 - support required Yandex services.
 
-Exact CSP implementation depends on runtime architecture and must be tested carefully.
+Exact CSP implementation depends on runtime architecture and must be tested carefully. The published-Site CSP for approved Native JS and Embed `frame-src` is part of X-025 / X-029 (ADR-009).
 
 ---
 

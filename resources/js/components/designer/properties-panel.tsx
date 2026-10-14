@@ -207,6 +207,41 @@ function FieldControl({
                     {errorMessage}
                 </div>
             );
+        case 'color':
+            return (
+                <div className="grid gap-1.5">
+                    <Label htmlFor={id}>{field.label}</Label>
+                    <Input
+                        id={id}
+                        type="color"
+                        value={
+                            /^#[0-9A-Fa-f]{6}$/.test(text) ? text : '#000000'
+                        }
+                        aria-describedby={describedBy}
+                        onChange={(event) => onChange(event.target.value)}
+                    />
+                    {help}
+                    {errorMessage}
+                </div>
+            );
+        case 'font':
+            return (
+                <div className="grid gap-1.5">
+                    <Label htmlFor={id}>{field.label}</Label>
+                    <select
+                        id={id}
+                        value={text}
+                        aria-describedby={describedBy}
+                        onChange={(event) => onChange(event.target.value)}
+                        className="h-9 w-full rounded-md border border-input bg-transparent px-3 text-sm"
+                    >
+                        <option value="sans">Без засечек</option>
+                        <option value="serif">С засечками</option>
+                    </select>
+                    {help}
+                    {errorMessage}
+                </div>
+            );
         case 'group':
             return (
                 <fieldset className="grid gap-3 rounded-md border p-3">

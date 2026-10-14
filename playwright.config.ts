@@ -5,19 +5,12 @@ import { viewports } from './tests/browser/support/viewports';
 
 const port = 8200;
 const baseURL = `http://127.0.0.1:${port}`;
-
-// CI sets E2E_REUSE_BUILD=1 to reuse the production build `composer quality` has just
-// produced from the same checkout. Locally the E2E server always rebuilds, so a stale
-// build is never tested.
-const buildStep =
-    process.env.E2E_REUSE_BUILD === '1' ? '' : 'npm run build && ';
-
 export default defineConfig({
     testDir: './tests/browser',
     testMatch: '**/*.spec.ts',
     outputDir: './test-results',
     fullyParallel: false,
-    // The E2E server is a single-threaded `php artisan serve` over one SQLite file.
+    // The E2E server is a single-threaded PHP server over one SQLite file.
     workers: 1,
     forbidOnly: !!process.env.CI,
     retries: 0,
@@ -94,19 +87,7 @@ export default defineConfig({
             },
         },
     ],
-    webServer: {
-        // Isolated E2E environment: fresh .env.e2e + SQLite file, production build,
-        // migrations + deterministic test users, then a dedicated Laravel server.
-        // Never the developer's server or database.
-        command: `node tests/browser/support/prepare-e2e.mjs && ${buildStep}php artisan migrate --force --no-interaction && php artisan catalog:migrate --force --no-interaction && php artisan db:seed --class=E2eSeeder --force --no-interaction && php artisan serve --host=127.0.0.1 --port=${port}`,
-        url: `${baseURL}/up`,
-        env: {
-            APP_ENV: 'e2e',
-            VITE_APP_NAME: 'Landflow',
-        },
-        reuseExistingServer: false,
-        timeout: 180_000,
-        stdout: 'ignore',
-        stderr: 'pipe',
-    },
+    // `npm run test:e2e` owns the isolated PHP process and always stops that exact PID.
+    // Playwright must not wrap or tear down the server process on Windows.
+    webServer: undefined,
 });

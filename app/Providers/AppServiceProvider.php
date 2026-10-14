@@ -27,6 +27,7 @@ use App\Policies\SitePolicy;
 use App\Publishing\Rendering\NodePageRenderer;
 use App\Publishing\Rendering\PageRenderer;
 use App\Support\PlatformAuthorization;
+use App\Support\PublicSessionDomainGuard;
 use App\Support\SiteAccessResolver;
 use App\Support\WorkspaceAuthorization;
 use App\Support\WorkspaceContext;
@@ -85,6 +86,9 @@ class AppServiceProvider extends ServiceProvider
     public function boot(): void
     {
         $this->configureDefaults();
+        if ($this->app->environment('production')) {
+            app(PublicSessionDomainGuard::class)->assertSafe(config('session.domain'), (string) config('publishing.public_domain'));
+        }
         Gate::policy(Site::class, SitePolicy::class);
 
         if ($this->usesE2eIntegrationFakes()) {

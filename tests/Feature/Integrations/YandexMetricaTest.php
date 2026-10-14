@@ -107,13 +107,17 @@ class YandexMetricaTest extends TestCase
 
         $this->publish();
 
-        $html = (string) $this->visit('/')->assertOk()->getContent();
+        $response = $this->visit('/')->assertOk();
+        $html = (string) $response->getContent();
+        $csp = (string) $response->headers->get('Content-Security-Policy');
         $this->assertStringContainsString('"https://mc.yandex.ru/metrika/tag.js", "ym"', $html);
         $this->assertStringContainsString('ym(98765432, "init", {"clickmap":true,"trackLinks":false,"accurateTrackBounce":true,"webvisor":false});', $html);
         $this->assertStringContainsString('<img src="https://mc.yandex.ru/watch/98765432"', $html);
         $this->assertStringContainsString('"analytics":{"metrica":"98765432"}', $html);
         $this->assertStringNotContainsString('userParams', $html);
         $this->assertStringNotContainsString('UserID', $html);
+        $this->assertStringContainsString('https://mc.yandex.ru', $csp);
+        $this->assertStringNotContainsString('smartcaptcha.cloud.yandex.ru', $csp);
 
         $version = PublishedVersion::query()->latest('id')->firstOrFail();
         $this->assertSame([

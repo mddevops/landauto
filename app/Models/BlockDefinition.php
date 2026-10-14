@@ -14,6 +14,7 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Support\Carbon;
@@ -141,6 +142,20 @@ class BlockDefinition extends Model
     }
 
     /**
+     * Adds `latest_runtime`, the runtime of the newest version, for authoring lists.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeWithLatestRuntime(Builder $query): void
+    {
+        $query->addSelect(['latest_runtime' => BlockVersion::query()
+            ->select('runtime')
+            ->whereColumn('block_definition_id', 'block_definitions.id')
+            ->latest('id')
+            ->limit(1)]);
+    }
+
+    /**
      * @return HasMany<BlockVersion, $this>
      */
     public function versions(): HasMany
@@ -194,6 +209,24 @@ class BlockDefinition extends Model
     public function catalogLicenses(): HasMany
     {
         return $this->hasMany(CatalogLicense::class);
+    }
+
+    /**
+     * Plans that include this catalog Block (X-026).
+     *
+     * @return BelongsToMany<Plan, $this>
+     */
+    public function plans(): BelongsToMany
+    {
+        return $this->belongsToMany(Plan::class, 'plan_block_definitions')->withTimestamps();
+    }
+
+    /**
+     * @return HasOne<MarketplaceListing, $this>
+     */
+    public function marketplaceListing(): HasOne
+    {
+        return $this->hasOne(MarketplaceListing::class);
     }
 
     private function assertAccessIsConsistent(): void

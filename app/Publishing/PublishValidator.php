@@ -7,11 +7,16 @@ use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockReferenceResolver;
 use App\Blocks\BlockSourceChecker;
+use App\Blocks\BlockSourceFingerprint;
 use App\Blocks\BlockStateValidator;
 use App\Blocks\BlockVersionGrants;
+use App\Blocks\LegacyBlockMigration;
+use App\Blocks\Native\NativeBlockCompiler;
+use App\Blocks\Native\NativeCompileException;
 use App\Enums\SiteStatus;
 use App\Http\Requests\SavePageRequest;
 use App\Models\BlockInstance;
+use App\Models\BlockVersion;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\SeriesMediaImage;
@@ -53,6 +58,9 @@ final class PublishValidator
         private BlockVersionGrants $grants,
         private BlockReferenceInspector $references,
         private VehicleBindings $vehicles,
+        private NativeBlockCompiler $native,
+        private BlockSourceFingerprint $fingerprint,
+        private LegacyBlockMigration $legacy,
     ) {}
 
     public function validate(Site $site, ?User $actor = null): PublishValidation
@@ -169,16 +177,47 @@ final class PublishValidator
                     continue;
                 }
 
+                if (LegacyBlockMigration::isLegacy($version)) {
+                    $this->validateLegacy($site, $block->setRelation('page', $page), $licensed, $granted);
+                }
+
+                $native = NativeBlockCompiler::source($version);
+
+                if ($native !== null && (
+                    $version->approved_revision === null || $version->approved_by_user_id === null || $version->approved_at === null
+                    || ! is_string($version->approved_source_hash)
+                    || preg_match('/^[a-f0-9]{64}$/', $version->approved_source_hash) !== 1
+                    || ! hash_equals($version->approved_source_hash, $this->fingerprint->fromVersion($version))
+                )) {
+                    $this->error('native_approval_invalid', 'Нативный блок не имеет действующего одобрения точной версии исходного кода.', page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
                 // Studio code passed the checks when it was published; re-checked so a version that
                 // fails today's rules never reaches a new Published Version.
-                if ($this->sources->checkVersion($version) !== []) {
+                $sourceIssues = $this->sources->checkVersion($version);
+
+                if ($sourceIssues !== [] && $native !== null) {
+                    $this->error('native_block_invalid', "«{$version->definition->name}»: нативный блок не компилируется. {$sourceIssues[0]['message']}", page: $page->public_id, block: $block->public_id);
+
+                    continue;
+                }
+
+                if ($sourceIssues !== []) {
                     $this->error('block_source_rejected', 'Код блока не проходит автоматические проверки. Обратитесь к автору блока.', page: $page->public_id, block: $block->public_id);
 
                     continue;
                 }
 
-                foreach ($this->states->errors($version->schema_json, $block->state_json, $acceptAll) as $path => $message) {
+                $stateErrors = $this->states->errors($version->schema_json, $block->state_json, $acceptAll);
+
+                foreach ($stateErrors as $path => $message) {
                     $this->error('block_state_invalid', $message, page: $page->public_id, block: $block->public_id, path: $path);
+                }
+
+                if ($native !== null && $stateErrors === []) {
+                    $this->validateNativeRender($version, $native, $block, $page);
                 }
 
                 foreach ($this->states->missing($version->schema_json, $block->state_json) as $path => $message) {
@@ -198,6 +237,46 @@ final class PublishValidator
         }
 
         return $referenced;
+    }
+
+    /**
+     * A legacy sandboxed Block never silently stays the final runtime of a new publication
+     * (ADR-009 §10): Publish is blocked while this Site can move it to its Native version, and
+     * warns when it cannot (no Native version yet, no access, Quiz / Chat, incompatible data).
+     *
+     * @param  array<int, true>  $licensed
+     * @param  array<int, true>  $granted
+     */
+    private function validateLegacy(Site $site, BlockInstance $block, array $licensed, array $granted): void
+    {
+        $version = $block->version;
+        $upgrade = $this->legacy->forSite($site, $block, $licensed, $granted);
+        $prefix = "«{$version->definition->name}» использует устаревшую изолированную версию {$version->version}";
+
+        if ($upgrade->possible()) {
+            $this->error('legacy_block_upgrade_required', "{$prefix}. Обновите блок до нативной версии {$upgrade->target->version} в редакторе и опубликуйте сайт.", page: $block->page->public_id, block: $block->public_id);
+
+            return;
+        }
+
+        $this->warning('legacy_block_sandboxed', "{$prefix} и будет показан во встроенном фрейме. {$upgrade->reason}", page: $block->page->public_id, block: $block->public_id);
+    }
+
+    /**
+     * Renders the Native Block with its Draft state exactly as the artifact build will, so
+     * data-dependent failures (e.g. an unsafe link in a text field) block Publish up front.
+     *
+     * @param  array{html: string, css: string, js: string, fields: list<array<string, mixed>>}  $source
+     */
+    private function validateNativeRender(BlockVersion $version, array $source, BlockInstance $block, Page $page): void
+    {
+        $scope = NativeBlockCompiler::scope($version->definition->slug, $version->version, $source);
+
+        try {
+            $this->native->render($scope, $source, $block->state_json, fn (string $assetId): string => "/_landflow/assets/validation/{$assetId}");
+        } catch (NativeCompileException $exception) {
+            $this->error('native_block_invalid', "«{$version->definition->name}»: {$exception->getMessage()}", page: $page->public_id, block: $block->public_id);
+        }
     }
 
     private function validateReferences(Site $site): void

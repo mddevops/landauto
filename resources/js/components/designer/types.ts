@@ -31,6 +31,13 @@ export type DesignerBlock = {
     /** Present for sandboxed Block Versions (ADR-008); null for official renderers. */
     sandbox: SandboxSource | null;
     state: BlockState;
+    /** Full persisted state used only by the canvas when SiteType limits editable fields. */
+    renderState?: BlockState;
+    legacy?: {
+        target_version: string | null;
+        available: boolean;
+        reason: string | null;
+    } | null;
 };
 
 /** A saved reference whose target was deleted, hidden or disabled afterwards (X-018). */
@@ -56,6 +63,7 @@ export type DesignerBlockRoutes = {
     state: (blockId: string) => string;
     move: (blockId: string) => string;
     duplicate: (blockId: string) => string;
+    upgrade: (blockId: string) => string;
     visibility: (blockId: string) => string;
     destroy: (blockId: string) => string;
 };

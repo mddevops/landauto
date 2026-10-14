@@ -60,7 +60,7 @@ Landflow is **not** the separate automotive CRM project.
 
 Current phase:
 
-**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 and P9-018 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED; final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed; D-094 stays OPEN as a production-launch blocker only). The next ready task is in §68.
+**Phase 6 — Integrations & Analytics: COMPLETED** (gate `P6-015` DONE, branch `autopilot/phase6-2026-10-05`). **Phase 7 — Paid Site Features: COMPLETED** for planned scope (X-022, P7-001 … P7-008 and review `P7-010` DONE on `autopilot/phase7-2026-10-06`; P7-008 = YooKassa, ADR-007 / D-078; `P7-009` DEFERRED by plan). **Phase 8 — Team / Collaboration: COMPLETED** (P8-001 … P8-010 and review `P8-011` DONE on `autopilot/phase8-2026-10-06`; D-088 → D-114, D-083 → D-115, D-087 → D-116). **Phase 9 — Developer Platform: COMPLETED for planned scope** (branch `autopilot/phase9-2026-10-07`; P9-001 … P9-009, P9-011, P9-013 … P9-017 and review `P9-012` DONE; P9-010 and P9-018 DEFERRED; D-093 APPROVED, D-117, D-118; re-planned 2026-10-07 with D-080 / D-081 (ADR-008) / D-119 / D-120 APPROVED; final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed; D-094 stays OPEN as a production-launch blocker only). **Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001** (branch `autopilot/phase10-2026-10-08`; P10-001 Marketplace Listings DONE and retained; P10-004 licensing decision DONE; P10-002 / P10-003 / P10-008 / P10-009 DEFERRED by D-125). **Native First-Party Block Runtime replan** (ADR-009 Accepted; D-123 … D-126): X-023 through X-029 DONE.
 
 Phase 5 — Publishing is COMPLETED: gate `P5-012 — Phase 5 Review` DONE (branch `autopilot/phase5-2026-10-05`).
 
@@ -218,7 +218,7 @@ Current focus:
 - `P9-008` DONE: `BlockSourceChecker` (ADR-008 §7 — size / UTF-8, canonical schema, template syntax + paths, action keys, forbidden elements, external URLs / `@import`) with source + line / path; Studio «Проверки перед публикацией» uses it; no review queue (D-120).
 - `P9-006` DONE: Studio «Опубликовать» → `BlockPublisher` creates the next immutable `sandboxed` Block Version (source + schema snapshot, semantic version, `{platform|developer}.block_published`); `block_versions.runtime` / sources / publisher; tab «Версии».
 - `P9-009` DONE: sandboxed Block Versions render through the ADR-008 wrapper (`SandboxedBlock` / SSR-safe `SandboxFrame`) in the Designer canvas, draft preview and published Sites; sources travel in Designer / preview props and, only for sandboxed blocks, in the Published Version manifest / payload (`blocks[].sandbox`); Block actions resolve the Instance's own top-level `action` fields through the Action System; `PublishValidator` re-checks sandboxed sources. Platform-owned published Blocks appear in the Designer library; Developer Blocks stay unplaceable until P9-014. Images in sandboxed Blocks render only on published Sites (Designer / preview show a placeholder).
-- `P9-014` DONE (D-121, D-122; corrected 2026-10-08): `block_definitions.access_mode` free / entitlement (boolean catalog gate) / paid (`site_price_minor` and / or `workspace_price_minor`, ADR-004, no checkout) / admin_grant, set in Block Studio «Настройки»; `catalog_licenses` (one item × one Site or one Workspace; source purchase | admin_grant, only admin_grant created) granted / revoked by Super Admin at «Лицензии каталога» (`manage_catalog_licenses`). Effective access = Site license OR the Site's Workspace license. `site_block_version_grants` (D-122): adding a Block / installing a Template / restoring a version records Site + Block Version grants; duplicating a granted version and publishing pass on the grant, otherwise current access applies (`block_access_denied`); revocation never breaks installed versions; existing Block Instances were backfilled. Designer library and Add follow current access. License purchase DEFERRED (P10-005).
+- `P9-014` DONE (D-121, D-122; catalog modes refined by D-126): `free` / explicit Plan inclusion (`entitlement`, X-026) / paid (`site_price_minor` and / or `workspace_price_minor`, ADR-004, checkout deferred) / `admin_grant`; `catalog_licenses` (one item × one Site or one Workspace; source purchase | admin_grant, only admin_grant created) granted / revoked by Super Admin at «Лицензии каталога» (`manage_catalog_licenses`). Effective license access = Site license OR the Site's Workspace license. `site_block_version_grants` (D-122): adding a Block / installing a Template / restoring a version records Site + Block Version grants; duplicating a granted version and publishing pass on the grant, otherwise current access applies (`block_access_denied`); revocation never breaks installed versions; existing Block Instances were backfilled. Designer library and Add follow current access. Purchase DEFERRED (P10-005).
 - `P9-007` DONE: Template Builder — `templates.owner_scope` platform / developer (immutable), Draft `template_pages` / `template_blocks` edited in the reused Designer at `studio/templates/{template}` (owner only, others 404); created from «Шаблоны Landflow» (`manage_platform_content`) or «Студия → Шаблоны» (`create_templates`); library = catalog Blocks with a published version; device preview (Компьютер / Планшет / Телефон) via frame page; publish = automated checks → immutable `template_versions.content_json` snapshot. Installation and access: P9-015.
 - `P9-015` DONE (D-121, D-122; corrected 2026-10-08): published platform / Developer Templates are offered on «Новый сайт»; `CreateSite` copies the latest `template_versions.content_json` into new Pages / Block Instances (new `public_id`s, `open_page` / `scroll_to` remapped, no later sync) and grants every copied Block Version to the new Site. Backend checks: version, Site type, multi-page content only for page-capable types, Template + included Block access against the Workspace. Templates have `access_mode` / `site_price_minor` / `workspace_price_minor` like Blocks (owner edits on «Публикация шаблона»); a `paid` / `admin_grant` Template starts a new Site only with a Workspace Template license, which covers exactly the Block Versions of the installed Template Version. Site-scoped Template licenses are stored but no flow uses them yet.
 - `P9-016` DONE: official Block `quiz` (steps / options / result / lead button) and official Template «Квиз: подбор автомобиля» (`OfficialQuizTemplateSeeder`, `TemplatePublisher::publishOfficial`), installable only into `quiz` Sites; installation creates a Site-owned Form «Заявка с квиза» in a Popup wired to the quiz button (`ProvisionLeadPopup`). Visitor `context.answers` (option IDs) are resolved by the backend from the Draft Block / Published Version into `trusted.answers.items` (shown on «Заявки», mapping source `answers`).
@@ -991,13 +991,23 @@ Future initial product types:
 Marketplace requires:
 
 - versioning;
-- review;
-- security;
+- automated security checks (ADR-008; no manual moderation, D-120);
 - compatibility;
-- licensing;
+- licensing (D-121);
 - later payments/earnings.
 
 Not MVP.
+
+Implemented (P10-001): `marketplace_listings` — one presentation card per canonical Block / Template (DATABASE.md §70). Owner derived from the product (official Landflow listings have no Developer Profile; workspace-private Blocks cannot be listed); draft / published lifecycle; publishing requires a published product version and non-`admin_grant` access; fail-closed `MarketplaceListing::publiclyVisible()` also hides listings of suspended Developers. Listings store no price or access data — the canonical product stays the pricing source (D-121). Management only: `/developer/marketplace` (active profile + `submit_marketplace_item`) and `/platform/marketplace` (`manage_platform_content`). No public storefront, categories / search / detail, install, checkout or reviews yet.
+
+Scope since D-125 / D-126 (2026-10-09): there is no open third-party Marketplace (no public Developer registration, earnings, commissions or payouts). P10-001 stays as retained infrastructure; public discovery / install (P10-002, P10-003) and P10-008 / P10-009 are DEFERRED. Active scope is the Landflow-owned Block / Template catalog with explicit Plan availability (X-026 DONE) on the Native runtime.
+
+Block runtime truth (2026-10-09):
+
+- **Baseline (X-024 DONE):** `BlockRuntime` = `official` | `sandboxed` | `native`. Native versions render in the host DOM without an iframe: publish-time compiled HTML (`app/Blocks/Native/*`, parser-based, context-aware escaping, allowlists), AST-scoped CSS stored as one immutable `native_css` asset per Published Version (`published_runtime_assets`, `/_landflow/runtime/{version}/{hash}.css`), and delegated `data-landflow-action` through the shared host action / Popup runtime.
+- **Current (X-025 DONE):** Studio publication creates immutable `native` versions only for an actor with edit authority plus separate deny-by-default `approve_native_blocks`. Approval records the exact Draft revision, canonical SHA-256 source hash, actor and time. Published Sites load one immutable same-origin `native_js` module per Published Version and mount per instance with cleanup/failure isolation; authenticated surfaces use the Native mount-body contract only inside the opaque-origin sandbox. Legacy `sandboxed` versions remain unchanged. Final gates: `composer quality` PASS (1285 tests, 1283 passed, 2 skipped; PHPStan, Pint, `vp check`, production and SSR builds), `npm run test:e2e` PASS (95 / 95).
+
+Site Type editing (D-124): `landing` / `multi_page` — normal Block editing; `quiz` / `chat_selection` — Template only, customers edit only exposed fonts / colors / images. X-027 (DONE) implements schema exposure and server-side state / Page / SEO / design / restore restrictions.
 
 ---
 
@@ -1218,7 +1228,7 @@ Also done: `X-007 — ADR: Primary Identifier Strategy` (D-085 APPROVED, ADR-001
 
 Also done: `P1-003 — Create Workspace Schema`; `P1-004 — Workspace Domain Models`; `P1-005 — Create Default Personal Workspace`; `X-014 — Decision: OAuth Account Linking and Yandex Client` (ADR-002); `P1-005A — Yandex OAuth Authentication`; `X-011 — Foundation Hygiene Follow-ups`; `P1-006 — Workspace Context / Switcher Backend`; `P1-007 — Workspace Switcher UI`; `P1-008 — Permission Foundation`; `P1-009 — Entitlement Foundation`; `P1-010 — Site Schema`; `P1-011 — Site Domain Models and Policies`; `P1-012 — Template Foundation`; `P1-013 — Create Site Flow Backend`; `X-012 — Foundation UI Follow-ups`; `P1-014 — Dashboard UI`; `P1-015 — Create Site Wizard UI`; `P1-016 — Core Platform E2E`; `P1-017 — Phase 1 Review`; `P2-001 — Page Schema and Models`; `P2-002 — Block Definition / Version Schema`; `P2-003 — Block Schema Validator`; `P2-004 — Block Instance Schema`; `P2-005 — Initial Official Blocks`; `P2-006 — Designer Shell`; `X-015 — Default Free Plan for New Workspaces`.
 
-Current next step: see §68 (Phase 9 — Developer Platform COMPLETED for planned scope: P9-001 … P9-009, P9-011 … P9-017 DONE except P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
+Current next step: see §68 (Native runtime: X-023 through X-029 DONE; Phase 10 public Marketplace expansion DEFERRED after P10-001 by D-125; Phase 9 COMPLETED for planned scope with P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED).
 
 No implementation task should be inferred from this alone.
 
@@ -1514,7 +1524,8 @@ Phase 6 — Integrations & Analytics: COMPLETED (gate P6-015)
 Phase 7 — Paid Features: COMPLETED for planned scope (P7-008 ADR-007; P7-009 DEFERRED)
 Phase 8 — Team: COMPLETED
 Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 DEFERRED, P9-010 DEFERRED)
-Phase 10 — Marketplace: NOT_STARTED
+Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125; P10-001, P10-004 DONE)
+Cross-cutting — Native First-Party Block Runtime: X-023 through X-029 DONE
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 
@@ -1776,7 +1787,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-**`P10-001 — Marketplace Listings`**. Phases 0–8 are COMPLETED (Phase 7 for planned scope: P7-001 … P7-008 and P7-010 DONE, P7-009 DEFERRED; Phase 8: P8-001 … P8-011 DONE); Phase 9 is COMPLETED for planned scope (P9-001 … P9-009, P9-011 … P9-017 DONE; P9-018 and P9-010 DEFERRED; final owner-decision corrective pass 2026-10-08: D-121, D-122).
+Native First-Party Block Runtime tasks **`X-023` through `X-029` are DONE**. X-029 completed the hardening review across security, SSR / SEO, multiple instances, CSS isolation, actions / Popup / Form, Native JS cleanup, iframe boundaries, all four Site types, tariff access, D-122 downgrade behavior and publication atomicity. Published pages now receive an integration-aware CSP; browser coverage verifies two Native JavaScript instances, failure isolation, cleanup/remount and action → Popup → Form submission. Final gates: `composer quality` PASS (1,299 tests: 1,297 passed, 2 skipped; PHPStan, Pint, frontend check and builds PASS), focused CSP/runtime tests PASS, focused Native Playwright 3 / 3, full `npm run test:e2e` 96 / 96. No subsequent task has been started.
 
 ---
 
@@ -1829,7 +1840,7 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121, D-122 APPROVED; D-094, X-013, X-017 OPEN)
+Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; Phase 10 public expansion DEFERRED after P10-001 (D-125); Native runtime X-023 … X-029 DONE; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121 … D-126 APPROVED; ADR-009 Accepted; D-094, X-013, X-017 OPEN)
 ```
 
-**Current phase: Phase 9 — Developer Platform (COMPLETED for planned scope; P9-012 review DONE, P9-018 and P9-010 DEFERRED; Phases 0–8 COMPLETED, P7-009 DEFERRED). Next step: §68.**
+**Current phase: Native First-Party Block Runtime replan completed (X-023 through X-029 DONE; no subsequent task started). Phase 10 — Marketplace public expansion DEFERRED after P10-001 (D-125). Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED); Phases 0–8 COMPLETED, P7-009 DEFERRED. Next step: §68.**

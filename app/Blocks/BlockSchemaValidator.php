@@ -122,6 +122,14 @@ final class BlockSchemaValidator
                 $this->errors["{$fieldPath}.required"] = 'Признак обязательности должен быть логическим значением.';
             }
 
+            if (array_key_exists('exposed', $field)) {
+                if (! is_bool($field['exposed'])) {
+                    $this->errors["{$fieldPath}.exposed"] = 'Признак доступности должен быть логическим значением.';
+                } elseif ($containerDepth !== 0 || ! in_array($type, [BlockFieldType::Image, BlockFieldType::Color, BlockFieldType::Font], true)) {
+                    $this->errors["{$fieldPath}.exposed"] = 'Для клиента можно открыть только поле изображения, цвета или шрифта верхнего уровня.';
+                }
+            }
+
             match ($type) {
                 BlockFieldType::Text => $this->validateText($field, $fieldPath, self::TEXT_MAX_LENGTH),
                 BlockFieldType::Textarea => $this->validateText($field, $fieldPath, self::TEXTAREA_MAX_LENGTH),
@@ -129,6 +137,8 @@ final class BlockSchemaValidator
                 BlockFieldType::Boolean => $this->validateBoolean($field, $fieldPath),
                 BlockFieldType::Select => $this->validateSelect($field, $fieldPath),
                 BlockFieldType::Image, BlockFieldType::Action, BlockFieldType::Vehicle => null,
+                BlockFieldType::Color => $this->validatePatternDefault($field, $fieldPath, '/^#[0-9A-Fa-f]{6}$/', 'Цвет должен быть записан в формате #RRGGBB.'),
+                BlockFieldType::Font => $this->validatePatternDefault($field, $fieldPath, '/^(sans|serif)$/', 'Поддерживаются только шрифты sans и serif.'),
                 BlockFieldType::Group, BlockFieldType::Repeater => $this->validateContainer(
                     $field,
                     $type,
@@ -145,6 +155,14 @@ final class BlockSchemaValidator
             if (is_string($key) && in_array($type, [BlockFieldType::Boolean, BlockFieldType::Select], true)) {
                 $controllers[$key] = $field;
             }
+        }
+    }
+
+    /** @param array<string, mixed> $field */
+    private function validatePatternDefault(array $field, string $path, string $pattern, string $message): void
+    {
+        if (array_key_exists('default', $field) && (! is_string($field['default']) || preg_match($pattern, $field['default']) !== 1)) {
+            $this->errors["{$path}.default"] = $message;
         }
     }
 

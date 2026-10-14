@@ -151,16 +151,19 @@ final class PublishSite
     }
 
     /**
-     * Every manifest Page must have exactly one non-empty artifact whose hash matches its HTML.
+     * Every manifest Page must have exactly one non-empty artifact whose hash matches its HTML;
+     * every runtime asset (Native CSS) must be non-empty and match its hash and size.
      */
     private function verifyArtifacts(PublishedVersion $version): void
     {
         $expected = array_column($version->public_manifest_json['pages'], 'public_id');
         $artifacts = $version->pages()->get(['page_public_id', 'rendered_html', 'content_hash']);
+        $runtimeAssets = $version->runtimeAssets()->get(['content', 'content_hash', 'byte_size']);
 
         $valid = $artifacts->count() === count($expected)
             && $artifacts->pluck('page_public_id')->sort()->values()->all() === collect($expected)->sort()->values()->all()
-            && $artifacts->every(fn ($page): bool => trim($page->rendered_html) !== '' && hash('sha256', $page->rendered_html) === $page->content_hash);
+            && $artifacts->every(fn ($page): bool => trim($page->rendered_html) !== '' && hash('sha256', $page->rendered_html) === $page->content_hash)
+            && $runtimeAssets->every(fn ($asset): bool => $asset->content !== '' && hash('sha256', $asset->content) === $asset->content_hash && strlen($asset->content) === $asset->byte_size);
 
         if (! $valid) {
             throw new PublishAborted(PublishFailure::ArtifactInvalid);

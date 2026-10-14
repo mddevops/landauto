@@ -24,6 +24,8 @@ export function instanceProps(
             case 'text':
             case 'textarea':
             case 'select':
+            case 'color':
+            case 'font':
                 if (typeof value === 'string') {
                     props[field.key] = value;
                 }

@@ -1,5 +1,7 @@
 # Landflow — Database Architecture
 
+> **X-025:** `block_versions` adds nullable `approved_revision`, lowercase SHA-256 `approved_source_hash`, nullable/null-on-delete `approved_by_user_id`, and `approved_at`. All are present only for Native versions. `published_runtime_assets.kind` now includes immutable `native_js` alongside `native_css`.
+
 **Document:** `docs/architecture/DATABASE.md`  
 **Status:** Database design source of truth  
 **Purpose:** Define primary entities, relationships, ownership, normalization rules, JSON boundaries, deletion behavior, and future-proofing requirements before migrations are written.
@@ -279,6 +281,24 @@ Examples:
 - custom_domain = false
 - version_history = false
 
+## plan_block_definitions (X-026 / D-126)
+
+- `plan_id` → `plans.id`
+- `block_definition_id` → `block_definitions.id`
+- composite primary key (`plan_id`, `block_definition_id`)
+- timestamps
+
+This explicit membership is used only for catalog Blocks whose `access_mode = entitlement` («По тарифу»). The current active Plan of a Workspace must be mapped to the Block. Capability keys in `plan_entitlements` do not grant catalog access.
+
+## plan_templates (X-026 / D-126)
+
+- `plan_id` → `plans.id`
+- `template_id` → `templates.id`
+- composite primary key (`plan_id`, `template_id`)
+- timestamps
+
+The same explicit membership rule applies to Templates. The X-026 migration backfills these pivots from legacy boolean catalog entitlement rows, then current access checks use only the pivots. `free`, `paid`, `admin_grant`, CatalogLicense scopes and D-122 grants retain their separate behavior.
+
 ## subscriptions
 
 Suggested fields:
@@ -295,6 +315,8 @@ Suggested fields:
 - timestamps
 
 Business code should read capabilities through an Entitlement/Capability service rather than query plan names everywhere.
+
+Planned, NOT implemented (X-026): an explicit Plan ↔ catalog item mapping (working name `plan_catalog_items`: plan × Block Definition XOR Template) only if the audit shows the typed entitlement catalog cannot express per-item plan availability. It must integrate with `access_mode`, `catalog_licenses` (D-121) and `site_block_version_grants` (D-122), not replace them.
 
 ---
 
@@ -545,6 +567,10 @@ Fields may include:
 - created_at
 
 Implemented (P9-006, ADR-008): `runtime` string(16) (`App\Enums\BlockRuntime`: `official` default / backfill, `sandboxed`); `html`, `css`, `js` mediumText nullable — the immutable source snapshot, set for every `sandboxed` version and null for `official`; `published_by_user_id` nullable FK (null on User delete), audit identity. Sandboxed versions are created only by Studio publishing (`BlockPublisher`, semantic version auto-incremented); since P9-009 platform-owned (and since P9-014 Developer-owned, subject to catalog access) sandboxed versions are placeable and their sources are copied into the Published Version manifest (`blocks[].sandbox`).
+
+Implemented (X-024): `runtime` value `native` (no schema change — `runtime` is a string column); Native versions carry `html` / `css` / `js` like sandboxed ones. No production path creates them before X-025 (test factories / E2E fixtures only).
+
+Planned, NOT implemented (ADR-009 / D-123; X-025): a Native version carries approval audit metadata `approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at` (columns on `block_versions` or a separate table — decided in X-025). No such columns exist today. Existing `sandboxed` rows are never rewritten to `native`.
 
 Important:
 
@@ -1869,46 +1895,50 @@ Unique `developer_profile_id + permission`. Rows survive suspension. Unknown key
 
 ## marketplace_listings
 
+Implemented in P10-001 (`App\Models\MarketplaceListing`). A listing is the public Marketplace card of one canonical product; it owns presentation only.
+
 Fields:
 
-- id
-- product_type
-- template_id nullable
-- block_definition_id nullable
-- developer_profile_id
-- title
-- slug
-- description
-- status
-- pricing_type
-- price nullable
-- currency nullable
+- id (internal; never in routes or Inertia props)
+- public_id (ULID, unique, route key)
+- product_type (`block` / `template`, `App\Enums\MarketplaceProductType`; immutable)
+- block_definition_id nullable, unique, FK `block_definitions` RESTRICT (immutable)
+- template_id nullable, unique, FK `templates` RESTRICT (immutable)
+- developer_profile_id nullable, FK `developer_profiles` RESTRICT (immutable); NULL = official Landflow listing (no fake profile)
+- title (≤ 120, trimmed plain text)
+- slug (3–80, `^[a-z0-9]+(?:-[a-z0-9]+)*$`, globally unique, immutable)
+- description nullable (plain text ≤ 5000, HTML rejected)
+- status (`draft` / `published`, `App\Enums\MarketplaceListingStatus`; default `draft`, indexed)
 - published_at nullable
+- created_by_user_id / updated_by_user_id nullable, FK `users` nullOnDelete
 - timestamps
 
-Product types initially:
+Rules (enforced by the model `saving` / `updating` hooks plus unique indexes; no DB CHECK constraint for cross-database portability):
+
+- Exactly one of `block_definition_id` / `template_id` is set and matches `product_type`; the referenced product must exist.
+- At most one listing per product (unique FK columns).
+- The owner is derived from the product by the server: platform-owned product → `developer_profile_id = NULL`; developer-owned product → that product's profile. `workspace_private` Blocks cannot be listed. The browser never supplies an owner.
+- No pricing, currency, access mode, entitlement or version columns: price and access stay on the canonical product (`access_mode`, `site_price_minor`, `workspace_price_minor`, `currency`, `required_entitlement_key`) per D-121. Installed Versions follow D-122.
+- `published_at` is set exactly while `status = published` and holds the start of the current publication; unpublishing clears it.
+- Draft listings may exist before the product has a version. Publishing requires ≥ 1 published product version and `access_mode != admin_grant` (licence-only private distribution).
+- No soft deletes; listings are not deleted in P10-001.
+
+Public visibility (`MarketplaceListing::scopePubliclyVisible`, fail-closed, recomputed on every read): status `published`, the product exists, has ≥ 1 version, is not `admin_grant`, a listed Block is `platform` / `developer` scope, and the Developer Profile (if any) is `active`. A suspended Developer keeps the listing rows unchanged; they are just hidden until reactivation.
+
+Product types:
 
 - template
 - block
+
+Scope (D-125, 2026-10-08): the table is retained infrastructure; public Marketplace discovery / install (P10-002, P10-003) and the tables of §72 are deferred while the Native runtime and plan-based catalog work take priority.
 
 ---
 
 # 71. Marketplace Reviews / Moderation
 
-## marketplace_reviews
+Manual moderation is not part of the architecture (D-120): Blocks and Templates publish after the automated ADR-008 checks, and listings publish without an approval queue. There is no `marketplace_reviews` table and no moderation status.
 
-Internal moderation, not customer rating.
-
-Fields:
-
-- id
-- listing_id
-- reviewer_user_id
-- status
-- notes
-- created_at
-
-Later customer reviews/ratings should use separate tables.
+Customer reviews / ratings are `P10-007` (DEFERRED). If they are ever added, they get separate tables designed in that task.
 
 ---
 

@@ -30,7 +30,7 @@ enum Entitlement: string
     }
 
     /**
-     * Boolean entitlements a catalog item may require in `entitlement` access mode (D-121).
+     * Boolean keys retained only for reading legacy D-121 catalog rows during rollback windows.
      *
      * @return list<self>
      */

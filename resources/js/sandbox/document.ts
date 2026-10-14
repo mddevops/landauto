@@ -1,6 +1,11 @@
 import { SANDBOX_BOOTSTRAP } from '@/sandbox/bootstrap';
 
-export type SandboxSources = { html: string; css: string; js: string };
+export type SandboxSources = {
+    html: string;
+    css: string;
+    js: string;
+    contract?: 'native' | 'legacy';
+};
 
 export type SandboxOptions = {
     props: Record<string, unknown>;
@@ -63,6 +68,11 @@ export function buildSandboxDocument(
         .replace(/\u2028/g, '\\u2028')
         .replace(/\u2029/g, '\\u2029');
 
+    const script =
+        sources.contract === 'native'
+            ? `(function(){"use strict";function mount(root,props,api){"use strict";\n${neutralize(sources.js, 'script')}\n}var cleanup=mount(window.landflow.root,window.landflow.props,Object.freeze({action:window.landflow.action}));window.addEventListener('pagehide',function(){if(typeof cleanup==='function'){cleanup();cleanup=undefined;}});})();`
+            : neutralize(sources.js, 'script');
+
     return [
         '<!doctype html><html lang="ru"><head>',
         `<meta http-equiv="Content-Security-Policy" content="${escapeAttribute(contentSecurityPolicy(options.assetOrigin))}">`,
@@ -74,7 +84,7 @@ export function buildSandboxDocument(
         '</head><body><div id="landflow-root"></div>',
         `<script type="application/json" id="landflow-data">${data}</script>`,
         `<script>${SANDBOX_BOOTSTRAP}</script>`,
-        `<script>${neutralize(sources.js, 'script')}</script>`,
+        `<script>${script}</script>`,
         '</body></html>',
     ].join('');
 }

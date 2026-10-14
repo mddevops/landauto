@@ -142,4 +142,12 @@ class PublishedVersion extends Model
     {
         return $this->hasMany(PublishedAssetReference::class);
     }
+
+    /**
+     * @return HasMany<PublishedRuntimeAsset, $this>
+     */
+    public function runtimeAssets(): HasMany
+    {
+        return $this->hasMany(PublishedRuntimeAsset::class);
+    }
 }

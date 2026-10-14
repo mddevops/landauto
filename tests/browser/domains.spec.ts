@@ -1,5 +1,6 @@
-import { execFileSync } from 'node:child_process';
 import type { Browser, Page } from '@playwright/test';
+import { startArtisanWorker } from './support/artisan-worker';
+import type { ArtisanWorker } from './support/artisan-worker';
 import { expect, test } from './support/fixtures';
 import { expectNoHorizontalOverflow, isMobileViewport } from './support/layout';
 import { guestStorageState, users } from './support/users';
@@ -10,15 +11,26 @@ const owner = users.domains;
 const hostname = 'dealer.e2e.test';
 const customUrl = `http://${hostname}:8200`;
 
+let artisanWorker: ArtisanWorker | undefined;
+
+test.afterEach(async () => {
+    await artisanWorker?.stop();
+    artisanWorker = undefined;
+});
+
 /**
- * Runs an artisan command against the isolated E2E environment. DNS answers come from the fake
- * resolver and certificates from the fake provisioner (both honoured only in testing/e2e).
+ * Runs an artisan command against the isolated E2E environment, in order, through the test's
+ * Artisan worker. DNS answers come from the fake resolver and certificates from the fake
+ * provisioner (both honoured only in testing/e2e). Failures carry exit code, stdout and stderr.
  */
-function artisan(...args: string[]) {
-    execFileSync('php', ['artisan', ...args, '--no-interaction'], {
-        env: { ...process.env, APP_ENV: 'e2e' },
-        stdio: 'pipe',
-    });
+async function artisan(...args: string[]) {
+    if (!artisanWorker) {
+        throw new Error(
+            'Start the Artisan worker at the beginning of the test.',
+        );
+    }
+
+    await artisanWorker.run(...args);
 }
 
 async function login(page: Page, email: string, password: string) {
@@ -65,6 +77,8 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
     page,
     browser,
 }) => {
+    // Boots alongside the browser steps; the Artisan commands below still run in order.
+    artisanWorker = startArtisanWorker();
     await login(page, owner.email, owner.password);
     await openSite(page);
     await openSiteSection(page, 'Домены');
@@ -113,12 +127,12 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
         }),
     ).toBeVisible();
 
-    artisan(
+    await artisan(
         'domains:fake-dns',
         `_landflow-verification.${hostname}`,
         `--txt=${txt}`,
     );
-    artisan('domains:fake-dns', hostname, '--a=203.0.113.10');
+    await artisan('domains:fake-dns', hostname, '--a=203.0.113.10');
     await card
         .getByRole('button', { name: `Проверить DNS домена ${hostname}` })
         .click();
@@ -129,7 +143,7 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
         'Выпуск сертификата',
     );
 
-    artisan('queue:work', '--stop-when-empty', '--tries=1', '--sleep=0');
+    await artisan('queue:work', '--stop-when-empty', '--tries=1', '--sleep=0');
     await page.reload();
     await expect(card.getByTestId('domain-state')).toHaveText('Активен');
     await expect(
@@ -172,7 +186,7 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
     await expect(visitor.getByTestId('landflow-branding')).toHaveText(
         'Создано на Landflow',
     );
-    artisan(
+    await artisan(
         'tinker',
         "--execute=App\\Models\\Plan::query()->where('key', 'e2e-domains')->firstOrFail()->setEntitlement(App\\Enums\\Entitlement::RemoveBranding, true);",
     );

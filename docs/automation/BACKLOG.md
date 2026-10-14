@@ -78,7 +78,11 @@ Phase 8 — Team / Collaboration: COMPLETED (branch `autopilot/phase8-2026-10-06
 
 Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/phase9-2026-10-07`; review `P9-012` DONE; P9-018 and P9-010 DEFERRED). P9-001 DONE (D-093 APPROVED, D-117). P9-002 DONE (D-118). P9-003 DONE. Re-planned 2026-10-07 (Creator Studio, Site types, catalog; D-080 / D-081 / D-119 / D-120 APPROVED, ADR-008). Final owner decisions 2026-10-08: D-079 SUPERSEDED by D-121 (Site / Workspace license scopes), D-122 (installed Block Version grandfathering), D-080 / D-081 / ADR-008 / D-120 confirmed, P9-018 DEFERRED; D-094 stays OPEN as a production-launch blocker only.
 
-Next ready task: `P10-001 — Marketplace Listings` (not started; outside the Creator Studio batch). Non-blocking follow-up: `X-017` (storage quota, before production).
+Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
+
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement), `X-028` DONE (legacy sandboxed migration), `X-029` DONE (runtime hardening and E2E review).
+
+Native runtime tasks `X-023` through `X-029` are DONE. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -3524,7 +3528,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ### Result
 
-- `block_definitions.access_mode` (`free` default, `entitlement`, `paid`, `admin_grant`) + `access_entitlement` (boolean catalog gates only: `custom_domain`, `remove_branding`, `multi_page_sites`) + `site_price_minor` / `workspace_price_minor` / `price_currency` (ADR-004, RUB; `paid` needs at least one price > 0, other modes none); the model refuses inconsistent combinations. Authors change access in Block Studio «Настройки → Доступ в каталоге» («Лицензия на 1 сайт, ₽», «Лицензия на всё пространство, ₽»; `PUT {platform|developer}/blocks/{block}/access`, own Blocks only, logged `*.block_access_updated`).
+- `block_definitions.access_mode` (`free` default, `entitlement`, `paid`, `admin_grant`) + legacy `access_entitlement` (retained for old-row compatibility; current Plan mapping is D-126 / X-026) + `site_price_minor` / `workspace_price_minor` / `price_currency` (ADR-004, RUB; `paid` needs at least one price > 0, other modes none); the model refuses inconsistent combinations. Authors change mode and prices in Block Studio «Настройки → Доступ в каталоге»; Super Admin assigns Plans in «Доступ по тарифам».
 - `catalog_licenses` (D-121): ULID `public_id`, exactly one item (Block XOR Template) × exactly one target by scope (`site` → Site, `workspace` → Workspace), source `purchase` | `admin_grant`, `granted_by_user_id`; unique Site+Block / Site+Template / Workspace+Block / Workspace+Template; immutable, revoke = delete. Super Admin page «Лицензии каталога» (`/platform/licenses`, platform permission `manage_catalog_licenses`, Super Admin only): scope «Один сайт» (subdomain or Site ID) / «Всё пространство» (Workspace ID or a subdomain of any of its Sites); table shows item, type, scope, target, Workspace, source and date without internal IDs; grants / revokes are logged (`platform.catalog_license_*`). Purchase creation stays DEFERRED (P10-005); no prices are charged.
 - Effective access for a Site = its Site license OR its Workspace license (no row copies; Sites created later are covered). No account-wide license; a User in two Workspaces never carries a license across.
 - `site_block_version_grants` (D-122): adding a Block, installing a Template and restoring a Site version record Site + Block Version grants in the same transaction (only after the current access check, except restore); duplicating a granted version needs no new check; publishing passes on the grant, otherwise applies current access, and never creates grants. Revoking a license or restricting a Block keeps installed versions editable and publishable; a new Block Version, a new install and other Sites follow current access. Existing Block Instances were backfilled by the migration.
@@ -3533,11 +3537,11 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 ### Acceptance Criteria
 
-- Author sets access mode on publish-ready items: `free`, `entitlement` (typed entitlement key), `paid` (Site and / or Workspace price per ADR-004; no checkout), `admin_grant`.
+- Author sets access mode on publish-ready items: `free`, `entitlement` (explicit Plan inclusion, D-126), `paid` (Site and / or Workspace price per ADR-004; no checkout), `admin_grant`.
 - `catalog_licenses` (item × Site or Workspace, source `purchase` | `admin_grant`); Super Admin grants / revokes; purchase creation DEFERRED (P10-005).
 - Customer catalog in the Designer library with Russian access cards; backend checks access when adding a Block Instance and when publishing; a Site license covers one Site, a Workspace license all Sites of that Workspace.
 - Installed Block Versions are grandfathered per Site (D-122).
-- Tests: each access mode, both scopes, invariants, duplicates, grandfathering cases, entitlement vs license separation, no internal IDs in props; Playwright allowed / denied for both scopes.
+- Tests: each access mode, both scopes, invariants, duplicates, grandfathering cases, Plan inclusion vs license separation, no internal IDs in props; Playwright allowed / denied for both scopes.
 
 ---
 
@@ -3572,7 +3576,7 @@ Final Phase 6 gate: `composer quality` PASS (728 tests, PHPStan, Pint, `npm run 
 
 - Customer catalog = platform and Developer Templates with a published Template Version (`Template::availableForSites`; `StoreSiteRequest` uses the same rule). `CreateSite` copies the latest version (`InstallTemplateVersion`): new Pages / Block Instances with new `public_id`s, pinned Block Versions, hidden flags; `open_page` / `scroll_to` targets remapped to the new IDs, unknown targets → null. No sync afterwards. Legacy versions without content still start with a home Page.
 - Backend checks before the transaction: Template has a version, supports the Site type, multi-page content only for types that allow pages (publisher also refuses multi-page content with such types), access (`TemplateCatalogAccess`) against the Workspace: the Template's mode and every included Block, unless the Workspace holds a license for the Template.
-- Templates get `access_mode` / `access_entitlement` / `site_price_minor` / `workspace_price_minor` / `price_currency` (same rules as Blocks, `CatalogAccessMode::fieldsMatch`), edited in «Публикация шаблона» → «Доступ в каталоге» (owner only, 404 otherwise). `catalog_licenses.template_id` (D-121): a new Site from a `paid` / `admin_grant` Template requires a Workspace Template license, which covers exactly the Block Versions of the Template Version being installed (no union over historical versions). Site-scoped Template licenses are stored for future flows; none is built.
+- Templates get `access_mode` / legacy `access_entitlement` / `site_price_minor` / `workspace_price_minor` / `price_currency`; «По тарифу» Templates use explicit Plan inclusion (D-126 / X-026). Owners edit mode and prices in «Публикация шаблона» → «Доступ в каталоге» (owner only, 404 otherwise); Super Admin assigns Plans in «Доступ по тарифам». `catalog_licenses.template_id` (D-121): a new Site from a `paid` / `admin_grant` Template requires a Workspace Template license, which covers exactly the Block Versions of the Template Version being installed (no union over historical versions). Site-scoped Template licenses are stored for future flows; none is built.
 - Installation grants every copied Block Version to the new Site in the same transaction (D-122); later Template / Block access changes and Template republishes never change the copied Site.
 - UI: «Новый сайт» shows author, access label and the denial reason, unavailable Templates are disabled.
 - Checks: `TemplateInstallationTest` (14), `TemplateBuilderTest`, create-site / catalog / plan tests; Playwright `template-install.spec.ts` (publish → customer creates landing Site → republish → Site unchanged), `catalog-licenses`, `site-formats`, `template-builder`.
@@ -3662,7 +3666,7 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 
 ### Result
 
-- New `developer-platform.spec.ts`: a Developer creates a Block in Block Studio (schema + HTML), publishes 1.0.0 immediately after the automated checks, sets catalog access «По тарифу» / «Собственный домен»; a customer without the option sees author, access label and the Russian reason with adding disabled; a customer whose plan has it adds the Block, it renders in its `allow-scripts` sandbox frame and is edited through its schema; a later unpublished Draft edit never reaches the placed Instance. E2E data: `platform-developer@` / `platform-customer@` / `platform-premium@` (`E2eSeeder`).
+- `developer-platform.spec.ts`: a Developer creates and publishes a Block; a Super Admin assigns it to an explicit Plan in «Доступ по тарифам»; a Workspace on another Plan gets the Russian reason and a disabled Add action; a Workspace on the mapped Plan installs it and edits its schema; unpublished Draft edits never reach the placed Instance. E2E data: `platform-developer@` / `platform-customer@` / `platform-premium@` / `licenses-admin@` (`E2eSeeder`).
 - Coverage map of the remaining requirements: Studio Code / Schema / Preview, errors, reload, publishing, sandbox isolation, Super Admin and Developer ownership — `block-authoring`; schema-driven Instance editing, Draft / published sandbox — `sandboxed-blocks`; admin_grant Site license for one Site only and Workspace license for current / new Sites of one Workspace (D-121) — `catalog-licenses`; Template build / publish / devices — `template-builder`; compatible install as an independent copy — `template-install`; the four formats, multi-page denied without `multi_page_sites`, no blank start for Quiz / Chat — `site-formats` + `core-platform`; quiz and chat flows — `quiz-site`, `chat-selection`. Tablet / mobile overflow checks run in the `@responsive` specs.
 - Live operator chat is not tested: it is not implemented (P9-018 DEFERRED).
 
@@ -3679,7 +3683,7 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 - Review (no regressions found):
   - Ownership: Block Studio routes resolve only the current Developer Profile's Blocks (`ownedByDeveloper`) or platform Blocks for `manage_platform_content`; all 16 Template Studio actions go through `ResolvesEditableTemplates` (non-owner → 404), Template Pages / Blocks are scoped to that Template. Catalog licenses only with `manage_catalog_licenses`.
   - Sandbox (ADR-008): authored HTML / CSS / JS runs only in `srcdoc` frames with `sandbox="allow-scripts"` (opaque origin, no `allow-same-origin`) and a CSP meta first; the parent accepts messages only from its own frame window with origin `null` and only `landflow:resize` / `landflow:action` (schema action keys) / `landflow:error` (truncated). No authored code in the app origin.
-  - Catalog access (D-121): checked by the backend when adding a Block Instance, installing a Template and publishing; entitlements are typed (`Entitlement::catalogGates`), no plan-name checks; paid / admin_grant need a Site or Workspace license; installed versions are grandfathered per Site (D-122).
+  - Catalog access (D-121 / D-126): checked by the backend when adding a Block Instance, installing a Template and publishing; `entitlement` mode uses explicit Plan inclusion, never typed capability entitlements or plan-name checks; paid / admin_grant need a Site or Workspace license; installed versions are grandfathered per Site (D-122).
   - Props: no numeric internal IDs added to Inertia props in Phase 9 (public ULIDs only); no secrets.
   - Public submissions: quiz / chat `answers` are bounded by the Block's steps and resolved from server state (Draft Block or Published manifest); question / answer text never comes from the browser.
   - Versions: Block and Template Versions are immutable; autosave writes Drafts only; installed Sites are independent copies.
@@ -3698,22 +3702,45 @@ Only after deterministic Schema authoring works. AI never publishes without the 
 
 ## P10-001 — Marketplace Listings
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** P9-012
+
+### Result
+
+Branch `autopilot/phase10-2026-10-08` (base main `0cb5d56`).
+
+- **Schema:** one additive migration `2026_10_19_000001_create_marketplace_listings_table` (DATABASE.md §70). ULID `public_id`; `product_type` block / template; nullable unique `block_definition_id` XOR `template_id`; nullable `developer_profile_id` (NULL = official Landflow); title ≤ 120; immutable globally unique slug 3–80; plain-text description ≤ 5000; status draft / published; `published_at`; audit users. FKs: RESTRICT on product and profile, nullOnDelete on audit users. No pricing / currency / access / entitlement / version columns, no soft deletes.
+- **Ownership:** the server derives the owner from the selected canonical product; `workspace_private` Blocks are rejected; browser owner / scope / type fields are ignored. Foreign, platform (for Developers), private or unknown products get the same non-leaking validation error; foreign listings resolve to 404. Model invariants make slug, product, type and owner immutable.
+- **Lifecycle:** draft → published → draft. Drafts may exist before the product has a version; publishing requires ≥ 1 published product version and `access_mode != admin_grant`. `published_at` is the start of the current publication and is cleared on unpublish. Editing changes only title and description (HTML rejected).
+- **Visibility:** centralized fail-closed `MarketplaceListing::publiclyVisible()` (published, product exists with a version, not `admin_grant`, listable Block scope, active Developer Profile). Suspension hides Developer listings without mutating them; reactivation restores visibility.
+- **Authorization:** `/developer/marketplace` (index, store, show, update, publish, unpublish) requires an active Developer Profile + `submit_marketplace_item`, independent of `create_blocks` / `create_templates`. `/platform/marketplace` requires `manage_platform_content`; Developer listings are 404 there. Audit logs `developer.marketplace_listing_*` / `platform.marketplace_listing_*` (created, updated, published, unpublished) with public ids only.
+- **D-120:** no moderation queue, no `marketplace_reviews` table, no review status; listings publish directly. Developer dashboard copy «Отправка на модерацию» replaced by «Публикация в Marketplace» (Разрешена / Нет разрешения) plus a Marketplace tool card or «Нет разрешения на публикацию в Marketplace.».
+- **D-121:** pricing and access are read from the canonical Block / Template at render time; changing the product price does not touch the listing. D-121 / D-122 unchanged; customer catalog / license acquisition paths unchanged.
+- **Platform listings:** official Landflow listings for platform Blocks / Templates, author «Landflow», sidebar entry «Marketplace».
+- **Developer UI:** Russian list / create / edit pages with status badge, publication denial reason, read-only product facts (type, access mode, published version) and publish / unpublish actions; no numeric ids in props.
+- **Out of scope (not built):** public storefront / `/marketplace` routes, categories / search / detail (P10-002), install, checkout / orders, ratings / reviews, sales / payouts, featured.
+- **Tests:** `tests/Feature/Marketplace/*` (29 tests: model invariants and schema, Developer ownership / permissions / lifecycle, visibility, D-121 pricing source, Platform listings, no storefront); `E2eSeederTest` and `DeveloperPermissionsTest` updated. E2E fixture «Мирон Маркетов» (`marketplace-developer@landflow.test`, only `submit_marketplace_item`, one published Block per Playwright project); `tests/browser/marketplace-listings.spec.ts` (@responsive) — create, publish, unpublish.
+- **Migration evidence (2026-10-08):** `db:show` / `migrate:status` confirmed connection `mysql`, database `landauto`, only this migration pending; `php artisan migrate` DONE; counts unchanged before / after (users 3, workspaces 3, sites 1, block_definitions 12, block_versions 18, templates 1, template_versions 1, developer_profiles 0, catalog_licenses 0); `marketplace_listings` created empty.
+- **Gates (2026-10-08):** `composer quality` PASS (PHPUnit 1145 / 1145, 9504 assertions; PHPStan 0 errors; Pint; `vp check`; build). `npm run test:e2e` 93 / 93 PASS (an earlier full run hit a login-timeout flake in `chat-selection.spec.ts` desktop; the isolated rerun passed 4 / 4 and the full rerun passed). `git diff --check` clean.
+- **Retention note (X-023, D-125):** P10-001 is retained as implemented infrastructure (listing metadata for future distribution / internal use). Public third-party Marketplace expansion is deferred by D-125; P10-001 itself is not a production priority.
 
 ---
 
 ## P10-002 — Categories / Search / Detail
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-001
+
+Deferred by D-125 (X-023): public Marketplace discovery is postponed while the Native runtime (X-024 … X-029) and the internal tariff catalog work take priority.
 
 ---
 
 ## P10-003 — Free Install Flow
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-002
+
+Deferred by D-125 (X-023): depends on the deferred public Marketplace discovery. The existing customer Block / Template catalog (P9-014 / P9-015) is separate and stays active.
 
 ---
 
@@ -3751,15 +3778,19 @@ Resolved early by D-079 (owner instruction 2026-10-07), which was SUPERSEDED on 
 
 ## P10-008 — Marketplace E2E
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-001 through P10-004
+
+Deferred by D-125 (X-023): the public Marketplace sequence it tests is deferred.
 
 ---
 
 ## P10-009 — Phase 10 Review
 
-**Status:** NOT_STARTED  
+**Status:** DEFERRED
 **Dependencies:** P10-008
+
+Deferred by D-125 (X-023): the Phase 10 public Marketplace review cannot complete while its public scope is deferred.
 
 ---
 
@@ -3771,6 +3802,8 @@ Resolved early by D-079 (owner instruction 2026-10-07), which was SUPERSEDED on 
 
 **Status:** NOT_STARTED  
 **Dependencies:** P10-009
+
+Note (X-023): P10-009 is DEFERRED by D-125; Phase 11 is not scheduled before the Native runtime sequence X-024 … X-029 completes and its start needs an explicit backlog update.
 
 ### Objective
 
@@ -4172,7 +4205,7 @@ Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/
 
 ## X-017 — Workspace Asset Storage Quota
 
-**Status:** NOT_STARTED
+**Status:** PARTIAL
 **Trigger:** before the first public production deployment
 **Decision:** D-106
 
@@ -4272,6 +4305,151 @@ Separate the Workspace context from the Site context and prepare the navigation 
 - Site shell (`SiteLayout` for `sites/*` pages): «← Все сайты», Site name, groups Общее (Общее, Дизайнер, Предпросмотр), Контент (Автомобили, Формы, Попапы), Заявки (Заявки, Доставка заявок), Настройки (Интеграции, Защита форм, Публикация). Visibility comes from a backend-computed `siteContext` shared prop (Site policy abilities, current Workspace only); pages still authorize themselves.
 - `GET /sites/{site}` «Общее»: name, status, subdomain, publish state, active address; `PATCH /sites/{site}` renames with `edit_site_settings`.
 - Tests: default names (registration, Yandex, no backfill), switcher props, Workspace creation (Free plan, Owner, current, validation, unverified), foreign Workspace, rename permission, Site shell abilities for Owner/Admin/Designer, foreign Site 404, Site rename permission; E2E switcher (one and many), create + rename Workspace, Site context and back, Designer/Admin navigation, tablet/375px.
+
+---
+
+## X-023 — Native First-Party Block Runtime Architecture
+
+**Status:** DONE
+**Trigger:** owner decision 2026-10-08 (approved direction; documentation / replan only)
+**Decision:** ADR-009 (Accepted), D-123, D-124, D-125
+
+Reconcile the architecture with the owner-approved direction: ordinary approved first-party Blocks render natively (HTML + scoped CSS + approved JS in the host DOM, no iframe wrapper); iframes stay for sandbox preview, legacy sandboxed versions and genuine Embeds. Split the implementation into executable tasks. No application, migration, package, enum or runtime change.
+
+### Result
+
+- ADR-009 Accepted: target runtimes `official` / `sandboxed` / `native`; D-123 trust approval (revision + source hash + approver + time, «Одобрить и опубликовать», separate deny-by-default capability, not moderation); Native HTML / CSS / JS targets; actions / popups / forms stay host-owned; ADR-006 pipeline and atomicity kept; legacy sandboxed versions immutable with an explicit migration path; Embed distinction; Native JS never in the Landflow application origin.
+- ADR-008 narrowed (not deleted): authoritative for preview, untrusted code and legacy sandboxed versions; superseded only for the public runtime of approved first-party Blocks.
+- D-120 partially refined by D-123 (no moderation queue stays); D-080 / D-081 / D-118 / D-119 annotated; D-124 (Site Type editing matrix v2: quiz / chat — fonts, colors, images only) and D-125 (public Marketplace deferred) added. D-121 / D-122 unchanged.
+- Phase 10: P10-001 retained (DONE), P10-002 / P10-003 / P10-008 / P10-009 DEFERRED; P10-004 DONE.
+- Current implementation truth recorded: `BlockRuntime` = `official` / `sandboxed`; authored versions publish as `sandboxed` and render in an iframe on published Sites; Native is not implemented.
+- Docs: ADR-009, ADR-008, DECISIONS, BLOCK_SYSTEM, PUBLISHING, SECURITY, PERMISSIONS, DATABASE (planned fields only), PRODUCT, MASTER_PLAN, BACKLOG, PROJECT_STATE. Checks: `git diff --check`; documentation only, so PHPUnit / Playwright were not required and not run.
+
+---
+
+## X-024 — Native Block Runtime: HTML / CSS / Actions
+
+**Status:** DONE
+**Trigger:** after X-023
+**Decision:** ADR-009 §1, §5, §6, §8, §9; D-123
+
+Scope:
+
+- Native runtime model (`native` alongside `official` / `sandboxed`; immutable per Block Version);
+- Native HTML compiler from the immutable template + validated Block Instance state + published Site context, with context-aware escaping / sanitization, safe URLs, no inline handlers / `javascript:` / script-style-meta-base-embed injection, validated `data-landflow-action` bindings, Block Instance identity on the root;
+- scoped CSS compiler (AST / parser based, dependency evaluated and approved inside this task) covering selectors, `*`, `:root`, `html` / `body`, `@media`, `@supports`, `@keyframes` / animation names, custom properties, `url()`, `@import`; no leakage into other Blocks, Popups, host shell or page;
+- host Action integration (`open_url`, `open_page`, `scroll_to`, `phone`, `email`, `open_popup`);
+- publish-time compilation inside the ADR-006 pipeline with atomic failure (no activation, previous version untouched, Draft intact, safe Russian error); HTML survives hydration;
+- **no authored Native JS yet**; sandbox preview stays; Native JS never runs in the application origin;
+- tests proving Native HTML appears in the initial host HTML without an iframe, escaping / CSS isolation, multiple instances, publish failure atomicity.
+
+### Result
+
+- `BlockRuntime::Native` («Нативный»); `BlockVersion` source invariant (official: no sources; sandboxed / native: all three), `authoredSource()` / `previewSource()`; `sandboxSource()` stays sandboxed-only; `BlockSourceChecker::checkVersion` covers Native versions (sandbox checks + Native compiler issues).
+- **No production path creates Native versions:** `BlockPublisher::publish()` (Block Studio) still creates `sandboxed` versions until X-025 (regression test: a `runtime=native` request still yields `sandboxed`). Native versions come only from `BlockVersionFactory::native()` (tests, E2E fixtures). No `approve_native_blocks`, no approval metadata, no «Одобрить и опубликовать».
+- Native HTML compiler (`app/Blocks/Native/*`): libxml parse after replacing template tags with placeholders (no regex rewriting), element / attribute / URL allowlists, forbidden `script` / `style` / `link` / `meta` / `base` / `iframe` / `frame` / `object` / `embed` / `form` / `portal`, no `on*` / `style` attributes, `javascript:` / `vbscript:` / `data:` URLs rejected (also when they come from state), images only from trusted Published Media URLs, context-aware escaping, one controlled root per instance (`data-landflow-native` / `data-landflow-block` / `data-landflow-instance`).
+- Native CSS compiler: in-repo CSS Syntax L3 tokenizer / parser + selector scoper; `:root` / `html` / `body` → scope, `@media` / `@supports` kept and scoped, `@keyframes` namespaced with `animation` references renamed, `@import` / `@font-face` / `url()` rejected. Limits 512 KB HTML per instance, 256 KB CSS per version, 1 MB CSS per Published Version.
+- Compile boundary: Publish time only (`PublishValidator` checks + validation render; `PublishedArtifactBuilder` compiles instance HTML into the renderer payload and one deduplicated stylesheet). Public requests never compile; raw Native source stays in the server-side manifest, the browser payload carries only compiled `{scope, html, actions}`.
+- Non-empty Native JS blocks Publish (`native_js_not_approved`, «Нативный JavaScript этого блока ещё не одобрен. Опубликуйте версию после внедрения доверенного JS runtime.»); never executed, stripped or iframe-wrapped. Compile failure: `native_block_invalid`; atomic (no Published Version activated, active version and Draft untouched).
+- Runtime asset: new table `published_runtime_assets` (immutable `native_css` row per Published Version, sha256 hash, size), route `/_landflow/runtime/{version}/{hash}.css` (`text/css`, immutable cache, 404 for wrong hash / other Site), `<link>` only when the asset exists.
+- Frontend: `NativeBlock` (only `dangerouslySetInnerHTML` in `resources/js`, guarded by a test), delegated `data-landflow-action` through the shared `runBlockAction` (same Popup runtime as sandboxed Blocks); `published-site.tsx` mixes official / sandboxed / native. Studio, Designer and authenticated Preview keep the sandbox frame for Native versions.
+- Packages: none. No PHP CSS parser is installed; postcss / lightningcss are Node-only transitive dependencies (lightningcss is native) and Publish must not call Node per Block.
+- Migration (local MySQL `landauto`, MySQL 8.2.0; `db:show` / `migrate:status` checked, only `2026_10_20_000001_create_published_runtime_assets_table` pending, batch 15): counts unchanged before / after — users 3, workspaces 3, sites 1, pages 2, block_definitions 12, block_versions 18, page_blocks 3, published_versions 0, published_pages 0, marketplace_listings 0; `published_runtime_assets` 0.
+- Tests: `tests/Unit/Blocks/Native/*` (HTML / CSS compilers), `tests/Feature/Blocks/NativeBlockRuntimeTest.php` (mixed page, visitor HTML, asset route, JS blocking, atomicity, immutability, preview surfaces, `dangerouslySetInnerHTML` guard), `NodePageRendererTest` (real SSR bundle), `BlockPublishingTest` regression, `E2eSeederTest`; Playwright `tests/browser/native-blocks.spec.ts` (publish, host DOM without iframe, one root per instance, computed-style CSS isolation, `scroll_to` + `open_popup`, CSS asset headers, JS-blocked publish with production unpublished).
+- Gates: `composer quality` PASS (PHPUnit 1265 / 1265, PHPStan 0, Pint, `vp check`, build); `npm run test:e2e` PASS 95 / 95 (first full run: 1 failure in `block-authoring.spec.ts` — the new Native fixtures used the Hero category, whose label «Первый экран» matched that test's list filter; fixtures moved to the Content category, isolated rerun and full rerun PASS); `git diff --check` PASS.
+
+---
+
+## X-025 — Native Block Runtime: Approved JavaScript
+
+**Status:** DONE
+**Trigger:** after X-024
+**Decision:** ADR-009 §2, §3, §4, §7; D-123
+
+Scope:
+
+- explicit deny-by-default Native trust capability (preferred `approve_native_blocks`; never backfilled to Developer Profiles; platform authority for platform content);
+- approval metadata `approved_revision`, `approved_source_hash`, `approved_by_user_id`, `approved_at` (placement decided here);
+- «Одобрить и опубликовать» with server re-check of revision + hash + permission; a later Draft change invalidates approval;
+- trusted immutable, versioned JS artifacts; `mount(root, props, api) => cleanup`; multiple independent instances; failure isolation;
+- CSP implications for published Sites; published host cookie / session isolation from the application host;
+- no `eval` / `new Function` / unvalidated dynamic imports; deterministic / security checks;
+- Designer / Studio / authenticated Preview never execute Native JS in the application origin.
+
+Result: deny-by-default Native approval is enforced for Developer and Platform authors, bound to the exact Draft revision and canonical source hash. Approved immutable Native versions publish scoped HTML/CSS plus one same-origin `native_js` asset, mount independently per instance, clean up safely and isolate failures. Authenticated previews retain the opaque-origin sandbox; legacy Sandboxed versions are unchanged.
+
+Gates: `composer quality` PASS (1285 tests, 1283 passed, 2 skipped; 9836 assertions; PHPStan 0 errors; Pint; `vp check`; production and SSR builds), `npm run test:e2e` PASS (95 / 95), `git diff --check` PASS.
+
+---
+
+## X-026 — Plan ↔ Catalog Access Matrix
+
+**Status:** DONE
+**Trigger:** after X-025, before customer Native catalog rollout
+**Decision:** D-121, D-122, D-126, ADR-009 §13
+
+Scope:
+
+- audit the actual Plan / Entitlement / `CatalogAccessMode` / `CatalogLicense` / `BlockCatalogAccess` / `TemplateCatalogAccess` model;
+- implement an explicit Plan ↔ Block Definition / Template mapping if the existing typed entitlement catalog cannot express it (e.g. Block A → Free + Premium + Team, Template C → Team); no plan-name branching;
+- internal admin UI for which plans contain a Block / Template; customer catalog locked state and upgrade messaging in Russian;
+- preserve `paid` / `admin_grant` / `CatalogLicense` / D-122 grandfathering; server-side enforcement;
+- no numeric plan values or tariff definitions invented without owner approval.
+
+### Result
+
+- Added explicit Plan ↔ Block Definition / Template pivots and a safe backfill from prior boolean catalog entitlements. «По тарифу» checks only the mapped active Workspace Plan; typed Plan entitlements remain separate capabilities.
+- Added the Super Admin «Доступ по тарифам» page for published Blocks and Templates, with backend validation and Russian catalog denial / upgrade reasons.
+- Preserved universal `free`, paid access independent of Plan (purchase flow remains deferred under P10-005), administrator-issued CatalogLicense overrides, license scopes and D-122 grandfathering.
+- Checks: PHPUnit 1,288 (1,283 passed, 5 skipped); PHPStan PASS; Pint PASS; frontend check PASS; canonical production / SSR build PASS; `npm run test:e2e` PASS (95 / 95); `git diff --check` PASS.
+
+---
+
+## X-027 — SiteType Locked Editing Enforcement
+
+**Status:** DONE
+**Trigger:** after X-026
+**Decision:** D-124 (refines D-119)
+
+Scope: server-enforce D-124 across Site creation, blank start, Template compatibility, Page mutations, Block add / remove / move / duplicate, Block state update, copy / import, restore and Designer capabilities. `quiz` / `chat_selection`: only explicitly exposed fonts / colors / images (define the exposure mechanism); `landing` / `multi_page`: normal Block Designer per permissions / access. UI hiding alone is insufficient.
+
+### Result
+
+- Added immutable Block Schema exposure for top-level `image`, `color` (`#RRGGBB`) and `font` (`sans` / `serif`) fields; the Block Studio can explicitly expose those fields to Quiz / Chat customers.
+- Quiz / Chat state updates preserve every unexposed field; the Designer receives only exposed schema fields and no full Block catalog / Site design controls. Page / SEO mutations, Site design token updates and full-version restore are denied server-side. Existing creation, blank-start and Template compatibility guards remain covered by their existing tests.
+- Added focused feature and browser assertions. `npm run check` PASS; `git diff --check` PASS.
+- E2E runner: `npm run test:e2e` now runs `tests/browser/support/run-e2e.mjs`, which owns the isolated PHP server process and stops that exact PID (Playwright no longer wraps the server on Windows).
+- Custom-domain E2E stabilised without timeout changes: its Artisan steps (`domains:fake-dns` ×2, `queue:work`, `tinker` entitlement change) run in order through one booted PHP process (`tests/browser/support/artisan-worker.php` / `.ts`) instead of four `php artisan` processes; failures report exit code, stdout and stderr (bounded). The test took 31 s (30 s timeout) under full-suite load before, 12.6 s after.
+- Checks (PHP-enabled Landauto environment): `composer quality` PASS (PHPUnit 1,293: 1,291 passed, 2 skipped; PHPStan PASS; Pint PASS; frontend check PASS; production / SSR build PASS); `npm run test:e2e` PASS (95 / 95); `git diff --check` PASS.
+
+---
+
+## X-028 — Legacy Sandboxed Block Migration
+
+**Status:** DONE
+**Trigger:** after X-025, before final Native rollout
+**Decision:** ADR-009 §10; D-123; D-122
+
+Scope: detect legacy `sandboxed` Block Versions; copy-to-Draft migration workflow producing a new approved Native version only (never mutate an immutable version); controlled upgrades in Template Studio and Site Drafts; publishing diagnostic with Russian warning / blocker for ordinary legacy sandboxed Blocks in new publications; historical active Published Versions preserved.
+
+### Result (2026-10-13)
+
+- Backend migration, explicit Block Studio copy-to-Draft, deliberate Site / Template Draft upgrade UI, D-122 transactional Site grant, publication warning / blocker, Quiz / Chat restriction and focused tests are implemented in the working tree.
+- `composer quality` PASS (PHPUnit 1,297: 1,295 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS).
+- The legacy-version label, isolated E2E PsySH history and post-copy Studio transition are fixed: successful copy-to-Draft opens the copied Draft on «Код» while publication still opens «Версии».
+- Final gates PASS: `composer quality` (PHPUnit 1,297: 1,295 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS), focused migration Playwright 2 / 2, full `npm run test:e2e` 96 / 96.
+
+---
+
+## X-029 — Native Runtime Hardening and E2E Review
+
+**Status:** DONE
+**Trigger:** after X-024 … X-028
+**Decision:** ADR-009; D-123; D-124; D-121; D-122
+
+Scope: security review; SSR / SEO assertions; multiple Block instances; CSS isolation; popups / forms / actions; Native JS cleanup; iframe only for Embed / sandbox / legacy; four Site types; tariff access; D-122 downgrade regression; publication atomicity; Playwright; documentation review.
+
+Result: reviewed the existing backend and browser coverage across the full scope; hardened published runtime CSP with conditional Yandex Metrica / SmartCaptcha origins while preserving the isolated legacy sandbox; expanded Playwright coverage for multiple Native JavaScript instances, failure isolation, action → Popup → Form submission and cleanup/remount behavior. Final gates PASS: `composer quality` (PHPUnit 1,299: 1,297 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS) and full `npm run test:e2e` 96 / 96.
 
 ---
 
@@ -4383,7 +4561,9 @@ Task statuses and results live in the phase sections above; this section only po
 - Special state: `P7-009 — Real Subscription Integration` DEFERRED.
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
-- Next: `P10-001 — Marketplace Listings` per order (P9-018 and P9-010 DEFERRED).
+- Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
+- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029` DONE.
+- Current: Native First-Party Block Runtime replan completed through `X-029`; no subsequent task started (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

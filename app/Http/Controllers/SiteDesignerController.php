@@ -5,6 +5,9 @@ namespace App\Http\Controllers;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
+use App\Blocks\BlockVersionGrants;
+use App\Blocks\LegacyBlockMigration;
+use App\Blocks\SiteTypeBlockAccess;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
@@ -20,7 +23,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess, BlockVersionGrants $grants, LegacyBlockMigration $legacy): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -33,6 +36,8 @@ class SiteDesignerController extends Controller
 
         $blocks = $page->blocks()->with('version.definition')->get();
         $vehicles = $vehicleBindings->forSite($site);
+        $licensed = $access->licensedBlockIds($site);
+        $granted = $grants->grantedVersionIds($site);
 
         return Inertia::render('sites/designer', [
             'site' => [
@@ -65,9 +70,13 @@ class SiteDesignerController extends Controller
                     'name' => $block->version->definition->name,
                     'version' => $block->version->version,
                     'is_hidden' => $block->is_hidden,
-                    'schema' => $block->version->schema_json,
-                    'sandbox' => $block->version->sandboxSource(),
-                    'state' => (object) $block->state_json,
+                    'schema' => $siteTypeAccess->schema($site, $block->version->schema_json),
+                    'sandbox' => $block->version->previewSource(),
+                    'state' => (object) $siteTypeAccess->visibleState($site, $block->version->schema_json, $block->state_json),
+                    'renderState' => (object) $block->state_json,
+                    'legacy' => LegacyBlockMigration::isLegacy($block->version)
+                        ? LegacyBlockMigration::props($legacy->forSite($site, $block->setRelation('page', $page), $licensed, $granted))
+                        : null,
                 ])
                 ->values()
                 ->all(),
@@ -88,7 +97,7 @@ class SiteDesignerController extends Controller
             'popups' => $popups->forSite($site),
             'referenceIssues' => (object) $references->inspectPage($page, $blocks),
             'selectedBlock' => $blocks->firstWhere('public_id', $request->query('block'))?->public_id,
-            'library' => $this->library($site, $access),
+            'library' => $site->site_type->hasLockedStructure() ? [] : $this->library($site, $access),
             'can' => [
                 'editDesign' => Gate::allows('editDesign', $site),
                 'editStructure' => Gate::allows('editStructure', $site),

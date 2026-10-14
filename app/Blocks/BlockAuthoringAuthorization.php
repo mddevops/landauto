@@ -49,4 +49,20 @@ final class BlockAuthoringAuthorization
             BlockOwnerScope::WorkspacePrivate => false,
         };
     }
+
+    public function canApproveNative(?User $user, BlockDefinition $block): bool
+    {
+        if ($user === null || ! $this->canEdit($user, $block)) {
+            return false;
+        }
+
+        return match ($block->owner_scope) {
+            BlockOwnerScope::Platform => $this->platform->allows($user, PlatformPermission::ManagePlatformContent)
+                && $this->platform->allows($user, PlatformPermission::ApproveNativeBlocks),
+            BlockOwnerScope::Developer => ($profile = $this->developerAuthor($user)) !== null
+                && $profile->id === $block->developer_profile_id
+                && $this->developers->allows($profile, DeveloperPermission::ApproveNativeBlocks),
+            BlockOwnerScope::WorkspacePrivate => false,
+        };
+    }
 }

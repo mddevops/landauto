@@ -241,8 +241,8 @@ function PermissionsDialog({
                     {form.data.permissions.length === 0 && (
                         <p className="text-sm text-muted-foreground">
                             Без прав разработчик сможет открыть панель, но не
-                            сможет создавать блоки, шаблоны и отправлять их на
-                            модерацию.
+                            сможет создавать блоки, шаблоны и публиковать их в
+                            Marketplace.
                         </p>
                     )}
                     <InputError

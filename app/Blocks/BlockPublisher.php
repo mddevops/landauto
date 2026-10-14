@@ -9,14 +9,15 @@ use App\Models\BlockDraft;
 use App\Models\BlockVersion;
 use App\Models\User;
 use Illuminate\Auth\Access\AuthorizationException;
+use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Log;
 use LogicException;
 
 /**
- * Publishes the saved Block Draft as the next immutable `sandboxed` Block Version (D-120): the
- * automated checks run first and are the only gate — there is no review queue. Earlier versions
- * and the Block Instances pinned to them never change.
+ * Approves the saved Block Draft as the next immutable `native` Block Version (D-123): the automated
+ * checks run first, then the explicit approval of the exact revision — there is no review queue
+ * (D-120). Earlier versions and the Block Instances pinned to them never change.
  */
 final class BlockPublisher
 {
@@ -26,6 +27,7 @@ final class BlockPublisher
     public function __construct(
         private BlockAuthoringAuthorization $authorization,
         private BlockSourceChecker $checker,
+        private BlockSourceFingerprint $fingerprint,
     ) {}
 
     /**
@@ -35,13 +37,17 @@ final class BlockPublisher
      */
     public function publish(User $actor, BlockDefinition $block, int $revision): BlockVersion
     {
-        if (! $this->authorization->canEdit($actor, $block)) {
+        if (! $this->authorization->canApproveNative($actor, $block)) {
             throw new AuthorizationException;
         }
 
         $version = DB::transaction(function () use ($actor, $block, $revision): BlockVersion {
             // Serializes publishing per Block so version numbers never collide.
             BlockDefinition::query()->whereKey($block->id)->lockForUpdate()->firstOrFail();
+
+            if (! $this->authorization->canApproveNative($actor, $block)) {
+                throw new AuthorizationException;
+            }
 
             $draft = BlockDraft::query()->where('block_definition_id', $block->id)->first();
 
@@ -68,23 +74,33 @@ final class BlockPublisher
             $schema = json_decode($sources['schema'], true, 64, JSON_THROW_ON_ERROR);
             $latest = $block->versions()->latest('id')->first();
 
-            if ($latest !== null && $this->sameContent($latest, $sources, $schema)) {
+            // Unchanged sources of a legacy sandboxed version are a migration, not a duplicate (ADR-009 §10).
+            if ($latest !== null && $latest->runtime === BlockRuntime::Native && $this->sameContent($latest, $sources, $schema)) {
                 throw new BlockPublishException("Изменений с версии {$latest->version} нет.");
             }
 
             $version = new BlockVersion(['version' => $this->nextVersion($latest, $schema), 'schema_json' => $schema]);
-            $version->runtime = BlockRuntime::Sandboxed;
+            $hash = $this->fingerprint->fromDraft($sources);
+            $version->runtime = BlockRuntime::Native;
             $version->html = $sources['html'];
             $version->css = $sources['css'];
             $version->js = $sources['js'];
             $version->definition()->associate($block);
             $version->publisher()->associate($actor);
+            $version->approved_revision = $revision;
+            $version->approved_source_hash = $hash;
+            $version->approver()->associate($actor);
+            $version->approved_at = Carbon::now();
             $version->save();
+
+            if (! hash_equals($hash, $this->fingerprint->fromVersion($version))) {
+                throw new LogicException('Native Block source fingerprint mismatch.');
+            }
 
             return $version;
         });
 
-        $context = ['block' => $block->public_id, 'version' => $version->version];
+        $context = ['block' => $block->public_id, 'version' => $version->version, 'source_hash' => $version->approved_source_hash];
 
         if ($block->isDeveloperOwned()) {
             $context['developer_profile'] = $block->developerProfile?->public_id;

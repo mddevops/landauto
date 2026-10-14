@@ -177,21 +177,48 @@ class TemplateInstallationTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->where('templates.0.site_types', ['multi_page']));
     }
 
-    public function test_entitlement_template_follows_the_workspace_plan(): void
+    public function test_template_access_uses_explicit_plan_inclusion(): void
     {
         $template = $this->template([SiteType::Landing]);
         $this->placeBlock($template->pages()->sole(), 'hero');
         $this->publish($template);
-        $template->forceFill(['access_mode' => CatalogAccessMode::Entitlement, 'access_entitlement' => Entitlement::RemoveBranding])->save();
+        $template->forceFill(['access_mode' => CatalogAccessMode::Entitlement, 'access_entitlement' => null])->save();
 
         $this->createSite($template, SiteType::Landing)
-            ->assertSessionHasErrors(['template' => 'Шаблон доступен на тарифе с опцией «Без брендинга Landflow».']);
+            ->assertSessionHasErrors(['template' => 'Шаблон пока не включён ни в один тариф.']);
         $this->asCustomer()->get(route('sites.create'))
             ->assertInertia(fn (Assert $page) => $page
                 ->where('templates.0.available', false)
                 ->where('templates.0.access.restricted', true));
 
-        $this->plan->setEntitlement(Entitlement::RemoveBranding, true);
+        $template->plans()->attach($this->plan);
+        $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
+        $this->assertSame(1, Site::query()->count());
+    }
+
+    public function test_template_plan_access_uses_an_explicit_plan_mapping(): void
+    {
+        $template = $this->template([SiteType::Landing]);
+        $this->placeBlock($template->pages()->sole(), 'hero');
+        $this->publish($template);
+        $template->forceFill(['access_mode' => CatalogAccessMode::Entitlement, 'access_entitlement' => null])->save();
+
+        $admin = User::factory()->create();
+        PlatformRoleAssignment::query()->create(['user_id' => $admin->id, 'role' => PlatformRole::SuperAdmin->value]);
+
+        $this->createSite($template, SiteType::Landing)
+            ->assertSessionHasErrors(['template' => 'Шаблон пока не включён ни в один тариф.']);
+
+        $otherPlan = Plan::factory()->create();
+        $this->actingAs($admin)
+            ->put(route('platform.catalog-access.templates.update', $template->public_id), ['plan_keys' => [$otherPlan->key]])
+            ->assertRedirect(route('platform.catalog-access.index'));
+        $this->createSite($template, SiteType::Landing)
+            ->assertSessionHasErrors(['template' => 'Для доступа к шаблону нужен тариф «'.$otherPlan->name.'» или отдельная лицензия каталога.']);
+
+        $this->actingAs($admin)
+            ->put(route('platform.catalog-access.templates.update', $template->public_id), ['plan_keys' => [$this->plan->key]])
+            ->assertRedirect(route('platform.catalog-access.index'));
         $this->createSite($template, SiteType::Landing)->assertSessionHasNoErrors();
         $this->assertSame(1, Site::query()->count());
     }
@@ -337,7 +364,7 @@ class TemplateInstallationTest extends TestCase
 
         $this->actingAs($author)->get(route('studio.templates.show', $template))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('access', ['mode' => 'free', 'entitlement' => null, 'site_price' => '', 'workspace_price' => ''])
+                ->where('access', ['mode' => 'free', 'site_price' => '', 'workspace_price' => ''])
                 ->has('accessModes', 4));
 
         $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'paid', 'site_price' => '4 900', 'workspace_price' => '14 900'])
@@ -348,13 +375,13 @@ class TemplateInstallationTest extends TestCase
 
         $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'paid'])
             ->assertSessionHasErrors('site_price');
-        $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'entitlement', 'entitlement' => 'max_sites'])
-            ->assertSessionHasErrors('entitlement');
+        $this->actingAs($author)->put(route('studio.templates.access', $template), ['mode' => 'entitlement'])
+            ->assertSessionHasNoErrors();
 
         $stranger = DeveloperProfile::factory()->withPermissions()->create()->user;
         $this->actingAs($stranger)->put(route('studio.templates.access', $template), ['mode' => 'free'])->assertNotFound();
         $this->actingAs($this->customer)->put(route('studio.templates.access', $template), ['mode' => 'free'])->assertNotFound();
-        $this->assertSame(CatalogAccessMode::Paid, $template->fresh()?->access_mode);
+        $this->assertSame(CatalogAccessMode::Entitlement, $template->fresh()?->access_mode);
     }
 
     public function test_super_admin_grants_a_template_license(): void

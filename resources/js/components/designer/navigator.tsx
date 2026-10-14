@@ -6,6 +6,7 @@ import {
     Eye,
     EyeOff,
     Plus,
+    RefreshCw,
     Trash2,
     TriangleAlert,
 } from 'lucide-react';
@@ -173,9 +174,38 @@ export function Navigator({
                                             (есть устаревшие ссылки)
                                         </span>
                                     )}
+                                    {block.legacy && (
+                                        <span className="sr-only">
+                                            {' '}
+                                            (устаревшая изолированная версия)
+                                        </span>
+                                    )}
                                 </button>
                                 {canEdit && (
                                     <>
+                                        {block.legacy && (
+                                            <IconAction
+                                                label={
+                                                    block.legacy?.available
+                                                        ? `Обновить «${block.name}» до нативной версии ${block.legacy.target_version}`
+                                                        : `Нативное обновление «${block.name}» недоступно`
+                                                }
+                                                disabled={
+                                                    !block.legacy.available
+                                                }
+                                                onClick={() =>
+                                                    router.post(
+                                                        routes.upgrade(
+                                                            block.public_id,
+                                                        ),
+                                                        {},
+                                                        visit,
+                                                    )
+                                                }
+                                            >
+                                                <RefreshCw />
+                                            </IconAction>
+                                        )}
                                         <IconAction
                                             label={`Переместить «${block.name}» выше`}
                                             disabled={index === 0}
@@ -260,6 +290,18 @@ export function Navigator({
                         ))}
                     </ol>
                 )}
+                {blocks
+                    .filter((block) => block.legacy)
+                    .map((block) => (
+                        <p
+                            key={`${block.public_id}-legacy`}
+                            className="text-xs text-amber-700 dark:text-amber-400"
+                        >
+                            {block.legacy?.available
+                                ? `Блок «${block.name}» можно обновить до нативной версии ${block.legacy.target_version}.`
+                                : `Блок «${block.name}» использует устаревшую изолированную версию. ${block.legacy?.reason ?? ''}`}
+                        </p>
+                    ))}
             </section>
 
             {canEdit && (

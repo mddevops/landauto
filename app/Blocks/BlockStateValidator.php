@@ -210,11 +210,20 @@ final class BlockStateValidator
             BlockFieldType::Boolean => $this->validateBoolean($value, $path),
             BlockFieldType::Select => $this->validateSelect($field, $value, $path),
             BlockFieldType::Image => $this->validateImage($value, $path),
+            BlockFieldType::Color => $this->validatePattern($value, $path, '/^#[0-9A-Fa-f]{6}$/', 'Укажите цвет в формате #RRGGBB.'),
+            BlockFieldType::Font => $this->validatePattern($value, $path, '/^(sans|serif)$/', 'Выберите поддерживаемый шрифт.'),
             BlockFieldType::Action => $this->validateAction($value, $path),
             BlockFieldType::Vehicle => $this->reference('vehicles', is_string($value) ? $value : '', $path, 'Выберите автомобиль этого сайта.'),
             BlockFieldType::Group => $this->validateObject($this->nestedFields($field), $value, $path, false),
             BlockFieldType::Repeater => $this->validateRepeater($field, $value, $path),
         };
+    }
+
+    private function validatePattern(mixed $value, string $path, string $pattern, string $message): void
+    {
+        if (! is_string($value) || preg_match($pattern, $value) !== 1) {
+            $this->errors[$path] = $message;
+        }
     }
 
     /**

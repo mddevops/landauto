@@ -76,9 +76,9 @@ export type BlockStudioPageProps = {
     draft: BlockDraft;
     versions: PublishedBlockVersion[];
     publishBlockedReason: string | null;
+    canApproveNative: boolean;
     access: BlockAccessSettings;
     accessModes: Choice[];
-    accessEntitlements: Choice[];
     categories: Choice[];
     sourceMaxBytes: number;
 };
@@ -88,6 +88,7 @@ type BlockStudioProps = BlockStudioPageProps & {
     draftUrl: string;
     publishUrl: string;
     accessUrl: string;
+    copyLegacyVersionUrl: (version: string) => string;
 };
 
 export function BlockStudio({
@@ -95,15 +96,16 @@ export function BlockStudio({
     draft,
     versions,
     publishBlockedReason,
+    canApproveNative,
     access,
     accessModes,
-    accessEntitlements,
     categories,
     sourceMaxBytes,
     metadataAction,
     draftUrl,
     publishUrl,
     accessUrl,
+    copyLegacyVersionUrl,
 }: BlockStudioProps) {
     const autosave = useDraftAutosave(draftUrl, draft);
     const { sources, status, errors } = autosave;
@@ -115,6 +117,7 @@ export function BlockStudio({
         draft.saved_at !== null &&
         draft.checks.length === 0 &&
         publishBlockedReason === null &&
+        canApproveNative &&
         !publishing;
 
     const publish = () => {
@@ -198,7 +201,7 @@ export function BlockStudio({
                         ) : (
                             <Upload aria-hidden="true" />
                         )}
-                        Опубликовать
+                        Одобрить и опубликовать
                     </Button>
                 </div>
             </header>
@@ -206,11 +209,13 @@ export function BlockStudio({
                 id="studio-publish-hint"
                 className="-mt-2 text-xs text-muted-foreground lg:text-right"
             >
-                {publishHint({
-                    blockedReason: publishBlockedReason,
-                    saved: status === 'saved' && draft.saved_at !== null,
-                    issues: draft.checks.length,
-                })}
+                {!canApproveNative
+                    ? 'Нет права одобрять нативные блоки.'
+                    : publishHint({
+                          blockedReason: publishBlockedReason,
+                          saved: status === 'saved' && draft.saved_at !== null,
+                          issues: draft.checks.length,
+                      })}
             </p>
 
             {publishError && (
@@ -343,7 +348,14 @@ export function BlockStudio({
                         />
                     )}
 
-                    {mode === 'versions' && <VersionList versions={versions} />}
+                    {mode === 'versions' && (
+                        <VersionList
+                            versions={versions}
+                            revision={draft.revision}
+                            copyLegacyVersionUrl={copyLegacyVersionUrl}
+                            onCopied={() => setMode('code')}
+                        />
+                    )}
 
                     {mode === 'settings' && (
                         <BlockSettings
@@ -352,7 +364,6 @@ export function BlockStudio({
                             action={metadataAction}
                             access={access}
                             accessModes={accessModes}
-                            accessEntitlements={accessEntitlements}
                             accessUrl={accessUrl}
                         />
                     )}
@@ -441,7 +452,17 @@ function publishHint({
     return 'Публикация создаст новую неизменяемую версию; сайты, где блок уже используется, не изменятся.';
 }
 
-function VersionList({ versions }: { versions: PublishedBlockVersion[] }) {
+function VersionList({
+    versions,
+    revision,
+    copyLegacyVersionUrl,
+    onCopied,
+}: {
+    versions: PublishedBlockVersion[];
+    revision: number;
+    copyLegacyVersionUrl: (version: string) => string;
+    onCopied: () => void;
+}) {
     return (
         <section
             aria-labelledby="studio-versions-title"
@@ -475,6 +496,28 @@ function VersionList({ versions }: { versions: PublishedBlockVersion[] }) {
                             <Badge variant="outline">
                                 {version.runtime_label}
                             </Badge>
+                            {version.legacy && (
+                                <Button
+                                    type="button"
+                                    variant="outline"
+                                    size="sm"
+                                    onClick={() =>
+                                        router.post(
+                                            copyLegacyVersionUrl(
+                                                version.version,
+                                            ),
+                                            { revision },
+                                            {
+                                                preserveScroll: true,
+                                                onSuccess: onCopied,
+                                            },
+                                        )
+                                    }
+                                >
+                                    <FileCode2 aria-hidden="true" />
+                                    Скопировать в черновик
+                                </Button>
+                            )}
                             <span className="text-muted-foreground">
                                 {formatBlockDate(version.published_at)}
                             </span>
@@ -582,7 +625,6 @@ function BlockSettings({
     action,
     access,
     accessModes,
-    accessEntitlements,
     accessUrl,
 }: {
     block: AuthoringBlockDetail;
@@ -590,7 +632,6 @@ function BlockSettings({
     action: RouteFormDefinition<'post'>;
     access: BlockAccessSettings;
     accessModes: Choice[];
-    accessEntitlements: Choice[];
     accessUrl: string;
 }) {
     return (
@@ -677,7 +718,6 @@ function BlockSettings({
                 description="Как клиенты могут добавлять опубликованный блок на свои сайты. Платный блок продаётся лицензией на один сайт, на всё пространство или обеими; покупка лицензий в Landflow пока недоступна. Сайты, которые уже установили версию блока, сохраняют её при смене доступа."
                 access={access}
                 modes={accessModes}
-                entitlements={accessEntitlements}
                 url={accessUrl}
                 className="lg:col-span-2"
             />

@@ -44,6 +44,7 @@ class PlatformBlockController extends Controller
             'blocks' => BlockDefinition::query()
                 ->platformOwned()
                 ->withCount('versions')
+                ->withLatestRuntime()
                 ->orderBy('name')
                 ->orderBy('id')
                 ->get()
@@ -76,9 +77,9 @@ class PlatformBlockController extends Controller
         return to_route('platform.blocks.show', $block);
     }
 
-    public function show(string $block): Response
+    public function show(Request $request, string $block): Response
     {
-        return Inertia::render('platform/blocks/show', $this->presenter->studio($this->find($block)));
+        return Inertia::render('platform/blocks/show', $this->presenter->studio($this->find($block), $this->actor($request)));
     }
 
     public function update(UpdateBlockDefinitionRequest $request, string $block): RedirectResponse
@@ -112,6 +113,14 @@ class PlatformBlockController extends Controller
         return to_route('platform.blocks.show', $definition);
     }
 
+    public function copyVersion(Request $request, string $block, string $version): RedirectResponse
+    {
+        $definition = $this->find($block);
+        $this->copyLegacyVersionToDraft($this->studio, $request, $this->actor($request), $definition, $version);
+
+        return to_route('platform.blocks.show', $definition);
+    }
+
     public function publish(PublishBlockRequest $request, string $block, BlockPublisher $publisher): RedirectResponse
     {
         $definition = $this->find($block);
@@ -127,6 +136,7 @@ class PlatformBlockController extends Controller
             ->where('public_id', $publicId)
             ->with('draft')
             ->withCount('versions')
+            ->withLatestRuntime()
             ->firstOrFail();
     }
 

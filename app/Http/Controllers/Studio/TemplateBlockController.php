@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Studio;
 
 use App\Blocks\BlockStateDefaults;
+use App\Blocks\LegacyBlockMigration;
 use App\Exceptions\InvalidBlockStateException;
 use App\Http\Controllers\Concerns\ResolvesEditableTemplates;
 use App\Http\Controllers\Controller;
@@ -16,6 +17,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 /**
  * Block Instances of a Template Draft, edited through the existing Designer. Only catalog Blocks
@@ -98,6 +100,19 @@ class TemplateBlockController extends Controller
         });
 
         return $this->backTo($found, $templateBlock->page, $copy);
+    }
+
+    /**
+     * Moves a legacy sandboxed Block of the Template Draft to its approved Native version (ADR-009 §10).
+     */
+    public function upgrade(Request $request, string $template, string $block, LegacyBlockMigration $migration): RedirectResponse
+    {
+        $found = $this->editableTemplate($request, $template);
+        $templateBlock = $this->templateBlock($found, $block);
+        $version = $migration->upgradeTemplateBlock($templateBlock);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Блок обновлён до нативной версии {$version->version}."]);
+
+        return $this->backTo($found, $templateBlock->page, $templateBlock);
     }
 
     public function visibility(Request $request, string $template, string $block): RedirectResponse

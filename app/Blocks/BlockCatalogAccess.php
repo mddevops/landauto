@@ -2,6 +2,7 @@
 
 namespace App\Blocks;
 
+use App\Catalog\PlanCatalogAccess;
 use App\Enums\CatalogAccessMode;
 use App\Models\BlockDefinition;
 use App\Models\CatalogLicense;
@@ -9,19 +10,18 @@ use App\Models\Site;
 use App\Models\Template;
 use App\Models\Workspace;
 use App\Support\Money;
-use App\Support\WorkspaceEntitlements;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
  * Backend check whether a Site may newly acquire a catalog Block (D-121): when adding a Block
  * Instance, installing a Template and publishing a version the Site holds no grant for, never only
- * when rendering a card. A license for the Site itself or for its Workspace grants access; a typed
- * entitlement grants access in `entitlement` mode. No plan-name checks. Versions the Site already
+ * when rendering a card. A license for the Site itself or for its Workspace grants access; an
+ * explicit Plan mapping grants access in `entitlement` mode. No plan-name checks. Versions the Site already
  * installed lawfully stay usable through {@see BlockVersionGrants} (D-122).
  */
 final class BlockCatalogAccess
 {
-    public function __construct(private WorkspaceEntitlements $entitlements) {}
+    public function __construct(private PlanCatalogAccess $plans) {}
 
     /**
      * Russian reason why the Site may not newly use the Block; null when it may.
@@ -88,12 +88,16 @@ final class BlockCatalogAccess
      */
     public static function card(BlockDefinition|Template $item): array
     {
+        $planNames = $item->access_mode === CatalogAccessMode::Entitlement
+            ? app(PlanCatalogAccess::class)->includedPlanNames($item)
+            : [];
+
         return [
             'mode' => $item->access_mode->value,
             'restricted' => $item->access_mode !== CatalogAccessMode::Free,
             'label' => $item->access_mode->label(),
             'detail' => match ($item->access_mode) {
-                CatalogAccessMode::Entitlement => "Опция тарифа: {$item->access_entitlement?->label()}",
+                CatalogAccessMode::Entitlement => $planNames === [] ? 'Тарифы не назначены' : 'Тарифы: '.implode(', ', $planNames),
                 CatalogAccessMode::Paid => self::priceDetail($item),
                 CatalogAccessMode::Free, CatalogAccessMode::AdminGrant => null,
             },
@@ -104,9 +108,9 @@ final class BlockCatalogAccess
     {
         return match ($block->access_mode) {
             CatalogAccessMode::Free => null,
-            CatalogAccessMode::Entitlement => $block->access_entitlement !== null && $this->entitlements->allows($workspace, $block->access_entitlement)
+            CatalogAccessMode::Entitlement => $this->plans->includes($workspace, $block)
                 ? null
-                : "Блок доступен на тарифе с опцией «{$block->access_entitlement?->label()}».",
+                : $this->plans->denial($block, 'Блок'),
             CatalogAccessMode::Paid => 'Платный блок: нужна лицензия на этот сайт или на всё пространство. Покупка в Landflow пока недоступна.',
             CatalogAccessMode::AdminGrant => 'Блок выдаёт администратор Landflow для сайта или всего пространства.',
         };

@@ -60,7 +60,6 @@ class CatalogAccessTest extends TestCase
             'free' => $this->catalogBlock('dev-free', 'Бесплатная карточка', []),
             'entitlement' => $this->catalogBlock('dev-plan', 'Карточка по тарифу', [
                 'access_mode' => CatalogAccessMode::Entitlement,
-                'access_entitlement' => Entitlement::RemoveBranding,
             ]),
             'paid' => $this->catalogBlock('dev-paid', 'Платная карточка', [
                 'access_mode' => CatalogAccessMode::Paid,
@@ -94,9 +93,9 @@ class CatalogAccessTest extends TestCase
                 );
                 $this->assertTrue($items['dev-free']['available']);
 
-                $this->assertSame('Опция тарифа: Без брендинга Landflow', $items['dev-plan']['access']['detail']);
+                $this->assertSame('Тарифы не назначены', $items['dev-plan']['access']['detail']);
                 $this->assertFalse($items['dev-plan']['available']);
-                $this->assertSame('Блок доступен на тарифе с опцией «Без брендинга Landflow».', $items['dev-plan']['reason']);
+                $this->assertSame('Блок пока не включён ни в один тариф.', $items['dev-plan']['reason']);
 
                 $this->assertSame("Лицензия на 1 сайт — 1\u{00A0}500,50\u{00A0}₽ · Лицензия на всё пространство — 14\u{00A0}900\u{00A0}₽", $items['dev-paid']['access']['detail']);
                 $this->assertSame('Платно', $items['dev-paid']['access']['label']);
@@ -111,13 +110,19 @@ class CatalogAccessTest extends TestCase
 
     public function test_each_access_mode_is_checked_when_adding_a_block(): void
     {
+        // Plan assignments are valid only for «По тарифу»; they never grant paid or admin-grant items.
+        $this->blocks['paid']->plans()->attach($this->plan);
+        $this->blocks['grant']->plans()->attach($this->plan);
+
         $this->add('dev-free')->assertSessionHasNoErrors();
-        $this->add('dev-plan')->assertSessionHasErrors(['block' => 'Блок доступен на тарифе с опцией «Без брендинга Landflow».']);
+        $this->add('dev-plan')->assertSessionHasErrors(['block' => 'Блок пока не включён ни в один тариф.']);
+        $this->plan->setEntitlement(Entitlement::RemoveBranding, true);
+        $this->add('dev-plan')->assertSessionHasErrors(['block' => 'Блок пока не включён ни в один тариф.']);
         $this->add('dev-paid')->assertSessionHasErrors(['block' => 'Платный блок: нужна лицензия на этот сайт или на всё пространство. Покупка в Landflow пока недоступна.']);
         $this->add('dev-grant')->assertSessionHasErrors(['block' => 'Блок выдаёт администратор Landflow для сайта или всего пространства.']);
         $this->assertSame(1, $this->placedCount());
 
-        $this->plan->setEntitlement(Entitlement::RemoveBranding, true);
+        $this->blocks['entitlement']->plans()->attach($this->plan);
         $this->add('dev-plan')->assertSessionHasNoErrors();
         $this->add('dev-paid')->assertSessionHasErrors('block');
         $this->add('dev-grant')->assertSessionHasErrors('block');
@@ -127,6 +132,46 @@ class CatalogAccessTest extends TestCase
         $this->add('dev-paid')->assertSessionHasNoErrors();
         $this->add('dev-grant')->assertSessionHasNoErrors();
         $this->assertSame(4, $this->placedCount());
+    }
+
+    public function test_inactive_mapped_plan_does_not_grant_catalog_access(): void
+    {
+        $block = $this->blocks['entitlement'];
+        $block->plans()->attach($this->plan);
+        $this->plan->update(['is_active' => false]);
+
+        $this->add('dev-plan')->assertSessionHasErrors(['block' => 'Блок пока не включён ни в один тариф.']);
+
+        $this->plan->update(['is_active' => true]);
+        $this->add('dev-plan')->assertSessionHasNoErrors();
+    }
+
+    public function test_catalog_plan_matrix_is_admin_managed_and_matches_plan_keys_explicitly(): void
+    {
+        $admin = $this->userWithRole(PlatformRole::SuperAdmin);
+        $block = $this->blocks['entitlement'];
+
+        $this->actingAs($admin)->get(route('platform.catalog-access.index'))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->component('platform/catalog-access/index')
+                ->where('items', fn ($items): bool => collect($items)->contains(fn ($item): bool => $item['kind'] === 'block' && $item['public_id'] === $block->public_id))
+                ->missing('items.0.id'));
+
+        $this->actingAs($this->owner)->get(route('platform.catalog-access.index'))->assertForbidden();
+        $this->actingAs($admin)
+            ->put(route('platform.catalog-access.blocks.update', $block->public_id), ['plan_keys' => [$this->plan->key]])
+            ->assertRedirect(route('platform.catalog-access.index'));
+        $this->assertSame([$this->plan->id], $block->plans()->pluck('plans.id')->all());
+
+        $this->actingAs($admin)
+            ->put(route('platform.catalog-access.blocks.update', $block->public_id), ['plan_keys' => ['missing-plan']])
+            ->assertSessionHasErrors('plan_keys.0');
+
+        $this->actingAs($admin)
+            ->put(route('platform.catalog-access.blocks.update', $this->blocks['free']->public_id), ['plan_keys' => [$this->plan->key]])
+            ->assertStatus(422);
+        $this->assertSame([], $this->blocks['free']->plans()->pluck('plans.id')->all());
     }
 
     public function test_a_license_covers_only_its_own_site(): void
@@ -147,13 +192,13 @@ class CatalogAccessTest extends TestCase
         $this->assertSame(0, $otherHome->blocks()->count());
     }
 
-    public function test_entitlement_and_license_stay_separate(): void
+    public function test_plan_catalog_access_and_license_stay_separate(): void
     {
         $this->plan->setEntitlement(Entitlement::RemoveBranding, true);
         $this->add('dev-paid')->assertSessionHasErrors('block');
         $this->add('dev-grant')->assertSessionHasErrors('block');
 
-        $this->plan->setEntitlement(Entitlement::RemoveBranding, false);
+        $this->blocks['entitlement']->plans()->attach($this->plan);
         $this->license($this->site, 'entitlement');
         $this->add('dev-plan')->assertSessionHasNoErrors();
         $this->assertSame(1, $this->placedCount());
@@ -190,14 +235,13 @@ class CatalogAccessTest extends TestCase
         $this->assertContains('block_access_denied', $issues->errorCodes());
         $this->assertStringContainsString('«Карточка по тарифу»', implode(' ', array_column($issues->toArray()['errors'], 'message')));
 
-        $this->plan->setEntitlement(Entitlement::RemoveBranding, true);
+        $this->blocks['entitlement']->plans()->attach($this->plan);
         $this->assertNotContains('block_access_denied', $this->issueCodes());
     }
 
     public function test_model_rejects_inconsistent_access_fields(): void
     {
         $invalid = [
-            ['access_mode' => CatalogAccessMode::Entitlement],
             ['access_mode' => CatalogAccessMode::Entitlement, 'access_entitlement' => Entitlement::MaxSites],
             ['access_mode' => CatalogAccessMode::Paid, 'price_currency' => 'RUB'],
             ['access_mode' => CatalogAccessMode::Paid, 'site_price_minor' => 0, 'price_currency' => 'RUB'],
@@ -229,9 +273,8 @@ class CatalogAccessTest extends TestCase
 
         $this->actingAs($user)->get(route('developer.blocks.show', $block))
             ->assertInertia(fn (Assert $page) => $page
-                ->where('access', ['mode' => 'free', 'entitlement' => null, 'site_price' => '', 'workspace_price' => ''])
-                ->has('accessModes', 4)
-                ->where('accessEntitlements', fn ($choices): bool => collect($choices)->pluck('value')->all() === ['custom_domain', 'remove_branding', 'multi_page_sites']));
+                ->where('access', ['mode' => 'free', 'site_price' => '', 'workspace_price' => ''])
+                ->has('accessModes', 4));
 
         $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '1 500,5'])
             ->assertSessionHasNoErrors()
@@ -244,7 +287,7 @@ class CatalogAccessTest extends TestCase
         $block->refresh();
         $this->assertSame([null, 1_490_000], [$block->site_price_minor, $block->workspace_price_minor]);
         $this->actingAs($user)->get(route('developer.blocks.show', $block))
-            ->assertInertia(fn (Assert $page) => $page->where('access', ['mode' => 'paid', 'entitlement' => null, 'site_price' => '', 'workspace_price' => '14900']));
+            ->assertInertia(fn (Assert $page) => $page->where('access', ['mode' => 'paid', 'site_price' => '', 'workspace_price' => '14900']));
 
         $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '4900', 'workspace_price' => '14900'])
             ->assertSessionHasNoErrors();
@@ -261,15 +304,15 @@ class CatalogAccessTest extends TestCase
 
         $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'paid', 'site_price' => '0'])
             ->assertSessionHasErrors('site_price');
-        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement', 'entitlement' => 'max_sites'])
-            ->assertSessionHasErrors('entitlement');
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement'])
+            ->assertSessionHasNoErrors();
         $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'reseller'])
             ->assertSessionHasErrors('mode');
 
-        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement', 'entitlement' => 'multi_page_sites', 'site_price' => '900', 'workspace_price' => '900'])
+        $this->actingAs($user)->put(route('developer.blocks.access', $block), ['mode' => 'entitlement', 'site_price' => '900', 'workspace_price' => '900'])
             ->assertSessionHasNoErrors();
         $block->refresh();
-        $this->assertSame([CatalogAccessMode::Entitlement, Entitlement::MultiPageSites, null, null, null], [$block->access_mode, $block->access_entitlement, $block->site_price_minor, $block->workspace_price_minor, $block->price_currency]);
+        $this->assertSame([CatalogAccessMode::Entitlement, null, null, null, null], [$block->access_mode, $block->access_entitlement, $block->site_price_minor, $block->workspace_price_minor, $block->price_currency]);
 
         $foreign = $this->catalogBlock('foreign-card', 'Чужая карточка', [], DeveloperProfile::factory()->withPermissions()->create());
         $this->actingAs($user)->put(route('developer.blocks.access', $foreign), ['mode' => 'admin_grant'])->assertNotFound();

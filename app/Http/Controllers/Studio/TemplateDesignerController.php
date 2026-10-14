@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Studio;
 
 use App\Blocks\BlockCatalogAccess;
+use App\Blocks\LegacyBlockMigration;
 use App\Http\Controllers\Concerns\ResolvesEditableTemplates;
 use App\Http\Controllers\Controller;
 use App\Models\BlockDefinition;
@@ -78,6 +79,8 @@ class TemplateDesignerController extends Controller
      */
     private function common(Template $template, Collection $pages, TemplatePage $page, Collection $blocks, bool $includeHidden): array
     {
+        $legacy = app(LegacyBlockMigration::class);
+
         return [
             'template' => [
                 'public_id' => $template->public_id,
@@ -96,8 +99,11 @@ class TemplateDesignerController extends Controller
                     'version' => $block->version->version,
                     'is_hidden' => $block->is_hidden,
                     'schema' => $block->version->schema_json,
-                    'sandbox' => $block->version->sandboxSource(),
+                    'sandbox' => $block->version->previewSource(),
                     'state' => (object) $block->state_json,
+                    'legacy' => LegacyBlockMigration::isLegacy($block->version)
+                        ? LegacyBlockMigration::props($legacy->forTemplate($block->setRelation('page', $page)))
+                        : null,
                 ])
                 ->values()
                 ->all(),

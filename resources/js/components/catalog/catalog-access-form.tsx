@@ -6,13 +6,12 @@ import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
 import type { BlockAccessSettings } from '@/types/blocks';
 
-/** Catalog access (D-121) of a Block or Template: mode, entitlement or Site / Workspace license prices. */
+/** Catalog access (D-121 / X-026): mode or Site / Workspace license prices. */
 export function CatalogAccessForm({
     idPrefix,
     description,
     access,
     modes,
-    entitlements,
     url,
     className,
 }: {
@@ -20,18 +19,15 @@ export function CatalogAccessForm({
     description: string;
     access: BlockAccessSettings;
     modes: Choice[];
-    entitlements: Choice[];
     url: string;
     className?: string;
 }) {
     const form = useForm<{
         mode: string;
-        entitlement: string;
         site_price: string;
         workspace_price: string;
     }>({
         mode: access.mode,
-        entitlement: access.entitlement ?? '',
         site_price: access.site_price,
         workspace_price: access.workspace_price,
     });
@@ -69,18 +65,10 @@ export function CatalogAccessForm({
                     error={form.errors.mode}
                 />
                 {form.data.mode === 'entitlement' && (
-                    <SelectField
-                        id={`${idPrefix}-entitlement`}
-                        label="Опция тарифа"
-                        choices={entitlements}
-                        emptyLabel="Выберите опцию"
-                        value={form.data.entitlement}
-                        onChange={(event) =>
-                            form.setData('entitlement', event.target.value)
-                        }
-                        required
-                        error={form.errors.entitlement}
-                    />
+                    <p className="text-sm text-muted-foreground sm:col-span-2">
+                        Состав тарифов настраивается администратором Landflow в
+                        разделе «Доступ по тарифам».
+                    </p>
                 )}
                 {form.data.mode === 'paid' && (
                     <>

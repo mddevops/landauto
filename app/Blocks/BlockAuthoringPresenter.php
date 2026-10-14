@@ -5,10 +5,10 @@ namespace App\Blocks;
 use App\Enums\BlockCategory;
 use App\Enums\BlockRuntime;
 use App\Enums\CatalogAccessMode;
-use App\Enums\Entitlement;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
 use App\Models\BlockVersion;
+use App\Models\User;
 use App\Support\Money;
 use stdClass;
 
@@ -20,10 +20,14 @@ final class BlockAuthoringPresenter
     public function __construct(
         private BlockStudio $studio,
         private BlockSourceChecker $checker,
+        private BlockAuthoringAuthorization $authorization,
     ) {}
 
     /**
-     * @return array{public_id: string, name: string, slug: string, category: string, category_label: string, versions_count: int, updated_at: string|null}
+     * `needs_migration`: the latest version is legacy sandboxed (ADR-009 §10); needs the
+     * {@see BlockDefinition::scopeWithLatestRuntime()} column.
+     *
+     * @return array{public_id: string, name: string, slug: string, category: string, category_label: string, versions_count: int, needs_migration: bool, updated_at: string|null}
      */
     public function listItem(BlockDefinition $block): array
     {
@@ -34,12 +38,13 @@ final class BlockAuthoringPresenter
             'category' => $block->category->value,
             'category_label' => $block->category->label(),
             'versions_count' => (int) $block->getAttribute('versions_count'),
+            'needs_migration' => $block->getAttribute('latest_runtime') === BlockRuntime::Sandboxed->value,
             'updated_at' => $block->updated_at?->toIso8601String(),
         ];
     }
 
     /**
-     * @return array<string, string|int|null>
+     * @return array<string, string|int|bool|null>
      */
     public function detail(BlockDefinition $block): array
     {
@@ -57,7 +62,7 @@ final class BlockAuthoringPresenter
      *
      * @return array<string, mixed>
      */
-    public function studio(BlockDefinition $block): array
+    public function studio(BlockDefinition $block, ?User $actor = null): array
     {
         $versions = $block->versions()->latest('id')->get();
         $official = $versions->contains(fn (BlockVersion $version): bool => $version->runtime === BlockRuntime::Official);
@@ -67,21 +72,18 @@ final class BlockAuthoringPresenter
             'draft' => $this->draft($this->studio->draftFor($block)),
             'versions' => $versions->map(fn (BlockVersion $version): array => [
                 'version' => $version->version,
-                'runtime_label' => $version->runtime->label(),
+                'runtime_label' => LegacyBlockMigration::isLegacy($version) ? 'Изолированный' : $version->runtime->label(),
+                'legacy' => LegacyBlockMigration::isLegacy($version),
                 'published_at' => $version->created_at?->toIso8601String(),
             ])->values()->all(),
             'publishBlockedReason' => $official ? BlockPublisher::OFFICIAL_RUNTIME : null,
+            'canApproveNative' => $this->authorization->canApproveNative($actor, $block),
             'access' => [
                 'mode' => $block->access_mode->value,
-                'entitlement' => $block->access_entitlement?->value,
                 'site_price' => $block->site_price_minor !== null ? Money::toInput($block->site_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
                 'workspace_price' => $block->workspace_price_minor !== null ? Money::toInput($block->workspace_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
             ],
             'accessModes' => CatalogAccessMode::options(),
-            'accessEntitlements' => array_map(
-                fn (Entitlement $entitlement): array => ['value' => $entitlement->value, 'label' => $entitlement->label()],
-                Entitlement::catalogGates(),
-            ),
             'categories' => BlockCategory::options(),
             'sourceMaxBytes' => BlockStudio::SOURCE_MAX_BYTES,
         ];

@@ -5,6 +5,8 @@ export type SchemaFieldType =
     | 'boolean'
     | 'select'
     | 'image'
+    | 'color'
+    | 'font'
     | 'action'
     | 'vehicle'
     | 'group'
@@ -26,6 +28,7 @@ export type SchemaField = {
     min_items?: number;
     max_items?: number;
     visible_if?: { field: string; equals: string | boolean };
+    exposed?: boolean;
 };
 
 export type BlockSchema = {

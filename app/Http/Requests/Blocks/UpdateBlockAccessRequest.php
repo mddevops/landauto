@@ -3,7 +3,6 @@
 namespace App\Http\Requests\Blocks;
 
 use App\Enums\CatalogAccessMode;
-use App\Enums\Entitlement;
 use App\Support\Money;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -26,11 +25,6 @@ class UpdateBlockAccessRequest extends FormRequest
     {
         return [
             'mode' => ['required', Rule::enum(CatalogAccessMode::class)],
-            'entitlement' => [
-                'nullable',
-                'required_if:mode,'.CatalogAccessMode::Entitlement->value,
-                Rule::in(array_map(fn (Entitlement $entitlement): string => $entitlement->value, Entitlement::catalogGates())),
-            ],
             'site_price' => ['nullable', 'string', 'max:32'],
             'workspace_price' => ['nullable', 'string', 'max:32'],
         ];
@@ -68,8 +62,6 @@ class UpdateBlockAccessRequest extends FormRequest
         return [
             'mode.required' => 'Выберите режим доступа.',
             'mode.enum' => 'Выберите режим доступа из списка.',
-            'entitlement.required_if' => 'Выберите опцию тарифа.',
-            'entitlement.in' => 'Выберите опцию тарифа из списка.',
         ];
     }
 
@@ -80,7 +72,6 @@ class UpdateBlockAccessRequest extends FormRequest
     {
         return [
             'mode' => 'Режим доступа',
-            'entitlement' => 'Опция тарифа',
             'site_price' => 'Лицензия на 1 сайт',
             'workspace_price' => 'Лицензия на всё пространство',
         ];
@@ -91,9 +82,9 @@ class UpdateBlockAccessRequest extends FormRequest
         return CatalogAccessMode::from($this->string('mode')->toString());
     }
 
-    public function entitlement(): ?Entitlement
+    public function entitlement(): null
     {
-        return $this->mode() === CatalogAccessMode::Entitlement ? Entitlement::from($this->string('entitlement')->toString()) : null;
+        return null;
     }
 
     public function sitePriceMinor(): ?int
