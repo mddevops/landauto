@@ -139,5 +139,48 @@ test('approved Native JavaScript publishes and mounts on the public origin', asy
     const visitor = await page.context().newPage();
     const response = await visitor.goto(owner.blockedPublicUrl);
     expect(response?.status()).toBe(200);
-    await expect(visitor.locator('[data-native-ready="true"]')).toBeVisible();
+    const csp = response?.headers()['content-security-policy'] ?? '';
+    expect(csp).toContain("script-src 'self' 'unsafe-inline'");
+    expect(csp).not.toContain("'unsafe-eval'");
+
+    const instances = visitor.locator(
+        '[data-landflow-block="e2e-native-script"]',
+    );
+    const working = instances.filter({ hasText: 'Рабочий экземпляр' });
+    const failing = instances.filter({ hasText: 'Сбой' });
+    await expect(instances).toHaveCount(2);
+    await expect(working).toHaveAttribute(
+        'data-native-ready',
+        'Рабочий экземпляр',
+    );
+    await expect(failing).not.toHaveAttribute('data-native-ready');
+    await expect(
+        visitor.locator('iframe[title="Нативный блок с кодом"]'),
+    ).toHaveCount(0);
+
+    // The approved module uses the controlled host API. Opening the Popup rerenders the tree,
+    // proving the previous instance cleanup runs before an independent remount.
+    await working.getByRole('button', { name: 'Открыть форму' }).click();
+    await expect(working).toHaveAttribute('data-native-clicks', '1');
+    const popup = visitor.getByRole('dialog', {
+        name: 'Заявка из нативного кода',
+    });
+    await expect(popup).toBeVisible();
+    await expect(working).toHaveAttribute('data-native-cleanups', '1');
+    await expect(working).toHaveAttribute('data-native-mounts', '2');
+
+    await popup.getByLabel(/Телефон/).fill('+7 999 555-44-33');
+    await popup
+        .getByRole('checkbox', { name: /Согласен на обработку данных/ })
+        .check();
+    const submitted = visitor.waitForResponse(
+        (candidate) =>
+            candidate.url().includes('/_landflow/forms/') &&
+            candidate.request().method() === 'POST',
+    );
+    await popup.getByRole('button', { name: 'Отправить' }).click();
+    expect((await submitted).status()).toBe(201);
+    await expect(popup.getByRole('status')).toHaveText(
+        'Спасибо! Мы свяжемся с вами.',
+    );
 });

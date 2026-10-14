@@ -80,9 +80,9 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (branch `autopilot/p
 
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-001 DONE (Marketplace Listings, retained infrastructure); P10-004 DONE (licensing decision); P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 
-Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement), `X-028` DONE (legacy sandboxed migration); X-029 not started.
+Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement), `X-028` DONE (legacy sandboxed migration), `X-029` DONE (runtime hardening and E2E review).
 
-`X-025 — Native Block Runtime: Approved JavaScript`, `X-026 — Plan ↔ Catalog Access Matrix`, `X-027 — SiteType Locked Editing Enforcement` and `X-028 — Legacy Sandboxed Block Migration` are DONE. X-029 is not started. Non-blocking follow-up: `X-017` (storage quota, before production).
+Native runtime tasks `X-023` through `X-029` are DONE. Non-blocking follow-up: `X-017` (storage quota, before production).
 
 Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
 
@@ -4443,11 +4443,13 @@ Scope: detect legacy `sandboxed` Block Versions; copy-to-Draft migration workflo
 
 ## X-029 — Native Runtime Hardening and E2E Review
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Trigger:** after X-024 … X-028
 **Decision:** ADR-009; D-123; D-124; D-121; D-122
 
 Scope: security review; SSR / SEO assertions; multiple Block instances; CSS isolation; popups / forms / actions; Native JS cleanup; iframe only for Embed / sandbox / legacy; four Site types; tariff access; D-122 downgrade regression; publication atomicity; Playwright; documentation review.
+
+Result: reviewed the existing backend and browser coverage across the full scope; hardened published runtime CSP with conditional Yandex Metrica / SmartCaptcha origins while preserving the isolated legacy sandbox; expanded Playwright coverage for multiple Native JavaScript instances, failure isolation, action → Popup → Form submission and cleanup/remount behavior. Final gates PASS: `composer quality` (PHPUnit 1,299: 1,297 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS) and full `npm run test:e2e` 96 / 96.
 
 ---
 
@@ -4560,8 +4562,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Current: Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED; D-093, D-117, D-118 APPROVED; D-080, D-081 (ADR-008), D-119, D-120 APPROVED 2026-10-07 and confirmed 2026-10-08; D-079 SUPERSEDED by D-121; D-122 APPROVED 2026-10-08).
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
-- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029`.
-- Current: `X-029 — Native Runtime Hardening and E2E Review` (NOT_STARTED; P9-018 and P9-010 DEFERRED).
+- Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029` DONE.
+- Current: Native First-Party Block Runtime replan completed through `X-029`; no subsequent task started (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

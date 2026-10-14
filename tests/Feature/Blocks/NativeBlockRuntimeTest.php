@@ -138,13 +138,18 @@ class NativeBlockRuntimeTest extends TestCase
         $this->assertInstanceOf(PublishedVersion::class, $version);
         $stylesheet = PublishedRuntimeAsset::query()->where('published_version_id', $version->id)->sole();
 
-        $content = (string) $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertOk()->getContent();
+        $response = $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertOk();
+        $content = (string) $response->getContent();
+        $csp = (string) $response->headers->get('Content-Security-Policy');
 
         $this->assertMatchesRegularExpression('/<div data-landflow-native="native-hero--1-0-0--[0-9a-f]{10}" data-landflow-block="native-hero" data-landflow-instance="'.$native->public_id.'"><section class="hero"><h2>Весеннее предложение<\/h2>/u', $content);
         $this->assertStringContainsString('<p>Скидка до 15%</p><a href="/contacts">Подробнее</a><button type="button" data-landflow-action="cta">Оставить заявку</button>', $content);
         $this->assertStringContainsString('<link rel="stylesheet" href="/_landflow/runtime/'.$version->public_id.'/'.$stylesheet->content_hash.'.css">', $content);
         $this->assertStringNotContainsString('<iframe', $content);
         $this->assertStringNotContainsString('/_landflow/runtime/'.$version->id.'/', $content);
+        $this->assertStringContainsString("script-src 'self' 'unsafe-inline'", $csp);
+        $this->assertStringNotContainsString("'unsafe-eval'", $csp);
+        $this->assertStringNotContainsString('yandex.ru', $csp);
     }
 
     public function test_runtime_stylesheet_route_serves_only_ready_versions_of_this_site(): void

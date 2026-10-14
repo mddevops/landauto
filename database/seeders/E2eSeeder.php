@@ -293,10 +293,10 @@ class E2eSeeder extends Seeder
         $native(
             'e2e-native-script',
             'Нативный блок с кодом',
-            '<section class="card"><h2>{{ title }}</h2></section>',
+            '<section class="card"><h2>{{ title }}</h2><button type="button" data-landflow-action="cta">Открыть форму</button></section>',
             '.card { padding: 8px; }',
-            [$text('title', 'Заголовок', 'Блок с кодом')],
-            'root.dataset.nativeReady = "true"; return () => { delete root.dataset.nativeReady; };',
+            [$text('title', 'Заголовок', 'Блок с кодом'), ['key' => 'cta', 'type' => 'action', 'label' => 'Кнопка']],
+            'if (root.hasAttribute("data-landflow-native") && props.title === "Сбой") { throw new Error("isolated instance failure"); } const button = root.querySelector("[data-landflow-action=cta]"); const onClick = () => { root.dataset.nativeClicks = String(Number(root.dataset.nativeClicks ?? "0") + 1); }; button?.addEventListener("click", onClick); root.dataset.nativeReady = String(props.title); root.dataset.nativeMounts = String(Number(root.dataset.nativeMounts ?? "0") + 1); return () => { button?.removeEventListener("click", onClick); root.dataset.nativeCleanups = String(Number(root.dataset.nativeCleanups ?? "0") + 1); };',
         );
     }
 
@@ -321,8 +321,19 @@ class E2eSeeder extends Seeder
         $this->placeBlock($home, 'footer', 14, []);
 
         $blocked = app(CreateSite::class)->create($workspace, 'Сайт с неодобренным кодом', SiteType::MultiPage);
-        $blocked->forceFill(['subdomain' => 'native-js-e2e'])->save();
-        $this->placeBlock($blocked->pages()->where('is_home', true)->firstOrFail(), 'e2e-native-script', 10, []);
+        $blocked->forceFill(['subdomain' => 'native-js-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $blockedForm = Form::factory()->for($blocked)->withLeadFields()->create(['name' => 'Заявка из нативного кода']);
+        $blockedPopup = Popup::factory()->for($blocked)->create(['name' => 'Форма нативного кода', 'title' => 'Заявка из нативного кода']);
+        $blockedPopup->form()->associate($blockedForm)->save();
+        $blockedHome = $blocked->pages()->where('is_home', true)->firstOrFail();
+        $this->placeBlock($blockedHome, 'e2e-native-script', 10, [
+            'title' => 'Рабочий экземпляр',
+            'cta' => ['type' => 'open_popup', 'popup' => $blockedPopup->public_id],
+        ]);
+        $this->placeBlock($blockedHome, 'e2e-native-script', 11, [
+            'title' => 'Сбой',
+            'cta' => ['type' => 'open_popup', 'popup' => $blockedPopup->public_id],
+        ]);
     }
 
     /**
