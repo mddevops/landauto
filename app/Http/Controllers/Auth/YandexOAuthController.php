@@ -76,6 +76,12 @@ class YandexOAuthController extends Controller
             ]);
         }
 
+        if ($user->isPendingDeletion()) {
+            return to_route('login')->withErrors([
+                'yandex' => __('This account is scheduled for deletion and can no longer sign in.'),
+            ]);
+        }
+
         Auth::login($user);
         $request->session()->regenerate();
 

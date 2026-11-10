@@ -37,6 +37,7 @@ import { index as developersIndex } from '@/routes/platform/developers';
 import { index as licensesIndex } from '@/routes/platform/licenses';
 import { index as catalogAccessIndex } from '@/routes/platform/catalog-access';
 import { index as platformMarketplaceIndex } from '@/routes/platform/marketplace';
+import { edit as platformSettingsEdit } from '@/routes/platform/settings';
 import { index as platformTemplatesIndex } from '@/routes/platform/templates';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
@@ -144,6 +145,15 @@ export function AppSidebar() {
                       title: 'Лицензии каталога',
                       href: licensesIndex(),
                       icon: KeyRound,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_platform_settings')
+            ? [
+                  {
+                      title: 'Настройки платформы',
+                      href: platformSettingsEdit(),
+                      icon: Settings,
                   },
               ]
             : []),

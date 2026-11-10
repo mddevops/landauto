@@ -28,11 +28,33 @@ class EmailChangedNotification extends Notification
      */
     public function toMail(object $notifiable): MailMessage
     {
-        return (new MailMessage)
+        $mail = (new MailMessage)
             ->subject(Lang::get('Your account email address was changed'))
             ->line(Lang::get('The email address of your :app account was changed. This address is no longer used to sign in.', [
                 'app' => config('app.name'),
-            ]))
-            ->line(Lang::get('If you did not make this change, contact support immediately.'));
+            ]));
+
+        $support = $this->supportContact();
+
+        return $support === null
+            ? $mail->line(Lang::get('If you did not make this change, contact support immediately.'))
+            : $mail->line(Lang::get('If you did not make this change, contact support immediately at :contact.', [
+                'contact' => $support,
+            ]));
+    }
+
+    private function supportContact(): ?string
+    {
+        $email = config('security.support_email');
+        if (is_string($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            return $email;
+        }
+
+        $url = config('security.support_url');
+        if (is_string($url) && preg_match('#^https://#i', $url) === 1) {
+            return $url;
+        }
+
+        return null;
     }
 }

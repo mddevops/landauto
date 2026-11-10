@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Assets\WorkspaceStorage;
 use App\Http\Requests\UploadSiteAssetRequest;
 use App\Models\Site;
 use App\Models\SiteAsset;
@@ -16,7 +17,7 @@ use Throwable;
 
 class SiteAssetController extends Controller
 {
-    public function store(UploadSiteAssetRequest $request, Site $site): RedirectResponse
+    public function store(UploadSiteAssetRequest $request, Site $site, WorkspaceStorage $storage): RedirectResponse
     {
         $file = $request->file('file');
         abort_if($file === null, 422);
@@ -24,6 +25,8 @@ class SiteAssetController extends Controller
         $info = getimagesize((string) $file->getRealPath());
         abort_if($info === false, 422);
         [$width, $height] = $info;
+
+        $storage->assertCanStore($site->workspace, (int) $file->getSize());
 
         $asset = new SiteAsset(['original_name' => Str::limit(trim($file->getClientOriginalName()) ?: 'image', 250, '')]);
         $asset->public_id = $asset->newUniqueId();

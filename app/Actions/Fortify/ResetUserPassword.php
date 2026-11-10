@@ -4,13 +4,15 @@ namespace App\Actions\Fortify;
 
 use App\Concerns\PasswordValidationRules;
 use App\Models\User;
-use Illuminate\Support\Facades\DB;
+use App\Support\EndUserSessions;
 use Illuminate\Support\Facades\Validator;
 use Laravel\Fortify\Contracts\ResetsUserPasswords;
 
 class ResetUserPassword implements ResetsUserPasswords
 {
     use PasswordValidationRules;
+
+    public function __construct(private EndUserSessions $sessions) {}
 
     /**
      * Validate and reset the user's forgotten password.
@@ -27,24 +29,7 @@ class ResetUserPassword implements ResetsUserPasswords
             'password' => $input['password'],
         ])->save();
 
-        $this->endActiveSessions($user);
-    }
-
-    /**
-     * End every active session of the user.
-     *
-     * The reset is performed as a guest, so none of these sessions belongs to the current request.
-     * Fortify rotates the remember token afterwards, which also invalidates "remember me" cookies.
-     */
-    private function endActiveSessions(User $user): void
-    {
-        if (config('session.driver') !== 'database') {
-            return;
-        }
-
-        DB::connection(config('session.connection'))
-            ->table(config('session.table', 'sessions'))
-            ->where('user_id', $user->getKey())
-            ->delete();
+        // Guest reset: every session ends; remember token is rotated.
+        $this->sessions->all($user);
     }
 }

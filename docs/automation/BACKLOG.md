@@ -82,9 +82,7 @@ Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125). P10-0
 
 Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 approved 2026-10-09): `X-023` DONE (documentation), `X-024` DONE (Native HTML / CSS / actions), `X-025` DONE (Native approval and approved JavaScript), `X-026` DONE (Plan ↔ catalog access matrix), `X-027` DONE (SiteType locked editing enforcement), `X-028` DONE (legacy sandboxed migration), `X-029` DONE (runtime hardening and E2E review).
 
-Native runtime tasks `X-023` through `X-029` are DONE. Non-blocking follow-up: `X-017` (storage quota, before production).
-
-Resolved stops: `X-014`, P1-005A, `X-011`, `X-012` and `X-015` (default Free plan, D-100) are DONE. Before the first production deployment: `X-013` and D-094.
+Native runtime tasks `X-023` through `X-029` are DONE. `X-013`, `X-017` and D-094 DONE for launch-without-billing. Remaining before production: server deploy / DNS / secrets (`Production deployment: NOT_CONFIGURED`).
 
 ---
 
@@ -4110,30 +4108,18 @@ Acceptance Criteria:
 
 ## X-013 — Production Security Hardening Baseline (from P1-001)
 
-**Status:** NOT_STARTED  
+**Status:** DONE
 **Trigger:** before the first production deployment
 
-No BACKLOG task covers production security configuration yet; P1-001 found items that are acceptable locally but must be settled before production. Primary: backend; reviews: security, reviewer; architect if infrastructure is introduced.
+### Result
 
-Scope:
-
-- secure session cookie (`SESSION_SECURE_COOKIE`), HTTPS enforcement and HSTS where the domain setup permits (rule `70-security.mdc` §12, §69);
-- centralized security headers for the authenticated app (rule `70-security.mdc` §68–§69);
-- decide whether a password change or an email change logs out other sessions (SECURITY.md §4); P1-002 ends all database sessions on password reset only for the `database` session driver — decide the policy for other drivers (e.g. Laravel `auth.session` middleware) if the production driver changes;
-- support contact referenced by the email-changed notice (`X-012`);
-- confirm `APP_DEBUG=false` and safe error pages in production (rule `70-security.mdc` §101);
-- trusted proxies for the production load balancer (otherwise all users share one IP and per-IP rate limits break);
-- `APP_ENV=production` and `INERTIA_DEVTOOLS_ENABLED` unset on every internet-facing environment including staging (the Inertia DevTools routes `_inertia/devtools/entries*` are open without login when `APP_ENV=local`);
-- `APP_URL` is the HTTPS production origin;
-- production Yandex OAuth redirect URI and client secret configured server-side only (P1-005A);
-- the `local` disk has `serve => true` (`config/filesystems.php`), which registers `storage/{path}` and a signed upload route `PUT storage/{path}`: disable or confirm safe before production, and review in the first media/upload task;
-- reference D-094 (personal data retention) as the related launch blocker.
-
-Acceptance Criteria:
-
-- each item implemented or explicitly decided with reason;
-- tests where behavior changes;
-- security review PASS.
+- `SecureHeaders` on the `web` group: `nosniff`, `X-Frame-Options: DENY`, Referrer-Policy, Permissions-Policy; HSTS when the request is HTTPS and production/`FORCE_HTTPS`.
+- `FORCE_HTTPS` / production forces `URL::forceScheme('https')`; `TRUSTED_PROXIES` via `config/security.php` + `TrustProxies::at`.
+- Session policy: password reset ends all sessions; password change and email change end other sessions and regenerate the current one; remember token rotated. Production keeps `SESSION_DRIVER=database` (other drivers are a documented no-op for session-row cleanup).
+- `FILESYSTEM_LOCAL_SERVE` defaults to `false` (private assets only through Landflow routes).
+- Support contact: `SUPPORT_EMAIL` / `SUPPORT_URL` in email-changed notice when set.
+- `.env.example` documents the production checklist (`APP_DEBUG=false`, secure cookies, leave Inertia DevTools unset). D-094 remains the related launch blocker.
+- Tests: `ProductionSecurityHardeningTest` (headers, other-session cleanup, support email, serve default).
 
 ---
 
@@ -4205,13 +4191,13 @@ Reconcile the automotive architecture with the owner-approved Catalog V2 (`docs/
 
 ## X-017 — Workspace Asset Storage Quota
 
-**Status:** PARTIAL
+**Status:** DONE
 **Trigger:** before the first public production deployment
 **Decision:** D-106
 
-Typed Workspace entitlement `max_storage_mb` (or an equivalent typed storage limit) aggregating Site Assets owned by the Workspace's Sites, enforced on upload. No plan-name checks; numeric plan values require owner approval. Not a Phase 3 blocker.
+### Result
 
-Scope update (P8-008): the cumulative quota must count Site Assets **and** Workspace Assets (`workspace_assets`), and be enforced on Workspace Asset upload and on copy-to-Site (each copy is a separate file). No numeric value is defined yet.
+Typed entitlement `max_storage_mb`: Free default **500 МБ** (Super Admin editable); Plans without the entitlement are unlimited. Cumulative use counts Site Assets + Workspace Assets; enforced on Site upload, Workspace upload and copy-to-Site. Platform settings UI for Free storage, Submission retention (D-094) and account-deletion grace.
 
 ---
 

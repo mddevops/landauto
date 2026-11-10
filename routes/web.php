@@ -33,6 +33,7 @@ use App\Http\Controllers\Platform\CatalogLicenseController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
 use App\Http\Controllers\Platform\PlatformMarketplaceController;
+use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\PlatformTemplateController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
@@ -367,6 +368,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('/', [CatalogLicenseController::class, 'index'])->name('index');
             Route::post('/', [CatalogLicenseController::class, 'store'])->middleware('throttle:30,1')->name('store');
             Route::delete('{license}', [CatalogLicenseController::class, 'destroy'])->whereUlid('license')->name('destroy');
+        });
+
+    Route::prefix('platform/settings')
+        ->name('platform.settings.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManagePlatformSettings->value)
+        ->group(function () {
+            Route::get('/', [PlatformSettingsController::class, 'edit'])->name('edit');
+            Route::put('/', [PlatformSettingsController::class, 'update'])->middleware('throttle:30,1')->name('update');
         });
 
     // Plan ↔ catalog access matrix (X-026), restricted to Super Admin catalog-license managers.

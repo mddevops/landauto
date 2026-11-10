@@ -13,6 +13,21 @@ use Illuminate\Support\Facades\DB;
 
 class DeleteUserAccount
 {
+    /**
+     * @throws DeveloperProfileBlocksDeletionException
+     * @throws LastWorkspaceOwnerException
+     */
+    public function assertCanBeDeleted(User $user): void
+    {
+        if ($user->developerProfile()->exists()) {
+            throw new DeveloperProfileBlocksDeletionException;
+        }
+
+        /** @var list<WorkspaceMember> $memberships */
+        $memberships = $user->memberships()->with('workspace')->get()->all();
+        $this->ensureOwnedWorkspacesCanBeLeft($memberships, lock: false);
+    }
+
     public function delete(User $user, ?Closure $beforeDelete = null): void
     {
         DB::transaction(function () use ($user, $beforeDelete): void {
@@ -28,7 +43,7 @@ class DeleteUserAccount
                 ->get()
                 ->all();
 
-            $this->ensureOwnedWorkspacesCanBeLeft($memberships);
+            $this->ensureOwnedWorkspacesCanBeLeft($memberships, lock: true);
             $beforeDelete?->__invoke();
 
             foreach ($memberships as $membership) {
@@ -52,22 +67,24 @@ class DeleteUserAccount
     /**
      * @param  list<WorkspaceMember>  $memberships
      */
-    private function ensureOwnedWorkspacesCanBeLeft(array $memberships): void
+    private function ensureOwnedWorkspacesCanBeLeft(array $memberships, bool $lock): void
     {
         foreach ($memberships as $membership) {
             if (! $membership->isActiveOwner() || $membership->workspace->members()->count() === 1) {
                 continue;
             }
 
-            $hasAnotherOwner = WorkspaceMember::query()
+            $query = WorkspaceMember::query()
                 ->where('workspace_id', $membership->workspace_id)
                 ->whereKeyNot($membership->getKey())
                 ->where('role', WorkspaceRole::Owner->value)
-                ->where('status', WorkspaceMemberStatus::Active->value)
-                ->lockForUpdate()
-                ->exists();
+                ->where('status', WorkspaceMemberStatus::Active->value);
 
-            if (! $hasAnotherOwner) {
+            if ($lock) {
+                $query->lockForUpdate();
+            }
+
+            if (! $query->exists()) {
                 throw new LastWorkspaceOwnerException;
             }
         }

@@ -4,7 +4,9 @@ export type PlatformPermission =
     | 'manage_catalog_media'
     | 'manage_developers'
     | 'manage_platform_content'
-    | 'manage_catalog_licenses';
+    | 'manage_catalog_licenses'
+    | 'manage_platform_settings'
+    | 'approve_native_blocks';
 
 export type PlatformContext = {
     permissions: PlatformPermission[];

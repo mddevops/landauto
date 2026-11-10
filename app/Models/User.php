@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property Carbon|null $email_verified_at
  * @property string|null $password
  * @property string|null $remember_token
+ * @property Carbon|null $pending_deletion_at
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
@@ -42,7 +43,13 @@ class User extends Authenticatable implements MustVerifyEmail
         return [
             'email_verified_at' => 'datetime',
             'password' => 'hashed',
+            'pending_deletion_at' => 'datetime',
         ];
+    }
+
+    public function isPendingDeletion(): bool
+    {
+        return $this->pending_deletion_at !== null;
     }
 
     /**

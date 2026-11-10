@@ -33,7 +33,9 @@ return [
         'local' => [
             'driver' => 'local',
             'root' => storage_path('app/private'),
-            'serve' => true,
+            // Production must keep this false (X-013): private assets are served only through
+            // authenticated / published Landflow routes, never via Laravel's generic storage routes.
+            'serve' => (bool) env('FILESYSTEM_LOCAL_SERVE', false),
             'throw' => false,
             'report' => false,
         ],

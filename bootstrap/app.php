@@ -3,6 +3,7 @@
 use App\Http\Middleware\HandleAppearance;
 use App\Http\Middleware\HandleInertiaRequests;
 use App\Http\Middleware\ResolveWorkspaceContext;
+use App\Http\Middleware\SecureHeaders;
 use App\Http\Middleware\ValidateFortifyEmail;
 use App\Integrations\IntegrationProfiles;
 use Illuminate\Foundation\Application;
@@ -45,6 +46,7 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->trimStrings(except: ['sources.html', 'sources.css', 'sources.js', 'sources.schema']);
 
         $middleware->web(append: [
+            SecureHeaders::class,
             ValidateFortifyEmail::class,
             ResolveWorkspaceContext::class,
             HandleAppearance::class,

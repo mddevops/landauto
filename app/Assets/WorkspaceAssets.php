@@ -22,6 +22,8 @@ use Throwable;
  */
 final class WorkspaceAssets
 {
+    public function __construct(private WorkspaceStorage $storage) {}
+
     /**
      * Stores an upload that already passed the shared ImageUpload validation.
      */
@@ -33,6 +35,8 @@ final class WorkspaceAssets
         if ($info === false || ! isset(ImageUpload::TYPES[$mime])) {
             throw ValidationException::withMessages(['file' => 'Файл повреждён или не является изображением.']);
         }
+
+        $this->storage->assertCanStore($workspace, (int) $file->getSize());
 
         $asset = new WorkspaceAsset(['original_name' => Str::limit(trim($file->getClientOriginalName()) ?: 'image', 250, '')]);
         $asset->public_id = $asset->newUniqueId();
@@ -65,6 +69,8 @@ final class WorkspaceAssets
         if ($source->workspace_id !== $site->workspace_id) {
             throw ValidationException::withMessages(['site' => 'Выберите сайт этого пространства.']);
         }
+
+        $this->storage->assertCanStore($site->workspace, $source->size_bytes);
 
         $disk = Storage::disk(SiteAsset::DISK);
 

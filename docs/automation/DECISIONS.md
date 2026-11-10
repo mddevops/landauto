@@ -1762,27 +1762,18 @@ Owner decision dated 2026-10-07 (Phase 9 start); P9-001.
 
 ## D-094 — Personal Data Retention and Deletion Policy
 
-**Status:** ADR_REQUIRED
+**Status:** APPROVED (owner 2026-11-10)
 
-### Decision Needed
+### Decision
 
-Define for personal data (Submissions, contact fields, IP addresses, delivery payloads):
+- Submissions (including IP and user-agent stored on the Submission row) are retained for **12 months** by default, then purged by `landflow:purge-personal-data`.
+- Account deletion is **scheduled**: after the customer confirms, login is blocked and the account is hard-deleted after a grace period of **30 days** by default.
+- Defaults are editable by Super Admin under «Настройки платформы» (`manage_platform_settings`).
+- Submission export remains out of scope until a dedicated backlog task references this decision.
 
-- retention periods;
-- deletion and anonymization rules and triggers;
-- applicable Russian personal-data requirements.
+### Resolved By
 
-### Current Constraint
-
-`SECURITY.md` §21: retention policy must be defined before production launch. Schema must not make deletion/anonymization impossible (`.cursor/rules/50-database.mdc` §99, `.cursor/rules/70-security.mdc` §99).
-
-### Blocking
-
-- production launch;
-- Submission export (no BACKLOG task exists yet; the task must reference D-094 when created).
-- Persisting chat transcripts of Chat Selection Sites, if the DEFERRED P9-018 is ever resumed: messages are personal data with no defined retention / deletion rule.
-
-D-094 stays a production-launch blocker but no longer blocks Phase 9 (owner decision 2026-10-08).
+Owner answers for launch without billing (2026-11-10); implemented with `PlatformSettings` + purge command.
 
 ---
 
@@ -1925,15 +1916,21 @@ Owner approval in the automotive autopilot instruction (2026-10-04); X-019.
 
 ## D-106 — Workspace Asset Storage Quota Direction
 
-**Status:** APPROVED (direction); numeric values OPEN
+**Status:** APPROVED (direction + Free numeric default)
 
 ### Decision
 
-A cumulative Workspace asset storage quota is required before the first public production launch. Direction: a typed Workspace entitlement (`max_storage_mb` or an equivalent typed storage limit) that aggregates Site Assets owned by the Workspace's Sites. No plan-name checks; no numeric plan values are defined yet. Tracked by X-017; not a Phase 3 blocker.
+A cumulative Workspace asset storage quota is required before the first public production launch. Typed entitlement `max_storage_mb` aggregates Site Assets and Workspace Assets (including copy-to-Site). No plan-name checks.
+
+Numeric defaults (owner 2026-11-10):
+- Free plan: **500 МБ** (editable via Super Admin «Настройки платформы» / `free_max_storage_mb`);
+- Plans without `max_storage_mb` (full access): **unlimited**.
+
+Tracked by X-017.
 
 ### Resolved By
 
-Owner approval in the automotive autopilot instruction (2026-10-04).
+Owner approval in the automotive autopilot instruction (2026-10-04); Free numeric default 2026-11-10.
 
 ---
 

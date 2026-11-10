@@ -2,13 +2,14 @@
 
 namespace App\Http\Controllers\Settings;
 
-use App\Actions\Accounts\DeleteUserAccount;
+use App\Actions\Accounts\ScheduleUserDeletion;
 use App\Exceptions\DeveloperProfileBlocksDeletionException;
 use App\Exceptions\LastWorkspaceOwnerException;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Settings\ProfileDeleteRequest;
 use App\Http\Requests\Settings\ProfileUpdateRequest;
 use App\Notifications\EmailChangedNotification;
+use App\Support\EndUserSessions;
 use Illuminate\Contracts\Auth\MustVerifyEmail;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -34,7 +35,7 @@ class ProfileController extends Controller
     /**
      * Update the user's profile information.
      */
-    public function update(ProfileUpdateRequest $request): RedirectResponse
+    public function update(ProfileUpdateRequest $request, EndUserSessions $sessions): RedirectResponse
     {
         $user = $request->user();
         $previousEmail = $user->email;
@@ -51,6 +52,8 @@ class ProfileController extends Controller
         $user->save();
 
         if ($emailChanged) {
+            $sessions->others($user, $request->session()->getId());
+            $request->session()->regenerate(true);
             $user->sendEmailVerificationNotification();
 
             if ($previousEmailWasVerified) {
@@ -66,12 +69,12 @@ class ProfileController extends Controller
     /**
      * Delete the user's profile.
      */
-    public function destroy(ProfileDeleteRequest $request, DeleteUserAccount $deleteUserAccount): RedirectResponse
+    public function destroy(ProfileDeleteRequest $request, ScheduleUserDeletion $scheduleDeletion): RedirectResponse
     {
         $user = $request->user();
 
         try {
-            $deleteUserAccount->delete($user, fn () => Auth::logout());
+            $graceDays = $scheduleDeletion->handle($user);
         } catch (LastWorkspaceOwnerException) {
             return back()->withErrors([
                 'account' => __('Transfer ownership or remove the other workspace members before deleting your account.'),
@@ -80,9 +83,12 @@ class ProfileController extends Controller
             return back()->withErrors(['account' => $exception->getMessage()]);
         }
 
+        Auth::logout();
         $request->session()->invalidate();
         $request->session()->regenerateToken();
 
-        return redirect('/');
+        return redirect('/')->with('status', __('Your account is scheduled for deletion in :days days.', [
+            'days' => $graceDays,
+        ]));
     }
 }

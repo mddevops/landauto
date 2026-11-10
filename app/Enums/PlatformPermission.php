@@ -16,4 +16,6 @@ enum PlatformPermission: string
     case ApproveNativeBlocks = 'approve_native_blocks';
     // Grant / revoke Site- or Workspace-scoped catalog licenses (D-121); Super Admin only.
     case ManageCatalogLicenses = 'manage_catalog_licenses';
+    // Platform policy defaults (retention, deletion grace, Free storage); Super Admin only.
+    case ManagePlatformSettings = 'manage_platform_settings';
 }

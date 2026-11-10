@@ -36,12 +36,12 @@ class AccountWorkspaceLifecycleTest extends TestCase
             ->assertRedirect(route('home'));
 
         $this->assertGuest();
-        $this->assertDatabaseMissing('users', ['id' => $user->id]);
-        $this->assertDatabaseMissing('workspaces', ['id' => $workspace->id]);
+        $this->assertNotNull($user->refresh()->pending_deletion_at);
+        $this->assertDatabaseHas('workspaces', ['id' => $workspace->id]);
         $this->assertDatabaseMissing('sessions', ['id' => 'another-session']);
     }
 
-    public function test_account_deletion_removes_membership_when_another_active_owner_exists(): void
+    public function test_account_deletion_is_scheduled_when_another_active_owner_exists(): void
     {
         $user = User::factory()->create();
         $otherOwner = User::factory()->create();
@@ -53,7 +53,7 @@ class AccountWorkspaceLifecycleTest extends TestCase
             ->delete(route('profile.destroy'), ['password' => 'password'])
             ->assertSessionHasNoErrors();
 
-        $this->assertDatabaseMissing('users', ['id' => $user->id]);
+        $this->assertNotNull($user->refresh()->pending_deletion_at);
         $this->assertDatabaseHas('workspaces', ['id' => $workspace->id]);
         $this->assertDatabaseHas('workspace_members', [
             'workspace_id' => $workspace->id,

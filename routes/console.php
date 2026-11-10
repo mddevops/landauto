@@ -10,3 +10,4 @@ Artisan::command('inspire', function () {
 
 Schedule::command('integrations:dispatch-due-deliveries')->everyMinute()->withoutOverlapping();
 Schedule::command('domains:reconcile')->everyFiveMinutes()->withoutOverlapping();
+Schedule::command('landflow:purge-personal-data')->daily()->withoutOverlapping();

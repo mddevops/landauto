@@ -1787,7 +1787,7 @@ Agents must preserve:
 
 # 68. Current Next Step
 
-Native First-Party Block Runtime tasks **`X-023` through `X-029` are DONE**. X-029 completed the hardening review across security, SSR / SEO, multiple instances, CSS isolation, actions / Popup / Form, Native JS cleanup, iframe boundaries, all four Site types, tariff access, D-122 downgrade behavior and publication atomicity. Published pages now receive an integration-aware CSP; browser coverage verifies two Native JavaScript instances, failure isolation, cleanup/remount and action → Popup → Form submission. Final gates: `composer quality` PASS (1,299 tests: 1,297 passed, 2 skipped; PHPStan, Pint, frontend check and builds PASS), focused CSP/runtime tests PASS, focused Native Playwright 3 / 3, full `npm run test:e2e` 96 / 96. No subsequent task has been started.
+`X-013`, `X-017` and **D-094** DONE for launch-without-billing: security baseline; Free storage 500 МБ (unlimited when entitlement absent); Submissions kept 12 months then purged; account deletion grace 30 days; Super Admin «Настройки платформы». Native runtime X-023 … X-029 remain DONE. **Next:** production deploy when server access is provided (`Production deployment: NOT_CONFIGURED`).
 
 ---
 
@@ -1840,7 +1840,7 @@ Autonomous workflow:          CONFIGURED (P0-026, AUTONOMOUS_WORKFLOW.md + orche
 Phase 0 validation:           PASS (P0-027: architecture, security, QA, workflow, gates, CI ubuntu-24.04)
 Production deployment:        NOT_CONFIGURED
 
-Core Landflow implementation: IN_PROGRESS (Phases 0–9 COMPLETED for planned scope; Phase 10 public expansion DEFERRED after P10-001 (D-125); Native runtime X-023 … X-029 DONE; P7-009, P9-010 and P9-018 DEFERRED; D-093, D-118, D-121 … D-126 APPROVED; ADR-009 Accepted; D-094, X-013, X-017 OPEN)
+Core Landflow implementation: READY_FOR_PRODUCTION_DEPLOY (Phases 0–9 COMPLETED; Phase 10 public expansion DEFERRED; Native runtime + X-013 + X-017 + D-094 DONE; billing/Marketplace expansion deferred; Production deployment NOT_CONFIGURED)
 ```
 
-**Current phase: Native First-Party Block Runtime replan completed (X-023 through X-029 DONE; no subsequent task started). Phase 10 — Marketplace public expansion DEFERRED after P10-001 (D-125). Phase 9 — Developer Platform COMPLETED for planned scope (P9-018 and P9-010 DEFERRED); Phases 0–8 COMPLETED, P7-009 DEFERRED. Next step: §68.**
+**Current phase: ready for production deploy. Code launch blockers closed for launch-without-billing. Next step: §68.**

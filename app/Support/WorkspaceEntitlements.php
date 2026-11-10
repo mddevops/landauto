@@ -30,6 +30,23 @@ final class WorkspaceEntitlements
             : 0;
     }
 
+    /**
+     * Cumulative file storage ceiling in megabytes (X-017). Null means unlimited (no MaxStorageMb
+     * on an active Plan). Workspaces without a Plan get 0 (uploads denied).
+     */
+    public function storageLimitMb(Workspace $workspace): ?int
+    {
+        if ($workspace->plan_id === null) {
+            return 0;
+        }
+
+        $value = $this->find($workspace, Entitlement::MaxStorageMb);
+
+        return $value?->value_type === EntitlementValueType::Integer
+            ? max(0, (int) $value->integer_value)
+            : null;
+    }
+
     private function find(Workspace $workspace, Entitlement $entitlement): ?PlanEntitlement
     {
         if ($workspace->plan_id === null) {

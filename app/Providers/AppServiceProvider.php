@@ -35,11 +35,13 @@ use Carbon\CarbonImmutable;
 use Illuminate\Cache\RateLimiting\Limit;
 use Illuminate\Contracts\Foundation\Application;
 use Illuminate\Http\Client\Factory as HttpFactory;
+use Illuminate\Http\Middleware\TrustProxies;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Date;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\RateLimiter;
+use Illuminate\Support\Facades\URL;
 use Illuminate\Support\ServiceProvider;
 use Illuminate\Validation\Rules\Password;
 use Inertia\Inertia;
@@ -189,6 +191,12 @@ class AppServiceProvider extends ServiceProvider
             app()->isProduction(),
         );
 
+        if ($this->app->environment('production') || config('security.force_https')) {
+            URL::forceScheme('https');
+        }
+
+        $this->configureTrustedProxies();
+
         Password::defaults(fn (): ?Password => app()->isProduction()
             ? Password::min(12)
                 ->mixedCase()
@@ -197,6 +205,24 @@ class AppServiceProvider extends ServiceProvider
                 ->symbols()
                 ->uncompromised()
             : null,
+        );
+    }
+
+    /**
+     * Honour TRUSTED_PROXIES from config so rate limits and HTTPS detection work behind a load balancer (X-013).
+     */
+    private function configureTrustedProxies(): void
+    {
+        $proxies = config('security.trusted_proxies');
+
+        if (! is_string($proxies) || trim($proxies) === '') {
+            return;
+        }
+
+        TrustProxies::at(
+            trim($proxies) === '*'
+                ? '*'
+                : array_values(array_filter(array_map(trim(...), explode(',', $proxies)))),
         );
     }
 }
