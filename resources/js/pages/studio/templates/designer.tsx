@@ -1,4 +1,4 @@
-import { Head, Link, usePage } from '@inertiajs/react';
+import { Head, Link, router, usePage } from '@inertiajs/react';
 import { ArrowLeft, Eye, Settings } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
@@ -126,6 +126,7 @@ export default function TemplateDesigner({
         autosave.drafts[block.public_id] ?? block.state;
     const unsaved =
         autosave.status === 'pending' || autosave.status === 'saving';
+    const visit = { preserveScroll: true, preserveState: true } as const;
 
     return (
         <>
@@ -228,9 +229,9 @@ export default function TemplateDesigner({
 
                     <main
                         aria-label="Холст"
-                        className="min-w-0 flex-1 p-3 sm:p-6 lg:overflow-y-auto"
+                        className="min-w-0 flex-1 bg-neutral-100 lg:overflow-y-auto"
                     >
-                        <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-lg border bg-white shadow-sm">
+                        <div className="min-h-full bg-white">
                             <BlockRenderContext value={renderContext}>
                                 <SiteTheme tokens={design}>
                                     {blocks.length === 0 ? (
@@ -238,7 +239,7 @@ export default function TemplateDesigner({
                                             На странице пока нет блоков.
                                         </div>
                                     ) : (
-                                        blocks.map((block) => (
+                                        blocks.map((block, index) => (
                                             <CanvasBlock
                                                 key={block.public_id}
                                                 block={block}
@@ -252,6 +253,59 @@ export default function TemplateDesigner({
                                                         block.public_id,
                                                     )
                                                 }
+                                                canEditStructure
+                                                actions={{
+                                                    canMoveUp: index > 0,
+                                                    canMoveDown:
+                                                        index <
+                                                        blocks.length - 1,
+                                                    onMoveUp: () =>
+                                                        router.post(
+                                                            blockRoutes.move(
+                                                                block.public_id,
+                                                            ),
+                                                            {
+                                                                direction: 'up',
+                                                            },
+                                                            visit,
+                                                        ),
+                                                    onMoveDown: () =>
+                                                        router.post(
+                                                            blockRoutes.move(
+                                                                block.public_id,
+                                                            ),
+                                                            {
+                                                                direction:
+                                                                    'down',
+                                                            },
+                                                            visit,
+                                                        ),
+                                                    onDuplicate: () =>
+                                                        router.post(
+                                                            blockRoutes.duplicate(
+                                                                block.public_id,
+                                                            ),
+                                                            {},
+                                                            visit,
+                                                        ),
+                                                    onToggleHidden: () =>
+                                                        router.patch(
+                                                            blockRoutes.visibility(
+                                                                block.public_id,
+                                                            ),
+                                                            {
+                                                                hidden: !block.is_hidden,
+                                                            },
+                                                            visit,
+                                                        ),
+                                                    onDelete: () =>
+                                                        router.delete(
+                                                            blockRoutes.destroy(
+                                                                block.public_id,
+                                                            ),
+                                                            visit,
+                                                        ),
+                                                }}
                                             />
                                         ))
                                     )}
