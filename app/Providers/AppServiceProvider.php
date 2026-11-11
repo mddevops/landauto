@@ -91,7 +91,12 @@ class AppServiceProvider extends ServiceProvider
         if ($this->app->environment('production')) {
             $guard = app(PublicSessionDomainGuard::class);
             $guard->assertSafe(config('session.domain'), (string) config('publishing.public_domain'));
-            $guard->assertSeparateHosts((string) config('app.url'), (string) config('publishing.public_domain'));
+
+            // Only web requests can serve Sites on the application origin; unconfigured builds
+            // (composer install, CI) still need artisan.
+            if (! $this->app->runningInConsole()) {
+                $guard->assertSeparateHosts((string) config('app.url'), (string) config('publishing.public_domain'));
+            }
         }
         Gate::policy(Site::class, SitePolicy::class);
 
