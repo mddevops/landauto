@@ -18,7 +18,8 @@ class SecureHeaders
         $response = $next($request);
 
         $response->headers->set('X-Content-Type-Options', 'nosniff', false);
-        $response->headers->set('X-Frame-Options', 'DENY', false);
+        // Same-origin framing stays allowed: the Template preview embeds its own frame route.
+        $response->headers->set('X-Frame-Options', 'SAMEORIGIN', false);
         $response->headers->set('Referrer-Policy', 'strict-origin-when-cross-origin', false);
         $response->headers->set('Permissions-Policy', 'camera=(), microphone=(), geolocation=()', false);
 

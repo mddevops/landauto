@@ -30,8 +30,9 @@ return [
     | Public hosts (ADR-006 §9)
     |--------------------------------------------------------------------------
     |
-    | Published Sites are served on {subdomain}.{public_domain}, e.g.
-    | dealer.localhost locally and dealer.landflow.me in production.
+    | Published Sites are served on {public_domain}/{public_number} (D-127), e.g.
+    | my.dealershtab.ru/482910374615. In production the public domain must
+    | differ from the APP_URL host.
     |
     */
 

@@ -38,7 +38,7 @@ final class SiteDomains
     }
 
     /**
-     * Removing a primary domain makes the Landflow subdomain primary again; the subdomain itself is
+     * Removing a primary domain makes the Landflow address primary again; that address itself is
      * never removed.
      */
     public function remove(Site $site, SiteDomain $domain): void
@@ -69,7 +69,7 @@ final class SiteDomains
     }
 
     /**
-     * Makes the Landflow subdomain the primary address again.
+     * Makes the Landflow address primary again.
      */
     public function resetPrimary(Site $site): void
     {

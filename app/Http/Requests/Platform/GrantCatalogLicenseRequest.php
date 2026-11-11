@@ -9,8 +9,8 @@ use Illuminate\Validation\Rule;
 
 /**
  * One catalog item — a Block (`block`) or a Template (`template`) public ID — and one target
- * (D-121): a Site addressed by its Landflow subdomain or public ID, or a Workspace addressed by its
- * public ID or by the subdomain / public ID of any of its Sites.
+ * (D-121): a Site addressed by its public number (D-127) or public ID, or a Workspace addressed by
+ * its public ID or by the public number / public ID of any of its Sites.
  */
 class GrantCatalogLicenseRequest extends FormRequest
 {

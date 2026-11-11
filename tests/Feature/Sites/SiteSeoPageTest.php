@@ -34,7 +34,7 @@ class SiteSeoPageTest extends TestCase
         $this->owner = User::factory()->create();
         $this->workspace = Workspace::factory()->create();
         $this->workspace->addMember($this->owner, WorkspaceRole::Owner);
-        $this->site = Site::factory()->for($this->workspace)->create(['name' => 'Дилер', 'subdomain' => 'dealer']);
+        $this->site = Site::factory()->for($this->workspace)->create(['name' => 'Дилер', 'public_number' => self::DEALER_NUMBER]);
         $this->home = Page::factory()->for($this->site)->home()->create(['title' => 'Главная', 'seo_title' => 'KIA в Москве']);
         Page::factory()->for($this->site)->create(['title' => 'Акции', 'slug' => 'promo', 'sort_order' => 2]);
     }
@@ -51,7 +51,7 @@ class SiteSeoPageTest extends TestCase
                 ->where('pages.0.path', '/')
                 ->where('pages.0.seo_title', 'KIA в Москве')
                 ->where('pages.1.path', '/promo')
-                ->where('addresses.primary', 'http://dealer.localhost/')
+                ->where('addresses.primary', 'http://localhost/100000000001/')
                 ->where('addresses.sitemap', null)
                 ->where('published', false)
                 ->where('can.editIndexing', true)

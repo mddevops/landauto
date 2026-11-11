@@ -140,8 +140,8 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     const previewLeadPhone = phoneFor(run, '02');
     const visitor = await page.context().newPage();
 
-    // Before the first Publish the public host answers with the safe 404.
-    browserIssues.expectFailedResponse(404, 'lifecycle-e2e.localhost');
+    // Before the first Publish the Site address answers with the safe 404.
+    browserIssues.expectFailedResponse(404, owner.publicUrl);
     await visitor.goto(owner.publicUrl);
     await expect(
         visitor.getByRole('heading', { name: 'Страница не найдена' }),

@@ -35,7 +35,7 @@ class PlanLimitEnforcementTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $this->plan = Plan::factory()->create();
         $this->plan->setEntitlement(Entitlement::MaxSites, 5);
         $this->plan->setEntitlement(Entitlement::MaxMembers, 10);
@@ -54,7 +54,7 @@ class PlanLimitEnforcementTest extends TestCase
     public function test_paid_plan_unlocks_every_capability(): void
     {
         $this->visit('http://dealer.ru/')->assertOk()->assertDontSee('Создано на Landflow');
-        $this->visit('http://dealer.localhost/')->assertRedirect('http://dealer.ru/');
+        $this->visit('http://localhost/100000000001/')->assertRedirect('http://dealer.ru/');
         $this->createSite('Второй сайт')->assertSessionHasNoErrors();
     }
 
@@ -69,7 +69,7 @@ class PlanLimitEnforcementTest extends TestCase
         $this->assertFalse($entitlements->allows($workspace, Entitlement::CustomDomain));
         $this->assertFalse($entitlements->allows($workspace, Entitlement::RemoveBranding));
 
-        $this->visit('http://dealer.localhost/')->assertOk()->assertSee('Создано на Landflow');
+        $this->visit('http://localhost/100000000001/')->assertOk()->assertSee('Создано на Landflow');
         $this->visit('http://dealer.ru/')->assertNotFound();
         $this->createSite('Второй сайт')->assertSessionHasErrors('site');
         $this->assertSame(1, Site::query()->count());

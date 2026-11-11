@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Support\DefaultWorkspacePlan;
 use App\Support\WorkspaceContext;
 use Database\Seeders\OfficialBlockSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -131,7 +132,8 @@ class SiteAssetsTest extends TestCase
     private function siteFor(WorkspaceRole $role): array
     {
         $user = User::factory()->create();
-        $workspace = Workspace::factory()->create();
+        // Uploads need a storage allowance (X-017); a Workspace without a Plan has none.
+        $workspace = Workspace::factory()->create(['plan_id' => app(DefaultWorkspacePlan::class)->resolve()->id]);
         $workspace->addMember($user, $role);
         $site = Site::factory()->for($workspace)->create();
         $home = new Page(['title' => Page::HOME_TITLE, 'slug' => Page::HOME_SLUG, 'sort_order' => 0]);

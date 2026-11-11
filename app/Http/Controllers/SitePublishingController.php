@@ -48,8 +48,7 @@ class SitePublishingController extends Controller
         return Inertia::render('sites/publishing', [
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
             'address' => [
-                'subdomain' => $site->subdomain,
-                'domain' => (string) config('publishing.public_domain'),
+                'number' => $site->public_number,
                 'url' => PublicSiteResolver::url($site),
             ],
             'production' => $active === null ? null : [

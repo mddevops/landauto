@@ -99,7 +99,7 @@ class E2eSeeder extends Seeder
         $interactive = $this->createUser('Инна Интерактивова', 'interactive@landflow.test');
         $this->createVehicleShowcase($this->createWorkspace($interactive, 'Автосалон Запад', plan: $plan));
 
-        // Publishing flow: a Site on its own Landflow subdomain with a ready lead Form + Popup.
+        // Publishing flow: a Site on its own Landflow address with a ready lead Form + Popup.
         $publisher = $this->createUser('Павел Публикаторов', 'publisher@landflow.test');
         $this->createPublishingSite($this->createWorkspace($publisher, 'Автосалон Центр', plan: $plan));
 
@@ -132,7 +132,7 @@ class E2eSeeder extends Seeder
         $domainsWorkspace = $this->createWorkspace($domainsOwner, 'Автосалон Домен', plan: $domainsPlan);
         $domainsWorkspace->addMember($this->createUser('Диана Доменная', 'domains-designer@landflow.test'), WorkspaceRole::Designer);
         $domainsSite = app(CreateSite::class)->create($domainsWorkspace, 'Сайт с доменом', SiteType::MultiPage);
-        $domainsSite->forceFill(['subdomain' => 'domains-e2e'])->save();
+        $this->withNumber($domainsSite, '100000000001');
         $this->placeBlock($domainsSite->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Свой домен: главная']);
 
         $this->createTeamWorkspace();
@@ -162,7 +162,7 @@ class E2eSeeder extends Seeder
         $this->createSandboxedPlatformBlock();
         $sandboxOwner = $this->createUser('Сабина Песочникова', 'sandbox@landflow.test');
         $sandboxSite = app(CreateSite::class)->create($this->createWorkspace($sandboxOwner, 'Автосалон Песочница', plan: $plan), 'Сайт с блоком из студии', SiteType::MultiPage);
-        $sandboxSite->forceFill(['subdomain' => 'sandbox-e2e'])->save();
+        $this->withNumber($sandboxSite, '100000000002');
         $sandboxForm = Form::factory()->for($sandboxSite)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($sandboxSite)->create(['name' => 'Обратный звонок'])->form()->associate($sandboxForm)->save();
 
@@ -179,11 +179,11 @@ class E2eSeeder extends Seeder
         $this->createGrantOnlyDeveloperBlock($this->createDeveloperProfile($catalogAuthor, 'Студия каталога E2E', 'e2e-catalog-studio'));
         $licensee = $this->createUser('Лиана Лицензиатова', 'licensee@landflow.test');
         $licenseSite = app(CreateSite::class)->create($this->createWorkspace($licensee, 'Автосалон Лицензия', plan: $plan), 'Сайт по лицензии', SiteType::MultiPage);
-        $licenseSite->forceFill(['subdomain' => 'license-e2e'])->save();
+        $this->withNumber($licenseSite, '100000000003');
         // D-121: a second Site of the same Workspace and a separate Workspace, for Site vs Workspace scope.
-        app(CreateSite::class)->create($licenseSite->workspace, 'Второй сайт по лицензии', SiteType::MultiPage)->forceFill(['subdomain' => 'license-two-e2e'])->save();
+        $this->withNumber(app(CreateSite::class)->create($licenseSite->workspace, 'Второй сайт по лицензии', SiteType::MultiPage), '100000000004');
         $otherLicensee = $this->createUser('Олег Сторонний', 'licensee-other@landflow.test');
-        app(CreateSite::class)->create($this->createWorkspace($otherLicensee, 'Автосалон Сторонний', plan: $plan), 'Сайт другого пространства', SiteType::MultiPage)->forceFill(['subdomain' => 'license-other-e2e'])->save();
+        $this->withNumber(app(CreateSite::class)->create($this->createWorkspace($otherLicensee, 'Автосалон Сторонний', plan: $plan), 'Сайт другого пространства', SiteType::MultiPage), '100000000005');
         $licenseAdmin = $this->createUser('Ольга Лицензиарова', 'licenses-admin@landflow.test');
         $this->createWorkspace($licenseAdmin, 'Workspace Ольги');
         PlatformRoleAssignment::query()->create(['user_id' => $licenseAdmin->id, 'role' => PlatformRole::SuperAdmin->value]);
@@ -303,7 +303,7 @@ class E2eSeeder extends Seeder
     private function createNativeSites(Workspace $workspace): void
     {
         $site = app(CreateSite::class)->create($workspace, 'Сайт с нативными блоками', SiteType::MultiPage);
-        $site->forceFill(['subdomain' => 'native-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $this->withNumber($site, '100000000006')->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         $popup = Popup::factory()->for($site)->create(['name' => 'Обратный звонок', 'title' => 'Перезвоним за 5 минут']);
         $popup->form()->associate($form)->save();
@@ -321,7 +321,7 @@ class E2eSeeder extends Seeder
         $this->placeBlock($home, 'footer', 14, []);
 
         $blocked = app(CreateSite::class)->create($workspace, 'Сайт с неодобренным кодом', SiteType::MultiPage);
-        $blocked->forceFill(['subdomain' => 'native-js-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $this->withNumber($blocked, '100000000007')->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
         $blockedForm = Form::factory()->for($blocked)->withLeadFields()->create(['name' => 'Заявка из нативного кода']);
         $blockedPopup = Popup::factory()->for($blocked)->create(['name' => 'Форма нативного кода', 'title' => 'Заявка из нативного кода']);
         $blockedPopup->form()->associate($blockedForm)->save();
@@ -366,9 +366,8 @@ class E2eSeeder extends Seeder
         $plan->setEntitlement(Entitlement::MultiPageSites, true);
         $workspace = $this->createWorkspace($this->createUser('Тимур Командиров', 'team-owner@landflow.test'), 'Автосалон Команда', plan: $plan);
         $siteA = app(CreateSite::class)->create($workspace, 'Сайт команды А', SiteType::MultiPage);
-        $siteA->forceFill(['subdomain' => 'team-a-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
-        $siteB = app(CreateSite::class)->create($workspace, 'Сайт команды Б', SiteType::MultiPage);
-        $siteB->forceFill(['subdomain' => 'team-b-e2e'])->save();
+        $this->withNumber($siteA, '100000000008')->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
+        $siteB = $this->withNumber(app(CreateSite::class)->create($workspace, 'Сайт команды Б', SiteType::MultiPage), '100000000009');
         $this->placeBlock($siteA->pages()->where('is_home', true)->firstOrFail(), 'hero', 0, ['title' => 'Команда: главная']);
         $form = Form::factory()->for($siteA)->withLeadFields()->create(['name' => 'Заявка команды']);
         Submission::factory()->create(['form_id' => $form->id]);
@@ -413,7 +412,7 @@ class E2eSeeder extends Seeder
     private function createIntegrationsSite(Workspace $workspace): void
     {
         $site = app(CreateSite::class)->create($workspace, 'Сайт интеграций', SiteType::MultiPage);
-        $site->forceFill(['subdomain' => 'integrations-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $this->withNumber($site, '100000000010')->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         $popup = Popup::factory()->for($site)->create(['name' => 'Обратный звонок', 'title' => 'Перезвоним за 5 минут']);
         $popup->form()->associate($form)->save();
@@ -443,7 +442,7 @@ class E2eSeeder extends Seeder
     private function createPublishingSite(Workspace $workspace): void
     {
         $site = app(CreateSite::class)->create($workspace, 'Сайт для публикации', SiteType::MultiPage);
-        $site->forceFill(['subdomain' => 'publish-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $this->withNumber($site, '100000000011')->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка с сайта']);
         Popup::factory()->for($site)->create(['name' => 'Обратный звонок'])->form()->associate($form)->save();
     }
@@ -457,7 +456,7 @@ class E2eSeeder extends Seeder
     private function createLifecycleSite(Workspace $workspace): void
     {
         $site = app(CreateSite::class)->create($workspace, 'Сайт жизненного цикла', SiteType::MultiPage);
-        $site->forceFill(['subdomain' => 'lifecycle-e2e', 'form_security' => ['ip_limit' => 1000]])->save();
+        $this->withNumber($site, '100000000012')->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
         $form = Form::factory()->for($site)->withLeadFields()->create(['name' => 'Заявка на тест-драйв']);
         $popup = Popup::factory()->for($site)->create(['name' => 'Тест-драйв', 'title' => 'Тест-драйв за 15 минут']);
         $popup->form()->associate($form)->save();
@@ -599,5 +598,16 @@ class E2eSeeder extends Seeder
         $workspace->addMember($user, WorkspaceRole::Owner, $status);
 
         return $workspace;
+    }
+
+    /**
+     * Browser specs open these Sites at a fixed address; the model keeps the number immutable,
+     * so the seeder replaces the generated one directly in the table.
+     */
+    private function withNumber(Site $site, string $number): Site
+    {
+        Site::query()->whereKey($site->id)->update(['public_number' => $number]);
+
+        return $site->refresh();
     }
 }

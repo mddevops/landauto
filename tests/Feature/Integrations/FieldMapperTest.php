@@ -35,7 +35,7 @@ class FieldMapperTest extends TestCase
     {
         parent::setUp();
 
-        $this->site = Site::factory()->create(['name' => 'Дилер Москвич', 'subdomain' => 'dealer']);
+        $this->site = Site::factory()->create(['name' => 'Дилер Москвич', 'public_number' => self::DEALER_NUMBER]);
         $this->form = Form::factory()->for($this->site)->withLeadFields()->create(['name' => 'Тест-драйв']);
         $profile = IntegrationProfile::factory()->create(['workspace_id' => $this->site->workspace_id]);
         $this->binding = SiteIntegrationBinding::factory()->for($this->site)->create(['integration_profile_id' => $profile->id, 'overrides_json' => ['site_id' => '101']]);

@@ -51,8 +51,8 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
     const phone = `+7 (998) ${run.slice(-7, -4)}-${run.slice(-4, -2)}-${run.slice(-2)}`;
     const visitor = await page.context().newPage();
 
-    // Not published yet: the subdomain answers with a safe 404.
-    browserIssues.expectFailedResponse(404, 'publish-e2e.localhost');
+    // Not published yet: the Site address answers with a safe 404.
+    browserIssues.expectFailedResponse(404, publisher.publicUrl);
     await visitor.goto(publisher.publicUrl);
     await expect(
         visitor.getByRole('heading', { name: 'Страница не найдена' }),
@@ -171,18 +171,10 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
         visitor.getByRole('heading', { name: 'Черновой заголовок' }),
     ).toBeVisible();
 
-    // An explicit address change moves the public host at once.
+    // The address is the platform-assigned Site number; customers cannot edit it.
     await expect(page.getByTestId('public-url')).toHaveText(
         `${publisher.publicUrl}/`,
     );
-    await page.getByLabel('Поддомен').fill('publish-e2e-renamed');
-    await page.getByRole('button', { name: 'Сохранить адрес' }).click();
-    await expect(page.getByText('Адрес сайта сохранён.').first()).toBeVisible();
-    await expect(page.getByTestId('public-url')).toHaveText(
-        'http://publish-e2e-renamed.localhost:8200/',
-    );
-    await visitor.goto('http://publish-e2e-renamed.localhost:8200/');
-    await expect(
-        visitor.getByRole('heading', { name: 'Черновой заголовок' }),
-    ).toBeVisible();
+    await expect(page.getByTestId('site-number')).toHaveText('100000000011');
+    await expect(page.getByLabel('Поддомен')).toHaveCount(0);
 });

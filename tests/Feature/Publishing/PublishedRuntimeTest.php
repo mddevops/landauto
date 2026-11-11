@@ -45,15 +45,13 @@ class PublishedRuntimeTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
     }
 
     public function test_an_unpublished_or_unknown_site_is_a_safe_404(): void
     {
         $this->visit('/')->assertNotFound()->assertSee('Страница не найдена')->assertDontSee('Заголовок v1');
-        $this->onPublicHost(fn () => $this->get('http://unknown.localhost/'))->assertNotFound();
-
-        $this->onPublicHost(fn () => $this->get('http://www.localhost/'))->assertOk()->assertDontSee('Страница не найдена');
+        $this->onPublicHost(fn () => $this->get('http://localhost/999999999999/'))->assertNotFound()->assertSee('Страница не найдена');
     }
 
     public function test_the_active_version_is_served_from_stored_html_without_draft_reads(): void
@@ -128,8 +126,8 @@ class PublishedRuntimeTest extends TestCase
         $this->visit('/login')->assertNotFound();
         $this->visit('/dashboard')->assertNotFound();
         $this->visit('/sites/'.$this->site->public_id.'/designer')->assertNotFound();
-        $this->onPublicHost(fn () => $this->post('http://dealer.localhost/login', ['email' => 'x']))->assertNotFound();
-        $this->onPublicHost(fn () => $this->delete('http://dealer.localhost/'))->assertNotFound();
+        $this->onPublicHost(fn () => $this->post('http://localhost/100000000001/login', ['email' => 'x']))->assertNotFound();
+        $this->onPublicHost(fn () => $this->delete('http://localhost/100000000001/'))->assertNotFound();
     }
 
     public function test_only_files_referenced_by_a_ready_version_are_delivered(): void
@@ -154,8 +152,8 @@ class PublishedRuntimeTest extends TestCase
         $this->visit("/_landflow/assets/{$v1->public_id}/{$draftAsset->public_id}")->assertNotFound();
         $this->visit("/_landflow/media/{$v1->public_id}/{$this->image->public_id}")->assertOk();
 
-        $foreign = Site::factory()->create(['subdomain' => 'foreign']);
-        $this->onPublicHost(fn () => $this->get("http://foreign.localhost/_landflow/media/{$v1->public_id}/{$this->image->public_id}"))->assertNotFound();
+        $foreign = Site::factory()->create();
+        $this->onPublicHost(fn () => $this->get("http://localhost/{$foreign->public_number}/_landflow/media/{$v1->public_id}/{$this->image->public_id}"))->assertNotFound();
         $this->assertNull($foreign->active_published_version_id);
     }
 
@@ -210,7 +208,7 @@ class PublishedRuntimeTest extends TestCase
         $this->assertNotNull($v1);
 
         $draftOnly = Form::factory()->for($this->site)->withLeadFields()->create();
-        $this->onPublicHost(fn () => $this->postJson("http://dealer.localhost/_landflow/forms/{$v1->public_id}/{$draftOnly->public_id}", ['fields' => $this->fields()]))
+        $this->onPublicHost(fn () => $this->postJson("http://localhost/100000000001/_landflow/forms/{$v1->public_id}/{$draftOnly->public_id}", ['fields' => $this->fields()]))
             ->assertNotFound()->assertExactJson(['message' => 'Форма недоступна.']);
 
         $this->renderer()->fail = true;
@@ -240,7 +238,7 @@ class PublishedRuntimeTest extends TestCase
      */
     private function visit(string $path): TestResponse
     {
-        return $this->onPublicHost(fn () => $this->get('http://dealer.localhost'.$path));
+        return $this->onPublicHost(fn () => $this->get('http://localhost/100000000001'.$path));
     }
 
     /**
@@ -250,7 +248,7 @@ class PublishedRuntimeTest extends TestCase
     private function lead(PublishedVersion $version, array $context, string $phone = '+7 (999) 111-22-33'): TestResponse
     {
         return $this->onPublicHost(fn () => $this->postJson(
-            "http://dealer.localhost/_landflow/forms/{$version->public_id}/{$this->form->public_id}",
+            "http://localhost/100000000001/_landflow/forms/{$version->public_id}/{$this->form->public_id}",
             ['fields' => $this->fields($phone), 'context' => $context],
         ));
     }

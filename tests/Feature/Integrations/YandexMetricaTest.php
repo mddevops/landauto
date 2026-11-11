@@ -36,7 +36,7 @@ class YandexMetricaTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
     }
 
     public function test_owner_saves_draft_settings_and_the_integrations_page_shows_them(): void
@@ -170,7 +170,7 @@ class YandexMetricaTest extends TestCase
      */
     private function visit(string $path): TestResponse
     {
-        return $this->onPublicHost(fn () => $this->get('http://dealer.localhost'.$path));
+        return $this->onPublicHost(fn () => $this->get('http://localhost/100000000001'.$path));
     }
 
     private function as(User $user): self

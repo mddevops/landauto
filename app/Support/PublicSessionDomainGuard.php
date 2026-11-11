@@ -17,4 +17,17 @@ final class PublicSessionDomainGuard
             throw new LogicException('SESSION_DOMAIN must not include the published Site domain.');
         }
     }
+
+    /**
+     * Published Sites must never share the application origin (D-127): their scripts would run
+     * next to the application session.
+     */
+    public function assertSeparateHosts(string $appUrl, string $publicDomain): void
+    {
+        $app = strtolower((string) parse_url($appUrl, PHP_URL_HOST));
+        $public = strtolower(trim($publicDomain, '.'));
+        if ($app === '' || $app === $public) {
+            throw new LogicException('LANDFLOW_PUBLIC_DOMAIN must differ from the APP_URL host.');
+        }
+    }
 }

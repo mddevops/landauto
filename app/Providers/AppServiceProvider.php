@@ -89,7 +89,9 @@ class AppServiceProvider extends ServiceProvider
     {
         $this->configureDefaults();
         if ($this->app->environment('production')) {
-            app(PublicSessionDomainGuard::class)->assertSafe(config('session.domain'), (string) config('publishing.public_domain'));
+            $guard = app(PublicSessionDomainGuard::class);
+            $guard->assertSafe(config('session.domain'), (string) config('publishing.public_domain'));
+            $guard->assertSeparateHosts((string) config('app.url'), (string) config('publishing.public_domain'));
         }
         Gate::policy(Site::class, SitePolicy::class);
 

@@ -11,7 +11,6 @@ use App\Publishing\PublishedSnapshotBuilder;
 use App\Publishing\Runtime\PublicSiteResolver;
 use Closure;
 use Illuminate\Http\Request;
-use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 
@@ -58,10 +57,6 @@ trait SubmitsPublishedForms
     {
         $site = Site::query()->findOrFail($form->site_id);
 
-        if ($site->subdomain === null) {
-            $site->forceFill(['subdomain' => 'site-'.Str::lower(Str::random(10))])->save();
-        }
-
         if (! $site->popups()->active()->where('form_id', $form->id)->exists()) {
             Popup::factory()->for($site)->create()->form()->associate($form)->save();
         }
@@ -96,6 +91,6 @@ trait SubmitsPublishedForms
 
     protected function publicUrl(Site $site, string $path = '/'): string
     {
-        return (string) PublicSiteResolver::url($site, $path);
+        return PublicSiteResolver::url($site, $path);
     }
 }

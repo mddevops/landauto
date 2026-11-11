@@ -47,7 +47,7 @@ class BlockVersionGrandfatheringTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $this->siteB = Site::factory()->for($this->workspace)->create(['name' => 'Сайт Б']);
         $this->homeB = Page::factory()->for($this->siteB)->home()->create();
 

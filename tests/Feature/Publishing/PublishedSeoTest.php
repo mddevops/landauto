@@ -27,7 +27,7 @@ class PublishedSeoTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
     }
 
     public function test_published_pages_carry_title_description_canonical_robots_and_real_open_graph_only(): void
@@ -40,17 +40,17 @@ class PublishedSeoTest extends TestCase
             ->assertOk()
             ->assertSee('<title>KIA в Москве — Дилер</title>', false)
             ->assertSee('<meta name="description" content="Новые KIA в наличии.">', false)
-            ->assertSee('<link rel="canonical" href="http://dealer.localhost/">', false)
+            ->assertSee('<link rel="canonical" href="http://localhost/100000000001/">', false)
             ->assertSee('<meta name="robots" content="index, follow">', false)
             ->assertSee('<meta property="og:title" content="KIA в Москве — Дилер">', false)
-            ->assertSee('<meta property="og:url" content="http://dealer.localhost/">', false)
+            ->assertSee('<meta property="og:url" content="http://localhost/100000000001/">', false)
             ->assertSee('<meta property="og:site_name" content="Дилер">', false)
             ->assertDontSee('og:image', false);
 
         $this->visit('/'.$offers->slug)
             ->assertOk()
             ->assertSee('<title>Предложения</title>', false)
-            ->assertSee('<link rel="canonical" href="http://dealer.localhost/offers">', false)
+            ->assertSee('<link rel="canonical" href="http://localhost/100000000001/offers">', false)
             ->assertSee('<meta name="robots" content="noindex, follow">', false)
             ->assertDontSee('name="description"', false)
             ->assertDontSee('og:description', false);
@@ -69,7 +69,7 @@ class PublishedSeoTest extends TestCase
         $this->assertStringStartsWith('application/xml', (string) $response->headers->get('Content-Type'));
         $xml = simplexml_load_string((string) $response->getContent());
         $this->assertNotFalse($xml);
-        $this->assertSame(['http://dealer.localhost/', 'http://dealer.localhost/promo'], array_map('strval', $xml->xpath('//*[local-name()="loc"]') ?: []));
+        $this->assertSame(['http://localhost/100000000001/', 'http://localhost/100000000001/promo'], array_map('strval', $xml->xpath('//*[local-name()="loc"]') ?: []));
         $this->assertStringNotContainsString('draft-only', (string) $response->getContent());
         $this->assertStringNotContainsString('offers', (string) $response->getContent());
     }
@@ -84,8 +84,8 @@ class PublishedSeoTest extends TestCase
             ->getContent();
 
         $this->assertStringContainsString("User-agent: *\n", $body);
-        $this->assertStringContainsString('Sitemap: http://dealer.localhost/sitemap.xml', $body);
-        $this->assertStringContainsString('Disallow: /_landflow/forms/', $body);
+        $this->assertStringContainsString('Sitemap: http://localhost/100000000001/sitemap.xml', $body);
+        $this->assertStringContainsString('Disallow: /100000000001/_landflow/forms/', $body);
 
         foreach (['/sites/', 'preview', 'designer', '/dashboard', $this->site->public_id] as $forbidden) {
             $this->assertStringNotContainsString($forbidden, $body);
@@ -192,7 +192,7 @@ class PublishedSeoTest extends TestCase
      */
     private function visit(string $path): TestResponse
     {
-        return $this->onPublicHost(fn () => $this->get('http://dealer.localhost'.$path));
+        return $this->onPublicHost(fn () => $this->get('http://localhost/100000000001'.$path));
     }
 
     /**

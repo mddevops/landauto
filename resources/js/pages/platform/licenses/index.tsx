@@ -28,7 +28,7 @@ type License = {
     scope: Scope;
     scope_label: string;
     target: string;
-    subdomain: string | null;
+    site_number: string | null;
     workspace: string;
     source_label: string;
     granted_at: string | null;
@@ -57,11 +57,11 @@ const kindLabels = { block: 'Блок', template: 'Шаблон' } as const;
 const targetFields = {
     site: {
         label: 'Сайт',
-        hint: 'Поддомен сайта на Landflow или ID сайта. Другие сайты пространства лицензию не получат.',
+        hint: 'Номер сайта (12 цифр) или ID сайта. Другие сайты пространства лицензию не получат.',
     },
     workspace: {
         label: 'Пространство',
-        hint: 'ID пространства или поддомен любого его сайта. Лицензия действует на все текущие и будущие сайты этого пространства.',
+        hint: 'ID пространства или номер любого его сайта. Лицензия действует на все текущие и будущие сайты этого пространства.',
     },
 } as const;
 
@@ -293,10 +293,12 @@ export default function PlatformLicenses({
                                         {`${license.scope_label}: ${license.target}`}
                                         {license.scope === 'site' &&
                                             ` · ${license.workspace}`}
-                                        {license.subdomain && (
+                                        {license.site_number && (
                                             <>
                                                 {' · '}
-                                                <code>{license.subdomain}</code>
+                                                <code>
+                                                    {license.site_number}
+                                                </code>
                                             </>
                                         )}
                                     </p>

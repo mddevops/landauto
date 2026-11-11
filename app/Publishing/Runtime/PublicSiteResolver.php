@@ -6,24 +6,21 @@ use App\Domains\CustomDomainAccess;
 use App\Enums\SiteStatus;
 use App\Models\Site;
 use App\Models\SiteDomain;
-use App\Support\SiteSubdomain;
 
 /**
- * Maps a public request host to its Site (ADR-006 §9, D-111). Custom domains are looked up first,
- * then Landflow subdomains of the configured public domain. A custom domain is served only while
- * it is fully active (ownership, routing, SSL) and its Workspace keeps the `custom_domain`
- * entitlement; otherwise the Landflow subdomain is the Site's primary address.
+ * Maps a public request to its Site (D-127, D-111). On the Landflow public domain the Site is
+ * addressed by its public number in the first path segment: `{public_domain}/{number}/…`. Custom
+ * domains are addressed by the request host and serve the Site at their root. A custom domain is
+ * served only while it is fully active (ownership, routing, SSL) and its Workspace keeps the
+ * `custom_domain` entitlement; otherwise the Landflow address is the Site's primary address.
  */
 final class PublicSiteResolver
 {
     /**
-     * Route requirement for the subdomain host parameter: one DNS label, not reserved. The
-     * lookahead ends with the dot that follows the label inside the host pattern.
+     * End of the host inside a host route requirement. Route caching compiles host and path into
+     * one subject (`{host}.{path}`), so a plain `$` would never match there.
      */
-    public static function routePattern(): string
-    {
-        return '(?!(?:'.implode('|', SiteSubdomain::RESERVED).')\.)[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?';
-    }
+    private const HOST_END = '(?:$|\./)';
 
     /**
      * Route requirement for custom hostnames: dotted DNS names that are not the application host,
@@ -32,30 +29,53 @@ final class PublicSiteResolver
      */
     public static function customHostPattern(): string
     {
-        $public = preg_quote((string) config('publishing.public_domain'), '#');
+        $public = preg_quote(self::publicDomain(), '#');
         $excluded = array_values(array_filter(array_unique([
-            (string) config('publishing.public_domain'),
+            self::publicDomain(),
             strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST)),
             'localhost',
         ])));
 
-        return '(?!(?:'.implode('|', array_map(fn (string $host): string => preg_quote($host, '#'), $excluded)).')$)'
-            .'(?!.*\.'.$public.'$)'
-            .'(?![0-9.]+$)'
+        return '(?!(?:'.implode('|', array_map(fn (string $host): string => preg_quote($host, '#'), $excluded)).')'.self::HOST_END.')'
+            .'(?![^/]*\.'.$public.self::HOST_END.')'
+            .'(?![0-9.]+(?:$|/))'
             .'(?:[a-z0-9](?:[a-z0-9-]{0,61}[a-z0-9])?\.)+[a-z0-9-]{2,63}';
     }
 
-    public function match(string $host): ?PublicSiteMatch
+    /**
+     * Whether published Sites share the application host (local development and tests only;
+     * production refuses it). The public domain then has no catch-all of its own.
+     */
+    public static function sharesApplicationHost(): bool
     {
-        $host = strtolower(rtrim($host, '.'));
-        $label = self::subdomainOf($host);
+        return self::publicDomain() === strtolower((string) parse_url((string) config('app.url'), PHP_URL_HOST));
+    }
 
-        if ($label !== null) {
-            $site = $this->resolve($host);
+    /**
+     * An active Site addressed by its public number on the Landflow public domain.
+     */
+    public function matchNumber(string $number): ?PublicSiteMatch
+    {
+        $site = Site::query()
+            ->where('public_number', $number)
+            ->where('status', SiteStatus::Active->value)
+            ->first();
 
-            return $site === null ? null : new PublicSiteMatch($site, self::primaryDomain($site)?->hostname);
+        if ($site === null) {
+            return null;
         }
 
+        $primary = self::primaryDomain($site);
+
+        return new PublicSiteMatch($site, self::basePath($site), $primary === null ? null : self::hostUrl($primary->hostname, ''));
+    }
+
+    /**
+     * An active Site addressed by one of its custom domains.
+     */
+    public function matchHost(string $host): ?PublicSiteMatch
+    {
+        $host = strtolower(rtrim($host, '.'));
         $domain = SiteDomain::query()->with('site.workspace')->where('hostname', $host)->first();
 
         if ($domain === null || ! $domain->isActive() || $domain->site->status !== SiteStatus::Active
@@ -66,24 +86,10 @@ final class PublicSiteResolver
         $primary = self::primaryDomain($domain->site);
 
         if ($primary?->is($domain) === true) {
-            return new PublicSiteMatch($domain->site, null);
+            return new PublicSiteMatch($domain->site, '', null);
         }
 
-        return new PublicSiteMatch($domain->site, $primary !== null ? $primary->hostname : self::subdomainHost($domain->site));
-    }
-
-    public function resolve(string $host): ?Site
-    {
-        $label = self::subdomainOf($host);
-
-        if ($label === null || SiteSubdomain::isReserved($label)) {
-            return null;
-        }
-
-        return Site::query()
-            ->where('subdomain', $label)
-            ->where('status', SiteStatus::Active->value)
-            ->first();
+        return new PublicSiteMatch($domain->site, '', $primary !== null ? self::hostUrl($primary->hostname, '') : self::url($domain->site, ''));
     }
 
     /**
@@ -96,35 +102,24 @@ final class PublicSiteResolver
         return $domain !== null && $domain->isActive() && app(CustomDomainAccess::class)->entitled($site) ? $domain : null;
     }
 
-    public static function subdomainOf(string $host): ?string
+    public static function basePath(Site $site): string
     {
-        $host = strtolower(rtrim($host, '.'));
-        $suffix = '.'.config('publishing.public_domain');
-
-        if (! str_ends_with($host, $suffix)) {
-            return null;
-        }
-
-        $label = substr($host, 0, -strlen($suffix));
-
-        return $label !== '' && ! str_contains($label, '.') ? $label : null;
+        return '/'.$site->public_number;
     }
 
     /**
-     * Landflow subdomain address; always works, even when a custom domain is primary.
+     * Landflow address; always works, even when a custom domain is primary.
      */
-    public static function url(Site $site, string $path = '/'): ?string
+    public static function url(Site $site, string $path = '/'): string
     {
-        $host = self::subdomainHost($site);
-
-        return $host === null ? null : self::hostUrl($host, $path);
+        return self::hostUrl(self::publicDomain(), self::basePath($site).$path);
     }
 
     /**
      * Address visitors should use: the custom primary domain if one is in effect, else the
-     * Landflow subdomain. Canonical URLs, sitemap and robots use it.
+     * Landflow address. Canonical URLs, sitemap and robots use it.
      */
-    public static function primaryUrl(Site $site, string $path = '/'): ?string
+    public static function primaryUrl(Site $site, string $path = '/'): string
     {
         $primary = self::primaryDomain($site);
 
@@ -148,8 +143,8 @@ final class PublicSiteResolver
         return filled($port) ? ':'.$port : '';
     }
 
-    private static function subdomainHost(Site $site): ?string
+    private static function publicDomain(): string
     {
-        return $site->subdomain === null ? null : $site->subdomain.'.'.config('publishing.public_domain');
+        return strtolower((string) config('publishing.public_domain'));
     }
 }

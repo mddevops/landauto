@@ -11,6 +11,7 @@ use App\Publishing\PublishedSnapshot;
 use App\Publishing\PublishedSnapshotBuilder;
 use App\Publishing\Rendering\PageRenderer;
 use App\Publishing\Rendering\PageRenderException;
+use App\Publishing\Runtime\PublicBasePath;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use LogicException;
 use Tests\Concerns\BuildsPublishableSite;
@@ -50,10 +51,12 @@ class PublishedArtifactBuilderTest extends TestCase
 
         $payload = $pages[0]->hydration_json;
         $this->assertSame($version->public_id, $payload['version']);
-        $this->assertSame("/_landflow/forms/{$version->public_id}", $payload['form_action']);
-        $this->assertSame("/_landflow/media/{$version->public_id}/{$this->image->public_id}", $payload['vehicles'][0]['media']['sets'][0]['images'][0]['url']);
+        // Site-relative URLs carry the base-path token; the runtime fills it per request host (D-127).
+        $base = PublicBasePath::TOKEN;
+        $this->assertSame("{$base}/_landflow/forms/{$version->public_id}", $payload['form_action']);
+        $this->assertSame("{$base}/_landflow/media/{$version->public_id}/{$this->image->public_id}", $payload['vehicles'][0]['media']['sets'][0]['images'][0]['url']);
         $this->assertSame($this->form->public_id, $payload['popups'][0]['form']['public_id']);
-        $this->assertSame([['public_id' => $this->home->public_id, 'path' => '/'], ['public_id' => $offers->public_id, 'path' => '/offers']], $payload['pages']);
+        $this->assertSame([['public_id' => $this->home->public_id, 'path' => "{$base}/"], ['public_id' => $offers->public_id, 'path' => "{$base}/offers"]], $payload['pages']);
         $this->assertArrayNotHasKey('offer_prices', $payload);
         $this->assertSame(['title' => 'Главная', 'description' => null, 'indexable' => true], $pages[0]->seo_json);
 

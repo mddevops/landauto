@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\Template;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Platform\PlatformSettings;
 use App\Support\WorkspaceContext;
 use App\Support\WorkspaceEntitlements;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -33,7 +34,8 @@ class DefaultFreePlanTest extends TestCase
         $this->assertSame(Plan::FREE_KEY, $plan->key);
         $this->assertTrue($plan->is_active);
         $this->assertSame(2, app(WorkspaceEntitlements::class)->limit($workspace, Entitlement::MaxSites));
-        $this->assertSame([Entitlement::MaxSites], $plan->entitlements()->pluck('key')->all());
+        $this->assertSame([Entitlement::MaxSites, Entitlement::MaxStorageMb], $plan->entitlements()->orderBy('id')->pluck('key')->all());
+        $this->assertSame(PlatformSettings::DEFAULT_FREE_MAX_STORAGE_MB, app(WorkspaceEntitlements::class)->storageLimitMb($workspace));
     }
 
     public function test_free_plan_is_shared_idempotently_and_never_overwritten(): void

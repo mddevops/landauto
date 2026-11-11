@@ -136,7 +136,7 @@ class SiteController extends Controller
                 'public_id' => $site->public_id,
                 'name' => $site->name,
                 'status' => $site->status->value,
-                'subdomain' => $site->subdomain,
+                'public_number' => $site->public_number,
                 'address' => PublicSiteResolver::primaryUrl($site),
                 'created_at' => $site->created_at?->toIso8601String(),
             ],

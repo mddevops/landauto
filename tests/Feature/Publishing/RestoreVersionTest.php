@@ -40,7 +40,7 @@ class RestoreVersionTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $this->home->forceFill(['seo_title' => 'SEO v1'])->save();
         $this->v1 = $this->publish();
 
@@ -81,13 +81,13 @@ class RestoreVersionTest extends TestCase
         $this->assertFalse($this->laterForm->fresh()?->status);
         $this->assertSame(1, Submission::query()->where('form_id', $this->laterForm->id)->count());
         $this->assertSame(['ip_limit' => 7], $this->site->fresh()?->form_security);
-        $this->assertSame('dealer', $this->site->fresh()?->subdomain);
+        $this->assertSame(self::DEALER_NUMBER, $this->site->fresh()?->public_number);
 
         // Production is still v2; nothing was published or activated.
         $this->assertSame($this->v2->id, $this->site->fresh()?->active_published_version_id);
         $this->assertSame(2, PublishedVersion::query()->count());
         $this->assertSame($publications, Publication::query()->count());
-        $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertSee('Заголовок v2')->assertDontSee('Заголовок v1');
+        $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/'))->assertSee('Заголовок v2')->assertDontSee('Заголовок v1');
 
         // Preview shows the restored Draft.
         $this->as($this->owner)->get(route('sites.preview', $this->site))
@@ -103,7 +103,7 @@ class RestoreVersionTest extends TestCase
         $this->assertSame(3, $v3->version_number);
         $this->assertSame($this->v1->manifest_hash, $v3->manifest_hash);
         $this->assertSame($v3->id, $this->site->fresh()?->active_published_version_id);
-        $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertSee('Заголовок v1');
+        $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/'))->assertSee('Заголовок v1');
         $this->assertSame(PublishedVersionStatus::Ready, $this->v2->fresh()?->status);
     }
 

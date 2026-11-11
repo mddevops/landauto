@@ -22,8 +22,8 @@ type SiteOverviewProps = {
         public_id: string;
         name: string;
         status: 'active' | 'archived';
-        subdomain: string | null;
-        address: string | null;
+        public_number: string;
+        address: string;
         created_at: string | null;
     };
     production: {
@@ -122,16 +122,16 @@ export default function SiteOverview({
                                         : `Версия ${production.version_number} · ${formatDate(production.published_at)}`}
                                 </dd>
                                 <dt className="text-muted-foreground">
-                                    Поддомен
+                                    Номер сайта
                                 </dt>
-                                <dd className="break-all">
-                                    {site.subdomain ?? '—'}
+                                <dd className="break-all tabular-nums">
+                                    {site.public_number}
                                 </dd>
                                 <dt className="text-muted-foreground">
                                     Публичный адрес
                                 </dt>
                                 <dd className="min-w-0">
-                                    {site.address && production !== null ? (
+                                    {production !== null ? (
                                         <a
                                             href={site.address}
                                             target="_blank"

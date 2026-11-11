@@ -44,7 +44,7 @@ class SandboxedBlockRuntimeTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $definition = BlockDefinition::factory()->platform()->create(['slug' => 'promo-card', 'name' => 'Промо-карточка']);
         $this->promo = BlockVersion::factory()->sandboxed(self::HTML, 'h2 { color: #b91c1c; }', self::JS)
             ->for($definition, 'definition')
@@ -130,7 +130,7 @@ class SandboxedBlockRuntimeTest extends TestCase
         $this->placeSandboxed(['title' => 'Акция']);
         $this->assertTrue($this->publish()->succeeded());
 
-        $content = (string) $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertOk()->getContent();
+        $content = (string) $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/'))->assertOk()->getContent();
         $this->assertStringNotContainsString('</script><b>yes</b>', $content);
         $this->assertStringNotContainsString('<h2>{{ title }}</h2>', $content);
         $this->assertStringContainsString('\u003C/script\u003E\u003Cb\u003Eyes', $content);
