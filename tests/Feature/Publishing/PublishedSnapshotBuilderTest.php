@@ -108,8 +108,9 @@ class PublishedSnapshotBuilderTest extends TestCase
         $this->assertFalse($draft['popups'][0]['status']);
         $this->assertSame($this->form->public_id, $draft['popups'][0]['form']);
         $this->assertSame(210_000_000, $draft['vehicles'][0]['offers'][0]['price_minor']);
-        $this->assertSame([], $draft['vehicles'][0]['media_sets']);
-        $this->assertSame($this->vehicle->catalog_series_public_id, $draft['vehicles'][0]['catalog_series_public_id']);
+        $this->assertSame([['public_id' => $this->image->color?->public_id, 'name' => 'Белый', 'swatch_hex' => '#ffffff', 'sort_order' => $this->image->color?->sort_order]], $draft['vehicles'][0]['colors']);
+        $this->assertSame([['public_id' => $this->image->public_id, 'color' => $this->image->color?->public_id, 'angle' => 'front_3_4_left', 'sort_order' => $this->image->sort_order]], $draft['vehicles'][0]['photos']);
+        $this->assertSame($this->vehicle->catalog_series_ref, $draft['vehicles'][0]['catalog_series_ref']);
         $this->assertSame('phone', $draft['forms'][0]['fields'][1]['key']);
     }
 
@@ -124,7 +125,7 @@ class PublishedSnapshotBuilderTest extends TestCase
 
         $this->assertEqualsCanonicalizing([
             ['kind' => PublishedAssetKind::SiteAsset, 'public_id' => $shown->public_id],
-            ['kind' => PublishedAssetKind::SeriesMediaImage, 'public_id' => $this->image->public_id],
+            ['kind' => PublishedAssetKind::VehiclePhoto, 'public_id' => $this->image->public_id],
         ], $references);
     }
 

@@ -2,7 +2,7 @@
 
 namespace App\Http\Requests\Vehicles;
 
-use App\Catalog\CatalogReferences;
+use App\Catalog\AutoCatalog;
 use App\Enums\BenefitType;
 use App\Enums\OfferAvailability;
 use App\Models\Site;
@@ -56,7 +56,7 @@ class SaveSiteOfferRequest extends FormRequest
         }
 
         $current = [
-            'catalog_equipment_public_id' => $offer->catalog_equipment_public_id,
+            'catalog_equipment_ref' => $offer->catalog_equipment_ref,
             'price_minor' => $offer->price_minor,
             'rrp_minor' => $offer->rrp_minor,
             'currency' => $offer->currency,
@@ -93,8 +93,8 @@ class SaveSiteOfferRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'equipment' => ['required', 'string'],
-            'price' => ['required', 'string', 'max:32'],
+            'equipment' => ['required', 'string', 'max:64'],
+            'price' => ['nullable', 'string', 'max:32'],
             'rrp' => ['nullable', 'string', 'max:32'],
             'availability' => ['nullable', Rule::enum(OfferAvailability::class)],
             'badge' => ['nullable', 'string', 'max:40'],
@@ -117,12 +117,19 @@ class SaveSiteOfferRequest extends FormRequest
                 return;
             }
 
-            if (Money::parse($this->string('price')->toString()) === null) {
+            $price = $this->filled('price') ? Money::parse($this->string('price')->toString()) : null;
+            $rrp = $this->filled('rrp') ? Money::parse($this->string('rrp')->toString()) : null;
+
+            if ($this->filled('price') && $price === null) {
                 $validator->errors()->add('price', 'Укажите цену в рублях, например 1 850 000.');
             }
 
-            if ($this->filled('rrp') && Money::parse($this->string('rrp')->toString()) === null) {
+            if ($this->filled('rrp') && $rrp === null) {
                 $validator->errors()->add('rrp', 'Укажите цену без скидки в рублях, например 1 990 000.');
+            }
+
+            if ($price !== null && $rrp !== null && $rrp < $price) {
+                $validator->errors()->add('rrp', 'Цена без скидки должна быть не меньше цены со скидкой.');
             }
 
             foreach ($this->benefitInput() as $index => $benefit) {
@@ -165,8 +172,8 @@ class SaveSiteOfferRequest extends FormRequest
         $badge = trim($this->string('badge')->toString());
 
         return [
-            'catalog_equipment_public_id' => $this->string('equipment')->toString(),
-            'price_minor' => Money::parse($this->string('price')->toString()),
+            'catalog_equipment_ref' => $this->string('equipment')->toString(),
+            'price_minor' => $this->filled('price') ? Money::parse($this->string('price')->toString()) : null,
             'rrp_minor' => $this->filled('rrp') ? Money::parse($this->string('rrp')->toString()) : null,
             'currency' => Money::DEFAULT_CURRENCY,
             'availability' => $this->input('availability') ?: null,
@@ -226,18 +233,18 @@ class SaveSiteOfferRequest extends FormRequest
 
     private function validateEquipment(Validator $validator): void
     {
-        $publicId = $this->string('equipment')->toString();
+        $key = $this->string('equipment')->toString();
         $offer = $this->route('offer');
 
-        if ($offer instanceof SiteOffer && $offer->catalog_equipment_public_id === $publicId) {
+        if ($offer instanceof SiteOffer && $offer->catalog_equipment_ref === $key) {
             return;
         }
 
-        $references = app(CatalogReferences::class);
-        $equipment = $references->equipment($publicId, availableOnly: true);
+        $catalog = app(AutoCatalog::class);
+        $series = $catalog->series($this->vehicle()->catalog_series_ref);
 
-        if ($equipment === null || ! $references->equipmentBelongsToSeries($equipment, $this->vehicle()->catalog_series_public_id)) {
-            $validator->errors()->add('equipment', 'Выберите комплектацию этой серии.');
+        if ($series === null || $catalog->equipment($series, $key) === null) {
+            $validator->errors()->add('equipment', 'Выберите комплектацию этого кузова.');
         }
     }
 }

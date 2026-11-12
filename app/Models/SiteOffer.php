@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Catalog\CatalogReferences;
+use App\Catalog\AutoCatalog;
 use App\Enums\BenefitType;
 use App\Enums\OfferAvailability;
 use App\Exceptions\InvalidCatalogDataException;
@@ -21,14 +21,15 @@ use Illuminate\Support\Facades\DB;
 use LogicException;
 
 /**
- * Site-owned commercial offer for one catalog Equipment of a SiteVehicle (D-104). Factory data
- * stays in the catalog; the offer owns price, benefits, availability and badge (ADR-004 money).
+ * Site-owned commercial offer for one catalog Equipment of a SiteVehicle (D-104, ADR-010). Factory
+ * data stays in the catalog; the offer owns price, benefits, availability and badge (ADR-004
+ * money). Without a price the trim is shown as «Цена по запросу».
  *
  * @property int $id
  * @property string $public_id
  * @property int $site_vehicle_id
- * @property string $catalog_equipment_public_id
- * @property int $price_minor
+ * @property string $catalog_equipment_ref
+ * @property int|null $price_minor
  * @property int|null $rrp_minor
  * @property string $currency
  * @property OfferAvailability|null $availability
@@ -38,7 +39,7 @@ use LogicException;
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['catalog_equipment_public_id', 'price_minor', 'rrp_minor', 'currency', 'availability', 'badge', 'status', 'sort_order'])]
+#[Fillable(['catalog_equipment_ref', 'price_minor', 'rrp_minor', 'currency', 'availability', 'badge', 'status', 'sort_order'])]
 #[Hidden(['id', 'site_vehicle_id'])]
 class SiteOffer extends Model
 {
@@ -83,11 +84,11 @@ class SiteOffer extends Model
                 }
             }
 
-            if (! $offer->exists || $offer->isDirty('catalog_equipment_public_id')) {
-                $references = app(CatalogReferences::class);
-                $equipment = $references->equipment($offer->catalog_equipment_public_id);
+            if (! $offer->exists || $offer->isDirty('catalog_equipment_ref')) {
+                $catalog = app(AutoCatalog::class);
+                $series = $catalog->series($offer->vehicle->catalog_series_ref);
 
-                if ($equipment === null || ! $references->equipmentBelongsToSeries($equipment, $offer->vehicle->catalog_series_public_id)) {
+                if ($series === null || $catalog->equipment($series, $offer->catalog_equipment_ref) === null) {
                     throw new InvalidCatalogDataException('Offer Equipment must belong to the vehicle Series.');
                 }
             }

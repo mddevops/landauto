@@ -72,12 +72,15 @@ class E2eSeederTest extends TestCase
         $dealer = User::query()->where('email', 'dealer@landflow.test')->sole();
         $this->assertTrue(Gate::forUser($catalogAdmin)->allows(PlatformPermission::EditCatalog->value));
         $this->assertFalse(Gate::forUser($dealer)->allows(PlatformPermission::EditCatalog->value));
-        $this->assertTrue(AutoSeries::query()->available()->where('url', 'sedan')->exists());
+        $this->assertTrue(AutoSeries::query()->where('name', 'Седан')->whereRelation('model', 'url', 'vesta')->exists());
 
         $showcase = Site::query()->where('name', 'Витрина Запад')->sole();
         $this->assertSame(2, $showcase->vehicles()->count());
         $this->assertSame(1, SiteOffer::query()->whereRelation('vehicle', 'site_id', $showcase->id)->count());
-        Storage::disk('local')->assertExists(['series-media/e2e/front_3_4.png', 'series-media/e2e/side.png']);
+        Storage::disk('local')->assertExists(['series-media/e2e/0-front_3_4_left.png', 'series-media/e2e/0-side_left.png']);
+        $showcaseVehicle = $showcase->vehicles()->ordered()->firstOrFail();
+        $this->assertSame(['Серебристый'], $showcaseVehicle->colors()->pluck('name')->all());
+        $this->assertSame(2, $showcaseVehicle->photos()->count());
 
         $lifecycle = Site::query()->where('public_number', '100000000012')->sole();
         $this->assertTrue(app(PublishValidator::class)->validate($lifecycle)->passes());

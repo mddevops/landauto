@@ -17,7 +17,7 @@ class SeriesMediaSetFactory extends Factory
     public function definition(): array
     {
         return [
-            'catalog_series_public_id' => fn (): string => AutoSeries::factory()->create()->public_id,
+            'catalog_series_ref' => fn (): string => (string) AutoSeries::factory()->create()->ref(),
             'name' => 'Цвет '.Str::upper(Str::random(5)),
             'swatch_hex' => '#ffffff',
             'status' => true,
@@ -27,6 +27,6 @@ class SeriesMediaSetFactory extends Factory
 
     public function forSeries(AutoSeries $series): static
     {
-        return $this->state(['catalog_series_public_id' => $series->public_id]);
+        return $this->state(['catalog_series_ref' => (string) $series->ref()]);
     }
 }

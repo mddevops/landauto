@@ -1,67 +1,38 @@
-import { Form, Head, Link } from '@inertiajs/react';
-import { Plus } from 'lucide-react';
-import InputError from '@/components/input-error';
-import { Button } from '@/components/ui/button';
-import type { PickerLevel } from '@/components/vehicles/series-picker';
-import { SeriesPicker } from '@/components/vehicles/series-picker';
+import { Head } from '@inertiajs/react';
+import { VehicleWizard } from '@/components/catalog/vehicle-wizard';
 import { dashboard } from '@/routes';
-import { create, index, store } from '@/routes/workspace/vehicles';
+import { index, store } from '@/routes/workspace/vehicles';
+import type { VehicleCollection, WizardProps } from '@/types/catalog';
+
+type CreateWorkspaceVehicleProps = WizardProps & {
+    collections: VehicleCollection[];
+    preselectedCollection: string | null;
+};
 
 export default function CreateWorkspaceVehicle({
-    levels,
-}: {
-    levels: PickerLevel[];
-}) {
+    collections,
+    preselectedCollection,
+    ...wizard
+}: CreateWorkspaceVehicleProps) {
     return (
         <>
-            <Head title="Добавить в библиотеку" />
-            <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
-                <header className="space-y-1">
-                    <p className="text-sm text-muted-foreground">
-                        Библиотека автомобилей
-                    </p>
+            <Head title="Добавить в Каталог" />
+            <main className="flex min-w-0 flex-1 flex-col">
+                <header className="space-y-1 px-4 pt-4 sm:px-6 sm:pt-6">
+                    <p className="text-sm text-muted-foreground">Каталог</p>
                     <h1 className="text-2xl font-semibold tracking-tight sm:text-3xl">
-                        Добавить в библиотеку
+                        Добавить автомобиль
                     </h1>
-                    <p className="text-sm text-muted-foreground">
-                        Выберите марку, модель, поколение и серию из каталога
-                        платформы. Цены задаются отдельно на каждом сайте.
-                    </p>
                 </header>
-
-                <SeriesPicker
-                    levels={levels}
-                    href={(query) => create({ query })}
-                    addedLabel="Уже в библиотеке"
-                    renderAdd={(item) => (
-                        <Form {...store.form()} disableWhileProcessing>
-                            {({ errors }) => (
-                                <>
-                                    <input
-                                        type="hidden"
-                                        name="series"
-                                        value={item.public_id}
-                                    />
-                                    <Button
-                                        type="submit"
-                                        size="sm"
-                                        aria-label={`Добавить серию ${item.name}`}
-                                    >
-                                        <Plus aria-hidden="true" />
-                                        Добавить
-                                    </Button>
-                                    <InputError message={errors.series} />
-                                </>
-                            )}
-                        </Form>
-                    )}
+                <VehicleWizard
+                    wizard={wizard}
+                    action={store()}
+                    cancelHref={index.url()}
+                    destination="в ваш Каталог; на сайты его можно скопировать потом"
+                    withPrices
+                    collections={collections}
+                    preselectedCollection={preselectedCollection}
                 />
-
-                <div>
-                    <Button variant="outline" asChild>
-                        <Link href={index()}>Вернуться к библиотеке</Link>
-                    </Button>
-                </div>
             </main>
         </>
     );
@@ -70,6 +41,6 @@ export default function CreateWorkspaceVehicle({
 CreateWorkspaceVehicle.layout = {
     breadcrumbs: [
         { title: 'Все сайты', href: dashboard() },
-        { title: 'Библиотека автомобилей', href: index() },
+        { title: 'Каталог', href: index() },
     ],
 };

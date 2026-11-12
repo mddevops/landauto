@@ -49,6 +49,14 @@ return [
             'report' => false,
         ],
 
+        // Images of the auto.ru catalog (logos, series photos), synchronised by the catalog team.
+        'auto_catalog' => [
+            'driver' => 'local',
+            'root' => env('AUTO_CATALOG_IMAGES_PATH', storage_path('app/auto-catalog')),
+            'throw' => false,
+            'report' => false,
+        ],
+
         's3' => [
             'driver' => 's3',
             'key' => env('AWS_ACCESS_KEY_ID'),

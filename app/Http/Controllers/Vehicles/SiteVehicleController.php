@@ -2,21 +2,17 @@
 
 namespace App\Http\Controllers\Vehicles;
 
-use App\Automotive\SeriesPicker;
-use App\Automotive\VehicleCatalog;
-use App\Automotive\WorkspaceVehicleLibrary;
-use App\Catalog\CatalogReferences;
+use App\Automotive\VehiclePhotos;
+use App\Automotive\VehiclePresenter;
+use App\Automotive\VehicleWizard;
+use App\Catalog\AutoCatalog;
+use App\Catalog\CatalogPresenter;
 use App\Enums\BenefitType;
 use App\Enums\MediaAngle;
 use App\Enums\OfferAvailability;
 use App\Enums\WorkspacePermission;
-use App\Exceptions\InvalidCatalogDataException;
 use App\Http\Controllers\Controller;
-use App\Models\Catalog\AutoEquipment;
-use App\Models\Catalog\AutoModification;
-use App\Models\Catalog\AutoSeries;
-use App\Models\SeriesMediaImage;
-use App\Models\SeriesMediaSet;
+use App\Http\Requests\Vehicles\StoreVehicleRequest;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteOfferBenefit;
@@ -25,20 +21,21 @@ use App\Support\DesignerScope;
 use App\Support\Money;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Customer «Автомобили» section: Site-owned vehicles at catalog Series level (D-104). The
- * catalog is read-only here; every catalog reference is validated on the server.
+ * Customer «Автомобили» section of a Site (D-104, ADR-010): Site-owned vehicles built from the
+ * auto.ru catalog with own photo copies and Site Offers. The catalog is read-only here; every
+ * catalog reference is validated on the server.
  */
 class SiteVehicleController extends Controller
 {
     public function __construct(
         private DesignerScope $scope,
-        private VehicleCatalog $catalog,
+        private VehiclePresenter $vehicles,
     ) {}
 
     public function index(Site $site): Response
@@ -46,23 +43,9 @@ class SiteVehicleController extends Controller
         $this->scope->site($site);
         Gate::authorize('viewVehicles', $site);
 
-        $vehicles = $site->vehicles()->ordered()->withCount(['offers', 'mediaSets'])->get();
-        $seriesIds = $vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_public_id)->values()->all();
-        $series = $this->catalog->series($seriesIds);
-        $available = AutoSeries::query()->available()->whereIn('public_id', $seriesIds)->pluck('public_id')->flip();
-
         return Inertia::render('sites/vehicles/index', [
             'site' => $this->site($site),
-            'vehicles' => $vehicles->map(fn (SiteVehicle $vehicle): array => [
-                'public_id' => $vehicle->public_id,
-                'status' => $vehicle->status,
-                'sort_order' => $vehicle->sort_order,
-                'custom_name' => $vehicle->custom_name,
-                'offers_count' => (int) $vehicle->getAttribute('offers_count'),
-                'media_sets_count' => (int) $vehicle->getAttribute('media_sets_count'),
-                'catalog' => isset($series[$vehicle->catalog_series_public_id]) ? $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]) : null,
-                'catalog_available' => isset($available[$vehicle->catalog_series_public_id]),
-            ])->values()->all(),
+            'vehicles' => $this->vehicles->cards($site->vehicles()->ordered()->get()),
             'can' => [
                 'editVehicles' => Gate::allows('editVehicles', $site),
                 'importVehicles' => Gate::allows('editVehicles', $site) && Gate::allows('importVehicles', $site),
@@ -70,115 +53,72 @@ class SiteVehicleController extends Controller
         ]);
     }
 
-    public function create(Request $request, Site $site, SeriesPicker $picker): Response
+    public function create(Request $request, Site $site, CatalogPresenter $catalog): Response
     {
         $this->scope->site($site);
         Gate::authorize('editVehicles', $site);
 
         return Inertia::render('sites/vehicles/create', [
+            ...$catalog->wizard($request),
             'site' => $this->site($site),
-            'levels' => $picker->levels($request, $site->vehicles()->pluck('catalog_series_public_id')->flip()->all()),
+            'taken' => $site->vehicles()->pluck('catalog_series_ref')->all(),
+            'can' => ['editPrices' => Gate::allows('editPrices', $site)],
         ]);
     }
 
-    public function store(Request $request, Site $site, CatalogReferences $references): RedirectResponse
+    public function store(StoreVehicleRequest $request, Site $site, VehicleWizard $wizard): RedirectResponse
     {
         $this->scope->site($site);
         Gate::authorize('editVehicles', $site);
+        $draft = $request->draft();
 
-        $series = $references->series($request->string('series')->toString(), availableOnly: true)
-            ?? throw ValidationException::withMessages(['series' => 'Выберите серию из каталога.']);
-
-        if ($site->vehicles()->where('catalog_series_public_id', $series->public_id)->exists()) {
-            throw ValidationException::withMessages(['series' => 'Этот автомобиль уже добавлен на сайт.']);
+        if (! Gate::allows('editPrices', $site)) {
+            $draft['offers'] = array_map(fn (array $offer): array => [...$offer, 'price_minor' => null, 'rrp_minor' => null], $draft['offers']);
         }
 
-        $vehicle = new SiteVehicle(['status' => true, 'sort_order' => ((int) $site->vehicles()->max('sort_order')) + 1]);
-        $vehicle->catalog_series_public_id = $series->public_id;
-        $vehicle->site()->associate($site)->save();
+        $vehicle = $wizard->createOnSite($site, $draft);
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Автомобиль добавлен на сайт.']);
 
         return to_route('sites.vehicles.show', [$site, $vehicle]);
     }
 
-    public function show(Site $site, SiteVehicle $vehicle): Response
+    public function show(Request $request, Site $site, SiteVehicle $vehicle, CatalogPresenter $catalog, AutoCatalog $auto): Response
     {
         $this->scope->vehicle($site, $vehicle);
         Gate::authorize('viewVehicles', $site);
 
-        $series = AutoSeries::query()->with('generation.model.mark')->where('public_id', $vehicle->catalog_series_public_id)->first();
-        $selected = $vehicle->mediaSets()->pluck('series_media_sets.public_id')->flip();
+        $series = $auto->series($vehicle->catalog_series_ref);
         $offers = $vehicle->offers()->ordered()->with('benefits')->get();
-        $equipments = $this->catalog->equipments($offers->map(fn (SiteOffer $offer): string => $offer->catalog_equipment_public_id)->values()->all());
-
+        $labels = $this->vehicles->siteOfferLabels($vehicle, $offers);
         $canManageLibrary = Gate::allows(WorkspacePermission::ManageWorkspaceVehicleLibrary->value);
 
         return Inertia::render('sites/vehicles/show', [
             'site' => $this->site($site),
             'vehicle' => [
-                'public_id' => $vehicle->public_id,
-                'status' => $vehicle->status,
-                'sort_order' => $vehicle->sort_order,
-                'custom_name' => $vehicle->custom_name,
-                'custom_description' => $vehicle->custom_description,
-                'catalog' => $series === null ? null : $this->catalog->seriesTitle($series),
-                'in_library' => $canManageLibrary && $site->workspace->vehicleLibrary()
-                    ->where('catalog_series_public_id', $vehicle->catalog_series_public_id)
-                    ->exists(),
+                ...$this->vehicles->detail($vehicle),
+                'in_library' => $canManageLibrary && $vehicle->source_workspace_vehicle_id !== null
+                    && $site->workspace->vehicleLibrary()->whereKey($vehicle->source_workspace_vehicle_id)->exists(),
             ],
-            'mediaSets' => SeriesMediaSet::query()
-                ->where('catalog_series_public_id', $vehicle->catalog_series_public_id)
-                ->active()
-                ->ordered()
-                ->with('images')
-                ->get()
-                ->map(fn (SeriesMediaSet $set): array => [
-                    'public_id' => $set->public_id,
-                    'name' => $set->name,
-                    'swatch_hex' => $set->swatch_hex,
-                    'selected' => isset($selected[$set->public_id]),
-                    'preview_url' => $this->preview($set)?->url(),
-                    'images_count' => $set->images->count(),
+            'offers' => $offers->map(fn (SiteOffer $offer): array => [
+                'public_id' => $offer->public_id,
+                ...$labels[$offer->public_id],
+                'price' => $offer->price_minor === null ? '' : Money::toInput($offer->price_minor, $offer->currency),
+                'price_label' => $offer->price_minor === null ? null : Money::format($offer->price_minor, $offer->currency),
+                'rrp' => $offer->rrp_minor === null ? '' : Money::toInput($offer->rrp_minor, $offer->currency),
+                'availability' => $offer->availability?->value,
+                'badge' => $offer->badge,
+                'status' => $offer->status,
+                'sort_order' => $offer->sort_order,
+                'benefits' => $offer->benefits->map(fn (SiteOfferBenefit $benefit): array => [
+                    'type' => $benefit->type->value,
+                    'amount' => Money::toInput($benefit->amount_minor, $offer->currency),
+                    'label' => $benefit->label,
                 ])->values()->all(),
-            'modifications' => $series === null ? [] : AutoModification::query()
-                ->available()
-                ->where('series_id', $series->id)
-                ->ordered()
-                ->with(['equipments' => fn ($query) => $query->where('status', true)->ordered()])
-                ->get()
-                ->map(fn (AutoModification $modification): array => [
-                    'public_id' => $modification->public_id,
-                    'name' => $modification->name,
-                    'summary' => $this->catalog->modificationSummary($modification),
-                    'equipments' => $modification->equipments->map(fn (AutoEquipment $equipment): array => [
-                        'public_id' => $equipment->public_id,
-                        'name' => $equipment->name,
-                    ])->values()->all(),
-                ])->values()->all(),
-            'offers' => $offers->map(function (SiteOffer $offer) use ($equipments): array {
-                $equipment = $equipments[$offer->catalog_equipment_public_id] ?? null;
-
-                return [
-                    'public_id' => $offer->public_id,
-                    'equipment' => $equipment === null ? null : [
-                        'public_id' => $equipment->public_id,
-                        'name' => $equipment->name,
-                        'modification' => $equipment->modification->public_id,
-                        'modification_name' => $equipment->modification->name,
-                    ],
-                    'price' => Money::toInput($offer->price_minor, $offer->currency),
-                    'price_label' => Money::format($offer->price_minor, $offer->currency),
-                    'rrp' => $offer->rrp_minor === null ? '' : Money::toInput($offer->rrp_minor, $offer->currency),
-                    'availability' => $offer->availability?->value,
-                    'badge' => $offer->badge,
-                    'status' => $offer->status,
-                    'sort_order' => $offer->sort_order,
-                    'benefits' => $offer->benefits->map(fn (SiteOfferBenefit $benefit): array => [
-                        'type' => $benefit->type->value,
-                        'amount' => Money::toInput($benefit->amount_minor, $offer->currency),
-                        'label' => $benefit->label,
-                    ])->values()->all(),
-                ];
-            })->values()->all(),
+            ])->values()->all(),
+            'trims' => fn (): array => $series === null ? [] : $catalog->trims($series),
+            'library' => fn (): array => $catalog->library($vehicle->catalog_series_ref),
+            'options' => fn (): array => $series === null ? [] : $catalog->options($series, $request->query('equipment')),
+            'angles' => MediaAngle::options(),
             'choices' => [
                 'availability' => array_map(fn (OfferAvailability $case): array => ['value' => $case->value, 'label' => $case->label()], OfferAvailability::cases()),
                 'benefitTypes' => array_map(fn (BenefitType $case): array => ['value' => $case->value, 'label' => $case->label()], BenefitType::cases()),
@@ -198,8 +138,8 @@ class SiteVehicleController extends Controller
         Gate::authorize('editVehicles', $site);
 
         $vehicle->update($request->validate([
-            'status' => ['required', 'boolean'],
-            'sort_order' => ['required', 'integer', 'min:0', 'max:4294967295'],
+            'status' => ['sometimes', 'boolean'],
+            'sort_order' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],
             'custom_name' => ['sometimes', 'nullable', 'string', 'max:120'],
             'custom_description' => ['sometimes', 'nullable', 'string', 'max:2000'],
         ], [], [
@@ -213,52 +153,34 @@ class SiteVehicleController extends Controller
     }
 
     /**
-     * «Сохранить в библиотеку»: copies the Series, name, description and media selection, never
-     * offers or prices. An existing library entry is only updated with explicit confirmation.
+     * «Сохранить в Каталог»: photos, trims and prices become a Catalog vehicle. The Catalog
+     * vehicle this one came from is only updated with explicit confirmation.
      */
-    public function saveToLibrary(Request $request, Site $site, SiteVehicle $vehicle, WorkspaceVehicleLibrary $library): RedirectResponse
+    public function saveToLibrary(Request $request, Site $site, SiteVehicle $vehicle, VehicleWizard $wizard): RedirectResponse
     {
         $this->scope->vehicle($site, $vehicle);
         Gate::authorize('viewVehicles', $site);
         Gate::authorize(WorkspacePermission::ManageWorkspaceVehicleLibrary->value);
 
-        $result = $library->saveFromSite($vehicle, $site->workspace, $request->boolean('overwrite'));
+        $result = $wizard->saveToCatalog($vehicle, $site->workspace, $request->boolean('overwrite'));
 
         Inertia::flash('toast', [
             'type' => 'success',
-            'message' => $result['created'] ? 'Автомобиль сохранён в библиотеку.' : 'Автомобиль в библиотеке обновлён.',
+            'message' => $result['created'] ? 'Автомобиль сохранён в Каталог.' : 'Автомобиль в Каталоге обновлён.',
         ]);
 
         return back();
     }
 
-    public function media(Request $request, Site $site, SiteVehicle $vehicle): RedirectResponse
+    public function destroy(Site $site, SiteVehicle $vehicle, VehiclePhotos $photos): RedirectResponse
     {
         $this->scope->vehicle($site, $vehicle);
         Gate::authorize('editVehicles', $site);
 
-        $data = $request->validate([
-            'sets' => ['present', 'array', 'max:50'],
-            'sets.*' => ['string', 'size:26'],
-        ]);
-
-        try {
-            /** @var list<string> $sets */
-            $sets = array_values($data['sets']);
-            $vehicle->selectMediaSets($sets);
-        } catch (InvalidCatalogDataException) {
-            throw ValidationException::withMessages(['sets' => 'Выберите доступные варианты этой серии. Обновите страницу.']);
-        }
-
-        return back();
-    }
-
-    public function destroy(Site $site, SiteVehicle $vehicle): RedirectResponse
-    {
-        $this->scope->vehicle($site, $vehicle);
-        Gate::authorize('editVehicles', $site);
-
-        $vehicle->delete();
+        DB::transaction(function () use ($vehicle, $photos): void {
+            $photos->removeAll($vehicle);
+            $vehicle->delete();
+        });
 
         return to_route('sites.vehicles.index', $site);
     }
@@ -269,10 +191,5 @@ class SiteVehicleController extends Controller
     private function site(Site $site): array
     {
         return ['public_id' => $site->public_id, 'name' => $site->name];
-    }
-
-    private function preview(SeriesMediaSet $set): ?SeriesMediaImage
-    {
-        return $set->images->sortBy(fn (SeriesMediaImage $image): int => $image->angle === MediaAngle::FrontThreeQuarter ? -1 : $image->angle->position())->first();
     }
 }

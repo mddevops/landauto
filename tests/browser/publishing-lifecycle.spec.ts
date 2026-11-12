@@ -218,12 +218,14 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
 
     await page.goto(`${siteUrl}/vehicles`);
     await page.getByRole('link', { name: /Кроссовер/ }).click();
-    const offers = page.getByRole('region', { name: 'Предложения' });
+    const offers = page.getByRole('region', { name: 'Комплектации и цены' });
     await offers.getByRole('button', { name: 'Изменить' }).click();
     const offerDialog = page.getByRole('dialog', {
         name: 'Изменить предложение',
     });
-    await offerDialog.getByLabel('Цена, ₽', { exact: true }).fill('2 090 000');
+    await offerDialog
+        .getByLabel('Цена со скидкой, ₽', { exact: true })
+        .fill('2 090 000');
     await offerDialog.getByRole('button', { name: 'Сохранить' }).click();
     await expect(offerDialog).toBeHidden();
     await expect(offers).toContainText(v2Price);
@@ -402,9 +404,9 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         .first();
     await photo.click();
     const lightbox = visitor.getByRole('dialog', { name: /Фото:/ });
-    await expect(lightbox).toContainText('1 из 2');
-    await lightbox.getByRole('button', { name: 'Следующее фото' }).click();
     await expect(lightbox).toContainText('2 из 2');
+    await lightbox.getByRole('button', { name: 'Следующее фото' }).click();
+    await expect(lightbox).toContainText('1 из 2');
     await visitor.keyboard.press('Escape');
     await expect(lightbox).toBeHidden();
 
@@ -429,7 +431,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         visitor.getByRole('button', { name: 'Скрыть подробности' }),
     ).toHaveAttribute('aria-expanded', 'true');
     await expect(
-        visitor.getByText('Модификация 1.5 CVT 150 л.с.'),
+        visitor.getByText('Модификация 1.5 CVT (150 л.с.)'),
     ).toBeVisible();
     await visitor.getByRole('button', { name: 'Оставить заявку' }).click();
     await expect(
@@ -504,7 +506,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     expect((await stranger.goto(`${siteUrl}/preview`))?.status()).toBe(404);
     await stranger.context().close();
 
-    // Platform media referenced by a Published Version cannot be deleted.
+    // Sites own copies of catalog photos: deleting the platform photo keeps the live Site intact.
     const admin = await signedIn(
         browser,
         users.catalogAdmin.email,
@@ -513,21 +515,25 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     await admin.goto('/platform/catalog');
     await admin.getByRole('link', { name: 'Moskvich', exact: true }).click();
     await admin.getByRole('link', { name: 'Moskvich 3', exact: true }).click();
-    await admin.getByRole('link', { name: 'I', exact: true }).click();
-    await admin.getByRole('link', { name: 'Медиа серии Кроссовер' }).click();
     await admin
-        .getByRole('region', { name: 'Белый' })
-        .getByRole('button', { name: 'Удалить изображение: Спереди 3/4' })
+        .getByRole('link', { name: 'I, Кроссовер', exact: true })
+        .click();
+    const white = admin.getByRole('article', { name: 'Цвет Белый' });
+    await white
+        .getByRole('button', { name: 'Удалить фото: 3/4, смотрит влево' })
         .click();
     await expect(
-        admin
-            .getByText(
-                'Фото используется на опубликованных сайтах, удалить его нельзя.',
-            )
-            .first(),
+        white.getByRole('button', {
+            name: 'Загрузить фото: 3/4, смотрит влево',
+        }),
     ).toBeVisible();
-    await expect(
-        admin.getByRole('img', { name: 'Белый: Спереди 3/4' }),
-    ).toBeVisible();
+    await admin.goto(owner.publicUrl);
+    const liveImage = admin.getByRole('img', { name: /Белый/ }).first();
+    await expect(liveImage).toBeVisible();
+    await expect
+        .poll(() =>
+            liveImage.evaluate((image: HTMLImageElement) => image.naturalWidth),
+        )
+        .toBeGreaterThan(0);
     await admin.context().close();
 });

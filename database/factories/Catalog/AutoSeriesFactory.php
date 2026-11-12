@@ -18,15 +18,11 @@ class AutoSeriesFactory extends Factory
     {
         return [
             'generation_id' => AutoGeneration::factory(),
+            'model_id' => fn (array $attributes): int => (int) AutoGeneration::query()->whereKey($attributes['generation_id'])->value('model_id'),
+            'external_id' => fake()->unique()->numberBetween(30_000_000, 39_999_999),
             'name' => 'Седан',
-            'url' => 'sedan-'.Str::lower(Str::random(6)),
-            'status' => true,
-            'sort_order' => 0,
+            'url' => 'https://auto.ru/catalog/cars/'.Str::lower(Str::random(8)).'/',
+            'status' => 1,
         ];
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(['status' => false]);
     }
 }

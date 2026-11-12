@@ -10,6 +10,7 @@ use App\Models\PublishedVersion;
 use App\Models\SeriesMediaImage;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Models\VehiclePhoto;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Storage;
 use Symfony\Component\HttpFoundation\Response;
@@ -38,6 +39,13 @@ class PublishedAssetController extends Controller
     {
         $site = ResolvePublicSite::site($request);
 
+        if ($this->references($site, $version, PublishedAssetKind::VehiclePhoto, $image)) {
+            $photo = VehiclePhoto::withTrashed()->where('workspace_id', $site->workspace_id)->where('public_id', strtolower($image))->first();
+
+            return $photo === null ? ResolvePublicSite::notFound() : $this->serve(VehiclePhoto::DISK, $photo->path, $photo->mime_type);
+        }
+
+        // Versions published before ADR-010 referenced platform media directly.
         if (! $this->references($site, $version, PublishedAssetKind::SeriesMediaImage, $image)) {
             return ResolvePublicSite::notFound();
         }

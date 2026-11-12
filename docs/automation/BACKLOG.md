@@ -4460,6 +4460,20 @@ Result: gates PASS — `composer quality` (PHPUnit 1,308: 1,306 passed, 2 skippe
 
 ---
 
+## X-031 — auto.ru Catalog, Vehicle Photos and Customer Catalog
+
+**Status:** IN PROGRESS
+**Trigger:** owner request 2026-11-12 (real catalog data loaded from auto.ru)
+**Decision:** ADR-010; D-128; D-115; D-083
+
+Scope: read-only auto.ru catalog models and string references (`catalog_series_ref`, `catalog_equipment_ref`); read-only platform catalog browser (marks → models → generations → series with modifications, trims, options, characteristics); Series media library with colours × five angles and a gallery; Workspace vehicles with copied photos, own uploads, default trims with prices and collections; six-step add-vehicle wizard for the customer Catalog and for a Site; customer Catalog grouped by mark/model and collections; published vehicle page with colour switch, gallery, trims with prices/options and characteristics; staging rollout (auto.ru tables restored, catalog images copied).
+
+Acceptance: customers add a vehicle from real auto.ru data in the wizard and see it in the Catalog or on the Site; published Site shows colours, gallery, trims with prices and characteristics; no auto.ru numeric ids in customer rows or browser props; `composer quality` and `npm run test:e2e` pass.
+
+Progress: code complete on `feature/autoru-catalog`; gates PASS locally — `composer quality` (PHPUnit 1,294: 1,292 passed, 2 skipped; PHPStan / Pint / frontend check / build PASS) and `npm run test:e2e` 96 / 96 (one ENOSPC infrastructure failure re-run green). Remaining: merge approval and staging rollout (drop empty V2 `auto_*` tables, restore auto.ru tables, copy catalog images, migrate, smoke) — needs explicit owner approval.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---

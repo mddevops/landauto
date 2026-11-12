@@ -2,6 +2,7 @@
 
 namespace Tests\Concerns;
 
+use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockStateDefaults;
 use App\Enums\MediaAngle;
 use App\Enums\WorkspaceRole;
@@ -16,12 +17,11 @@ use App\Models\Catalog\AutoSeries;
 use App\Models\Form;
 use App\Models\Page;
 use App\Models\Popup;
-use App\Models\SeriesMediaImage;
-use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use App\Models\User;
+use App\Models\VehiclePhoto;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
 use Database\Seeders\OfficialBlockSeeder;
@@ -29,10 +29,12 @@ use Illuminate\Support\Facades\Storage;
 
 /**
  * A complete, publishable Site: home Page with a hero that opens a lead Popup, and a priced
- * KIA Rio vehicle with one media image. Requires RefreshDatabase and RefreshCatalogDatabase.
+ * KIA Rio vehicle with one own colour photo. Requires RefreshDatabase and RefreshCatalogDatabase.
  */
 trait BuildsPublishableSite
 {
+    use CreatesCatalogMedia;
+
     protected Workspace $workspace;
 
     protected User $owner;
@@ -49,7 +51,8 @@ trait BuildsPublishableSite
 
     protected SiteOffer $offer;
 
-    protected SeriesMediaImage $image;
+    /** The vehicle's own copy of the platform colour photo. */
+    protected VehiclePhoto $image;
 
     protected function buildPublishableSite(): void
     {
@@ -68,16 +71,16 @@ trait BuildsPublishableSite
 
         $mark = AutoMark::factory()->create(['name' => 'KIA', 'url' => 'kia']);
         $model = AutoModel::factory()->for($mark, 'mark')->create(['name' => 'Rio', 'url' => 'rio']);
-        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV', 'url' => 'iv']);
-        $series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Седан', 'url' => 'sedan']);
+        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV']);
+        $series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Седан']);
         $modification = AutoModification::factory()->for($series, 'series')->create();
         $equipment = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Prestige']);
 
-        $set = SeriesMediaSet::factory()->forSeries($series)->create(['name' => 'Белый']);
-        $this->image = SeriesMediaImage::factory()->for($set, 'set')->create(['angle' => MediaAngle::FrontThreeQuarter]);
-        Storage::disk('local')->put($this->image->path, 'jpeg-bytes');
+        $set = $this->colorSet($series, 'Белый', [MediaAngle::FrontThreeQuarterLeft]);
 
         $this->vehicle = SiteVehicle::factory()->for($this->site)->forSeries($series)->create();
+        app(VehiclePhotos::class)->copyFromLibrary($this->vehicle, [$set->public_id], []);
+        $this->image = $this->vehicle->photos()->firstOrFail();
         $this->offer = SiteOffer::factory()->for($this->vehicle, 'vehicle')->forEquipment($equipment)->create(['price_minor' => 210_000_000]);
 
         $this->place('hero', [

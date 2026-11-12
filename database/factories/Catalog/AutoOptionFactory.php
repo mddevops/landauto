@@ -15,19 +15,6 @@ class AutoOptionFactory extends Factory
 
     public function definition(): array
     {
-        return [
-            'code' => 'group_'.Str::lower(Str::random(8)),
-            'name' => 'Группа опций',
-            'sort_order' => 0,
-        ];
-    }
-
-    public function option(?AutoOption $group = null): static
-    {
-        return $this->state(fn (): array => [
-            'code' => 'option_'.Str::lower(Str::random(8)),
-            'name' => 'Опция',
-            'parent_id' => ($group ?? AutoOption::factory()->create())->id,
-        ]);
+        return ['name' => 'Опция '.Str::random(6), 'parent_id' => null, 'sort' => 0];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Automotive;
 
+use App\Catalog\AutoCatalog;
 use App\Enums\BenefitType;
 use App\Models\Site;
 use App\Models\SiteOffer;
@@ -50,7 +51,10 @@ final class SiteVehicleCopier
 
     public const FIELDS = [self::FIELD_TEXT, self::FIELD_MEDIA, self::FIELD_STATUS, self::FIELD_OFFERS, self::FIELD_BENEFITS];
 
-    public function __construct(private VehicleCatalog $catalog) {}
+    public function __construct(
+        private AutoCatalog $catalog,
+        private VehiclePhotos $photos,
+    ) {}
 
     /**
      * @param  list<string>  $vehiclePublicIds  source SiteVehicle public IDs, in the requested order
@@ -69,7 +73,7 @@ final class SiteVehicleCopier
             ->with(['offers' => fn ($query) => $query->ordered()->with('benefits')])
             ->get()
             ->keyBy('public_id');
-        $titles = $this->catalog->series($vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_public_id)->values()->all());
+        $titles = $this->catalog->seriesByRefs($vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_ref)->values()->all());
         $results = [];
 
         foreach (array_values(array_unique($vehiclePublicIds)) as $publicId) {
@@ -81,9 +85,9 @@ final class SiteVehicleCopier
                 continue;
             }
 
-            $series = $titles->get($vehicle->catalog_series_public_id);
-            $title = $vehicle->custom_name ?? ($series === null ? 'Модель недоступна' : $this->catalog->seriesTitle($series)['title']);
-            $existing = $destination->vehicles()->where('catalog_series_public_id', $vehicle->catalog_series_public_id)->first();
+            $series = $titles->get($vehicle->catalog_series_ref);
+            $title = $vehicle->custom_name ?? ($series === null ? 'Модель недоступна' : $this->catalog->title($series)['title']);
+            $existing = $destination->vehicles()->where('catalog_series_ref', $vehicle->catalog_series_ref)->first();
             $fields = array_values(array_intersect(self::FIELDS, $updates[$publicId] ?? []));
 
             $result = match (true) {
@@ -113,9 +117,9 @@ final class SiteVehicleCopier
                 'custom_name' => $source->custom_name,
                 'custom_description' => $source->custom_description,
             ]);
-            $vehicle->catalog_series_public_id = $source->catalog_series_public_id;
+            $vehicle->catalog_series_ref = $source->catalog_series_ref;
             $vehicle->site()->associate($destination)->save();
-            $vehicle->selectMediaSets($source->activeMediaSetPublicIds());
+            $this->photos->copyAll($source, $vehicle);
 
             if ($withOffers) {
                 foreach ($source->offers as $offer) {
@@ -149,7 +153,7 @@ final class SiteVehicleCopier
             $target->save();
 
             if (in_array(self::FIELD_MEDIA, $fields, true)) {
-                $target->selectMediaSets($source->activeMediaSetPublicIds());
+                $this->photos->replaceAll($source, $target);
             }
 
             $withOffers = in_array(self::FIELD_OFFERS, $fields, true);
@@ -159,11 +163,11 @@ final class SiteVehicleCopier
                 return;
             }
 
-            $matches = $target->offers()->get()->keyBy('catalog_equipment_public_id');
+            $matches = $target->offers()->get()->keyBy('catalog_equipment_ref');
 
             foreach ($source->offers as $offer) {
                 /** @var SiteOffer|null $match */
-                $match = $matches->get($offer->catalog_equipment_public_id);
+                $match = $matches->get($offer->catalog_equipment_ref);
 
                 if ($match === null) {
                     if ($withOffers) {
@@ -186,19 +190,19 @@ final class SiteVehicleCopier
 
     private function hasDuplicateTargetOffers(SiteVehicle $source, SiteVehicle $target): bool
     {
-        $equipment = $source->offers->pluck('catalog_equipment_public_id')->unique()->values()->all();
+        $equipment = $source->offers->pluck('catalog_equipment_ref')->unique()->values()->all();
 
         return $target->offers()
-            ->whereIn('catalog_equipment_public_id', $equipment)
-            ->selectRaw('catalog_equipment_public_id, count(*) as offers_count')
-            ->groupBy('catalog_equipment_public_id')
+            ->whereIn('catalog_equipment_ref', $equipment)
+            ->selectRaw('catalog_equipment_ref, count(*) as offers_count')
+            ->groupBy('catalog_equipment_ref')
             ->havingRaw('count(*) > 1')
             ->exists();
     }
 
     private function copyOffer(SiteOffer $source, SiteVehicle $vehicle, bool $withBenefits): void
     {
-        $offer = new SiteOffer($source->only(['catalog_equipment_public_id', 'price_minor', 'rrp_minor', 'currency', 'availability', 'badge', 'status', 'sort_order']));
+        $offer = new SiteOffer($source->only(['catalog_equipment_ref', 'price_minor', 'rrp_minor', 'currency', 'availability', 'badge', 'status', 'sort_order']));
         $offer->vehicle()->associate($vehicle)->save();
 
         if ($withBenefits) {

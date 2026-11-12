@@ -6,4 +6,5 @@ enum PublishedAssetKind: string
 {
     case SiteAsset = 'site_asset';
     case SeriesMediaImage = 'series_media_image';
+    case VehiclePhoto = 'vehicle_photo';
 }

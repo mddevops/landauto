@@ -7,9 +7,8 @@ import type { BlockRendererProps, BlockState } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
 import { TriggerScope } from '@/blocks/trigger-context';
 import type { VehicleBinding, VehicleMediaSet } from '@/blocks/vehicles';
+import { PRICE_ON_REQUEST, primaryImage } from '@/blocks/vehicles';
 import { cn } from '@/lib/utils';
-
-const CARD_ANGLES = ['front_3_4', 'front', 'side'];
 
 export function useVehicle(
     state: BlockState,
@@ -32,20 +31,18 @@ export function VehiclePlaceholder({ selected }: { selected: boolean }) {
     );
 }
 
-export function cardImage(set: VehicleMediaSet | undefined) {
-    if (!set) {
-        return null;
-    }
+/** Primary-angle photo of the colour; vehicles without colours fall back to the gallery. */
+export function cardImage(
+    vehicle: VehicleBinding,
+    set: VehicleMediaSet | undefined,
+): { url: string; width: number; height: number } | null {
+    return primaryImage(vehicle, set) ?? vehicle.media.gallery?.[0] ?? null;
+}
 
-    for (const angle of CARD_ANGLES) {
-        const image = set.images.find((candidate) => candidate.angle === angle);
-
-        if (image) {
-            return image;
-        }
-    }
-
-    return set.images[0] ?? null;
+export function vehicleSubtitle(vehicle: VehicleBinding): string {
+    return [vehicle.generation, vehicle.series, vehicle.years]
+        .filter(Boolean)
+        .join(' · ');
 }
 
 export function ColorSwatches({
@@ -99,7 +96,7 @@ export function VehicleCard({
     const sets = vehicle.media.sets;
     const [setId, setSetId] = useState(sets[0]?.public_id);
     const set = sets.find((candidate) => candidate.public_id === setId);
-    const image = cardImage(set ?? sets[0]);
+    const image = cardImage(vehicle, set ?? sets[0]);
 
     return (
         <article className="flex h-full flex-col overflow-hidden rounded-(--lf-radius) border border-neutral-200 bg-white text-neutral-900">
@@ -120,7 +117,7 @@ export function VehicleCard({
                 <div>
                     <h3 className="text-lg font-semibold">{vehicle.title}</h3>
                     <p className="text-sm text-neutral-500">
-                        {vehicle.generation} · {vehicle.series}
+                        {vehicleSubtitle(vehicle)}
                     </p>
                 </div>
                 {showColors && (
@@ -130,11 +127,18 @@ export function VehicleCard({
                         onSelect={setSetId}
                     />
                 )}
-                {showPrice && vehicle.price_from_label && (
-                    <p className="text-xl font-bold">
-                        от {vehicle.price_from_label}
-                    </p>
-                )}
+                {showPrice &&
+                    (vehicle.price_from_label ? (
+                        <p className="text-xl font-bold">
+                            от {vehicle.price_from_label}
+                        </p>
+                    ) : (
+                        vehicle.offers.length > 0 && (
+                            <p className="text-lg font-semibold">
+                                {PRICE_ON_REQUEST}
+                            </p>
+                        )
+                    ))}
                 {showBenefit && vehicle.benefit_up_to_label && (
                     <p className="text-sm font-medium text-(--lf-secondary)">
                         Выгода до {vehicle.benefit_up_to_label}

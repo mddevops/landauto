@@ -143,15 +143,13 @@ async function openVehicle(page: Page, url: string, series: string) {
         .getByRole('link', { name: new RegExp(series) })
         .first()
         .click();
-    await expect(
-        page.getByText(`I · ${series}`, { exact: true }),
-    ).toBeVisible();
+    await expect(page.getByText(new RegExp(`^I · .*${series}$`))).toBeVisible();
 }
 
 async function setOfferPrice(page: Page, price: string) {
     await page.getByRole('button', { name: 'Изменить', exact: true }).click();
     const dialog = page.getByRole('dialog', { name: 'Изменить предложение' });
-    await dialog.getByLabel('Цена, ₽', { exact: true }).fill(price);
+    await dialog.getByLabel('Цена со скидкой, ₽', { exact: true }).fill(price);
     await dialog.getByRole('button', { name: 'Сохранить' }).click();
     await expect(dialog).toBeHidden();
 }
@@ -320,27 +318,30 @@ test('workspace library, site-to-site copy with conflicts and shared assets stay
 
     // Library: add a Series, put it on Site A, delete the library entry; the Site copy stays.
     await page.goto('/workspace/vehicles');
-    await page.getByRole('link', { name: 'Добавить из каталога' }).click();
-    await page.getByRole('link', { name: 'Тестмаш', exact: true }).click();
-    await page.getByRole('link', { name: 'Т-1', exact: true }).click();
-    await page.getByRole('link', { name: 'I', exact: true }).click();
     await page
-        .getByRole('button', { name: 'Добавить серию Универсал' })
+        .getByRole('link', { name: 'Добавить автомобиль' })
+        .first()
         .click();
-    await expect(page).toHaveURL(/\/workspace\/vehicles\/[0-9a-z]{26}$/i);
+    await page.getByLabel('Поиск марки').fill('Тестмаш');
+    await page.getByRole('button', { name: 'Тестмаш', exact: true }).click();
+    await page.getByRole('button', { name: 'Т-1', exact: true }).click();
     await page
-        .getByLabel('Сайт', { exact: true })
-        .selectOption({ label: owner.siteA });
+        .getByRole('button', { name: 'I, Универсал', exact: true })
+        .click();
+    await page.getByRole('button', { name: 'Далее' }).click();
+    await page.getByRole('button', { name: 'Далее' }).click();
+    await page.getByRole('button', { name: 'Добавить', exact: true }).click();
+    await expect(page).toHaveURL(/\/workspace\/vehicles\/[0-9a-z]{26}$/i);
     await page.getByRole('button', { name: 'Добавить на сайт' }).click();
+    const copyDialog = page.getByRole('dialog', { name: 'Добавить на сайт' });
+    await copyDialog.getByRole('radio', { name: owner.siteA }).click();
+    await copyDialog.getByRole('button', { name: 'Добавить' }).click();
     await expect(
         page.getByText(`Автомобиль добавлен на сайт «${owner.siteA}».`).first(),
     ).toBeVisible();
-    await page
-        .getByRole('button', { name: 'Удалить', exact: true })
-        .first()
-        .click();
+    await page.getByRole('button', { name: 'Удалить автомобиль' }).click();
     const remove = page.getByRole('dialog', {
-        name: 'Удалить автомобиль из библиотеки?',
+        name: 'Удалить автомобиль из Каталога?',
     });
     await remove.getByRole('button', { name: 'Удалить' }).click();
     await expect(page).toHaveURL('/workspace/vehicles');

@@ -3,10 +3,10 @@
 namespace App\Http\Controllers\Vehicles;
 
 use App\Automotive\SiteVehicleCopier;
-use App\Automotive\VehicleCatalog;
+use App\Automotive\VehiclePresenter;
+use App\Catalog\AutoCatalog;
 use App\Enums\SiteStatus;
 use App\Http\Controllers\Controller;
-use App\Models\Catalog\AutoEquipment;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
@@ -37,7 +37,8 @@ class SiteVehicleImportController extends Controller
         private DesignerScope $scope,
         private WorkspaceContext $workspaceContext,
         private SiteAccessResolver $siteAccess,
-        private VehicleCatalog $catalog,
+        private AutoCatalog $catalog,
+        private VehiclePresenter $presenter,
     ) {}
 
     public function create(Request $request, Site $site): Response
@@ -188,18 +189,19 @@ class SiteVehicleImportController extends Controller
      */
     private function sourceVehicles(Site $source, Site $destination): array
     {
-        $vehicles = $source->vehicles()->ordered()->with(['offers' => fn ($query) => $query->ordered()->with('benefits'), 'mediaSets'])->get();
-        $series = $this->catalog->series($vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_public_id)->values()->all());
+        $vehicles = $source->vehicles()->ordered()->with(['offers' => fn ($query) => $query->ordered()->with('benefits'), 'photos'])->get();
+        $series = $this->catalog->seriesByRefs($vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_ref)->values()->all());
         $existing = $destination->vehicles()
-            ->whereIn('catalog_series_public_id', $vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_public_id)->all())
-            ->with(['offers' => fn ($query) => $query->ordered()->with('benefits'), 'mediaSets'])
+            ->whereIn('catalog_series_ref', $vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_ref)->all())
+            ->with(['offers' => fn ($query) => $query->ordered()->with('benefits'), 'photos'])
             ->get()
-            ->keyBy('catalog_series_public_id');
-        $equipments = $this->catalog->equipments($vehicles->flatMap(fn (SiteVehicle $vehicle) => $vehicle->offers->pluck('catalog_equipment_public_id'))->unique()->values()->all());
+            ->keyBy('catalog_series_ref');
 
-        return array_values($vehicles->map(function (SiteVehicle $vehicle) use ($series, $existing, $equipments): array {
-            $catalog = isset($series[$vehicle->catalog_series_public_id]) ? $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]) : null;
-            $target = $existing->get($vehicle->catalog_series_public_id);
+        return array_values($vehicles->map(function (SiteVehicle $vehicle) use ($series, $existing): array {
+            $found = $series->get($vehicle->catalog_series_ref);
+            $catalog = $found === null ? null : $this->catalog->title($found);
+            $target = $existing->get($vehicle->catalog_series_ref);
+            $equipments = $this->presenter->siteOfferLabels($vehicle, $vehicle->offers);
 
             return [
                 'public_id' => $vehicle->public_id,
@@ -215,38 +217,43 @@ class SiteVehicleImportController extends Controller
     }
 
     /**
-     * @param  Collection<string, AutoEquipment>  $equipments
+     * @param  array<string, array{name: string}>  $equipments  Labels by source offer public_id.
      * @return array<string, mixed>
      */
-    private function conflictPreview(SiteVehicle $source, SiteVehicle $target, string $catalogTitle, Collection $equipments): array
+    private function conflictPreview(SiteVehicle $source, SiteVehicle $target, string $catalogTitle, array $equipments): array
     {
-        $grouped = $target->offers->groupBy('catalog_equipment_public_id');
+        $grouped = $target->offers->groupBy('catalog_equipment_ref');
         $targetOffers = $grouped->filter(fn ($offers): bool => $offers->count() === 1)->map(fn ($offers) => $offers->first());
-        $sourceEquipment = $source->offers->pluck('catalog_equipment_public_id')->flip();
+        $sourceEquipment = $source->offers->pluck('catalog_equipment_ref')->flip();
         $duplicates = $grouped->filter(fn ($offers, $equipment): bool => $offers->count() > 1 && $sourceEquipment->has($equipment))->count();
-        $matched = $source->offers->filter(fn (SiteOffer $offer): bool => $targetOffers->has($offer->catalog_equipment_public_id));
+        $matched = $source->offers->filter(fn (SiteOffer $offer): bool => $targetOffers->has($offer->catalog_equipment_ref));
 
         return [
             'public_id' => $target->public_id,
             'title' => $target->custom_name ?? $catalogTitle,
             'text_differs' => [$source->custom_name, $source->custom_description] !== [$target->custom_name, $target->custom_description],
-            'media_differs' => $source->mediaSets->pluck('public_id')->all() !== $target->mediaSets->pluck('public_id')->all(),
+            'media_differs' => $source->photos->count() !== $target->photos->count() || $source->primary_angle !== $target->primary_angle,
             'status_differs' => $source->status !== $target->status,
             'offers' => [
                 'matched' => $matched->count(),
-                'missing' => $source->offers->filter(fn (SiteOffer $offer): bool => ! $grouped->has($offer->catalog_equipment_public_id))->count(),
+                'missing' => $source->offers->filter(fn (SiteOffer $offer): bool => ! $grouped->has($offer->catalog_equipment_ref))->count(),
                 'duplicate_equipment' => $duplicates,
-                'destination_only' => $target->offers->filter(fn (SiteOffer $offer): bool => ! $sourceEquipment->has($offer->catalog_equipment_public_id))->count(),
+                'destination_only' => $target->offers->filter(fn (SiteOffer $offer): bool => ! $sourceEquipment->has($offer->catalog_equipment_ref))->count(),
                 'price_changes' => array_values($matched
-                    ->filter(fn (SiteOffer $offer): bool => $offer->price_minor !== $targetOffers[$offer->catalog_equipment_public_id]->price_minor)
+                    ->filter(fn (SiteOffer $offer): bool => $offer->price_minor !== $targetOffers[$offer->catalog_equipment_ref]->price_minor)
                     ->take(10)
                     ->map(fn (SiteOffer $offer): array => [
-                        'equipment' => $equipments->get($offer->catalog_equipment_public_id)->name ?? 'Комплектация',
-                        'source' => Money::format($offer->price_minor, $offer->currency),
-                        'destination' => Money::format($targetOffers[$offer->catalog_equipment_public_id]->price_minor, $targetOffers[$offer->catalog_equipment_public_id]->currency),
+                        'equipment' => $equipments[$offer->public_id]['name'] ?? 'Комплектация',
+                        'source' => self::price($offer),
+                        'destination' => self::price($targetOffers[$offer->catalog_equipment_ref]),
                     ])
                     ->all()),
             ],
         ];
+    }
+
+    private static function price(SiteOffer $offer): string
+    {
+        return $offer->price_minor === null ? 'Цена по запросу' : Money::format($offer->price_minor, $offer->currency);
     }
 }

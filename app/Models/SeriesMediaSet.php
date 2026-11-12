@@ -2,7 +2,7 @@
 
 namespace App\Models;
 
-use App\Catalog\CatalogReferences;
+use App\Catalog\AutoCatalog;
 use App\Exceptions\InvalidCatalogDataException;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\SeriesMediaSetFactory;
@@ -15,12 +15,12 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
- * Platform-owned prepared visual variant of a catalog Series (usually a customer-visible color).
- * The swatch is display metadata only; it is not an automotive color domain (D-103).
+ * Platform-owned colour of a catalog Series with photos for up to five angles (ADR-010).
+ * Customers receive copies of the photos; later changes never reach customer vehicles.
  *
  * @property int $id
  * @property string $public_id
- * @property string $catalog_series_public_id
+ * @property string $catalog_series_ref
  * @property string $name
  * @property string|null $swatch_hex
  * @property bool $status
@@ -48,11 +48,11 @@ class SeriesMediaSet extends Model
     protected static function booted(): void
     {
         static::saving(function (SeriesMediaSet $set): void {
-            if ($set->exists && $set->isDirty('catalog_series_public_id')) {
+            if ($set->exists && $set->isDirty('catalog_series_ref')) {
                 throw new InvalidCatalogDataException('A media set cannot move to another Series.');
             }
 
-            if (! $set->exists && app(CatalogReferences::class)->series($set->catalog_series_public_id) === null) {
+            if (! $set->exists && app(AutoCatalog::class)->series($set->catalog_series_ref) === null) {
                 throw new InvalidCatalogDataException('Media set Series does not exist in the catalog.');
             }
 

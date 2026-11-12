@@ -15,18 +15,11 @@ class AutoMarkFactory extends Factory
 
     public function definition(): array
     {
-        $name = 'Марка '.Str::upper(Str::random(6));
-
         return [
-            'name' => $name,
-            'url' => Str::slug($name).'-'.Str::lower(Str::random(4)),
-            'status' => true,
-            'sort_order' => 0,
+            'external_id' => fake()->unique()->numberBetween(1_000, 9_999_999),
+            'name' => 'Марка '.Str::upper(Str::random(4)),
+            'url' => 'mark-'.Str::lower(Str::random(8)),
+            'status' => 1,
         ];
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(['status' => false]);
     }
 }

@@ -3,39 +3,39 @@
 namespace App\Models\Catalog;
 
 use Database\Factories\Catalog\AutoEquipmentFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Комплектация: the confirmed real Modification + trim combination (no AutoConfiguration).
+ * Комплектация of one Modification. `external_id = 0` is the modification itself without a
+ * named trim («Базовая»). Customer rows reference it by `external_key` inside the Series.
  *
+ * @property int $series_id
  * @property int $modification_id
+ * @property int $external_id
+ * @property string $external_key
  * @property string $name
- * @property bool $status
- * @property int $sort_order
  * @property-read AutoModification $modification
+ * @property-read AutoSeries $series
  */
-#[Fillable(['name', 'status', 'sort_order'])]
-#[Hidden(['id', 'modification_id'])]
 class AutoEquipment extends CatalogModel
 {
     /** @use HasFactory<AutoEquipmentFactory> */
     use HasFactory;
 
-    protected const PARENT_KEY = 'modification_id';
+    public const BASE_NAME = 'Базовая';
 
     protected $table = 'auto_equipments';
+
+    protected $hidden = ['id', 'series_id', 'modification_id'];
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['status' => 'boolean', 'sort_order' => 'integer'];
+        return ['external_id' => 'integer'];
     }
 
     /**
@@ -47,11 +47,11 @@ class AutoEquipment extends CatalogModel
     }
 
     /**
-     * @return HasMany<AutoCharacteristicValue, $this>
+     * @return BelongsTo<AutoSeries, $this>
      */
-    public function characteristicValues(): HasMany
+    public function series(): BelongsTo
     {
-        return $this->hasMany(AutoCharacteristicValue::class, 'equipment_id');
+        return $this->belongsTo(AutoSeries::class, 'series_id');
     }
 
     /**
@@ -62,12 +62,13 @@ class AutoEquipment extends CatalogModel
         return $this->hasMany(AutoOptionValue::class, 'equipment_id');
     }
 
-    /**
-     * @param  Builder<static>  $query
-     */
-    public function scopeAvailable(Builder $query): void
+    public function isNamed(): bool
     {
-        $query->where($this->qualifyColumn('status'), true)
-            ->whereHas('modification', fn (Builder $modification) => $modification->available());
+        return $this->external_id > 0;
+    }
+
+    public function displayName(): string
+    {
+        return $this->isNamed() ? $this->name : self::BASE_NAME;
     }
 }

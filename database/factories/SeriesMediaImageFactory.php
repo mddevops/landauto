@@ -17,7 +17,7 @@ class SeriesMediaImageFactory extends Factory
     {
         return [
             'series_media_set_id' => SeriesMediaSet::factory(),
-            'angle' => MediaAngle::FrontThreeQuarter,
+            'angle' => MediaAngle::PREFERRED,
             'path' => 'series-media/test/'.Str::lower((string) Str::ulid()).'.png',
             'original_name' => 'front.png',
             'mime_type' => 'image/png',

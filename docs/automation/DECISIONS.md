@@ -2364,6 +2364,24 @@ Owner decision 2026-11-11 (staging: wildcard SSL unavailable, `my.dealershtab.ru
 
 ---
 
+## D-128 — auto.ru Catalog Source, Vehicle Photos and Default Prices
+
+**Status:** APPROVED (owner decision 2026-11-12; ADR-010; X-031)
+
+### Decision
+
+- The Global Automotive Catalog is the auto.ru data in the `catalog` database, read directly and never modified by Landflow.
+- Customer rows reference Series by `{generation.external_id}:{series.external_id}` and Equipment by `external_key`; auto.ru numeric ids are never stored.
+- Series photos: colours × five angles (`side_left`, `front_3_4_left`, `front`, `front_3_4_right`, `side_right`) plus a gallery. Chosen photos are copied into customer-owned files when a vehicle is added; customers can upload their own.
+- Workspace vehicles may carry default trims with prices; copying to a Site copies them into Site Offers.
+- The customer Catalog groups vehicles by mark/model automatically and by customer collections.
+
+### Resolved By
+
+Owner decisions 2026-11-12. Details: `docs/architecture/decisions/ADR-010-autoru-catalog-source.md`. Supersedes ADR-005, the V2 schema part of D-101/D-102 and the angle list of D-103.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

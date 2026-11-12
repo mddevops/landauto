@@ -154,6 +154,10 @@ final class PublishedArtifactBuilder
                     }
                 }
 
+                foreach ($vehicle['media']['gallery'] ?? [] as $i => $image) {
+                    $vehicle['media']['gallery'][$i]['url'] = PublicBasePath::prefix("/_landflow/media/{$versionId}/{$image['public_id']}");
+                }
+
                 return $vehicle;
             }, $manifest['vehicles']),
             'popups' => array_map(fn (array $popup): array => [

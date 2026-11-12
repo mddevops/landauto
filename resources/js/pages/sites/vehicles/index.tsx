@@ -1,27 +1,22 @@
 import { Head, Link } from '@inertiajs/react';
-import { Car, Copy, Plus, TriangleAlert } from 'lucide-react';
-import { Badge } from '@/components/ui/badge';
+import { Car, Copy, Plus, Search } from 'lucide-react';
+import { useMemo, useState } from 'react';
+import {
+    groupVehicles,
+    matchesSearch,
+    normalizeSearch,
+    VehicleGroups,
+} from '@/components/catalog/vehicle-cards';
 import { Button } from '@/components/ui/button';
-import { Card, CardDescription, CardHeader } from '@/components/ui/card';
+import { Input } from '@/components/ui/input';
 import { dashboard } from '@/routes';
 import { create, show } from '@/routes/sites/vehicles';
 import { create as importVehicles } from '@/routes/sites/vehicles/imports';
-import type { VehicleCatalogTitle } from '@/types/catalog';
-
-type VehicleSummary = {
-    public_id: string;
-    status: boolean;
-    sort_order: number;
-    custom_name: string | null;
-    offers_count: number;
-    media_sets_count: number;
-    catalog: VehicleCatalogTitle | null;
-    catalog_available: boolean;
-};
+import type { VehicleCard } from '@/types/catalog';
 
 type VehiclesIndexProps = {
     site: { public_id: string; name: string };
-    vehicles: VehicleSummary[];
+    vehicles: VehicleCard[];
     can: { editVehicles: boolean; importVehicles: boolean };
 };
 
@@ -30,6 +25,15 @@ export default function VehiclesIndex({
     vehicles,
     can,
 }: VehiclesIndexProps) {
+    const [query, setQuery] = useState('');
+    const groups = useMemo(() => {
+        const needle = normalizeSearch(query);
+
+        return groupVehicles(
+            vehicles.filter((vehicle) => matchesSearch(vehicle, needle)),
+        );
+    }, [vehicles, query]);
+
     return (
         <>
             <Head title={`Автомобили — ${site.name}`} />
@@ -43,7 +47,7 @@ export default function VehiclesIndex({
                             Автомобили
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Модели из каталога платформы и ваши предложения с
+                            Автомобили этого сайта с фото, комплектациями и
                             ценами.
                         </p>
                     </div>
@@ -52,7 +56,7 @@ export default function VehiclesIndex({
                             <Button variant="outline" asChild>
                                 <Link href={importVehicles(site.public_id)}>
                                     <Copy aria-hidden="true" />
-                                    Импортировать с другого сайта
+                                    С другого сайта
                                 </Link>
                             </Button>
                         )}
@@ -68,67 +72,53 @@ export default function VehiclesIndex({
                 </header>
 
                 {vehicles.length === 0 ? (
-                    <Card className="border-dashed">
-                        <CardHeader>
-                            <h2 className="leading-none font-semibold">
-                                Автомобилей пока нет
-                            </h2>
-                            <CardDescription>
-                                Выберите марку, модель, поколение и серию из
-                                каталога, затем добавьте предложения с ценами.
-                            </CardDescription>
-                        </CardHeader>
-                    </Card>
+                    <div className="flex flex-col items-center gap-3 rounded-xl border border-dashed p-10 text-center">
+                        <Car
+                            className="size-8 text-muted-foreground"
+                            aria-hidden="true"
+                        />
+                        <p className="font-medium">Автомобилей пока нет</p>
+                        <p className="max-w-md text-sm text-muted-foreground">
+                            Добавьте автомобиль из каталога auto.ru или
+                            скопируйте готовый из своего Каталога.
+                        </p>
+                    </div>
                 ) : (
-                    <ul className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3">
-                        {vehicles.map((vehicle) => (
-                            <li key={vehicle.public_id}>
-                                <Link
-                                    href={show({
+                    <>
+                        {vehicles.length > 6 && (
+                            <div className="relative max-w-md">
+                                <Search
+                                    className="pointer-events-none absolute top-1/2 left-3 size-4 -translate-y-1/2 text-muted-foreground"
+                                    aria-hidden="true"
+                                />
+                                <Input
+                                    type="search"
+                                    value={query}
+                                    onChange={(event) =>
+                                        setQuery(event.target.value)
+                                    }
+                                    placeholder="Найти: марка, модель, кузов"
+                                    aria-label="Поиск автомобиля"
+                                    className="pl-9"
+                                />
+                            </div>
+                        )}
+                        {groups.length === 0 ? (
+                            <p className="rounded-xl border border-dashed p-8 text-center text-sm text-muted-foreground">
+                                Ничего не найдено.
+                            </p>
+                        ) : (
+                            <VehicleGroups
+                                groups={groups}
+                                href={(vehicle) =>
+                                    show.url({
                                         site: site.public_id,
                                         vehicle: vehicle.public_id,
-                                    })}
-                                    className="flex h-full min-w-0 flex-col gap-3 rounded-xl border bg-card p-4 shadow-sm transition-colors hover:bg-accent focus-visible:ring-[3px] focus-visible:ring-ring/50 focus-visible:outline-none"
-                                >
-                                    <div className="flex items-start gap-3">
-                                        <Car
-                                            aria-hidden="true"
-                                            className="mt-0.5 size-5 shrink-0 text-muted-foreground"
-                                        />
-                                        <div className="min-w-0 flex-1">
-                                            <h2 className="font-semibold break-words">
-                                                {vehicle.custom_name ??
-                                                    vehicle.catalog?.title ??
-                                                    'Модель недоступна'}
-                                            </h2>
-                                            {vehicle.catalog && (
-                                                <p className="text-sm text-muted-foreground">
-                                                    {`${vehicle.catalog.generation} · ${vehicle.catalog.series}`}
-                                                </p>
-                                            )}
-                                        </div>
-                                        {!vehicle.status && (
-                                            <Badge variant="secondary">
-                                                Скрыт
-                                            </Badge>
-                                        )}
-                                    </div>
-                                    <p className="text-sm text-muted-foreground">
-                                        {`Предложений: ${vehicle.offers_count} · Вариантов изображений: ${vehicle.media_sets_count}`}
-                                    </p>
-                                    {!vehicle.catalog_available && (
-                                        <p className="flex items-center gap-2 text-sm text-amber-700 dark:text-amber-400">
-                                            <TriangleAlert
-                                                aria-hidden="true"
-                                                className="size-4 shrink-0"
-                                            />
-                                            Серия выключена в каталоге
-                                        </p>
-                                    )}
-                                </Link>
-                            </li>
-                        ))}
-                    </ul>
+                                    })
+                                }
+                            />
+                        )}
+                    </>
                 )}
             </main>
         </>

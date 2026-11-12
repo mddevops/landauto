@@ -3,12 +3,10 @@
 namespace Tests\Feature\Vehicles;
 
 use App\Automotive\VehicleBindings;
+use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockStateValidator;
 use App\Blocks\PageBlockReferences;
-use App\Catalog\EquipmentCharacteristics;
-use App\Catalog\EquipmentOptions;
 use App\Enums\BenefitType;
-use App\Enums\Catalog\OptionAvailability;
 use App\Enums\MediaAngle;
 use App\Enums\OfferAvailability;
 use App\Enums\WorkspaceRole;
@@ -21,8 +19,6 @@ use App\Models\Catalog\AutoModification;
 use App\Models\Catalog\AutoOption;
 use App\Models\Catalog\AutoSeries;
 use App\Models\Page;
-use App\Models\SeriesMediaImage;
-use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
@@ -30,13 +26,16 @@ use App\Models\User;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\CreatesCatalogMedia;
 use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
 
 class VehicleBindingsTest extends TestCase
 {
-    use RefreshCatalogDatabase, RefreshDatabase;
+    use CreatesCatalogMedia, RefreshCatalogDatabase, RefreshDatabase;
 
     private Site $site;
 
@@ -51,24 +50,37 @@ class VehicleBindingsTest extends TestCase
         $this->site = Site::factory()->create();
         $mark = AutoMark::factory()->create(['name' => 'Kia', 'url' => 'kia']);
         $model = AutoModel::factory()->for($mark, 'mark')->create(['name' => 'Rio', 'url' => 'rio']);
-        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV Рестайлинг', 'url' => 'iv-restyling']);
-        $this->series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Седан', 'url' => 'sedan']);
+        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV Рестайлинг']);
+        $this->series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Седан']);
         $modification = AutoModification::factory()->for($this->series, 'series')->create();
         $this->comfort = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Comfort']);
 
         $dimensions = AutoCharacteristic::factory()->create(['name' => 'Размеры']);
-        $clearance = AutoCharacteristic::factory()->parameter($dimensions)->create(['name' => 'Клиренс']);
-        $suspension = AutoCharacteristic::factory()->parameter($dimensions, null)->create(['name' => 'Подвеска']);
-        (new EquipmentCharacteristics)->sync($this->comfort, [$clearance->public_id => '160,5', $suspension->public_id => 'Независимая']);
+        $catalog = DB::connection('catalog');
 
-        $safety = AutoOption::factory()->create(['name' => 'Безопасность']);
-        $abs = AutoOption::factory()->option($safety)->create(['name' => 'ABS']);
-        $heated = AutoOption::factory()->option($safety)->create(['name' => 'Подогрев сидений']);
-        AutoOption::factory()->option($safety)->create(['name' => 'Неизвестная опция']);
-        (new EquipmentOptions)->sync($this->comfort, [$abs->public_id => OptionAvailability::Standard, $heated->public_id => OptionAvailability::Optional]);
+        foreach ([['Клиренс', '160,5', 'мм', 1], ['Подвеска', 'Независимая', null, 2]] as [$name, $value, $unit, $sort]) {
+            $characteristic = AutoCharacteristic::factory()->create(['name' => $name, 'parent_id' => $dimensions->id, 'sort' => $sort]);
+            $catalog->table('auto_characteristic_values')->insert([
+                'modification_id' => $modification->id, 'characteristic_id' => $characteristic->id, 'value' => $value, 'unit' => $unit,
+            ]);
+        }
 
-        $white = SeriesMediaSet::factory()->forSeries($this->series)->create(['name' => 'Белый', 'swatch_hex' => '#ffffff']);
-        SeriesMediaImage::factory()->for($white, 'set')->create(['angle' => MediaAngle::FrontThreeQuarter]);
+        $safety = AutoOption::query()->create(['name' => 'Безопасность', 'parent_id' => null, 'sort' => 0]);
+
+        foreach ([['ABS', true, 1], ['Подогрев сидений', false, 2]] as [$name, $base, $sort]) {
+            $option = AutoOption::query()->create(['name' => $name, 'parent_id' => $safety->id, 'sort' => $sort]);
+            $catalog->table('auto_option_values')->insert(['equipment_id' => $this->comfort->id, 'option_id' => $option->id, 'is_base' => $base]);
+        }
+
+        AutoOption::query()->create(['name' => 'Неизвестная опция', 'parent_id' => $safety->id, 'sort' => 3]);
+    }
+
+    private function withPhotos(SiteVehicle $vehicle): void
+    {
+        Storage::fake('local');
+        $white = $this->colorSet($this->series, 'Белый', [MediaAngle::FrontThreeQuarterLeft]);
+        $white->update(['swatch_hex' => '#ffffff']);
+        app(VehiclePhotos::class)->copyFromLibrary($vehicle, [$white->public_id], []);
     }
 
     public function test_site_bindings_expose_display_ready_visible_vehicles_and_offers_only(): void
@@ -82,12 +94,17 @@ class VehicleBindingsTest extends TestCase
         ]);
         $offer->replaceBenefits([['type' => BenefitType::Discount, 'amount_minor' => 10_000_000]]);
         SiteOffer::factory()->for($vehicle, 'vehicle')->forEquipment($this->comfort)->create(['price_minor' => 1_000_000, 'status' => false]);
-        $hiddenEquipment = AutoEquipment::factory()->for($this->comfort->modification, 'modification')->create(['name' => 'Classic']);
-        SiteOffer::factory()->for($vehicle, 'vehicle')->forEquipment($hiddenEquipment)->create(['price_minor' => 2_000_000]);
-        $hiddenEquipment->update(['status' => false]);
+        $removedEquipment = AutoEquipment::factory()->for($this->comfort->modification, 'modification')->create(['name' => 'Classic']);
+        SiteOffer::factory()->for($vehicle, 'vehicle')->forEquipment($removedEquipment)->create(['price_minor' => 2_000_000]);
+        $removedEquipment->delete();
+        $onRequest = AutoEquipment::factory()->for($this->comfort->modification, 'modification')->create(['name' => 'Luxe']);
+        SiteOffer::factory()->for($vehicle, 'vehicle')->forEquipment($onRequest)->create(['price_minor' => null]);
+        $this->withPhotos($vehicle);
 
         SiteVehicle::factory()->for($this->site)->forSeries(AutoSeries::factory()->create())->create(['status' => false]);
-        SiteVehicle::factory()->for($this->site)->forSeries(AutoSeries::factory()->inactive()->create())->create();
+        $removedSeries = AutoSeries::factory()->create();
+        SiteVehicle::factory()->for($this->site)->forSeries($removedSeries)->create();
+        $removedSeries->delete();
         SiteVehicle::factory()->forSeries($this->series)->create();
 
         $bindings = app(VehicleBindings::class)->forSite($this->site);
@@ -103,11 +120,12 @@ class VehicleBindingsTest extends TestCase
         $vehicle->update(['custom_name' => 'Rio для города', 'custom_description' => "Экономичный седан.\nГотов к выдаче."]);
         $binding = app(VehicleBindings::class)->forSite($this->site)[0];
         $this->assertSame(['Rio для города', "Экономичный седан.\nГотов к выдаче."], [$binding['title'], $binding['description']]);
-        $this->assertSame('global', $binding['media']['source']);
+        $this->assertSame('site', $binding['media']['source']);
         $this->assertSame('#ffffff', $binding['media']['sets'][0]['swatch_hex']);
-        $this->assertSame(MediaAngle::FrontThreeQuarter->label(), $binding['media']['sets'][0]['images'][0]['label']);
+        $this->assertSame(MediaAngle::FrontThreeQuarterLeft->label(), $binding['media']['sets'][0]['images'][0]['label']);
 
-        $this->assertCount(1, $binding['offers']);
+        $this->assertCount(2, $binding['offers']);
+        $this->assertSame(['Luxe', null], [$binding['offers'][1]['equipment']['name'], $binding['offers'][1]['price_label']]);
         $view = $binding['offers'][0];
         $this->assertSame($offer->public_id, $view['public_id']);
         $this->assertSame('Comfort', $view['equipment']['name']);
