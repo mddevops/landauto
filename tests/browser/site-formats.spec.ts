@@ -19,7 +19,7 @@ async function createSite(
         .getByRole('radio', { name: format })
         .check();
 
-    const startGroup = page.getByRole('group', { name: '2. Старт' });
+    const startGroup = page.getByRole('group', { name: '2. Шаблон' });
     const blank = startGroup.getByRole('radio', { name: 'Пустой старт' });
 
     if ('blank' in start) {
@@ -33,9 +33,13 @@ async function createSite(
 
     await expectNoHorizontalOverflow(page);
     await page.getByLabel('Название сайта').fill(name);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
-    await expect(page.getByRole('heading', { level: 2, name })).toBeVisible();
+    await page
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
+        .click();
+    await expect(page).toHaveURL(/\/designer$/);
+    await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
+
+    return page.url();
 }
 
 test('formats: landing, quiz and chat on a plan without multi-page sites @responsive', async ({
@@ -59,7 +63,7 @@ test('formats: landing, quiz and chat on a plan without multi-page sites @respon
     await expectNoHorizontalOverflow(page);
 
     await createSite(page, /^Лендинг/, `Лендинг ${suffix}`, { blank: true });
-    await createSite(page, /^Квиз/, `Квиз ${suffix}`, {
+    const quizDesigner = await createSite(page, /^Квиз/, `Квиз ${suffix}`, {
         template: account.quizTemplate,
     });
     await createSite(page, /^Чат-подбор/, `Чат ${suffix}`, {
@@ -67,9 +71,7 @@ test('formats: landing, quiz and chat on a plan without multi-page sites @respon
     });
 
     // The quiz Site keeps the Template structure: no new Pages or Blocks.
-    await page
-        .getByRole('link', { name: `Открыть дизайнер сайта «Квиз ${suffix}»` })
-        .click();
+    await page.goto(quizDesigner);
     const left = page.getByRole('complementary', { name: 'Левая панель' });
     await left.getByRole('tab', { name: 'Страницы' }).click();
     await expect(left.getByRole('link', { name: 'Главная' })).toBeVisible();

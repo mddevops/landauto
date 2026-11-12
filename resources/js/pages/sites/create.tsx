@@ -197,6 +197,7 @@ function TemplateShowcaseCard({
                         checked={selected}
                         disabled={disabled}
                         onChange={onSelect}
+                        aria-label={`Выбрать шаблон «${template.name}»`}
                         className="size-4 accent-primary"
                     />
                     Выбрать
@@ -206,6 +207,7 @@ function TemplateShowcaseCard({
                     variant="ghost"
                     size="sm"
                     onClick={onPreview}
+                    aria-label={`Смотреть шаблон «${template.name}»`}
                 >
                     <Eye aria-hidden="true" />
                     Смотреть
@@ -367,7 +369,7 @@ export default function CreateSite({
                                         {selectedType?.blank_allowed && (
                                             <label
                                                 className={cn(
-                                                    'flex min-h-48 cursor-pointer flex-col justify-between rounded-2xl border border-dashed bg-card p-5 shadow-sm transition hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20',
+                                                    'flex min-h-48 cursor-pointer flex-col justify-between rounded-2xl border border-dashed bg-card p-5 shadow-sm transition hover:bg-accent has-[:checked]:border-primary has-[:checked]:ring-2 has-[:checked]:ring-primary/20 has-[:focus-visible]:ring-[3px] has-[:focus-visible]:ring-ring',
                                                 )}
                                             >
                                                 <input

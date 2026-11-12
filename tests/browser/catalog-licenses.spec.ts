@@ -184,9 +184,10 @@ test('a Workspace license covers every current and future Site of that Workspace
         .getByRole('radio', { name: /^Лендинг/ })
         .check();
     await page.getByLabel('Название сайта').fill(newSite);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
-    await openDesigner(page, newSite);
+    await page
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
+        .click();
+    await expect(page).toHaveURL(/\/designer$/);
     await expect(addButton(page)).toBeEnabled();
     await addButton(page).click();
     await expect(blockFrame(page)).toBeVisible();

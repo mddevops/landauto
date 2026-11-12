@@ -37,27 +37,20 @@ test('owner logs in, creates a multi-page Site and another Workspace cannot see 
     await format.check();
     await expect(format).toBeChecked();
     const start = page
-        .getByRole('group', { name: '2. Старт' })
+        .getByRole('group', { name: '2. Шаблон' })
         .getByRole('radio', { name: creator.start });
     await start.check();
     await expect(start).toBeChecked();
     await page.getByLabel('Название сайта').fill(siteName);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
-    const createdSiteId = new URL(page.url()).searchParams.get('site');
-    expect(createdSiteId).toMatch(ulidPattern);
-    await expect(page.getByRole('alert')).toContainText('Сайт создан');
-    await expect(page.getByRole('alert')).toContainText(siteName);
-    await expect(
-        page.getByRole('heading', { level: 2, name: siteName }),
-    ).toBeVisible();
-
     await page
-        .getByRole('link', { name: `Открыть дизайнер сайта «${siteName}»` })
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
         .click();
 
-    await expect(page).toHaveURL(`/sites/${createdSiteId}/designer`);
+    // A new Site opens straight in the Designer.
+    await expect(page).toHaveURL(/\/sites\/[^/]+\/designer$/);
+    const createdSiteId = new URL(page.url()).pathname.split('/')[2];
+    expect(createdSiteId).toMatch(ulidPattern);
+    await expect(page.getByText(`Сайт «${siteName}» создан.`)).toBeVisible();
     await expect(page).toHaveTitle(`Дизайнер — ${siteName} - Landflow`);
     await expect(
         page.getByRole('heading', { level: 1, name: siteName }),

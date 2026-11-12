@@ -72,13 +72,13 @@ class SiteController extends Controller
                     }
 
                     $reason = $templateAccess->installDenial($workspace, $template, $template->latestVersion);
-                    $pages = array_values(array_map(
+                    $pages = array_map(
                         fn (array $page): array => [
-                            'title' => is_string($page['title'] ?? null) && $page['title'] !== '' ? $page['title'] : 'Страница',
-                            'block_count' => count($page['blocks'] ?? []),
+                            'title' => $page['title'] !== '' ? $page['title'] : 'Страница',
+                            'block_count' => count($page['blocks']),
                         ],
                         $template->latestVersion->content_json['pages'] ?? [],
-                    ));
+                    );
 
                     return [
                         'public_id' => $template->public_id,
@@ -129,6 +129,8 @@ class SiteController extends Controller
                 'site' => 'Достигнут лимит активных сайтов для текущего рабочего пространства.',
             ]);
         }
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Сайт «{$site->name}» создан."]);
 
         return to_route('sites.designer', $site);
     }

@@ -115,7 +115,10 @@ function FeaturesSketch() {
             <Bar className="mx-auto h-2 w-1/2" />
             <div className="grid grid-cols-3 gap-1.5">
                 {[0, 1, 2].map((item) => (
-                    <div key={item} className="space-y-1 rounded-sm bg-white/60 p-1">
+                    <div
+                        key={item}
+                        className="space-y-1 rounded-sm bg-white/60 p-1"
+                    >
                         <Bar className="mx-auto h-2 w-2 rounded-full" />
                         <Bar className="h-1 w-full" />
                         <Bar className="h-1 w-2/3 opacity-50" />
@@ -194,7 +197,10 @@ function GallerySketch() {
     return (
         <div className="grid grid-cols-4 gap-1">
             {[0, 1, 2, 3].map((item) => (
-                <div key={item} className="aspect-square rounded-sm bg-current/20" />
+                <div
+                    key={item}
+                    className="aspect-square rounded-sm bg-current/20"
+                />
             ))}
         </div>
     );

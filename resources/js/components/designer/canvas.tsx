@@ -173,7 +173,7 @@ export function CanvasBlock({
                 aria-pressed={selected}
                 onClick={onSelect}
                 className={cn(
-                    'absolute inset-0 z-10 outline-none transition-[box-shadow]',
+                    'absolute inset-0 z-10 transition-[box-shadow] outline-none',
                     'hover:shadow-[inset_0_0_0_1px_#3898EC]',
                     'focus-visible:shadow-[inset_0_0_0_1px_#3898EC]',
                     selected && 'shadow-[inset_0_0_0_1px_#3898EC]',

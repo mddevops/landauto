@@ -43,6 +43,8 @@ class CreateSitePageTest extends TestCase
                 'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
                 'available' => true,
                 'reason' => null,
+                'page_count' => 0,
+                'pages' => [],
             ])
             ->where('templates.1.public_id', $starter->public_id)
             ->where('templates.1.name', 'Стартовый шаблон')
@@ -54,6 +56,27 @@ class CreateSitePageTest extends TestCase
                 'reached' => false,
             ]));
         $response->assertDontSee('Скрытый шаблон');
+    }
+
+    public function test_template_preview_lists_pages_of_the_latest_version_without_content(): void
+    {
+        [$user, $workspace] = $this->userWithWorkspace(WorkspaceRole::Owner, 2);
+        $template = Template::factory()->create(['name' => 'Дилерский шаблон']);
+        $template->versions()->make(['version' => '1.0.0'])->forceFill(['content_json' => ['pages' => []]])->save();
+        $block = ['key' => 'b1', 'block_version_id' => 1, 'is_hidden' => false, 'state' => ['title' => 'Секретный оффер']];
+        $template->versions()->make(['version' => '1.1.0'])->forceFill(['content_json' => ['pages' => [
+            ['key' => 'p1', 'title' => 'Главная', 'slug' => 'home', 'is_home' => true, 'blocks' => [$block, [...$block, 'key' => 'b2']]],
+            ['key' => 'p2', 'title' => '', 'slug' => 'contacts', 'is_home' => false, 'blocks' => []],
+        ]]])->save();
+
+        $this->createPage($user, $workspace)
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('templates.0.page_count', 2)
+                ->where('templates.0.pages', [
+                    ['title' => 'Главная', 'block_count' => 2],
+                    ['title' => 'Страница', 'block_count' => 0],
+                ]))
+            ->assertDontSee('Секретный оффер');
     }
 
     public function test_reached_active_site_limit_is_backend_derived(): void

@@ -35,6 +35,7 @@ class CreateSiteTest extends TestCase
         $site = Site::query()->sole();
 
         $response->assertRedirect(route('sites.designer', $site));
+        $response->assertInertiaFlash('toast.message', 'Сайт «Автосалон Север» создан.');
         $this->assertTrue($site->workspace->is($workspace));
         $this->assertSame('Автосалон Север', $site->name);
         $this->assertSame(SiteStatus::Active, $site->status);

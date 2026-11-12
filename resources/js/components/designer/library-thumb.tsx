@@ -9,7 +9,28 @@ type LibraryThumbProps = {
     onAdd: () => void;
 };
 
+/** Official Landflow Blocks without access conditions need no access line. */
+function accessLine(item: DesignerLibraryBlock): string | null {
+    if (item.author === null && !item.access.restricted) {
+        return null;
+    }
+
+    return [
+        item.author ? `Автор: ${item.author}` : null,
+        [item.access.label, item.access.detail].filter(Boolean).join(' · '),
+    ]
+        .filter(Boolean)
+        .join('. ');
+}
+
 export function LibraryThumb({ item, onAdd }: LibraryThumbProps) {
+    const access = accessLine(item);
+    const accessId = `library-${item.slug}-access`;
+    const reasonId = `library-${item.slug}-reason`;
+    const describedBy =
+        [access ? accessId : null, item.reason ? reasonId : null]
+            .filter(Boolean)
+            .join(' ') || undefined;
     const buttonRef = useRef<HTMLButtonElement>(null);
     const [hover, setHover] = useState(false);
     const [coords, setCoords] = useState<{ top: number; left: number } | null>(
@@ -61,9 +82,7 @@ export function LibraryThumb({ item, onAdd }: LibraryThumbProps) {
                 type="button"
                 disabled={!item.available}
                 aria-label={`Добавить блок «${item.name}»`}
-                aria-describedby={
-                    item.reason ? `library-${item.slug}-reason` : undefined
-                }
+                aria-describedby={describedBy}
                 onClick={onAdd}
                 onMouseEnter={() => setHover(true)}
                 onMouseLeave={() => setHover(false)}
@@ -77,17 +96,22 @@ export function LibraryThumb({ item, onAdd }: LibraryThumbProps) {
                 )}
             >
                 <div className="aspect-[5/3] overflow-hidden rounded-md border border-neutral-200 bg-white">
-                    <BlockWireframe
-                        slug={item.slug}
-                        category={item.category}
-                    />
+                    <BlockWireframe slug={item.slug} category={item.category} />
                 </div>
                 <span className="truncate px-0.5 text-xs font-medium text-neutral-700">
                     {item.name}
                 </span>
+                {access && (
+                    <span
+                        id={accessId}
+                        className="px-0.5 text-xs leading-tight break-words text-neutral-500"
+                    >
+                        {access}
+                    </span>
+                )}
                 {item.reason && (
                     <span
-                        id={`library-${item.slug}-reason`}
+                        id={reasonId}
                         className="px-0.5 text-[10px] leading-tight text-amber-700"
                     >
                         {item.reason}

@@ -19,13 +19,14 @@ async function login(page: Page) {
 async function createSite(page: Page, siteName: string) {
     await page.getByRole('link', { name: 'Создать сайт' }).click();
     await page
-        .getByRole('group', { name: '2. Старт' })
+        .getByRole('group', { name: '2. Шаблон' })
         .getByRole('radio', { name: owner.start })
         .check();
     await page.getByLabel('Название сайта').fill(siteName);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
-    await openDesigner(page, siteName);
+    await page
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
+        .click();
+    await expect(page).toHaveURL(/\/sites\/[0-9A-HJKMNP-TV-Z]{26}\/designer$/i);
 }
 
 async function openDesigner(page: Page, siteName: string) {

@@ -68,18 +68,16 @@ test('a Site created from a published Template is an independent copy', async ({
         .getByRole('group', { name: '1. Формат' })
         .getByRole('radio', { name: /^Лендинг/ })
         .check();
-    const startGroup = customerPage.getByRole('group', { name: '2. Старт' });
+    const startGroup = customerPage.getByRole('group', { name: '2. Шаблон' });
     const templateRadio = startGroup.getByRole('radio', { name: templateName });
     await expect(templateRadio).toBeEnabled();
     await expect(startGroup).toContainText(`Автор: ${author.profile}`);
     await templateRadio.check();
     await customerPage.getByLabel('Название сайта').fill(siteName);
-    await customerPage.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(customerPage).toHaveURL(/\/dashboard\?site=/);
-
     await customerPage
-        .getByRole('link', { name: `Открыть дизайнер сайта «${siteName}»` })
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
         .click();
+    await expect(customerPage).toHaveURL(/\/designer$/);
     const customerCanvas = customerPage.getByRole('main', { name: 'Холст' });
     await expect(customerCanvas).toContainText(`Акция ${suffix}`);
     const siteDesignerUrl = customerPage.url();
