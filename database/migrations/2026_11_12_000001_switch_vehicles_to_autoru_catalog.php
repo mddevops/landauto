@@ -166,7 +166,17 @@ return new class extends Migration
 
     private function removeLegacyRows(): void
     {
-        $existing = array_filter(self::LEGACY_TABLES, fn (string $table): bool => DB::table($table)->exists());
+        $existing = [];
+
+        foreach (self::LEGACY_TABLES as $table) {
+            if (! Schema::hasTable($table)) {
+                continue;
+            }
+
+            if (DB::table($table)->exists()) {
+                $existing[] = $table;
+            }
+        }
 
         if ($existing === []) {
             return;
@@ -177,7 +187,9 @@ return new class extends Migration
         }
 
         foreach (self::LEGACY_TABLES as $table) {
-            DB::table($table)->delete();
+            if (Schema::hasTable($table)) {
+                DB::table($table)->delete();
+            }
         }
     }
 };
