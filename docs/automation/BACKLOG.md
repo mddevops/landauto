@@ -84,6 +84,8 @@ Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 app
 
 Native runtime tasks `X-023` through `X-029` are DONE. `X-013`, `X-017` and D-094 DONE for launch-without-billing. Remaining before production: server deploy / DNS / secrets (`Production deployment: NOT_CONFIGURED`).
 
+No task is ready as of 2026-11-12. Open work needs an owner decision first: `X-003` (object storage provider, D-076) and Phase 11 (`P11-001` start and source choice). Everything else not DONE is DEFERRED.
+
 ---
 
 # PHASE 0 — FOUNDATION / AUTOMATION
@@ -3882,8 +3884,9 @@ Adapter selected only after explicit source decision.
 
 ## X-001 — ADR: Public Site Rendering
 
-**Status:** NOT_STARTED  
-**Trigger:** before P5-002
+**Status:** DONE  
+**Trigger:** before P5-002  
+**Resolved by:** D-073 APPROVED — `docs/architecture/decisions/ADR-006-publishing-runtime.md` (publish-time React SSR into stored HTML artifacts, client hydration, no Node SSR on visitor requests; addressing per D-111 / D-127)
 
 Decision must cover:
 
@@ -3899,15 +3902,17 @@ Decision must cover:
 
 ## X-002 — ADR: Published Snapshot Format
 
-**Status:** NOT_STARTED  
-**Trigger:** before P5-002
+**Status:** DONE  
+**Trigger:** before P5-002  
+**Resolved by:** D-074 APPROVED — `docs/architecture/decisions/ADR-006-publishing-runtime.md` (immutable Published Version, sanitized public manifest, private draft snapshot)
 
 ---
 
 ## X-003 — ADR: Object Storage Provider
 
 **Status:** NOT_STARTED  
-**Trigger:** before production-scale media deployment
+**Trigger:** before production-scale media deployment  
+**Needs:** owner provider choice (D-076 ADR_REQUIRED); until then media stay on the server's local disk
 
 ---
 
@@ -3920,15 +3925,17 @@ Decision must cover:
 
 ## X-005 — ADR: Billing Provider
 
-**Status:** NOT_STARTED  
-**Trigger:** P7-008
+**Status:** DONE  
+**Trigger:** P7-008  
+**Resolved by:** D-078 APPROVED — `docs/architecture/decisions/ADR-007-billing-provider-yookassa.md` (P7-008); the real subscription integration stays DEFERRED (P7-009)
 
 ---
 
 ## X-006 — ADR: Marketplace Sandbox
 
-**Status:** NOT_STARTED  
-**Trigger:** P9-009
+**Status:** DONE  
+**Trigger:** P9-009  
+**Resolved by:** D-080 / D-081 APPROVED — `docs/architecture/decisions/ADR-008-sandboxed-block-runtime.md`, narrowed for approved first-party Blocks by `docs/architecture/decisions/ADR-009-native-first-party-block-runtime.md` (D-123)
 
 ---
 
