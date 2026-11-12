@@ -22,6 +22,11 @@ return new class extends Migration
         Schema::dropIfExists('site_vehicle_media_sets');
         Schema::dropIfExists('workspace_vehicle_media_sets');
 
+        // MySQL may back the site_id / workspace_id FKs with the composite unique indexes
+        // that also hold the old catalog public_id; give those FKs a dedicated index first.
+        Schema::table('site_vehicles', function (Blueprint $table) {
+            $table->index('site_id');
+        });
         Schema::table('site_vehicles', function (Blueprint $table) {
             $table->dropUnique(['site_id', 'catalog_series_public_id']);
             $table->dropIndex(['catalog_series_public_id']);
@@ -34,6 +39,9 @@ return new class extends Migration
             $table->index('catalog_series_ref');
         });
 
+        Schema::table('workspace_vehicles', function (Blueprint $table) {
+            $table->index('workspace_id');
+        });
         Schema::table('workspace_vehicles', function (Blueprint $table) {
             $table->dropUnique(['workspace_id', 'catalog_series_public_id']);
             $table->dropIndex(['catalog_series_public_id']);
