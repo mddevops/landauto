@@ -9,10 +9,11 @@ use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
 
 /**
- * Resolves the Site of a public host for every published-runtime route. Requests on a non-primary
- * address (Landflow subdomain or alternate custom domain while another host is primary) get a 301
- * to the primary host with path and query preserved. Unknown hosts get the same safe 404 as
- * missing pages; every response is marked `nosniff`.
+ * Resolves the Site of a public address for every published-runtime route: by public number on
+ * the Landflow public domain, by host on a custom domain (D-127, D-111). Requests on a
+ * non-primary address get a 301 to the primary address with the Site-relative path and query
+ * preserved. Unknown addresses get the same safe 404 as missing pages; every response is marked
+ * `nosniff`.
  */
 class ResolvePublicSite
 {
@@ -20,16 +21,18 @@ class ResolvePublicSite
 
     public function handle(Request $request, Closure $next): Response
     {
-        $request->route()?->forgetParameter('subdomain');
+        $number = $request->route()?->parameter('publicNumber');
+        $request->route()?->forgetParameter('publicNumber');
         $request->route()?->forgetParameter('host');
-        $match = $this->resolver->match($request->getHost());
+        $match = is_string($number) ? $this->resolver->matchNumber($number) : $this->resolver->matchHost($request->getHost());
 
         if ($match === null) {
             $response = self::notFound();
-        } elseif ($match->redirectHost !== null) {
-            $response = redirect()->away(PublicSiteResolver::hostUrl($match->redirectHost, $request->getRequestUri()), 301);
+        } elseif ($match->redirectBase !== null) {
+            $response = redirect()->away($match->redirectBase.self::sitePath($request->getRequestUri(), $match->basePath), 301);
         } else {
             $request->attributes->set('publicSite', $match->site);
+            $request->attributes->set('publicBasePath', $match->basePath);
             $response = $next($request);
         }
 
@@ -46,8 +49,29 @@ class ResolvePublicSite
         return $site;
     }
 
+    /**
+     * Base path of the address serving this request: '/{number}' on the public domain, '' on a
+     * custom domain.
+     */
+    public static function basePath(Request $request): string
+    {
+        $base = $request->attributes->get('publicBasePath');
+
+        return is_string($base) ? $base : '';
+    }
+
     public static function notFound(): Response
     {
         return response()->view('published.not-found', [], 404);
+    }
+
+    /**
+     * The request URI relative to the Site: base path removed, always starting with '/'.
+     */
+    private static function sitePath(string $requestUri, string $basePath): string
+    {
+        $path = substr($requestUri, strlen($basePath));
+
+        return str_starts_with($path, '/') ? $path : '/'.$path;
     }
 }

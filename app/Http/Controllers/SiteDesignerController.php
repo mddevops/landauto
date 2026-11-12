@@ -119,7 +119,7 @@ class SiteDesignerController extends Controller
      * access card and whether this Site may add it under current access; installation grants (D-122)
      * cover existing use only, never new acquisition. Identified by slug only.
      *
-     * @return list<array{slug: string, name: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: string|null}>
+     * @return list<array{slug: string, name: string, category: string, category_label: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: string|null}>
      */
     private function library(Site $site, BlockCatalogAccess $access): array
     {
@@ -138,6 +138,8 @@ class SiteDesignerController extends Controller
                 return [
                     'slug' => $definition->slug,
                     'name' => $definition->name,
+                    'category' => $definition->category->value,
+                    'category_label' => $definition->category->label(),
                     'author' => $definition->developerProfile?->display_name,
                     'access' => BlockCatalogAccess::card($definition),
                     'available' => $reason === null,

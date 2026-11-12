@@ -11,7 +11,8 @@ use Symfony\Component\HttpFoundation\Response;
 
 /**
  * `/sitemap.xml` and `/robots.txt` of a published Site, built only from the active Published
- * Version: indexable published Pages, never Draft or application URLs.
+ * Version: indexable published Pages, never Draft or application URLs. Crawlers read robots.txt
+ * only at a host root, so it matters on custom domains; the Landflow address serves it too.
  */
 class PublishedSeoController extends Controller
 {
@@ -26,7 +27,7 @@ class PublishedSeoController extends Controller
 
         return response()
             ->view('published.sitemap', [
-                'urls' => array_map(fn (string $path): string => (string) PublicSiteResolver::primaryUrl($site, $path), $pages->indexablePaths($site, $version)),
+                'urls' => array_map(fn (string $path): string => PublicSiteResolver::primaryUrl($site, $path), $pages->indexablePaths($site, $version)),
                 'lastmod' => $version->ready_at?->toAtomString(),
             ])
             ->header('Content-Type', 'application/xml; charset=UTF-8');
@@ -42,7 +43,7 @@ class PublishedSeoController extends Controller
 
         $lines = [
             'User-agent: *',
-            'Disallow: /_landflow/forms/',
+            'Disallow: '.ResolvePublicSite::basePath($request).'/_landflow/forms/',
             '',
             'Sitemap: '.PublicSiteResolver::primaryUrl($site, '/sitemap.xml'),
         ];

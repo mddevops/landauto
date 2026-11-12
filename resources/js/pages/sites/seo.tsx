@@ -235,21 +235,22 @@ export default function Seo({
                                 url={addresses.primary}
                             />
                         )}
-                        {published && addresses.sitemap && addresses.robots ? (
+                        {published && addresses.sitemap ? (
                             <>
                                 <AddressRow
                                     label="Карта сайта"
                                     url={addresses.sitemap}
                                 />
-                                <AddressRow
-                                    label="robots.txt"
-                                    url={addresses.robots}
-                                />
+                                {addresses.robots && (
+                                    <AddressRow
+                                        label="robots.txt"
+                                        url={addresses.robots}
+                                    />
+                                )}
                             </>
                         ) : (
                             <p className="text-sm text-muted-foreground">
-                                Карта сайта и robots.txt появятся после первой
-                                публикации.
+                                Карта сайта появится после первой публикации.
                             </p>
                         )}
                     </CardContent>

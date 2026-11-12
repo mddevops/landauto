@@ -19,6 +19,7 @@ use App\Publishing\PublishSite;
 use App\Publishing\PublishValidator;
 use App\Publishing\Rendering\PageRenderer;
 use App\Publishing\Rendering\PageRenderException;
+use App\Publishing\Runtime\PublicBasePath;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -51,7 +52,7 @@ class NativeBlockRuntimeTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $definition = BlockDefinition::factory()->platform()->create(['slug' => 'native-hero', 'name' => 'Нативный герой']);
         $this->hero = BlockVersion::factory()->native(self::HTML, self::CSS)->for($definition, 'definition')
             ->create(['schema_json' => ['fields' => self::FIELDS]]);
@@ -138,13 +139,13 @@ class NativeBlockRuntimeTest extends TestCase
         $this->assertInstanceOf(PublishedVersion::class, $version);
         $stylesheet = PublishedRuntimeAsset::query()->where('published_version_id', $version->id)->sole();
 
-        $response = $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertOk();
+        $response = $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/'))->assertOk();
         $content = (string) $response->getContent();
         $csp = (string) $response->headers->get('Content-Security-Policy');
 
         $this->assertMatchesRegularExpression('/<div data-landflow-native="native-hero--1-0-0--[0-9a-f]{10}" data-landflow-block="native-hero" data-landflow-instance="'.$native->public_id.'"><section class="hero"><h2>Весеннее предложение<\/h2>/u', $content);
         $this->assertStringContainsString('<p>Скидка до 15%</p><a href="/contacts">Подробнее</a><button type="button" data-landflow-action="cta">Оставить заявку</button>', $content);
-        $this->assertStringContainsString('<link rel="stylesheet" href="/_landflow/runtime/'.$version->public_id.'/'.$stylesheet->content_hash.'.css">', $content);
+        $this->assertStringContainsString('<link rel="stylesheet" href="/100000000001/_landflow/runtime/'.$version->public_id.'/'.$stylesheet->content_hash.'.css">', $content);
         $this->assertStringNotContainsString('<iframe', $content);
         $this->assertStringNotContainsString('/_landflow/runtime/'.$version->id.'/', $content);
         $this->assertStringContainsString("script-src 'self' 'unsafe-inline'", $csp);
@@ -158,7 +159,7 @@ class NativeBlockRuntimeTest extends TestCase
         $version = $this->publish()->version;
         $this->assertInstanceOf(PublishedVersion::class, $version);
         $hash = PublishedRuntimeAsset::query()->where('published_version_id', $version->id)->sole()->content_hash;
-        $url = "http://dealer.localhost/_landflow/runtime/{$version->public_id}/{$hash}.css";
+        $url = "http://localhost/100000000001/_landflow/runtime/{$version->public_id}/{$hash}.css";
 
         $response = $this->onPublicHost(fn () => $this->get($url))->assertOk();
         $this->assertStringStartsWith('text/css', (string) $response->headers->get('Content-Type'));
@@ -169,12 +170,12 @@ class NativeBlockRuntimeTest extends TestCase
         $this->assertStringContainsString('[data-landflow-native=', (string) $response->getContent());
 
         $wrongHash = str_repeat('a', 64);
-        $this->onPublicHost(fn () => $this->get("http://dealer.localhost/_landflow/runtime/{$version->public_id}/{$wrongHash}.css"))->assertNotFound();
-        $this->onPublicHost(fn () => $this->get("http://dealer.localhost/_landflow/runtime/{$version->id}/{$hash}.css"))->assertNotFound();
-        $this->onPublicHost(fn () => $this->get('http://dealer.localhost/_landflow/runtime/01ARZ3NDEKTSV4RRFFQ69G5FAV/'.$hash.'.css'))->assertNotFound();
+        $this->onPublicHost(fn () => $this->get("http://localhost/100000000001/_landflow/runtime/{$version->public_id}/{$wrongHash}.css"))->assertNotFound();
+        $this->onPublicHost(fn () => $this->get("http://localhost/100000000001/_landflow/runtime/{$version->id}/{$hash}.css"))->assertNotFound();
+        $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/_landflow/runtime/01ARZ3NDEKTSV4RRFFQ69G5FAV/'.$hash.'.css'))->assertNotFound();
 
-        $foreign = Site::factory()->for(Workspace::factory())->create(['subdomain' => 'other']);
-        $this->onPublicHost(fn () => $this->get("http://other.localhost/_landflow/runtime/{$version->public_id}/{$hash}.css"))->assertNotFound();
+        $foreign = Site::factory()->for(Workspace::factory())->create();
+        $this->onPublicHost(fn () => $this->get("http://localhost/{$foreign->public_number}/_landflow/runtime/{$version->public_id}/{$hash}.css"))->assertNotFound();
         $this->assertNotSame($foreign->id, $version->site_id);
 
         // A building (not yet activated) version is never served.
@@ -188,7 +189,7 @@ class NativeBlockRuntimeTest extends TestCase
         $this->assertInstanceOf(PublishedVersion::class, $version);
         $this->assertSame(0, PublishedRuntimeAsset::query()->count());
 
-        $content = (string) $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'))->assertOk()->getContent();
+        $content = (string) $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/'))->assertOk()->getContent();
         $this->assertStringNotContainsString('/_landflow/runtime/', $content);
         $this->assertStringNotContainsString('data-landflow-native', $content);
     }
@@ -338,12 +339,12 @@ class NativeBlockRuntimeTest extends TestCase
         $payload = $published->pages()->sole()->hydration_json;
         $native = collect($payload['blocks'])->firstWhere('slug', 'interactive-native')['native'];
         $url = "/_landflow/runtime/{$published->public_id}/{$asset->content_hash}.js";
-        $this->assertSame($url, $native['script']);
+        $this->assertSame(PublicBasePath::prefix($url), $native['script']);
         $this->assertStringNotContainsString('querySelector', json_encode($payload, JSON_THROW_ON_ERROR));
-        $response = $this->onPublicHost(fn () => $this->get("http://dealer.localhost{$url}"))->assertOk();
+        $response = $this->onPublicHost(fn () => $this->get("http://localhost/100000000001{$url}"))->assertOk();
         $this->assertStringStartsWith('text/javascript', (string) $response->headers->get('Content-Type'));
         $this->assertSame('nosniff', $response->headers->get('X-Content-Type-Options'));
-        $this->onPublicHost(fn () => $this->get("http://dealer.localhost/_landflow/runtime/{$published->public_id}/".str_repeat('a', 64).'.js'))->assertNotFound();
+        $this->onPublicHost(fn () => $this->get("http://localhost/100000000001/_landflow/runtime/{$published->public_id}/".str_repeat('a', 64).'.js'))->assertNotFound();
     }
 
     public function test_application_previews_render_native_versions_only_in_the_sandbox_frame(): void

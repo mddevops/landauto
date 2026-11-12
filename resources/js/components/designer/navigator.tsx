@@ -5,12 +5,13 @@ import {
     Copy,
     Eye,
     EyeOff,
-    Plus,
     RefreshCw,
+    Search,
     Trash2,
     TriangleAlert,
 } from 'lucide-react';
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
+import { LibraryThumb } from '@/components/designer/library-thumb';
 import type {
     DesignerBlock,
     DesignerBlockRoutes,
@@ -26,6 +27,7 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
+import { Input } from '@/components/ui/input';
 import { cn } from '@/lib/utils';
 
 type NavigatorProps = {
@@ -41,62 +43,6 @@ type NavigatorProps = {
 
 const visit = { preserveScroll: true, preserveState: true } as const;
 
-/** Official Landflow Blocks without access conditions stay compact buttons. */
-function isPlainOfficial(item: DesignerLibraryBlock): boolean {
-    return item.author === null && !item.access.restricted;
-}
-
-function CatalogCard({
-    item,
-    onAdd,
-}: {
-    item: DesignerLibraryBlock;
-    onAdd: () => void;
-}) {
-    const reasonId = `library-${item.slug}-reason`;
-
-    return (
-        <li
-            data-testid="catalog-block"
-            className="flex items-start gap-2 rounded-md border p-2"
-        >
-            <div className="min-w-0 flex-1 space-y-0.5">
-                <p className="text-sm font-medium break-words">{item.name}</p>
-                {item.author && (
-                    <p className="text-xs break-words text-muted-foreground">
-                        {`Автор: ${item.author}`}
-                    </p>
-                )}
-                <p className="text-xs text-muted-foreground">
-                    {[item.access.label, item.access.detail]
-                        .filter(Boolean)
-                        .join(' · ')}
-                </p>
-                {item.reason && (
-                    <p
-                        id={reasonId}
-                        className="text-xs text-amber-700 dark:text-amber-400"
-                    >
-                        {item.reason}
-                    </p>
-                )}
-            </div>
-            <Button
-                type="button"
-                variant="outline"
-                size="icon"
-                className="size-8 shrink-0"
-                aria-label={`Добавить блок «${item.name}»`}
-                aria-describedby={item.reason ? reasonId : undefined}
-                disabled={!item.available}
-                onClick={onAdd}
-            >
-                <Plus aria-hidden="true" />
-            </Button>
-        </li>
-    );
-}
-
 export function Navigator({
     routes,
     pageId,
@@ -110,10 +56,77 @@ export function Navigator({
     const [pendingDelete, setPendingDelete] = useState<DesignerBlock | null>(
         null,
     );
+    const [query, setQuery] = useState('');
+    const [category, setCategory] = useState<string>('all');
     const errors = usePage().props.errors as Record<string, string> | undefined;
     const libraryError = errors?.block;
     const add = (item: DesignerLibraryBlock) =>
         router.post(routes.add(pageId), { block: item.slug }, visit);
+
+    const categories = useMemo(() => {
+        const map = new Map<string, string>();
+
+        for (const item of library) {
+            map.set(item.category, item.category_label);
+        }
+
+        return [...map.entries()].sort((a, b) =>
+            a[1].localeCompare(b[1], 'ru'),
+        );
+    }, [library]);
+
+    const filtered = useMemo(() => {
+        const needle = query.trim().toLocaleLowerCase('ru');
+
+        return library.filter((item) => {
+            if (category !== 'all' && item.category !== category) {
+                return false;
+            }
+
+            if (needle === '') {
+                return true;
+            }
+
+            return (
+                item.name.toLocaleLowerCase('ru').includes(needle) ||
+                item.slug.includes(needle) ||
+                item.category_label.toLocaleLowerCase('ru').includes(needle)
+            );
+        });
+    }, [library, query, category]);
+
+    const grouped = useMemo(() => {
+        if (category !== 'all') {
+            return [
+                {
+                    key: category,
+                    label:
+                        categories.find(([value]) => value === category)?.[1] ??
+                        category,
+                    items: filtered,
+                },
+            ];
+        }
+
+        const map = new Map<
+            string,
+            { key: string; label: string; items: DesignerLibraryBlock[] }
+        >();
+
+        for (const item of filtered) {
+            const group = map.get(item.category) ?? {
+                key: item.category,
+                label: item.category_label,
+                items: [],
+            };
+            group.items.push(item);
+            map.set(item.category, group);
+        }
+
+        return [...map.values()].sort((a, b) =>
+            a.label.localeCompare(b.label, 'ru'),
+        );
+    }, [filtered, category, categories]);
 
     return (
         <div className="flex flex-col gap-5">
@@ -320,40 +333,64 @@ export function Navigator({
                             {libraryError}
                         </p>
                     )}
-                    <ul className="grid grid-cols-2 gap-2">
-                        {library.filter(isPlainOfficial).map((item) => (
-                            <li key={item.slug}>
-                                <Button
-                                    type="button"
-                                    variant="outline"
-                                    size="sm"
-                                    className="w-full justify-start"
-                                    aria-label={`Добавить блок «${item.name}»`}
-                                    onClick={() => add(item)}
-                                >
-                                    <Plus aria-hidden="true" />
-                                    <span className="truncate">
-                                        {item.name}
-                                    </span>
-                                </Button>
-                            </li>
+                    <div className="relative">
+                        <Search
+                            aria-hidden="true"
+                            className="pointer-events-none absolute top-2.5 left-2.5 size-4 text-muted-foreground"
+                        />
+                        <Input
+                            value={query}
+                            onChange={(event) => setQuery(event.target.value)}
+                            placeholder="Поиск блоков"
+                            aria-label="Поиск блоков"
+                            className="pl-8"
+                        />
+                    </div>
+                    <div
+                        role="tablist"
+                        aria-label="Категории блоков"
+                        className="flex flex-wrap gap-1"
+                    >
+                        <CategoryChip
+                            label="Все"
+                            active={category === 'all'}
+                            onClick={() => setCategory('all')}
+                        />
+                        {categories.map(([value, label]) => (
+                            <CategoryChip
+                                key={value}
+                                label={label}
+                                active={category === value}
+                                onClick={() => setCategory(value)}
+                            />
                         ))}
-                    </ul>
-                    {library.some((item) => !isPlainOfficial(item)) && (
-                        <ul
-                            aria-label="Блоки с условиями доступа и блоки разработчиков"
-                            className="flex flex-col gap-2"
-                        >
-                            {library
-                                .filter((item) => !isPlainOfficial(item))
-                                .map((item) => (
-                                    <CatalogCard
-                                        key={item.slug}
-                                        item={item}
-                                        onAdd={() => add(item)}
-                                    />
-                                ))}
-                        </ul>
+                    </div>
+                    {filtered.length === 0 ? (
+                        <p className="text-sm text-muted-foreground">
+                            Ничего не найдено.
+                        </p>
+                    ) : (
+                        <div className="flex flex-col gap-4">
+                            {grouped.map((group) => (
+                                <div
+                                    key={group.key}
+                                    className="flex flex-col gap-2"
+                                >
+                                    <h3 className="text-xs font-semibold tracking-wide text-muted-foreground uppercase">
+                                        {group.label}
+                                    </h3>
+                                    <ul className="grid grid-cols-2 gap-2">
+                                        {group.items.map((item) => (
+                                            <LibraryThumb
+                                                key={item.slug}
+                                                item={item}
+                                                onAdd={() => add(item)}
+                                            />
+                                        ))}
+                                    </ul>
+                                </div>
+                            ))}
+                        </div>
                     )}
                 </section>
             )}
@@ -398,6 +435,33 @@ export function Navigator({
                 </DialogContent>
             </Dialog>
         </div>
+    );
+}
+
+function CategoryChip({
+    label,
+    active,
+    onClick,
+}: {
+    label: string;
+    active: boolean;
+    onClick: () => void;
+}) {
+    return (
+        <button
+            type="button"
+            role="tab"
+            aria-selected={active}
+            onClick={onClick}
+            className={cn(
+                'rounded-full border px-2.5 py-1 text-xs transition-colors',
+                active
+                    ? 'border-primary bg-primary text-primary-foreground'
+                    : 'bg-background text-muted-foreground hover:text-foreground',
+            )}
+        >
+            {label}
+        </button>
     );
 }
 

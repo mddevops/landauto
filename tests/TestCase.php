@@ -5,6 +5,7 @@ namespace Tests;
 use App\Domains\Dns\DnsResolver;
 use App\Domains\Dns\FakeDnsResolver;
 use App\Integrations\Http\HostResolver;
+use App\Models\Site;
 use App\Publishing\Rendering\PageRenderer;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Testing\TestCase as BaseTestCase;
@@ -16,6 +17,8 @@ use Tests\Support\FakePageRenderer;
 
 abstract class TestCase extends BaseTestCase
 {
+    protected const DEALER_NUMBER = '100000000001';
+
     /**
      * @return Application
      */
@@ -56,6 +59,18 @@ abstract class TestCase extends BaseTestCase
         Http::preventStrayRequests();
         $this->app->instance(HostResolver::class, new FakeHostResolver([]));
         $this->app->instance(DnsResolver::class, new FakeDnsResolver);
+    }
+
+    /**
+     * Gives a Site a known public number so a test can address it at `localhost/{number}`. The
+     * model keeps the number immutable, so the table is updated directly.
+     */
+    protected function withPublicNumber(Site $site, string $number = self::DEALER_NUMBER): Site
+    {
+        Site::query()->whereKey($site->id)->update(['public_number' => $number]);
+        $site->forceFill(['public_number' => $number])->syncOriginalAttribute('public_number');
+
+        return $site;
     }
 
     protected function skipUnlessFortifyHas(string $feature, ?string $message = null): void

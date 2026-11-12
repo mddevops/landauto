@@ -49,7 +49,7 @@ class CatalogAccessTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $this->plan = Plan::factory()->create();
         $this->plan->setEntitlement(Entitlement::MaxSites, 5);
         $this->plan->setEntitlement(Entitlement::RemoveBranding, false);
@@ -81,7 +81,7 @@ class CatalogAccessTest extends TestCase
                 $items = collect($library)->keyBy('slug');
 
                 foreach ($items as $item) {
-                    $this->assertSame(['slug', 'name', 'author', 'access', 'available', 'reason'], array_keys($item));
+                    $this->assertSame(['slug', 'name', 'category', 'category_label', 'author', 'access', 'available', 'reason'], array_keys($item));
                     $this->assertSame(['mode', 'restricted', 'label', 'detail'], array_keys($item['access']));
                 }
 
@@ -346,7 +346,7 @@ class CatalogAccessTest extends TestCase
                 ->missing('items.0.id'));
 
         $grant = $this->blocks['grant'];
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => ' DEALER '])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => ' '.self::DEALER_NUMBER.' '])
             ->assertSessionHasNoErrors()
             ->assertRedirect(route('platform.licenses.index'));
         $license = CatalogLicense::query()->sole();
@@ -364,23 +364,23 @@ class CatalogAccessTest extends TestCase
 
         $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => $this->site->public_id])
             ->assertSessionHasErrors(['target' => 'У этого сайта уже есть лицензия на этот блок.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $this->blocks['free']->public_id, 'scope' => 'site', 'target' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $this->blocks['free']->public_id, 'scope' => 'site', 'target' => self::DEALER_NUMBER])
             ->assertSessionHasErrors(['block' => 'Этот блок бесплатный — лицензия не нужна.']);
         $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'site', 'target' => 'missing'])
-            ->assertSessionHasErrors(['target' => 'Сайт не найден. Укажите поддомен или ID сайта.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'account', 'target' => 'dealer'])
+            ->assertSessionHasErrors(['target' => 'Сайт не найден. Укажите номер или ID сайта.']);
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'account', 'target' => self::DEALER_NUMBER])
             ->assertSessionHasErrors('scope');
         $this->assertSame(1, CatalogLicense::query()->count());
 
-        // Workspace scope: addressed by the Workspace ID or a subdomain of any of its Sites.
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => 'dealer'])
+        // Workspace scope: addressed by the Workspace ID or the public number of any of its Sites.
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => self::DEALER_NUMBER])
             ->assertSessionHasNoErrors();
         $workspaceLicense = CatalogLicense::query()->where('scope', 'workspace')->sole();
         $this->assertSame([null, $this->workspace->id], [$workspaceLicense->site_id, $workspaceLicense->workspace_id]);
         $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => $this->workspace->public_id])
             ->assertSessionHasErrors(['target' => 'У этого пространства уже есть лицензия на этот блок.']);
         $this->actingAs($admin)->post(route('platform.licenses.store'), ['block' => $grant->public_id, 'scope' => 'workspace', 'target' => 'missing'])
-            ->assertSessionHasErrors(['target' => 'Пространство не найдено. Укажите ID пространства или поддомен любого его сайта.']);
+            ->assertSessionHasErrors(['target' => 'Пространство не найдено. Укажите ID пространства или номер любого его сайта.']);
         $this->assertSame(2, CatalogLicense::query()->count());
 
         $this->actingAs($admin)->get(route('platform.licenses.index'))
@@ -389,8 +389,9 @@ class CatalogAccessTest extends TestCase
                 ->where('licenses.0.scope', 'workspace')
                 ->where('licenses.0.scope_label', 'Всё пространство')
                 ->where('licenses.0.target', $this->workspace->name)
-                ->where('licenses.0.subdomain', null)
+                ->where('licenses.0.site_number', null)
                 ->where('licenses.1.public_id', $license->public_id)
+                ->where('licenses.1.site_number', self::DEALER_NUMBER)
                 ->where('licenses.1.scope_label', 'Один сайт')
                 ->where('licenses.1.target', 'Дилер')
                 ->where('licenses.1.workspace', $this->workspace->name)
@@ -419,7 +420,7 @@ class CatalogAccessTest extends TestCase
 
         foreach ($forbidden as $user) {
             $this->actingAs($user)->get(route('platform.licenses.index'))->assertForbidden();
-            $this->actingAs($user)->post(route('platform.licenses.store'), ['block' => $this->blocks['paid']->public_id, 'scope' => 'site', 'target' => 'dealer'])->assertForbidden();
+            $this->actingAs($user)->post(route('platform.licenses.store'), ['block' => $this->blocks['paid']->public_id, 'scope' => 'site', 'target' => self::DEALER_NUMBER])->assertForbidden();
             $this->actingAs($user)->delete(route('platform.licenses.destroy', $license->public_id))->assertForbidden();
         }
 

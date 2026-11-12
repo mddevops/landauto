@@ -4439,6 +4439,20 @@ Result: reviewed the existing backend and browser coverage across the full scope
 
 ---
 
+## X-030 — Path-Based Landflow Site Address
+
+**Status:** DONE
+**Trigger:** staging deployment (wildcard SSL unavailable)
+**Decision:** D-127; D-111
+
+Scope: immutable platform-assigned 12-digit `sites.public_number` (migration with backfill); public runtime on `{public_domain}/{number}/…` with a base-path token in stored artifacts; custom domains unchanged; removal of customer subdomain editing; production guard for a separate public host; `route:cache`-safe custom-host pattern; stale storage-quota test fixtures from X-017; `X-Frame-Options: SAMEORIGIN` (X-013's `DENY` blocked the same-origin Template preview frame).
+
+Acceptance: Site served under its number with CSS/JS/forms/media/sitemap on the same path; custom domain serves the same version at its root; Landflow address 301-redirects to an effective custom primary; compiled route collection keeps application, public and custom hosts apart; `composer quality` and `npm run test:e2e` pass.
+
+Result: gates PASS — `composer quality` (PHPUnit 1,308: 1,306 passed, 2 skipped; PHPStan / Pint / frontend check / production + SSR build PASS) and full `npm run test:e2e` 96 / 96.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---
@@ -4549,7 +4563,7 @@ Task statuses and results live in the phase sections above; this section only po
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 - Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029` DONE.
-- Current: Native First-Party Block Runtime replan completed through `X-029`; no subsequent task started (P9-018 and P9-010 DEFERRED).
+- Current: Native First-Party Block Runtime replan completed through `X-029`; `X-030` DONE (path-based Site address, D-127); no subsequent task started (P9-018 and P9-010 DEFERRED).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

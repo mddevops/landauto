@@ -42,7 +42,8 @@ class SiteSeoController extends Controller
             'addresses' => [
                 'primary' => PublicSiteResolver::primaryUrl($site),
                 'sitemap' => $published ? PublicSiteResolver::primaryUrl($site, '/sitemap.xml') : null,
-                'robots' => $published ? PublicSiteResolver::primaryUrl($site, '/robots.txt') : null,
+                // Crawlers read robots.txt only at a host root, i.e. on a custom primary domain.
+                'robots' => $published && PublicSiteResolver::primaryDomain($site) !== null ? PublicSiteResolver::primaryUrl($site, '/robots.txt') : null,
             ],
             'published' => $published,
             'limits' => ['title' => 120, 'description' => 300],

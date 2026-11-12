@@ -34,7 +34,8 @@ class CreateSiteTest extends TestCase
 
         $site = Site::query()->sole();
 
-        $response->assertRedirect(route('dashboard', ['site' => $site->public_id]));
+        $response->assertRedirect(route('sites.designer', $site));
+        $response->assertInertiaFlash('toast.message', 'Сайт «Автосалон Север» создан.');
         $this->assertTrue($site->workspace->is($workspace));
         $this->assertSame('Автосалон Север', $site->name);
         $this->assertSame(SiteStatus::Active, $site->status);
@@ -43,10 +44,6 @@ class CreateSiteTest extends TestCase
         $this->assertTrue($home->is_home);
         $this->assertSame('Главная', $home->title);
         $this->assertSame('home', $home->slug);
-        $location = $response->headers->get('Location');
-        $this->assertIsString($location);
-        parse_str((string) parse_url($location, PHP_URL_QUERY), $query);
-        $this->assertSame(['site' => $site->public_id], $query);
     }
 
     public function test_workspace_ownership_is_server_derived_and_request_cannot_replace_it(): void

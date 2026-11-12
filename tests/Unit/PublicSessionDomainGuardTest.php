@@ -21,4 +21,16 @@ class PublicSessionDomainGuardTest extends TestCase
         $this->expectException(LogicException::class);
         (new PublicSessionDomainGuard)->assertSafe('.landflow.me', 'landflow.me');
     }
+
+    public function test_public_domain_on_its_own_host_is_safe(): void
+    {
+        (new PublicSessionDomainGuard)->assertSeparateHosts('https://dealershtab.ru', 'my.dealershtab.ru');
+        $this->addToAssertionCount(1);
+    }
+
+    public function test_public_domain_on_the_application_host_is_rejected(): void
+    {
+        $this->expectException(LogicException::class);
+        (new PublicSessionDomainGuard)->assertSeparateHosts('https://Dealershtab.ru', 'dealershtab.ru');
+    }
 }

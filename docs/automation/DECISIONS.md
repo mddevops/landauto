@@ -2019,7 +2019,7 @@ Owner approval in the Phase 7 autopilot instruction (2026-10-06); X-022.
 - Hostnames: lowercase, trimmed, one trailing dot removed; globally unique; plain ASCII DNS names only (no scheme/path/query/fragment/port/userinfo/wildcard/IP literal/IDN or punycode/Landflow-owned host).
 - Custom domains need both `manage_domains` and the typed `custom_domain` entitlement; no plan-name checks; deny by default (Free has no `custom_domain`).
 - SSL is always issued and renewed by Landflow infrastructure (Let's Encrypt over ACME HTTP-01 after routing is verified). Customers never upload certificates, keys or CSRs. The application stores lifecycle metadata only (status, issued/expiry dates, safe error) and calls a `SslProvisioner` adapter; certificates, private keys and ACME account keys never enter the database, logs or repository.
-- The Landflow subdomain is never removed. Without an active custom primary it is the primary address; with one, it and alternate hosts 301-redirect to the primary, preserving path and query.
+- The Landflow address (since D-127: `{public_domain}/{public_number}`) is never removed. Without an active custom primary it is the primary address; with one, it and alternate hosts 301-redirect to the primary, preserving path and query.
 - Provisioning adapter contract (`CUSTOM_DOMAIN_SSL_DRIVER=command`): the app runs the executable at `CUSTOM_DOMAIN_SSL_COMMAND` with the validated hostname as its only argument (argument vector, no shell), bounded by `CUSTOM_DOMAIN_SSL_TIMEOUT`. Exit 0 = certificate installed (optional stdout line `expires_at=<ISO-8601>`), exit 75 = temporary failure, any other exit = permanent failure. Output is never logged. Automatic retries back off (15, 30 min) for at most 3 attempts; afterwards, and after a permanent failure, only a manual retry (4 per hour per domain) restarts provisioning — inside the CA limit of 5 failed authorizations per hostname per hour.
 
 ### Resolved By
@@ -2336,6 +2336,31 @@ Owner decision 2026-10-08; X-023.
 ### Resolved By
 
 Owner clarification 2026-10-09 during X-026.
+
+---
+
+## D-127 — Path-Based Landflow Site Address
+
+**Status:** APPROVED (owner decision 2026-11-11; X-030)
+
+### Decision
+
+- A published Site is served on the Landflow address `{LANDFLOW_PUBLIC_DOMAIN}/{public_number}/…` (staging: `https://my.dealershtab.ru/482910374615/`). Wildcard subdomains (`{subdomain}.{public_domain}`, P5-008) are no longer used.
+- `public_number` is 12 digits with a non-zero first digit, assigned by the platform when the Site is created, globally unique and immutable. Customers cannot choose or change it, so addresses never conflict. It is an address, never authorization.
+- The public domain must differ from the `APP_URL` host in production (boot guard); sharing a host is allowed only locally and in tests.
+- Stored artifacts (HTML, hydration payload) carry a base-path token; the runtime fills `/{number}` or `''` per request, so the same Published Version serves the Landflow address and a custom domain root.
+- Custom domains (D-111) are unchanged and serve the Site at their root; with an effective custom primary, the Landflow address 301-redirects to it with the Site-relative path and query.
+- `sites.subdomain` stays as an unused column until a separate cleanup migration; nothing is dropped.
+
+### Consequences
+
+- All Sites on the Landflow address share one browser origin. Publishing output contains no secrets and no application session; the public domain has its own host and never receives the application session cookie.
+- `robots.txt` and `sitemap.xml` are meaningful at a host root, i.e. on custom domains; on the Landflow address the sitemap lives under the Site path.
+- Root-relative links typed by hand inside Block content (for example `/contacts`) do not include the Site number; page links built from the Site's Pages do.
+
+### Resolved By
+
+Owner decision 2026-11-11 (staging: wildcard SSL unavailable, `my.dealershtab.ru` has a certificate). Supersedes the hosting part of P5-008.
 
 ---
 

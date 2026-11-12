@@ -46,7 +46,6 @@ use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\SiteSeoController;
-use App\Http\Controllers\SiteSubdomainController;
 use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Studio\TemplateBlockController;
 use App\Http\Controllers\Studio\TemplateController;
@@ -193,7 +192,6 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('preview', SitePreviewController::class)->name('preview');
             Route::get('publishing', [SitePublishingController::class, 'show'])->name('publishing.show');
             Route::post('publishing', [SitePublishingController::class, 'store'])->middleware('throttle:10,1')->name('publishing.store');
-            Route::put('subdomain', [SiteSubdomainController::class, 'update'])->name('subdomain.update');
             Route::get('domains', [SiteDomainController::class, 'index'])->name('domains.index');
             Route::post('domains', [SiteDomainController::class, 'store'])->middleware('throttle:20,1')->name('domains.store');
             Route::delete('domains/{domain}', [SiteDomainController::class, 'destroy'])->whereUlid('domain')->name('domains.destroy');

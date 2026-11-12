@@ -90,12 +90,15 @@ test('platform admin prepares the catalog, dealer adds a priced vehicle and show
 
     await page.getByRole('link', { name: 'Создать сайт' }).click();
     await page
-        .getByRole('group', { name: '2. Старт' })
+        .getByRole('group', { name: '2. Шаблон' })
         .getByRole('radio', { name: dealer.start })
         .check();
     await page.getByLabel('Название сайта').fill(siteName);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
+    await page
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
+        .click();
+    await expect(page).toHaveURL(/\/designer$/);
+    await page.goto('/dashboard');
 
     await page
         .getByRole('link', { name: `Автомобили сайта «${siteName}»` })

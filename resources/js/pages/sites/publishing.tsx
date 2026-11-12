@@ -8,7 +8,7 @@ import {
     TriangleAlert,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { FormEvent, ReactNode } from 'react';
+import type { ReactNode } from 'react';
 import InputError from '@/components/input-error';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -26,12 +26,10 @@ import {
     DialogHeader,
     DialogTitle,
 } from '@/components/ui/dialog';
-import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { designer, preview } from '@/routes/sites';
 import { show as showPublishing, store } from '@/routes/sites/publishing';
-import { update as updateSubdomain } from '@/routes/sites/subdomain';
 import { restore as restoreVersion } from '@/routes/sites/versions';
 
 type PublishIssue = {
@@ -43,7 +41,7 @@ type PublishIssue = {
 
 type PublishingProps = {
     site: { public_id: string; name: string };
-    address: { subdomain: string | null; domain: string; url: string | null };
+    address: { number: string; url: string };
     production: {
         public_id: string;
         version_number: number;
@@ -294,10 +292,8 @@ export default function Publishing({
                 </div>
 
                 <AddressCard
-                    site={site}
                     address={address}
                     published={production !== null}
-                    canManage={can.manageDomains}
                 />
 
                 <Card>
@@ -602,37 +598,23 @@ function HistoryPageLink({
 }
 
 function AddressCard({
-    site,
     address,
     published,
-    canManage,
 }: {
-    site: PublishingProps['site'];
     address: PublishingProps['address'];
     published: boolean;
-    canManage: boolean;
 }) {
-    const form = useForm({ subdomain: address.subdomain ?? '' });
-    const unchanged = form.data.subdomain === (address.subdomain ?? '');
-
-    function save(event: FormEvent) {
-        event.preventDefault();
-        form.submit(updateSubdomain(site.public_id), { preserveScroll: true });
-    }
-
     return (
         <Card>
             <CardHeader>
                 <h2 className="leading-none font-semibold">Адрес сайта</h2>
                 <CardDescription>
-                    Сайт открывается на поддомене Landflow. Смена названия сайта
-                    адрес не меняет.
+                    Номер сайта назначается автоматически и не меняется. Свой
+                    домен подключается в разделе «Домены».
                 </CardDescription>
             </CardHeader>
             <CardContent className="space-y-4 text-sm">
-                {address.url === null ? (
-                    <p className="text-muted-foreground">Адрес не задан.</p>
-                ) : published ? (
+                {published ? (
                     <a
                         href={address.url}
                         target="_blank"
@@ -657,55 +639,15 @@ function AddressCard({
                         </span>
                     </p>
                 )}
-
-                {canManage && (
-                    <form onSubmit={save} className="space-y-2">
-                        <Label htmlFor="subdomain">Поддомен</Label>
-                        <div className="flex flex-col gap-2 sm:flex-row sm:items-center">
-                            <div className="flex min-w-0 flex-1 items-center gap-2">
-                                <Input
-                                    id="subdomain"
-                                    name="subdomain"
-                                    value={form.data.subdomain}
-                                    onChange={(event) =>
-                                        form.setData(
-                                            'subdomain',
-                                            event.target.value,
-                                        )
-                                    }
-                                    maxLength={63}
-                                    autoComplete="off"
-                                    spellCheck={false}
-                                    aria-invalid={
-                                        form.errors.subdomain ? true : undefined
-                                    }
-                                    aria-describedby="subdomain-help"
-                                    className="min-w-0"
-                                />
-                                <span className="shrink-0 text-muted-foreground">
-                                    .{address.domain}
-                                </span>
-                            </div>
-                            <Button
-                                type="submit"
-                                variant="outline"
-                                disabled={form.processing || unchanged}
-                            >
-                                {form.processing && <Spinner />}
-                                Сохранить адрес
-                            </Button>
-                        </div>
-                        <p
-                            id="subdomain-help"
-                            className="text-xs text-muted-foreground"
-                        >
-                            Строчные латинские буквы, цифры и дефис.
-                            {published &&
-                                ' После смены старый адрес перестанет открываться.'}
-                        </p>
-                        <InputError message={form.errors.subdomain} />
-                    </form>
-                )}
+                <p className="text-muted-foreground">
+                    Номер сайта:{' '}
+                    <span
+                        className="font-medium text-foreground tabular-nums"
+                        data-testid="site-number"
+                    >
+                        {address.number}
+                    </span>
+                </p>
             </CardContent>
         </Card>
     );

@@ -25,16 +25,14 @@ test('a chat Site asks scripted questions and ends with a lead, without operator
         .check();
     await expect(
         page
-            .getByRole('group', { name: '2. Старт' })
+            .getByRole('group', { name: '2. Шаблон' })
             .getByRole('radio', { name: account.template }),
     ).toBeChecked();
     await page.getByLabel('Название сайта').fill(siteName);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
-
     await page
-        .getByRole('link', { name: `Открыть дизайнер сайта «${siteName}»` })
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
         .click();
+    await expect(page).toHaveURL(/\/designer$/);
     await expect(page.getByRole('main', { name: 'Холст' })).toContainText(
         'Подбор автомобиля в чате',
     );

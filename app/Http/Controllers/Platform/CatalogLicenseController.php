@@ -52,7 +52,7 @@ class CatalogLicenseController extends Controller
                         'scope' => $license->scope->value,
                         'scope_label' => $license->scope->label(),
                         'target' => $site !== null ? $site->name : (string) $license->workspace?->name,
-                        'subdomain' => $site?->subdomain,
+                        'site_number' => $site?->public_number,
                         'workspace' => (string) ($site?->workspace->name ?? $license->workspace?->name),
                         'source_label' => $license->source->label(),
                         'granted_at' => $license->created_at?->toIso8601String(),
@@ -108,20 +108,20 @@ class CatalogLicenseController extends Controller
 
         $scope = $request->scope();
         $address = mb_strtolower($request->string('target')->toString());
-        $site = Site::query()->where('public_id', $address)->orWhere('subdomain', $address)->first();
+        $site = Site::query()->where('public_id', $address)->orWhere('public_number', $address)->first();
 
         $license = new CatalogLicense;
         $license->scope = $scope;
         $license->source = CatalogLicenseSource::AdminGrant;
 
         if ($scope === CatalogLicenseScope::Site) {
-            $target = $site ?? throw ValidationException::withMessages(['target' => 'Сайт не найден. Укажите поддомен или ID сайта.']);
+            $target = $site ?? throw ValidationException::withMessages(['target' => 'Сайт не найден. Укажите номер или ID сайта.']);
             $license->site()->associate($target);
             $duplicate = "У этого сайта уже есть лицензия на этот {$noun}.";
         } else {
             $target = Workspace::query()->where('public_id', $address)->first()
                 ?? $site->workspace
-                ?? throw ValidationException::withMessages(['target' => 'Пространство не найдено. Укажите ID пространства или поддомен любого его сайта.']);
+                ?? throw ValidationException::withMessages(['target' => 'Пространство не найдено. Укажите ID пространства или номер любого его сайта.']);
             $license->workspace()->associate($target);
             $duplicate = "У этого пространства уже есть лицензия на этот {$noun}.";
         }

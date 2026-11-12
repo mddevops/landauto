@@ -7,6 +7,7 @@ use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\SiteSecurityPolicy;
 use App\Http\Controllers\Controller;
 use App\Http\Middleware\ResolvePublicSite;
+use App\Publishing\Runtime\PublicBasePath;
 use App\Publishing\Runtime\PublicContentSecurityPolicy;
 use App\Publishing\Runtime\PublicSiteResolver;
 use App\Publishing\Runtime\PublishedPages;
@@ -35,8 +36,10 @@ class PublishedPageController extends Controller
         // CAPTCHA is a live security setting: the widget follows what the server enforces now.
         $widget = SiteSecurityPolicy::forSite($site)->captchaRequired && $captcha->isConfigured() ? $captcha->widget() : null;
 
+        $base = ResolvePublicSite::basePath($request);
         $metrica = $pages->metrica($site, $version);
-        $payload = json_decode($artifact['payload'], false, 512, JSON_THROW_ON_ERROR);
+        $payload = json_decode(PublicBasePath::apply($artifact['payload'], $base), false, 512, JSON_THROW_ON_ERROR);
+        $nativeStylesheet = $pages->nativeStylesheet($site, $version);
         $seo = $artifact['seo'];
         $description = is_string($seo['description'] ?? null) && $seo['description'] !== '' ? $seo['description'] : null;
 
@@ -46,8 +49,8 @@ class PublishedPageController extends Controller
             'canonical' => PublicSiteResolver::primaryUrl($site, $artifact['path']),
             'robots' => ($seo['indexable'] ?? true) === true ? 'index, follow' : 'noindex, follow',
             'siteName' => is_object($payload) && is_object($payload->site ?? null) && is_string($payload->site->name ?? null) ? $payload->site->name : null,
-            'html' => $artifact['html'],
-            'nativeStylesheet' => $pages->nativeStylesheet($site, $version),
+            'html' => PublicBasePath::apply($artifact['html'], $base),
+            'nativeStylesheet' => $nativeStylesheet === null ? null : $base.$nativeStylesheet,
             // Live entitlement, outside the stored HTML: upgrading or downgrading needs no republish.
             'branding' => ! $entitlements->allows($site->workspace, Entitlement::RemoveBranding),
             'data' => json_encode(

@@ -56,14 +56,14 @@ export const users = {
         workspace: 'Автосалон Запад',
         start: 'Пустой старт',
     },
-    // Publishing flow: Site «Сайт для публикации» on the `publish-e2e` subdomain.
+    // Publishing flow: Site «Сайт для публикации» at `localhost:8200/100000000011`.
     publisher: {
         name: 'Павел Публикаторов',
         email: 'publisher@landflow.test',
         password: 'e2e-password',
         workspace: 'Автосалон Центр',
         site: 'Сайт для публикации',
-        publicUrl: 'http://publish-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000011',
     },
     // Full publishing lifecycle on `lifecycle-e2e`: Owner, Admin (publish) and Designer (preview).
     lifecycle: {
@@ -72,7 +72,7 @@ export const users = {
         password: 'e2e-password',
         workspace: 'Автосалон Цикл',
         site: 'Сайт жизненного цикла',
-        publicUrl: 'http://lifecycle-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000012',
     },
     lifecycleDesigner: {
         name: 'Дарья Оформителева',
@@ -86,7 +86,7 @@ export const users = {
         password: 'e2e-password',
         workspace: 'Автосалон Интеграция',
         site: 'Сайт интеграций',
-        publicUrl: 'http://integrations-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000010',
     },
     integrationsAdmin: {
         name: 'Игорь Админов',
@@ -118,7 +118,7 @@ export const users = {
         password: 'e2e-password',
         workspace: 'Автосалон Домен',
         site: 'Сайт с доменом',
-        publicUrl: 'http://domains-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000001',
     },
     domainsDesigner: {
         name: 'Диана Доменная',
@@ -133,7 +133,7 @@ export const users = {
         workspace: 'Автосалон Команда',
         siteA: 'Сайт команды А',
         siteB: 'Сайт команды Б',
-        publicUrl: 'http://team-a-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000008',
     },
     // Not a member yet: joins through the invitation flow.
     teamDesigner: {
@@ -192,7 +192,7 @@ export const users = {
         password: 'e2e-password',
         site: 'Сайт с блоком из студии',
         block: 'Промо из студии',
-        publicUrl: 'http://sandbox-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000002',
     },
     // Native runtime (X-024): seeded Native Blocks on `native-e2e` (mixed runtimes, a Popup) and an
     // unapproved Native JavaScript Block on `native-js-e2e`.
@@ -202,8 +202,8 @@ export const users = {
         password: 'e2e-password',
         site: 'Сайт с нативными блоками',
         blockedSite: 'Сайт с неодобренным кодом',
-        publicUrl: 'http://native-e2e.localhost:8200',
-        blockedPublicUrl: 'http://native-js-e2e.localhost:8200',
+        publicUrl: 'http://localhost:8200/100000000006',
+        blockedPublicUrl: 'http://localhost:8200/100000000007',
     },
     // Customer catalog (D-121): Developer Block «Витрина партнёра» needs a Super Admin license for
     // a Site or for the whole Workspace «Автосалон Лицензия» (two seeded Sites).
@@ -213,9 +213,9 @@ export const users = {
         password: 'e2e-password',
         workspace: 'Автосалон Лицензия',
         site: 'Сайт по лицензии',
-        subdomain: 'license-e2e',
+        siteNumber: '100000000003',
         secondSite: 'Второй сайт по лицензии',
-        secondSubdomain: 'license-two-e2e',
+        secondSiteNumber: '100000000004',
         block: 'Витрина партнёра',
         author: 'Студия каталога E2E',
     },

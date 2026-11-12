@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\SiteStatus;
 use App\Enums\SiteType;
 use App\Models\Concerns\HasImmutablePublicId;
+use App\Support\SitePublicNumber;
 use Database\Factories\SiteFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -22,7 +23,8 @@ use LogicException;
  * @property int $workspace_id
  * @property string $name
  * @property SiteType $site_type
- * @property string|null $subdomain
+ * @property string|null $subdomain Unused since D-127; kept until a separate cleanup migration.
+ * @property string $public_number
  * @property SiteStatus $status
  * @property array<string, string>|null $design_tokens
  * @property array<string, int|bool>|null $form_security
@@ -60,7 +62,15 @@ class Site extends Model
 
     protected static function booted(): void
     {
+        static::creating(function (Site $site): void {
+            $site->public_number ??= SitePublicNumber::generate();
+        });
+
         static::updating(function (Site $site): void {
+            if ($site->isDirty('public_number')) {
+                throw new LogicException('The Site public number is immutable.');
+            }
+
             if ($site->isDirty('workspace_id')) {
                 throw new LogicException('Site workspace is immutable outside a dedicated transfer workflow.');
             }

@@ -390,7 +390,7 @@ class TemplateInstallationTest extends TestCase
         $this->placeBlock($template->pages()->sole(), 'hero');
         $this->publish($template);
         $template->forceFill(['access_mode' => CatalogAccessMode::AdminGrant, 'name' => 'Шаблон по выдаче'])->save();
-        $site = Site::factory()->create(['workspace_id' => $this->workspace->id, 'subdomain' => 'dealer']);
+        $site = Site::factory()->create(['workspace_id' => $this->workspace->id, 'public_number' => self::DEALER_NUMBER]);
         $admin = User::factory()->create();
         PlatformRoleAssignment::query()->create(['user_id' => $admin->id, 'role' => PlatformRole::SuperAdmin->value]);
 
@@ -399,18 +399,18 @@ class TemplateInstallationTest extends TestCase
                 ->where('items', fn ($items): bool => collect($items)->contains(fn ($item): bool => $item['kind'] === 'template' && $item['public_id'] === $template->public_id))
                 ->missing('items.0.id'));
 
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'workspace', 'target' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'workspace', 'target' => self::DEALER_NUMBER])
             ->assertSessionHasNoErrors();
         $license = CatalogLicense::query()->sole();
         $this->assertSame([null, $this->workspace->id, $template->id, null], [$license->site_id, $license->workspace_id, $license->template_id, $license->block_definition_id]);
 
         $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'workspace', 'target' => $this->workspace->public_id])
             ->assertSessionHasErrors(['target' => 'У этого пространства уже есть лицензия на этот шаблон.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'site', 'target' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'site', 'target' => self::DEALER_NUMBER])
             ->assertSessionHasNoErrors();
         $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'scope' => 'site', 'target' => $site->public_id])
             ->assertSessionHasErrors(['target' => 'У этого сайта уже есть лицензия на этот шаблон.']);
-        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'block' => (string) Str::ulid(), 'scope' => 'site', 'target' => 'dealer'])
+        $this->actingAs($admin)->post(route('platform.licenses.store'), ['template' => $template->public_id, 'block' => (string) Str::ulid(), 'scope' => 'site', 'target' => self::DEALER_NUMBER])
             ->assertSessionHasErrors('block');
         $this->assertSame(2, CatalogLicense::query()->count());
 

@@ -25,14 +25,12 @@ test('owner builds a page in the designer, autosaves, reloads and previews it', 
 
     await page.getByRole('link', { name: 'Создать сайт' }).click();
     await page
-        .getByRole('group', { name: '2. Старт' })
+        .getByRole('group', { name: '2. Шаблон' })
         .getByRole('radio', { name: owner.start })
         .check();
     await page.getByLabel('Название сайта').fill(siteName);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
     await page
-        .getByRole('link', { name: `Открыть дизайнер сайта «${siteName}»` })
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
         .click();
     await expect(page).toHaveURL(/\/sites\/[0-9A-HJKMNP-TV-Z]{26}\/designer$/i);
 

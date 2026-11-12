@@ -37,6 +37,14 @@ import type {
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import {
+    Dialog,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+} from '@/components/ui/dialog';
+import {
     DropdownMenu,
     DropdownMenuContent,
     DropdownMenuItem,
@@ -192,10 +200,14 @@ export default function Designer({
 
     const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
     const [rightTab, setRightTab] = useState<RightTab>('block');
+    const [pendingDelete, setPendingDelete] = useState<DesignerBlock | null>(
+        null,
+    );
     const blockRoutes = siteBlockRoutes(site.public_id);
     const autosave = useBlockAutosave(blockRoutes.state);
     const [designDraft, setDesignDraft] = useState<DesignTokens | null>(null);
     const [saving, setSaving] = useState(false);
+    const visit = { preserveScroll: true, preserveState: true } as const;
     const tokens = designDraft ?? design;
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
     const selected = blocks.find((block) => block.public_id === selectedId);
@@ -343,9 +355,9 @@ export default function Designer({
 
                     <main
                         aria-label="Холст"
-                        className="min-w-0 flex-1 p-3 sm:p-6 lg:overflow-y-auto"
+                        className="min-w-0 flex-1 bg-neutral-100 lg:overflow-y-auto"
                     >
-                        <div className="mx-auto min-h-full max-w-6xl overflow-hidden rounded-lg border bg-white shadow-sm">
+                        <div className="min-h-full bg-white">
                             <BlockRenderContext value={renderContext}>
                                 <SiteTheme tokens={tokens}>
                                     {blocks.length === 0 ? (
@@ -353,7 +365,7 @@ export default function Designer({
                                             На странице пока нет блоков.
                                         </div>
                                     ) : (
-                                        blocks.map((block) => (
+                                        blocks.map((block, index) => (
                                             <CanvasBlock
                                                 key={block.public_id}
                                                 block={block}
@@ -362,10 +374,71 @@ export default function Designer({
                                                     block.public_id ===
                                                     selectedId
                                                 }
-                                                onSelect={() =>
+                                                onSelect={() => {
                                                     setSelectedId(
                                                         block.public_id,
-                                                    )
+                                                    );
+                                                    setRightTab('block');
+                                                }}
+                                                canEditStructure={
+                                                    can.editStructure
+                                                }
+                                                actions={
+                                                    can.editStructure
+                                                        ? {
+                                                              canMoveUp:
+                                                                  index > 0,
+                                                              canMoveDown:
+                                                                  index <
+                                                                  blocks.length -
+                                                                      1,
+                                                              onMoveUp: () =>
+                                                                  router.post(
+                                                                      blockRoutes.move(
+                                                                          block.public_id,
+                                                                      ),
+                                                                      {
+                                                                          direction:
+                                                                              'up',
+                                                                      },
+                                                                      visit,
+                                                                  ),
+                                                              onMoveDown: () =>
+                                                                  router.post(
+                                                                      blockRoutes.move(
+                                                                          block.public_id,
+                                                                      ),
+                                                                      {
+                                                                          direction:
+                                                                              'down',
+                                                                      },
+                                                                      visit,
+                                                                  ),
+                                                              onDuplicate: () =>
+                                                                  router.post(
+                                                                      blockRoutes.duplicate(
+                                                                          block.public_id,
+                                                                      ),
+                                                                      {},
+                                                                      visit,
+                                                                  ),
+                                                              onToggleHidden:
+                                                                  () =>
+                                                                      router.patch(
+                                                                          blockRoutes.visibility(
+                                                                              block.public_id,
+                                                                          ),
+                                                                          {
+                                                                              hidden: !block.is_hidden,
+                                                                          },
+                                                                          visit,
+                                                                      ),
+                                                              onDelete: () =>
+                                                                  setPendingDelete(
+                                                                      block,
+                                                                  ),
+                                                          }
+                                                        : null
                                                 }
                                             />
                                         ))
@@ -470,6 +543,48 @@ export default function Designer({
                     </aside>
                 </div>
             </div>
+
+            <Dialog
+                open={pendingDelete !== null}
+                onOpenChange={(open) => !open && setPendingDelete(null)}
+            >
+                <DialogContent>
+                    <DialogHeader>
+                        <DialogTitle>Удалить блок?</DialogTitle>
+                        <DialogDescription>
+                            {pendingDelete &&
+                                `Блок «${pendingDelete.name}» будет удалён из черновика страницы.`}
+                        </DialogDescription>
+                    </DialogHeader>
+                    <DialogFooter>
+                        <Button
+                            type="button"
+                            variant="outline"
+                            onClick={() => setPendingDelete(null)}
+                        >
+                            Отмена
+                        </Button>
+                        <Button
+                            type="button"
+                            variant="destructive"
+                            onClick={() => {
+                                if (pendingDelete) {
+                                    router.delete(
+                                        blockRoutes.destroy(
+                                            pendingDelete.public_id,
+                                        ),
+                                        visit,
+                                    );
+                                }
+
+                                setPendingDelete(null);
+                            }}
+                        >
+                            Удалить
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </>
     );
 }

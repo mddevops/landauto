@@ -18,7 +18,7 @@ class SiteShellTest extends TestCase
     public function test_site_overview_exposes_safe_site_state_and_site_navigation(): void
     {
         [$user, $workspace] = $this->member(WorkspaceRole::Owner);
-        $site = Site::factory()->for($workspace)->create(['name' => 'Автосалон Юг', 'subdomain' => 'avto-yug']);
+        $site = Site::factory()->for($workspace)->create(['name' => 'Автосалон Юг']);
 
         $this->actingAs($user)
             ->withSession([WorkspaceContext::SESSION_KEY => $workspace->public_id])
@@ -29,7 +29,7 @@ class SiteShellTest extends TestCase
                 ->where('site.public_id', $site->public_id)
                 ->where('site.name', 'Автосалон Юг')
                 ->where('site.status', 'active')
-                ->where('site.subdomain', 'avto-yug')
+                ->where('site.public_number', $site->public_number)
                 ->where('production', null)
                 ->missing('site.id')
                 ->missing('site.workspace_id')

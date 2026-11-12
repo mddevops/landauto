@@ -25,7 +25,7 @@ use Illuminate\Support\Facades\DB;
 /**
  * Copies a historical version's private draft snapshot into the current Draft in one transaction
  * (ADR-006 §8). Production, Published Versions, Submissions, blacklists, form security, the
- * subdomain, Site Assets, the catalog and platform media are never touched. Public IDs are kept;
+ * public number, Site Assets, the catalog and platform media are never touched. Public IDs are kept;
  * Forms are deactivated rather than deleted because Submissions reference them. Vehicles or
  * Offers whose catalog entries no longer exist are skipped and counted. Every successful restore
  * leaves a `SiteVersionRestore` audit record in the same transaction.

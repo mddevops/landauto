@@ -115,7 +115,7 @@ test('a Site license unlocks a catalog Block for that one Site only', async ({
 
     const { context: adminContext, page: adminPage } =
         await openLicenses(browser);
-    await grant(adminPage, 'Один сайт', customer.subdomain);
+    await grant(adminPage, 'Один сайт', customer.siteNumber);
     await expect(
         adminPage.getByText(
             `Лицензия на «${customer.block}» выдана сайту «${customer.site}».`,
@@ -156,10 +156,10 @@ test('a Workspace license covers every current and future Site of that Workspace
     test.setTimeout(150_000);
     const newSite = `Новый сайт ${Date.now().toString(36)}`;
 
-    // Addressed by the subdomain of any Site in the Workspace.
+    // Addressed by the public number of any Site in the Workspace.
     const { context: adminContext, page: adminPage } =
         await openLicenses(browser);
-    await grant(adminPage, 'Всё пространство', customer.secondSubdomain);
+    await grant(adminPage, 'Всё пространство', customer.secondSiteNumber);
     await expect(
         adminPage.getByText(
             `Лицензия на «${customer.block}» выдана пространству «${customer.workspace}».`,
@@ -184,9 +184,10 @@ test('a Workspace license covers every current and future Site of that Workspace
         .getByRole('radio', { name: /^Лендинг/ })
         .check();
     await page.getByLabel('Название сайта').fill(newSite);
-    await page.getByRole('button', { name: 'Создать сайт' }).click();
-    await expect(page).toHaveURL(/\/dashboard\?site=/);
-    await openDesigner(page, newSite);
+    await page
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
+        .click();
+    await expect(page).toHaveURL(/\/designer$/);
     await expect(addButton(page)).toBeEnabled();
     await addButton(page).click();
     await expect(blockFrame(page)).toBeVisible();

@@ -199,7 +199,7 @@ test('owner connects a custom domain, gets SSL, makes it primary and publishes',
     await visitor.goto(`${customUrl}/sitemap.xml`);
     const sitemap = await visitor.content();
     expect(sitemap).toContain(`${customUrl}/`);
-    expect(sitemap).not.toContain('domains-e2e.localhost');
+    expect(sitemap).not.toContain(owner.publicUrl);
 
     await visitor.goto(`${customUrl}/robots.txt`);
     await expect(visitor.locator('body')).toContainText(

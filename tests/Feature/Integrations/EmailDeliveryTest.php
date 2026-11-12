@@ -34,7 +34,7 @@ class EmailDeliveryTest extends TestCase
     {
         parent::setUp();
 
-        $this->site = Site::factory()->create(['name' => 'Дилер Москвич', 'subdomain' => 'dealer']);
+        $this->site = Site::factory()->create(['name' => 'Дилер Москвич', 'public_number' => self::DEALER_NUMBER]);
         $this->form = Form::factory()->for($this->site)->withLeadFields()->create(['name' => 'Тест-драйв']);
         FormField::factory()->for($this->form)->create(['key' => 'email', 'type' => FormFieldType::Email, 'label' => 'Почта', 'required' => false, 'sort_order' => 9]);
         $this->route = FormRoute::factory()->for($this->form)->create([

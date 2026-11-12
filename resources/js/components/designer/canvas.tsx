@@ -1,10 +1,15 @@
+import { ArrowDown, ArrowUp, Copy, Eye, EyeOff, Trash2 } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { blockRenderer } from '@/blocks/registry';
 import { SandboxedBlock } from '@/blocks/sandboxed-block';
 import type { BlockState } from '@/blocks/state';
 import type { DesignerBlock } from '@/components/designer/types';
 import type { AutosaveStatus } from '@/components/designer/use-block-autosave';
+import { Button } from '@/components/ui/button';
 import { cn } from '@/lib/utils';
+
+/** Webflow-like selection accent. */
+export const CANVAS_ACCENT = '#3898EC';
 
 const autosaveLabels: Record<AutosaveStatus, string | null> = {
     idle: null,
@@ -87,23 +92,77 @@ export function RenderedBlock({
     );
 }
 
+export type CanvasBlockActions = {
+    canMoveUp: boolean;
+    canMoveDown: boolean;
+    onMoveUp: () => void;
+    onMoveDown: () => void;
+    onDuplicate: () => void;
+    onToggleHidden: () => void;
+    onDelete: () => void;
+};
+
 export function CanvasBlock({
     block,
     state,
     selected,
     onSelect,
+    canEditStructure,
+    actions,
 }: {
     block: DesignerBlock;
     state: BlockState;
     selected: boolean;
     onSelect: () => void;
+    canEditStructure: boolean;
+    actions: CanvasBlockActions | null;
 }) {
     return (
-        <div className="relative">
+        <div className="group/block relative">
             {block.is_hidden && (
-                <span className="absolute top-2 right-2 z-10 rounded bg-neutral-900/80 px-2 py-0.5 text-xs text-white">
+                <span className="absolute top-2 right-2 z-20 rounded bg-neutral-900/80 px-2 py-0.5 text-xs text-white">
                     Скрыт
                 </span>
+            )}
+            {selected && canEditStructure && actions && (
+                <div className="absolute top-1.5 left-1.5 z-30 flex items-center gap-0.5 rounded-md border border-[#3898EC]/30 bg-white/95 p-0.5 shadow-sm">
+                    <ToolbarButton
+                        label={`Переместить «${block.name}» выше`}
+                        disabled={!actions.canMoveUp}
+                        onClick={actions.onMoveUp}
+                    >
+                        <ArrowUp />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        label={`Переместить «${block.name}» ниже`}
+                        disabled={!actions.canMoveDown}
+                        onClick={actions.onMoveDown}
+                    >
+                        <ArrowDown />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        label={`Дублировать «${block.name}»`}
+                        onClick={actions.onDuplicate}
+                    >
+                        <Copy />
+                    </ToolbarButton>
+                    <ToolbarButton
+                        label={
+                            block.is_hidden
+                                ? `Показать «${block.name}»`
+                                : `Скрыть «${block.name}»`
+                        }
+                        onClick={actions.onToggleHidden}
+                    >
+                        {block.is_hidden ? <Eye /> : <EyeOff />}
+                    </ToolbarButton>
+                    <ToolbarButton
+                        label={`Удалить «${block.name}»`}
+                        onClick={actions.onDelete}
+                    >
+                        <Trash2 />
+                    </ToolbarButton>
+                </div>
             )}
             <div inert className={cn(block.is_hidden && 'opacity-40')}>
                 <RenderedBlock block={block} state={state} />
@@ -114,10 +173,50 @@ export function CanvasBlock({
                 aria-pressed={selected}
                 onClick={onSelect}
                 className={cn(
-                    'absolute inset-0 outline-none hover:ring-2 hover:ring-primary/40 hover:ring-inset focus-visible:ring-2 focus-visible:ring-primary focus-visible:ring-inset',
-                    selected && 'ring-2 ring-primary ring-inset',
+                    'absolute inset-0 z-10 transition-[box-shadow] outline-none',
+                    'hover:shadow-[inset_0_0_0_1px_#3898EC]',
+                    'focus-visible:shadow-[inset_0_0_0_1px_#3898EC]',
+                    selected && 'shadow-[inset_0_0_0_1px_#3898EC]',
                 )}
             />
+            {selected && (
+                <span
+                    className="pointer-events-none absolute bottom-0 left-0 z-20 max-w-[min(100%,16rem)] truncate px-1.5 py-0.5 text-[11px] font-medium text-white"
+                    style={{ backgroundColor: CANVAS_ACCENT }}
+                >
+                    {block.name}
+                </span>
+            )}
         </div>
+    );
+}
+
+function ToolbarButton({
+    label,
+    onClick,
+    disabled,
+    children,
+}: {
+    label: string;
+    onClick: () => void;
+    disabled?: boolean;
+    children: ReactNode;
+}) {
+    return (
+        <Button
+            type="button"
+            variant="ghost"
+            size="icon"
+            className="size-7 text-[#3898EC] hover:bg-[#3898EC]/10 hover:text-[#3898EC] [&_svg]:size-3.5"
+            aria-label={label}
+            title={label}
+            disabled={disabled}
+            onClick={(event) => {
+                event.stopPropagation();
+                onClick();
+            }}
+        >
+            {children}
+        </Button>
     );
 }

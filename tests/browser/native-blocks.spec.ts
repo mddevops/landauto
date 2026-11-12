@@ -62,7 +62,7 @@ test('Native Blocks publish as host DOM with scoped CSS, hydrate cleanly and run
         '<button type="button" data-landflow-action="cta">Оставить заявку</button>',
     );
     expect(html).toMatch(
-        /<link rel="stylesheet" href="\/_landflow\/runtime\/[0-9a-z]{26}\/[0-9a-f]{64}\.css">/,
+        /<link rel="stylesheet" href="\/100000000006\/_landflow\/runtime\/[0-9a-z]{26}\/[0-9a-f]{64}\.css">/,
     );
     expect(html).not.toContain('<iframe title="Нативный герой"');
 

@@ -145,9 +145,13 @@ try {
     });
     console.error(`[e2e] Started PHP server pid=${server.pid}.`);
     await waitForServer(server);
-    await run(process.execPath, [playwrightCli, 'test'], {
-        E2E_MANAGED_SERVER: '1',
-    });
+    await run(
+        process.execPath,
+        [playwrightCli, 'test', ...process.argv.slice(2)],
+        {
+            E2E_MANAGED_SERVER: '1',
+        },
+    );
 } catch (error) {
     failure = error;
 } finally {

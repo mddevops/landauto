@@ -33,7 +33,7 @@ class CustomDomainRoutingTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $this->plan = Plan::factory()->create();
         $this->plan->setEntitlement(Entitlement::CustomDomain, true);
         $this->workspace->plan()->associate($this->plan)->save();
@@ -62,15 +62,16 @@ class CustomDomainRoutingTest extends TestCase
         $this->visit('http://dealer.ru/robots.txt')->assertOk()->assertSee('Sitemap: http://dealer.ru/sitemap.xml');
     }
 
-    public function test_landflow_subdomain_redirects_permanently_to_the_primary_preserving_path_and_query(): void
+    public function test_landflow_address_redirects_permanently_to_the_primary_preserving_path_and_query(): void
     {
         $this->domain('dealer.ru', primary: true);
 
-        $this->visit('http://dealer.localhost/offers?utm_source=ya&x=1')
+        $this->visit('http://localhost/100000000001/offers?utm_source=ya&x=1')
             ->assertStatus(301)
             ->assertRedirect('http://dealer.ru/offers?utm_source=ya&x=1')
             ->assertHeader('X-Content-Type-Options', 'nosniff');
-        $this->visit('http://dealer.localhost/sitemap.xml')->assertStatus(301)->assertRedirect('http://dealer.ru/sitemap.xml');
+        $this->visit('http://localhost/100000000001/sitemap.xml')->assertStatus(301)->assertRedirect('http://dealer.ru/sitemap.xml');
+        $this->visit('http://localhost/100000000001')->assertStatus(301)->assertRedirect('http://dealer.ru/');
     }
 
     public function test_alternate_custom_domain_redirects_to_the_primary_without_loops(): void
@@ -82,12 +83,12 @@ class CustomDomainRoutingTest extends TestCase
         $this->visit('http://dealer.ru/offers?a=b')->assertOk();
     }
 
-    public function test_without_custom_primary_alternates_redirect_to_the_landflow_subdomain(): void
+    public function test_without_custom_primary_alternates_redirect_to_the_landflow_address(): void
     {
         $this->domain('dealer.ru');
 
-        $this->visit('http://dealer.ru/offers')->assertStatus(301)->assertRedirect('http://dealer.localhost/offers');
-        $this->visit('http://dealer.localhost/')->assertOk()->assertSee('<link rel="canonical" href="http://dealer.localhost/">', false);
+        $this->visit('http://dealer.ru/offers')->assertStatus(301)->assertRedirect('http://localhost/100000000001/offers');
+        $this->visit('http://localhost/100000000001/')->assertOk()->assertSee('<link rel="canonical" href="http://localhost/100000000001/">', false);
     }
 
     public function test_domains_without_ssl_are_not_served_and_cannot_become_primary(): void
@@ -96,7 +97,7 @@ class CustomDomainRoutingTest extends TestCase
         $domain->forceFill(['is_primary' => true])->save();
 
         $this->visit('http://dealer.ru/')->assertNotFound();
-        $this->visit('http://dealer.localhost/')->assertOk()->assertSee('<link rel="canonical" href="http://dealer.localhost/">', false);
+        $this->visit('http://localhost/100000000001/')->assertOk()->assertSee('<link rel="canonical" href="http://localhost/100000000001/">', false);
 
         $domain->forceFill(['is_primary' => false])->save();
         $this->as($this->owner)
@@ -105,34 +106,34 @@ class CustomDomainRoutingTest extends TestCase
         $this->assertFalse($domain->refresh()->is_primary);
     }
 
-    public function test_lost_entitlement_falls_back_to_the_landflow_subdomain(): void
+    public function test_lost_entitlement_falls_back_to_the_landflow_address(): void
     {
         $this->domain('dealer.ru', primary: true);
         $this->workspace->plan()->associate(Plan::factory()->create())->save();
 
         $this->visit('http://dealer.ru/')->assertNotFound();
-        $this->visit('http://dealer.localhost/')->assertOk()->assertSee('<link rel="canonical" href="http://dealer.localhost/">', false);
+        $this->visit('http://localhost/100000000001/')->assertOk()->assertSee('<link rel="canonical" href="http://localhost/100000000001/">', false);
     }
 
-    public function test_removing_the_primary_falls_back_to_the_landflow_subdomain(): void
+    public function test_removing_the_primary_falls_back_to_the_landflow_address(): void
     {
         $domain = $this->domain('dealer.ru', primary: true);
 
         $this->as($this->owner)->delete(route('sites.domains.destroy', [$this->site, $domain]))->assertRedirect();
 
-        $this->visit('http://dealer.localhost/')->assertOk()->assertSee('<link rel="canonical" href="http://dealer.localhost/">', false);
+        $this->visit('http://localhost/100000000001/')->assertOk()->assertSee('<link rel="canonical" href="http://localhost/100000000001/">', false);
         $this->visit('http://dealer.ru/')->assertNotFound();
     }
 
-    public function test_reset_primary_returns_to_the_landflow_subdomain(): void
+    public function test_reset_primary_returns_to_the_landflow_address(): void
     {
         $domain = $this->domain('dealer.ru', primary: true);
 
         $this->as($this->owner)->delete(route('sites.domains.reset-primary', $this->site))->assertRedirect(route('sites.domains.index', $this->site));
 
         $this->assertFalse($domain->refresh()->is_primary);
-        $this->visit('http://dealer.localhost/')->assertOk();
-        $this->visit('http://dealer.ru/')->assertStatus(301)->assertRedirect('http://dealer.localhost/');
+        $this->visit('http://localhost/100000000001/')->assertOk();
+        $this->visit('http://dealer.ru/')->assertStatus(301)->assertRedirect('http://localhost/100000000001/');
     }
 
     public function test_make_primary_keeps_a_single_primary_and_needs_access(): void
@@ -194,7 +195,7 @@ class CustomDomainRoutingTest extends TestCase
 
         $this->as($this->owner)->get(route('sites.domains.index', $this->site))
             ->assertInertia(fn ($page) => $page
-                ->where('landflowAddress', 'http://dealer.localhost/')
+                ->where('landflowAddress', 'http://localhost/100000000001/')
                 ->where('primaryAddress', 'http://dealer.ru/')
                 ->where('hasPrimaryDomain', true)
                 ->where('domains.0.url', 'http://dealer.ru/'));

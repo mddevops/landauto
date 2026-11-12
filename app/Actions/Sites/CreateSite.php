@@ -11,7 +11,6 @@ use App\Models\Page;
 use App\Models\Site;
 use App\Models\Template;
 use App\Models\Workspace;
-use App\Support\SiteSubdomain;
 use App\Support\WorkspaceEntitlements;
 use App\Templates\InstallTemplateVersion;
 use App\Templates\ProvisionLeadPopup;
@@ -84,7 +83,6 @@ final class CreateSite
 
             $site = new Site(['name' => $name]);
             $site->site_type = $type;
-            $site->subdomain = SiteSubdomain::suggest($name);
             $site->workspace()->associate($lockedWorkspace);
             $site->save();
 

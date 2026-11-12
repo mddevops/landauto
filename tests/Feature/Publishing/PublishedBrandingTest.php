@@ -26,7 +26,7 @@ class PublishedBrandingTest extends TestCase
         parent::setUp();
 
         $this->buildPublishableSite();
-        $this->site->forceFill(['subdomain' => 'dealer'])->save();
+        $this->withPublicNumber($this->site);
         $this->actAsMember($this->owner);
         $this->assertTrue(app(PublishSite::class)->handle(Site::query()->findOrFail($this->site->id), $this->owner)->succeeded());
     }
@@ -71,6 +71,6 @@ class PublishedBrandingTest extends TestCase
      */
     private function visit(): TestResponse
     {
-        return $this->onPublicHost(fn () => $this->get('http://dealer.localhost/'));
+        return $this->onPublicHost(fn () => $this->get('http://localhost/100000000001/'));
     }
 }

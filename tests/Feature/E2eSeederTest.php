@@ -79,16 +79,16 @@ class E2eSeederTest extends TestCase
         $this->assertSame(1, SiteOffer::query()->whereRelation('vehicle', 'site_id', $showcase->id)->count());
         Storage::disk('local')->assertExists(['series-media/e2e/front_3_4.png', 'series-media/e2e/side.png']);
 
-        $lifecycle = Site::query()->where('subdomain', 'lifecycle-e2e')->sole();
+        $lifecycle = Site::query()->where('public_number', '100000000012')->sole();
         $this->assertTrue(app(PublishValidator::class)->validate($lifecycle)->passes());
         $this->assertSame(WorkspaceRole::Designer, $lifecycle->workspace->members()->whereRelation('user', 'email', 'lifecycle-designer@landflow.test')->sole()->role);
 
-        $integrations = Site::query()->where('subdomain', 'integrations-e2e')->sole();
+        $integrations = Site::query()->where('public_number', '100000000010')->sole();
         $this->assertTrue(app(PublishValidator::class)->validate($integrations)->passes());
         $this->assertSame(0, $integrations->integrationBindings()->count());
         $this->assertSame(WorkspaceRole::Admin, $integrations->workspace->members()->whereRelation('user', 'email', 'integrations-admin@landflow.test')->sole()->role);
 
-        $teamSite = Site::query()->where('subdomain', 'team-a-e2e')->sole();
+        $teamSite = Site::query()->where('public_number', '100000000008')->sole();
         $this->assertTrue(app(PublishValidator::class)->validate($teamSite)->passes());
         $this->assertSame(10, $entitlements->limit($teamSite->workspace, Entitlement::MaxMembers));
         $this->assertSame(5, $teamSite->workspace->members()->count());
@@ -105,20 +105,20 @@ class E2eSeederTest extends TestCase
         $this->assertSame(BlockRuntime::Sandboxed, $promo->runtime);
         $this->assertTrue($promo->definition->isPlatformOwned());
         $this->assertSame([], app(BlockSourceChecker::class)->checkVersion($promo));
-        $this->assertTrue(Site::query()->where('subdomain', 'sandbox-e2e')->sole()->popups()->exists());
+        $this->assertTrue(Site::query()->where('public_number', '100000000002')->sole()->popups()->exists());
 
         $this->assertSame(3, BlockVersion::query()->where('runtime', BlockRuntime::Native->value)->count());
-        $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-e2e')->sole())->passes());
-        $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('subdomain', 'native-js-e2e')->sole())->passes());
+        $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('public_number', '100000000006')->sole())->passes());
+        $this->assertTrue(app(PublishValidator::class)->validate(Site::query()->where('public_number', '100000000007')->sole())->passes());
 
         $showcase = BlockVersion::query()->whereRelation('definition', 'slug', 'e2e-partner-showcase')->sole();
         $this->assertTrue($showcase->definition->isDeveloperOwned());
         $this->assertSame(CatalogAccessMode::AdminGrant, $showcase->definition->access_mode);
         $this->assertSame([], app(BlockSourceChecker::class)->checkVersion($showcase));
-        $licenseSite = Site::query()->where('subdomain', 'license-e2e')->sole();
+        $licenseSite = Site::query()->where('public_number', '100000000003')->sole();
         $this->assertSame(0, CatalogLicense::query()->effectiveFor($licenseSite)->count());
         $this->assertSame(2, $licenseSite->workspace->sites()->count());
-        $this->assertNotSame($licenseSite->workspace_id, Site::query()->where('subdomain', 'license-other-e2e')->sole()->workspace_id);
+        $this->assertNotSame($licenseSite->workspace_id, Site::query()->where('public_number', '100000000005')->sole()->workspace_id);
         $this->assertNotNull(app(BlockCatalogAccess::class)->denial($licenseSite, $showcase->definition));
         $this->assertTrue(Gate::forUser(User::query()->where('email', 'licenses-admin@landflow.test')->sole())->allows(PlatformPermission::ManageCatalogLicenses->value));
 

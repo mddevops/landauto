@@ -66,6 +66,8 @@ class PageBlocksTest extends TestCase
                 ->where('library.1', [
                     'slug' => 'hero',
                     'name' => 'Первый экран',
+                    'category' => 'hero',
+                    'category_label' => 'Первый экран',
                     'author' => null,
                     'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
                     'available' => true,

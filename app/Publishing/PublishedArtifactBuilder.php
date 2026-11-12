@@ -14,6 +14,7 @@ use App\Models\PublishedRuntimeAsset;
 use App\Models\PublishedVersion;
 use App\Publishing\Rendering\PageRenderer;
 use App\Publishing\Rendering\PageRenderException;
+use App\Publishing\Runtime\PublicBasePath;
 use Illuminate\Support\Facades\DB;
 use LogicException;
 
@@ -45,7 +46,7 @@ final class PublishedArtifactBuilder
 
         $manifest = $version->public_manifest_json;
         $nativeJs = $this->javascript->compile($manifest['pages']);
-        $nativeJsUrl = $nativeJs === '' ? null : "/_landflow/runtime/{$version->public_id}/".hash('sha256', $nativeJs).'.js';
+        $nativeJsUrl = $nativeJs === '' ? null : PublicBasePath::prefix("/_landflow/runtime/{$version->public_id}/".hash('sha256', $nativeJs).'.js');
         $payloads = array_values(array_map(fn (array $page): array => $this->payload($version, $page, $nativeJsUrl), $manifest['pages']));
         $nativeCss = $this->nativeStylesheet($manifest['pages']);
 
@@ -104,7 +105,8 @@ final class PublishedArtifactBuilder
 
     /**
      * The exact public payload one Page is rendered and hydrated from. URLs are relative to the
-     * Site host and scoped to this version; nothing refers to Draft routes or numeric IDs. Native
+     * Site address (prefixed with the base path token) and scoped to this version; nothing refers
+     * to Draft routes or numeric IDs. Native
      * Blocks carry only compiled output (scope, safe HTML, action keys), never their source.
      *
      * @param  array<string, mixed>  $page
@@ -122,7 +124,7 @@ final class PublishedArtifactBuilder
         }
 
         foreach ($manifest['assets'] as $assetId) {
-            $assetUrls[$assetId] = "/_landflow/assets/{$versionId}/{$assetId}";
+            $assetUrls[$assetId] = PublicBasePath::prefix("/_landflow/assets/{$versionId}/{$assetId}");
         }
 
         return [
@@ -131,7 +133,7 @@ final class PublishedArtifactBuilder
             'page' => ['public_id' => $page['public_id'], 'title' => $page['title']],
             'pages' => array_map(fn (array $sitePage): array => [
                 'public_id' => $sitePage['public_id'],
-                'path' => $sitePage['is_home'] ? '/' : '/'.$sitePage['slug'],
+                'path' => PublicBasePath::prefix($sitePage['is_home'] ? '/' : '/'.$sitePage['slug']),
             ], $manifest['pages']),
             'design' => $manifest['design'],
             'blocks' => array_map(fn (array $block): array => [
@@ -148,7 +150,7 @@ final class PublishedArtifactBuilder
             'vehicles' => array_map(function (array $vehicle) use ($versionId): array {
                 foreach ($vehicle['media']['sets'] as $s => $set) {
                     foreach ($set['images'] as $i => $image) {
-                        $vehicle['media']['sets'][$s]['images'][$i]['url'] = "/_landflow/media/{$versionId}/{$image['public_id']}";
+                        $vehicle['media']['sets'][$s]['images'][$i]['url'] = PublicBasePath::prefix("/_landflow/media/{$versionId}/{$image['public_id']}");
                     }
                 }
 
@@ -158,7 +160,7 @@ final class PublishedArtifactBuilder
                 ...$popup,
                 'form' => is_string($popup['form']) ? ($forms[$popup['form']] ?? null) : null,
             ], $manifest['popups']),
-            'form_action' => "/_landflow/forms/{$versionId}",
+            'form_action' => PublicBasePath::prefix("/_landflow/forms/{$versionId}"),
         ];
     }
 

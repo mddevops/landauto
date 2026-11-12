@@ -7,13 +7,14 @@ use App\Http\Controllers\PublicSite\PublishedRuntimeAssetController;
 use App\Http\Controllers\PublicSite\PublishedSeoController;
 use App\Http\Middleware\ResolvePublicSite;
 use App\Publishing\Runtime\PublicSiteResolver;
+use App\Support\SitePublicNumber;
 use Illuminate\Support\Facades\Route;
 
 /*
-| Published Sites on {subdomain}.{public_domain} (ADR-006 §9) and on connected custom domains
-| (D-111). Content comes only from the active Published Version. Reserved paths: /_landflow/*,
-| /sitemap.xml, /robots.txt. Anything else that is not a published Page is a safe 404, so no
-| application route is reachable through a public host.
+| Published Sites on {public_domain}/{number} (D-127) and at the root of connected custom domains
+| (D-111). Content comes only from the active Published Version. Reserved Site paths:
+| /_landflow/*, /sitemap.xml, /robots.txt. Anything else that is not a published Page is a safe
+| 404, so no application route is reachable through a public address.
 */
 
 $runtime = function (string $name): void {
@@ -42,9 +43,16 @@ $runtime = function (string $name): void {
     });
 };
 
-Route::domain('{subdomain}.'.config('publishing.public_domain'))
-    ->where(['subdomain' => PublicSiteResolver::routePattern()])
-    ->group(fn () => $runtime('public.'));
+Route::domain((string) config('publishing.public_domain'))->group(function () use ($runtime): void {
+    Route::prefix('{publicNumber}')
+        ->where(['publicNumber' => SitePublicNumber::PATTERN])
+        ->group(fn () => $runtime('public.'));
+
+    // A public domain of its own serves nothing but Sites (the shared-host case exists only locally).
+    if (! PublicSiteResolver::sharesApplicationHost()) {
+        Route::any('{any?}', [PublishedPageController::class, 'missing'])->where('any', '.*')->name('public.root.missing');
+    }
+});
 
 Route::domain('{host}')
     ->where(['host' => PublicSiteResolver::customHostPattern()])

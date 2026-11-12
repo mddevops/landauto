@@ -72,6 +72,13 @@ class SiteController extends Controller
                     }
 
                     $reason = $templateAccess->installDenial($workspace, $template, $template->latestVersion);
+                    $pages = array_map(
+                        fn (array $page): array => [
+                            'title' => $page['title'] !== '' ? $page['title'] : 'Страница',
+                            'block_count' => count($page['blocks']),
+                        ],
+                        $template->latestVersion->content_json['pages'] ?? [],
+                    );
 
                     return [
                         'public_id' => $template->public_id,
@@ -81,6 +88,8 @@ class SiteController extends Controller
                         'access' => BlockCatalogAccess::card($template),
                         'available' => $reason === null,
                         'reason' => $reason,
+                        'page_count' => count($pages),
+                        'pages' => $pages,
                     ];
                 })
                 ->filter()
@@ -121,7 +130,9 @@ class SiteController extends Controller
             ]);
         }
 
-        return to_route('dashboard', ['site' => $site->public_id]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Сайт «{$site->name}» создан."]);
+
+        return to_route('sites.designer', $site);
     }
 
     public function show(Site $site, DesignerScope $scope): Response
@@ -136,7 +147,7 @@ class SiteController extends Controller
                 'public_id' => $site->public_id,
                 'name' => $site->name,
                 'status' => $site->status->value,
-                'subdomain' => $site->subdomain,
+                'public_number' => $site->public_number,
                 'address' => PublicSiteResolver::primaryUrl($site),
                 'created_at' => $site->created_at?->toIso8601String(),
             ],

@@ -11,6 +11,7 @@ use App\Models\SiteAsset;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Models\WorkspaceAsset;
+use App\Support\DefaultWorkspacePlan;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
@@ -34,7 +35,8 @@ class WorkspaceAssetsTest extends TestCase
         parent::setUp();
 
         Storage::fake(WorkspaceAsset::DISK);
-        $this->workspace = Workspace::factory()->create();
+        // Uploads need a storage allowance (X-017); a Workspace without a Plan has none.
+        $this->workspace = Workspace::factory()->create(['plan_id' => app(DefaultWorkspacePlan::class)->resolve()->id]);
         $this->owner = User::factory()->create();
         $this->workspace->addMember($this->owner, WorkspaceRole::Owner);
         $this->site = Site::factory()->for($this->workspace)->create(['name' => 'Сайт А']);

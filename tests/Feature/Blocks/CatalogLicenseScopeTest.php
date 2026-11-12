@@ -68,9 +68,9 @@ class CatalogLicenseScopeTest extends TestCase
         $this->otherWorkspace = Workspace::factory()->create(['plan_id' => $plan->id, 'name' => 'Автосалон Юг']);
         $this->otherWorkspace->addMember($this->owner, WorkspaceRole::Owner);
 
-        $this->siteA = $this->siteIn($this->workspace, 'Сайт А', 'site-a');
-        $this->siteB = $this->siteIn($this->workspace, 'Сайт Б', 'site-b');
-        $this->siteC = $this->siteIn($this->otherWorkspace, 'Сайт В', 'site-c');
+        $this->siteA = $this->siteIn($this->workspace, 'Сайт А');
+        $this->siteB = $this->siteIn($this->workspace, 'Сайт Б');
+        $this->siteC = $this->siteIn($this->otherWorkspace, 'Сайт В');
 
         $profile = DeveloperProfile::factory()->withPermissions()->create();
         $this->block = BlockDefinition::factory()->developer($profile)->create([
@@ -213,8 +213,8 @@ class CatalogLicenseScopeTest extends TestCase
                     $this->assertSame(['Шаблон Север', 'template', 'Всё пространство', 'Автосалон Север', 'Автосалон Север'], [
                         $rows['workspace']['item'], $rows['workspace']['kind'], $rows['workspace']['scope_label'], $rows['workspace']['target'], $rows['workspace']['workspace'],
                     ]);
-                    $this->assertSame(['Карточка по выдаче', 'block', 'Один сайт', 'Сайт А', 'site-a', 'Автосалон Север'], [
-                        $rows['site']['item'], $rows['site']['kind'], $rows['site']['scope_label'], $rows['site']['target'], $rows['site']['subdomain'], $rows['site']['workspace'],
+                    $this->assertSame(['Карточка по выдаче', 'block', 'Один сайт', 'Сайт А', $this->siteA->public_number, 'Автосалон Север'], [
+                        $rows['site']['item'], $rows['site']['kind'], $rows['site']['scope_label'], $rows['site']['target'], $rows['site']['site_number'], $rows['site']['workspace'],
                     ]);
 
                     foreach ($rows as $row) {
@@ -227,9 +227,9 @@ class CatalogLicenseScopeTest extends TestCase
                 }));
     }
 
-    private function siteIn(Workspace $workspace, string $name, string $subdomain): Site
+    private function siteIn(Workspace $workspace, string $name): Site
     {
-        $site = Site::factory()->for($workspace)->create(['name' => $name, 'subdomain' => $subdomain]);
+        $site = Site::factory()->for($workspace)->create(['name' => $name]);
         Page::factory()->for($site)->home()->create();
 
         return $site;

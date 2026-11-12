@@ -19,6 +19,45 @@ type PropertiesPanelProps = {
     onChange: (state: BlockState) => void;
 };
 
+type PropertyGroup = 'content' | 'look' | 'behavior';
+
+const groupLabels: Record<PropertyGroup, string> = {
+    content: 'Контент',
+    look: 'Вид',
+    behavior: 'Поведение',
+};
+
+function fieldGroup(field: SchemaField): PropertyGroup {
+    switch (field.type) {
+        case 'text':
+        case 'textarea':
+        case 'image':
+        case 'vehicle':
+        case 'repeater':
+            return 'content';
+        case 'boolean':
+        case 'action':
+            return 'behavior';
+        case 'select':
+        case 'color':
+        case 'font':
+        case 'number':
+            return 'look';
+        case 'group':
+            return (field.fields ?? []).some(
+                (child) =>
+                    child.type === 'action' ||
+                    child.type === 'text' ||
+                    child.type === 'textarea' ||
+                    child.type === 'image',
+            )
+                ? 'content'
+                : 'look';
+        default:
+            return 'content';
+    }
+}
+
 export function PropertiesPanel({
     block,
     state,
@@ -26,16 +65,40 @@ export function PropertiesPanel({
     disabled,
     onChange,
 }: PropertiesPanelProps) {
+    const visible = block.schema.fields.filter((field) =>
+        isFieldVisible(field, state),
+    );
+    const groups = (['content', 'look', 'behavior'] as const)
+        .map((group) => ({
+            group,
+            fields: visible.filter((field) => fieldGroup(field) === group),
+        }))
+        .filter((entry) => entry.fields.length > 0);
+
     return (
-        <fieldset disabled={disabled} className="flex flex-col gap-4">
+        <fieldset disabled={disabled} className="flex flex-col gap-5">
             <legend className="sr-only">{`Свойства блока «${block.name}»`}</legend>
-            <FieldList
-                fields={block.schema.fields}
-                value={state}
-                path="state"
-                errors={errors}
-                onChange={onChange}
-            />
+            {groups.map(({ group, fields }) => (
+                <details key={group} open className="group/section">
+                    <summary className="cursor-pointer list-none text-xs font-semibold tracking-wide text-muted-foreground uppercase marker:content-none [&::-webkit-details-marker]:hidden">
+                        <span className="inline-flex items-center gap-1">
+                            {groupLabels[group]}
+                            <span className="font-normal text-muted-foreground/80 normal-case">
+                                ({fields.length})
+                            </span>
+                        </span>
+                    </summary>
+                    <div className="mt-3 flex flex-col gap-4">
+                        <FieldList
+                            fields={fields}
+                            value={state}
+                            path="state"
+                            errors={errors}
+                            onChange={onChange}
+                        />
+                    </div>
+                </details>
+            ))}
         </fieldset>
     );
 }

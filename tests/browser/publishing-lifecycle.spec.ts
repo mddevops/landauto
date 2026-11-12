@@ -140,8 +140,8 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     const previewLeadPhone = phoneFor(run, '02');
     const visitor = await page.context().newPage();
 
-    // Before the first Publish the public host answers with the safe 404.
-    browserIssues.expectFailedResponse(404, 'lifecycle-e2e.localhost');
+    // Before the first Publish the Site address answers with the safe 404.
+    browserIssues.expectFailedResponse(404, owner.publicUrl);
     await visitor.goto(owner.publicUrl);
     await expect(
         visitor.getByRole('heading', { name: 'Страница не найдена' }),
@@ -309,11 +309,14 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
 
     // A broken action (scroll to a hidden block) blocks Publish until it is fixed.
     await page.goto(`${siteUrl}/designer`);
-    await page
+    const navigator = page.getByRole('complementary', { name: 'Левая панель' });
+    await navigator
         .getByRole('button', { name: 'Скрыть «Карточка автомобиля»' })
         .click();
     await expect(
-        page.getByRole('button', { name: 'Показать «Карточка автомобиля»' }),
+        navigator.getByRole('button', {
+            name: 'Показать «Карточка автомобиля»',
+        }),
     ).toBeVisible();
     await openPublishing(page, siteUrl);
     await expect(page.getByTestId('publish-errors')).toContainText(
@@ -329,11 +332,11 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         'Цикл: версия 1',
     );
     await page.goto(`${siteUrl}/designer`);
-    await page
+    await navigator
         .getByRole('button', { name: 'Показать «Карточка автомобиля»' })
         .click();
     await expect(
-        page.getByRole('button', { name: 'Скрыть «Карточка автомобиля»' }),
+        navigator.getByRole('button', { name: 'Скрыть «Карточка автомобиля»' }),
     ).toBeVisible();
     await openPublishing(page, siteUrl);
     await expect(page.getByTestId('publish-errors')).toHaveCount(0);

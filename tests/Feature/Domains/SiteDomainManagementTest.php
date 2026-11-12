@@ -218,7 +218,7 @@ class SiteDomainManagementTest extends TestCase
             ->delete(route('sites.domains.destroy', [$site, $domain]))
             ->assertRedirect(route('sites.domains.index', $site));
         $this->assertModelMissing($domain);
-        $this->assertNotNull($site->refresh()->subdomain);
+        $this->assertSame($site->public_number, $site->refresh()->public_number);
     }
 
     /**
