@@ -126,19 +126,19 @@ final class PublishedSubmissionContext
                 }
             }
 
-            $money = $manifest['offer_prices'][$ids['offer']] ?? null;
-
-            if ($offer === null || ! is_array($money)) {
+            if ($offer === null) {
                 return null;
             }
 
+            // A trim without a price has no money entry and is shown as «Цена по запросу».
+            $money = $manifest['offer_prices'][$ids['offer']] ?? null;
             $offer = [
                 'public_id' => $offer['public_id'],
                 'modification' => $offer['modification']['name'],
                 'equipment' => $offer['equipment']['name'],
-                'price_minor' => $money['price_minor'],
-                'currency' => $money['currency'],
-                'price_label' => Money::format($money['price_minor'], $money['currency']),
+                'price_minor' => is_array($money) ? $money['price_minor'] : null,
+                'currency' => is_array($money) ? $money['currency'] : Money::DEFAULT_CURRENCY,
+                'price_label' => is_array($money) ? Money::format($money['price_minor'], $money['currency']) : 'Цена по запросу',
             ];
         }
 

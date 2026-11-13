@@ -78,7 +78,7 @@ class ExpandedRolesTest extends TestCase
         $this->actingAs($user)->get(route('sites.vehicles.show', [$this->site, $vehicle]))->assertOk();
         $this->actingAs($user)
             ->patch(route('sites.offers.update', [$this->site, $offer]), [
-                'equipment' => $offer->catalog_equipment_public_id,
+                'equipment' => $offer->catalog_equipment_ref,
                 'price' => '2 000 000',
                 'status' => true,
                 'sort_order' => $offer->sort_order,

@@ -2,112 +2,102 @@
 
 namespace App\Http\Controllers\Vehicles;
 
-use App\Automotive\SeriesPicker;
-use App\Automotive\VehicleCatalog;
-use App\Automotive\WorkspaceVehicleLibrary;
+use App\Automotive\VehiclePhotos;
+use App\Automotive\VehiclePresenter;
+use App\Automotive\VehicleWizard;
+use App\Catalog\AutoCatalog;
+use App\Catalog\CatalogPresenter;
 use App\Enums\MediaAngle;
 use App\Enums\SiteStatus;
 use App\Enums\WorkspacePermission;
-use App\Exceptions\InvalidCatalogDataException;
 use App\Http\Controllers\Controller;
-use App\Models\Catalog\AutoSeries;
-use App\Models\SeriesMediaImage;
-use App\Models\SeriesMediaSet;
+use App\Http\Requests\Vehicles\StoreVehicleRequest;
 use App\Models\Site;
+use App\Models\VehicleCollection;
 use App\Models\Workspace;
 use App\Models\WorkspaceVehicle;
+use App\Models\WorkspaceVehicleOffer;
 use App\Support\SiteAccessResolver;
 use App\Support\WorkspaceContext;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * «Библиотека автомобилей» of the current Workspace (D-083). Catalog rows are read-only and
- * referenced by public_id; library entries are resolved inside the current Workspace only.
+ * Customer «Каталог» of the current Workspace (D-083, ADR-010): vehicles built from the auto.ru
+ * catalog with own photo copies, default trims with prices and collections. Every row is
+ * resolved inside the current Workspace.
  */
 class WorkspaceVehicleController extends Controller
 {
+    public const BULK_ACTIONS = ['archive', 'restore', 'delete', 'add_to_collection', 'remove_from_collection', 'copy_to_site'];
+
     public function __construct(
         private WorkspaceContext $workspaceContext,
-        private VehicleCatalog $catalog,
+        private VehiclePresenter $vehicles,
     ) {}
 
-    public function index(): Response
+    public function index(SiteAccessResolver $siteAccess): Response
     {
         $workspace = $this->authorizeLibrary();
-        $vehicles = $workspace->vehicleLibrary()->ordered()->withCount('mediaSets')->get();
-        $seriesIds = $vehicles->map(fn (WorkspaceVehicle $vehicle): string => $vehicle->catalog_series_public_id)->values()->all();
-        $series = $this->catalog->series($seriesIds);
-        $available = AutoSeries::query()->available()->whereIn('public_id', $seriesIds)->pluck('public_id')->flip();
 
         return Inertia::render('workspaces/vehicles/index', [
-            'vehicles' => $vehicles->map(fn (WorkspaceVehicle $vehicle): array => [
-                'public_id' => $vehicle->public_id,
-                'custom_name' => $vehicle->custom_name,
-                'status' => $vehicle->status,
-                'media_sets_count' => (int) $vehicle->getAttribute('media_sets_count'),
-                'catalog' => isset($series[$vehicle->catalog_series_public_id]) ? $this->catalog->seriesTitle($series[$vehicle->catalog_series_public_id]) : null,
-                'catalog_available' => isset($available[$vehicle->catalog_series_public_id]),
-            ])->values()->all(),
+            'vehicles' => $this->vehicles->cards($workspace->vehicleLibrary()->ordered()->get()),
+            'collections' => $this->collectionList($workspace),
+            'sites' => $this->importableSites($siteAccess)->map(fn (Site $site): array => ['public_id' => $site->public_id, 'name' => $site->name])->values()->all(),
         ]);
     }
 
-    public function create(Request $request, SeriesPicker $picker): Response
+    public function create(Request $request, CatalogPresenter $catalog): Response
     {
         $workspace = $this->authorizeLibrary();
 
         return Inertia::render('workspaces/vehicles/create', [
-            'levels' => $picker->levels($request, $workspace->vehicleLibrary()->pluck('catalog_series_public_id')->flip()->all()),
+            ...$catalog->wizard($request),
+            'collections' => $this->collectionList($workspace),
+            'preselectedCollection' => $request->query('collection'),
         ]);
     }
 
-    public function store(Request $request, WorkspaceVehicleLibrary $library): RedirectResponse
+    public function store(StoreVehicleRequest $request, VehicleWizard $wizard): RedirectResponse
     {
         $workspace = $this->authorizeLibrary();
-        $vehicle = $library->add($workspace, $request->string('series')->toString());
+        $vehicle = $wizard->createInCatalog($workspace, $request->draft(), $request->strings('collections'));
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Автомобиль добавлен в Каталог.']);
 
         return to_route('workspace.vehicles.show', $vehicle->public_id);
     }
 
-    public function show(string $vehicle, SiteAccessResolver $siteAccess): Response
+    public function show(Request $request, string $vehicle, SiteAccessResolver $siteAccess, CatalogPresenter $catalog, AutoCatalog $auto): Response
     {
         $workspace = $this->authorizeLibrary();
         $libraryVehicle = $this->vehicle($workspace, $vehicle);
-        $series = AutoSeries::query()->with('generation.model.mark')->where('public_id', $libraryVehicle->catalog_series_public_id)->first();
-        $selected = $libraryVehicle->mediaSets()->pluck('series_media_sets.public_id')->flip();
+        $series = $auto->series($libraryVehicle->catalog_series_ref);
 
         return Inertia::render('workspaces/vehicles/show', [
             'vehicle' => [
-                'public_id' => $libraryVehicle->public_id,
-                'custom_name' => $libraryVehicle->custom_name,
-                'custom_description' => $libraryVehicle->custom_description,
-                'status' => $libraryVehicle->status,
-                'catalog' => $series === null ? null : $this->catalog->seriesTitle($series),
+                ...$this->vehicles->detail($libraryVehicle),
+                'collections' => $libraryVehicle->collections()->pluck('vehicle_collections.public_id')->all(),
             ],
-            'mediaSets' => SeriesMediaSet::query()
-                ->where('catalog_series_public_id', $libraryVehicle->catalog_series_public_id)
-                ->active()
-                ->ordered()
-                ->with('images')
-                ->get()
-                ->map(fn (SeriesMediaSet $set): array => [
-                    'public_id' => $set->public_id,
-                    'name' => $set->name,
-                    'swatch_hex' => $set->swatch_hex,
-                    'selected' => isset($selected[$set->public_id]),
-                    'preview_url' => $this->preview($set)?->url(),
-                    'images_count' => $set->images->count(),
-                ])->values()->all(),
+            'offers' => $this->vehicles->catalogOffers($libraryVehicle),
+            'trims' => fn (): array => $series === null ? [] : $catalog->trims($series),
+            'library' => fn (): array => $catalog->library($libraryVehicle->catalog_series_ref),
+            'options' => fn (): array => $series === null ? [] : $catalog->options($series, $request->query('equipment')),
+            'angles' => MediaAngle::options(),
+            'collections' => $this->collectionList($workspace),
             'sites' => $this->importableSites($siteAccess)
                 ->map(fn (Site $site): array => [
                     'public_id' => $site->public_id,
                     'name' => $site->name,
-                    'has_vehicle' => $site->vehicles()->where('catalog_series_public_id', $libraryVehicle->catalog_series_public_id)->exists(),
+                    'has_vehicle' => $site->vehicles()->where('catalog_series_ref', $libraryVehicle->catalog_series_ref)->exists(),
                 ])->values()->all(),
         ]);
     }
@@ -117,9 +107,9 @@ class WorkspaceVehicleController extends Controller
         $libraryVehicle = $this->vehicle($this->authorizeLibrary(), $vehicle);
 
         $libraryVehicle->update($request->validate([
-            'custom_name' => ['nullable', 'string', 'max:120'],
-            'custom_description' => ['nullable', 'string', 'max:2000'],
-            'status' => ['required', 'boolean'],
+            'custom_name' => ['sometimes', 'nullable', 'string', 'max:120'],
+            'custom_description' => ['sometimes', 'nullable', 'string', 'max:2000'],
+            'status' => ['sometimes', 'boolean'],
         ], [], ['custom_name' => 'Название', 'custom_description' => 'Описание', 'status' => 'Статус']));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Изменения сохранены.']);
@@ -127,52 +117,180 @@ class WorkspaceVehicleController extends Controller
         return back();
     }
 
-    public function media(Request $request, string $vehicle): RedirectResponse
+    /**
+     * Replaces the default trims and prices; Sites keep their own copies.
+     */
+    public function offers(Request $request, string $vehicle, AutoCatalog $catalog): RedirectResponse
     {
         $libraryVehicle = $this->vehicle($this->authorizeLibrary(), $vehicle);
-
-        $data = $request->validate([
-            'sets' => ['present', 'array', 'max:50'],
-            'sets.*' => ['string', 'size:26'],
+        $series = $catalog->series($libraryVehicle->catalog_series_ref)
+            ?? throw ValidationException::withMessages(['offers' => 'Автомобиль недоступен в каталоге.']);
+        $validator = Validator::make($request->all(), StoreVehicleRequest::offerRules(), [], [
+            'offers.*.price' => 'Цена со скидкой',
+            'offers.*.rrp' => 'Цена без скидки',
         ]);
+        $input = StoreVehicleRequest::offerList($request->input('offers', []));
+        $validator->after(fn ($validator) => $validator->errors()->isEmpty() ? StoreVehicleRequest::checkOffers($validator, $catalog, $series, $input) : null);
+        $validator->validate();
 
-        try {
-            /** @var list<string> $sets */
-            $sets = array_values($data['sets']);
-            $libraryVehicle->selectMediaSets($sets);
-        } catch (InvalidCatalogDataException) {
-            throw ValidationException::withMessages(['sets' => 'Выберите доступные варианты этой серии. Обновите страницу.']);
-        }
+        DB::transaction(function () use ($libraryVehicle, $input): void {
+            $libraryVehicle->offers()->delete();
+
+            foreach (StoreVehicleRequest::parseOffers($input) as $position => $offer) {
+                $row = new WorkspaceVehicleOffer([
+                    'catalog_equipment_ref' => $offer['equipment'],
+                    'price_minor' => $offer['price_minor'],
+                    'rrp_minor' => $offer['rrp_minor'],
+                    'sort_order' => $position,
+                ]);
+                $row->vehicle()->associate($libraryVehicle)->save();
+            }
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Комплектации и цены сохранены.']);
 
         return back();
     }
 
-    public function destroy(string $vehicle): RedirectResponse
+    public function collections(Request $request, string $vehicle): RedirectResponse
     {
-        $this->vehicle($this->authorizeLibrary(), $vehicle)->delete();
+        $workspace = $this->authorizeLibrary();
+        $libraryVehicle = $this->vehicle($workspace, $vehicle);
+        $data = $request->validate(['collections' => ['present', 'array', 'max:50'], 'collections.*' => ['string', 'size:26']]);
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => 'Автомобиль удалён из библиотеки. Копии на сайтах не изменились.']);
+        $libraryVehicle->collections()->sync(
+            $workspace->vehicleCollections()->whereIn('public_id', array_map('strval', $data['collections']))->pluck('id')->all(),
+        );
+
+        return back();
+    }
+
+    public function destroy(string $vehicle, VehiclePhotos $photos): RedirectResponse
+    {
+        $libraryVehicle = $this->vehicle($this->authorizeLibrary(), $vehicle);
+
+        DB::transaction(function () use ($libraryVehicle, $photos): void {
+            $photos->removeAll($libraryVehicle);
+            $libraryVehicle->delete();
+        });
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => 'Автомобиль удалён из Каталога. Копии на сайтах не изменились.']);
 
         return to_route('workspace.vehicles.index');
     }
 
+    public function bulk(Request $request, SiteAccessResolver $siteAccess, VehicleWizard $wizard, VehiclePhotos $photos): RedirectResponse
+    {
+        $workspace = $this->authorizeLibrary();
+        $data = $request->validate([
+            'action' => ['required', Rule::in(self::BULK_ACTIONS)],
+            'vehicles' => ['required', 'array', 'min:1', 'max:500'],
+            'vehicles.*' => ['string', 'size:26'],
+            'collection' => ['required_if:action,add_to_collection,remove_from_collection', 'nullable', 'string', 'size:26'],
+            'site' => ['required_if:action,copy_to_site', 'nullable', 'string', 'size:26'],
+        ], ['vehicles.required' => 'Выберите автомобили.']);
+        $vehicles = $workspace->vehicleLibrary()->whereIn('public_id', array_map('strval', $data['vehicles']))->ordered()->get();
+        $action = (string) $data['action'];
+
+        $message = match ($action) {
+            'archive', 'restore' => $this->setStatus($vehicles, $action === 'restore'),
+            'delete' => $this->deleteMany($vehicles, $photos),
+            'add_to_collection', 'remove_from_collection' => $this->toggleCollection($workspace, $vehicles, (string) $data['collection'], $action === 'add_to_collection'),
+            default => $this->copyMany($vehicles, $this->importableSite($siteAccess, (string) $data['site']), $wizard),
+        };
+
+        Inertia::flash('toast', ['type' => 'success', 'message' => $message]);
+
+        return back();
+    }
+
     /**
-     * «Добавить на сайт»: requires the library permission, access to the destination Site and
-     * import_vehicles there. Creates an independent Site vehicle without any offers.
+     * «Добавить на сайт»: requires the Catalog permission, access to the destination Site and
+     * import_vehicles there. Photos and default trims with prices are copied.
      */
-    public function copyToSite(Request $request, string $vehicle, SiteAccessResolver $siteAccess, WorkspaceVehicleLibrary $library): RedirectResponse
+    public function copyToSite(Request $request, string $vehicle, SiteAccessResolver $siteAccess, VehicleWizard $wizard): RedirectResponse
     {
         $workspace = $this->authorizeLibrary();
         $libraryVehicle = $this->vehicle($workspace, $vehicle);
-        $sitePublicId = $request->string('site')->toString();
-        $site = $this->importableSites($siteAccess)->first(fn (Site $site): bool => $site->public_id === $sitePublicId)
-            ?? throw ValidationException::withMessages(['site' => 'Выберите доступный сайт.']);
+        $site = $this->importableSite($siteAccess, $request->string('site')->toString());
 
-        $library->copyToSite($libraryVehicle, $site);
+        $wizard->copyToSite($libraryVehicle, $site, Gate::allows('editPrices', $site));
 
         Inertia::flash('toast', ['type' => 'success', 'message' => "Автомобиль добавлен на сайт «{$site->name}»."]);
 
         return back();
+    }
+
+    /**
+     * @param  Collection<int, WorkspaceVehicle>  $vehicles
+     */
+    private function setStatus(Collection $vehicles, bool $status): string
+    {
+        $vehicles->each(fn (WorkspaceVehicle $vehicle) => $vehicle->update(['status' => $status]));
+
+        return $status ? 'Автомобили возвращены из архива.' : 'Автомобили перенесены в архив.';
+    }
+
+    /**
+     * @param  Collection<int, WorkspaceVehicle>  $vehicles
+     */
+    private function deleteMany(Collection $vehicles, VehiclePhotos $photos): string
+    {
+        DB::transaction(fn () => $vehicles->each(function (WorkspaceVehicle $vehicle) use ($photos): void {
+            $photos->removeAll($vehicle);
+            $vehicle->delete();
+        }));
+
+        return 'Автомобили удалены из Каталога. Копии на сайтах не изменились.';
+    }
+
+    /**
+     * @param  Collection<int, WorkspaceVehicle>  $vehicles
+     */
+    private function toggleCollection(Workspace $workspace, Collection $vehicles, string $collectionId, bool $add): string
+    {
+        $collection = $workspace->vehicleCollections()->where('public_id', $collectionId)->first()
+            ?? throw ValidationException::withMessages(['collection' => 'Подборка не найдена.']);
+        $ids = $vehicles->pluck('id')->all();
+        $add ? $collection->vehicles()->syncWithoutDetaching($ids) : $collection->vehicles()->detach($ids);
+
+        return $add ? "Автомобили добавлены в подборку «{$collection->name}»." : "Автомобили убраны из подборки «{$collection->name}».";
+    }
+
+    /**
+     * @param  Collection<int, WorkspaceVehicle>  $vehicles
+     */
+    private function copyMany(Collection $vehicles, Site $site, VehicleWizard $wizard): string
+    {
+        $copied = 0;
+        $skipped = 0;
+        $withPrices = Gate::allows('editPrices', $site);
+
+        foreach ($vehicles as $vehicle) {
+            try {
+                $wizard->copyToSite($vehicle, $site, $withPrices);
+                $copied++;
+            } catch (ValidationException) {
+                $skipped++;
+            }
+        }
+
+        return $skipped === 0
+            ? "На сайт «{$site->name}» добавлено автомобилей: {$copied}."
+            : "На сайт «{$site->name}» добавлено автомобилей: {$copied}. Пропущено: {$skipped} — уже есть на сайте или в архиве.";
+    }
+
+    /**
+     * @return list<array{public_id: string, name: string, vehicles_count: int}>
+     */
+    private function collectionList(Workspace $workspace): array
+    {
+        return array_values($workspace->vehicleCollections()->ordered()->withCount('vehicles')->get()
+            ->map(fn (VehicleCollection $collection): array => [
+                'public_id' => $collection->public_id,
+                'name' => $collection->name,
+                'vehicles_count' => (int) $collection->getAttribute('vehicles_count'),
+            ])->all());
     }
 
     private function authorizeLibrary(): Workspace
@@ -185,6 +303,12 @@ class WorkspaceVehicleController extends Controller
     private function vehicle(Workspace $workspace, string $publicId): WorkspaceVehicle
     {
         return $workspace->vehicleLibrary()->where('public_id', $publicId)->first() ?? abort(404);
+    }
+
+    private function importableSite(SiteAccessResolver $siteAccess, string $publicId): Site
+    {
+        return $this->importableSites($siteAccess)->first(fn (Site $site): bool => $site->public_id === $publicId)
+            ?? throw ValidationException::withMessages(['site' => 'Выберите доступный сайт.']);
     }
 
     /**
@@ -203,10 +327,5 @@ class WorkspaceVehicleController extends Controller
             ->filter(fn (Site $site): bool => Gate::allows('importVehicles', $site))
             ->values()
             ->toBase();
-    }
-
-    private function preview(SeriesMediaSet $set): ?SeriesMediaImage
-    {
-        return $set->images->sortBy(fn (SeriesMediaImage $image): int => $image->angle === MediaAngle::FrontThreeQuarter ? -1 : $image->angle->position())->first();
     }
 }

@@ -12,11 +12,12 @@ use App\Models\Form;
 use App\Models\FormField;
 use App\Models\Page;
 use App\Models\Popup;
-use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteOfferBenefit;
 use App\Models\SiteVehicle;
+use App\Models\VehicleColor;
+use App\Models\VehiclePhoto;
 use App\Popups\PopupRuntime;
 use App\Support\SiteDesignTokens;
 use Illuminate\Support\Facades\DB;
@@ -190,6 +191,10 @@ final class PublishedSnapshotBuilder
             }
         }
 
+        foreach ($vehicle['media']['gallery'] as $i => $image) {
+            unset($vehicle['media']['gallery'][$i]['url']);
+        }
+
         return $vehicle;
     }
 
@@ -213,10 +218,14 @@ final class PublishedSnapshotBuilder
                     $images[$image['public_id']] = true;
                 }
             }
+
+            foreach ($vehicle['media']['gallery'] as $image) {
+                $images[$image['public_id']] = true;
+            }
         }
 
         foreach (array_keys($images) as $imageId) {
-            $references[] = ['kind' => PublishedAssetKind::SeriesMediaImage, 'public_id' => (string) $imageId];
+            $references[] = ['kind' => PublishedAssetKind::VehiclePhoto, 'public_id' => (string) $imageId];
         }
 
         return $references;
@@ -232,7 +241,7 @@ final class PublishedSnapshotBuilder
     private function draftSnapshot(Site $site, array $pages): array
     {
         $vehicles = $site->vehicles()->ordered()
-            ->with(['offers' => fn ($query) => $query->ordered()->with('benefits'), 'mediaSets'])
+            ->with(['offers' => fn ($query) => $query->ordered()->with('benefits'), 'colors', 'photos'])
             ->get();
         $forms = $site->forms()->with('fields')->orderBy('id')->get();
         $popups = $site->popups()->with('form')->orderBy('id')->get();
@@ -258,15 +267,27 @@ final class PublishedSnapshotBuilder
             ], $pages),
             'vehicles' => array_values($vehicles->map(fn (SiteVehicle $vehicle): array => [
                 'public_id' => $vehicle->public_id,
-                'catalog_series_public_id' => $vehicle->catalog_series_public_id,
+                'catalog_series_ref' => $vehicle->catalog_series_ref,
                 'status' => $vehicle->status,
                 'sort_order' => $vehicle->sort_order,
                 'custom_name' => $vehicle->custom_name,
                 'custom_description' => $vehicle->custom_description,
-                'media_sets' => array_values($vehicle->mediaSets->map(fn (SeriesMediaSet $set): string => $set->public_id)->all()),
+                'primary_angle' => $vehicle->primary_angle?->value,
+                'colors' => array_values($vehicle->colors->map(fn (VehicleColor $color): array => [
+                    'public_id' => $color->public_id,
+                    'name' => $color->name,
+                    'swatch_hex' => $color->swatch_hex,
+                    'sort_order' => $color->sort_order,
+                ])->all()),
+                'photos' => array_values($vehicle->photos->map(fn (VehiclePhoto $photo): array => [
+                    'public_id' => $photo->public_id,
+                    'color' => $vehicle->colors->firstWhere('id', $photo->vehicle_color_id)?->public_id,
+                    'angle' => $photo->angle?->value,
+                    'sort_order' => $photo->sort_order,
+                ])->all()),
                 'offers' => array_values($vehicle->offers->map(fn (SiteOffer $offer): array => [
                     'public_id' => $offer->public_id,
-                    'catalog_equipment_public_id' => $offer->catalog_equipment_public_id,
+                    'catalog_equipment_ref' => $offer->catalog_equipment_ref,
                     'price_minor' => $offer->price_minor,
                     'rrp_minor' => $offer->rrp_minor,
                     'currency' => $offer->currency,

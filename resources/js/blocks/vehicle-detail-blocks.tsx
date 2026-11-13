@@ -9,11 +9,15 @@ import { TriggerScope } from '@/blocks/trigger-context';
 import {
     ColorSwatches,
     VehiclePlaceholder,
-    cardImage,
     useVehicle,
+    vehicleSubtitle,
 } from '@/blocks/vehicle-blocks';
 import type { VehicleBinding, VehicleOffer } from '@/blocks/vehicles';
-import { vehicleFullTitle } from '@/blocks/vehicles';
+import {
+    PRICE_ON_REQUEST,
+    primaryImage,
+    vehicleFullTitle,
+} from '@/blocks/vehicles';
 import { cn } from '@/lib/utils';
 
 function VehicleSection({
@@ -215,26 +219,52 @@ function Gallery({
     const [setId, setSetId] = useState(sets[0]?.public_id);
     const set =
         sets.find((candidate) => candidate.public_id === setId) ?? sets[0];
-    const [angle, setAngle] = useState(cardImage(set)?.angle);
-    const image =
-        set?.images.find((candidate) => candidate.angle === angle) ??
-        cardImage(set);
+    const slides = [
+        ...(set?.images ?? []).map((image) => ({
+            key: image.public_id,
+            label: image.label,
+            url: image.url,
+            width: image.width,
+            height: image.height,
+        })),
+        ...(vehicle.media.gallery ?? []).map((image, index) => ({
+            key: image.public_id,
+            label: `фото ${index + 1}`,
+            url: image.url,
+            width: image.width,
+            height: image.height,
+        })),
+    ];
+    const primaryIndex = () => {
+        const primary = primaryImage(vehicle, set);
+        const index = slides.findIndex(
+            (slide) => slide.key === primary?.public_id,
+        );
+
+        return Math.max(0, index);
+    };
+    const [current, setCurrent] = useState(primaryIndex);
+    const index = Math.min(current, Math.max(0, slides.length - 1));
+    const image = slides[index];
     const [lightboxOpen, setLightboxOpen] = useState(false);
     const photoButton = useRef<HTMLButtonElement>(null);
     const imageAlt = (label: string) =>
-        `${vehicleFullTitle(vehicle)}, ${set?.name ?? ''}, ${label}`;
-    const lightboxImages = (set?.images ?? []).map((candidate) => ({
-        url: candidate.url,
-        alt: imageAlt(candidate.label),
-        width: candidate.width,
-        height: candidate.height,
-    }));
-    const imageIndex = Math.max(
-        0,
-        set?.images.findIndex(
-            (candidate) => candidate.angle === image?.angle,
-        ) ?? 0,
-    );
+        [vehicleFullTitle(vehicle), set?.name, label]
+            .filter(Boolean)
+            .join(', ');
+    const selectColor = (next: string) => {
+        const nextSet = sets.find((candidate) => candidate.public_id === next);
+        const primary = primaryImage(vehicle, nextSet);
+        setSetId(next);
+        setCurrent(
+            Math.max(
+                0,
+                (nextSet?.images ?? []).findIndex(
+                    (candidate) => candidate.public_id === primary?.public_id,
+                ),
+            ),
+        );
+    };
 
     return (
         <div className="grid gap-6 lg:grid-cols-[2fr_1fr] lg:items-start">
@@ -266,36 +296,42 @@ function Gallery({
                 </div>
                 <Lightbox
                     label={`Фото: ${vehicleFullTitle(vehicle)}`}
-                    images={lightboxImages}
-                    index={imageIndex}
-                    onIndexChange={(next) => setAngle(set?.images[next]?.angle)}
+                    images={slides.map((slide) => ({
+                        url: slide.url,
+                        alt: imageAlt(slide.label),
+                        width: slide.width,
+                        height: slide.height,
+                    }))}
+                    index={index}
+                    onIndexChange={setCurrent}
                     open={lightboxOpen}
                     onOpenChange={setLightboxOpen}
                     returnFocusTo={photoButton}
                 />
-                {set && set.images.length > 1 && (
+                {slides.length > 1 && (
                     <div
                         role="group"
-                        aria-label="Ракурс"
-                        className="flex flex-wrap gap-2"
+                        aria-label="Фото"
+                        className="flex gap-2 overflow-x-auto pb-1"
                     >
-                        {set.images.map((candidate) => (
+                        {slides.map((slide, position) => (
                             <button
-                                key={candidate.angle}
+                                key={slide.key}
                                 type="button"
-                                aria-label={candidate.label}
-                                aria-pressed={candidate.angle === image?.angle}
-                                onClick={() => setAngle(candidate.angle)}
+                                aria-label={slide.label}
+                                aria-pressed={position === index}
+                                onClick={() => setCurrent(position)}
                                 className={cn(
-                                    'h-14 w-20 overflow-hidden rounded-(--lf-radius) border-2 bg-neutral-100',
-                                    candidate.angle === image?.angle
+                                    'h-14 w-20 shrink-0 overflow-hidden rounded-(--lf-radius) border-2 bg-neutral-100',
+                                    position === index
                                         ? 'border-(--lf-primary)'
                                         : 'border-transparent',
                                 )}
                             >
                                 <img
-                                    src={candidate.url}
+                                    src={slide.url}
                                     alt=""
+                                    loading="lazy"
                                     className="size-full object-contain"
                                 />
                             </button>
@@ -308,13 +344,13 @@ function Gallery({
                     <div>
                         <h2 className="text-3xl font-bold">{vehicle.title}</h2>
                         <p className="text-neutral-500">
-                            {vehicle.generation} · {vehicle.series}
+                            {vehicleSubtitle(vehicle)}
                         </p>
-                        {vehicle.price_from_label && (
-                            <p className="mt-3 text-2xl font-bold">
-                                от {vehicle.price_from_label}
-                            </p>
-                        )}
+                        <p className="mt-3 text-2xl font-bold">
+                            {vehicle.price_from_label
+                                ? `от ${vehicle.price_from_label}`
+                                : PRICE_ON_REQUEST}
+                        </p>
                         {vehicle.benefit_up_to_label && (
                             <p className="text-sm font-medium text-(--lf-secondary)">
                                 Выгода до {vehicle.benefit_up_to_label}
@@ -331,7 +367,7 @@ function Gallery({
                         <ColorSwatches
                             sets={sets}
                             selected={set.public_id}
-                            onSelect={setSetId}
+                            onSelect={selectColor}
                         />
                     </div>
                 )}
@@ -391,7 +427,9 @@ function OfferRow({
                     )}
                 </div>
                 <div className="text-right">
-                    <p className="text-xl font-bold">{offer.price_label}</p>
+                    <p className="text-xl font-bold">
+                        {offer.price_label ?? PRICE_ON_REQUEST}
+                    </p>
                     {offer.rrp_label && (
                         <p className="text-sm text-neutral-500 line-through">
                             {offer.rrp_label}

@@ -10,6 +10,8 @@ const png = Buffer.from(
     'base64',
 );
 
+const ANGLE = '3/4, смотрит влево';
+
 async function login(page: Page, email: string, password: string) {
     await page.goto('/login');
     await page.getByLabel('Электронная почта').fill(email);
@@ -18,36 +20,34 @@ async function login(page: Page, email: string, password: string) {
     await expect(page).toHaveURL('/dashboard');
 }
 
-async function addMediaSet(page: Page, name: string, swatch: string) {
-    await page.getByRole('button', { name: 'Добавить набор' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Новый набор' });
-    await dialog.getByLabel('Название').fill(name);
-    await dialog.getByLabel('Цвет образца').fill(swatch);
+async function addColor(page: Page, name: string, swatch: string) {
+    await page.getByRole('button', { name: 'Добавить цвет' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Новый цвет' });
+    await dialog.getByLabel('Название цвета').fill(name);
+    await dialog.getByRole('textbox', { name: 'Образец цвета' }).fill(swatch);
     await dialog.getByRole('button', { name: 'Сохранить' }).click();
     await expect(dialog).toBeHidden();
 
-    const slot = page
-        .getByRole('region', { name })
+    const color = page.getByRole('article', { name: `Цвет ${name}` });
+    await color
         .getByRole('figure')
-        .filter({ hasText: 'Спереди 3/4' });
-    await slot.getByLabel('Файл для ракурса «Спереди 3/4»').setInputFiles({
-        name: `${name}.png`,
-        mimeType: 'image/png',
-        buffer: png,
-    });
-    await slot.getByRole('button', { name: 'Загрузить' }).click();
-    await expect(
-        slot.getByRole('img', { name: `${name}: Спереди 3/4` }),
-    ).toBeVisible();
+        .filter({ hasText: ANGLE })
+        .locator('input[type="file"]')
+        .setInputFiles({
+            name: `${name}.png`,
+            mimeType: 'image/png',
+            buffer: png,
+        });
+    await expect(color.getByRole('img', { name: ANGLE })).toBeVisible();
 }
 
-test('platform admin prepares the catalog, dealer adds a priced vehicle and shows it on the site', async ({
+test('platform admin prepares series photos, dealer adds a priced vehicle with the wizard and shows it on the site', async ({
     page,
     context,
 }) => {
     test.setTimeout(120_000);
 
-    // Platform super admin: Series media sets and an Equipment characteristic.
+    // Platform: browse the auto.ru catalog and fill the Series photo library.
     await login(page, users.catalogAdmin.email, users.catalogAdmin.password);
     await page.goto('/platform/catalog');
     await expect(
@@ -56,33 +56,19 @@ test('platform admin prepares the catalog, dealer adds a priced vehicle and show
     await page.getByRole('link', { name: 'Kia', exact: true }).click();
     await page.getByRole('link', { name: 'Rio', exact: true }).click();
     await page
-        .getByRole('link', { name: 'IV Рестайлинг', exact: true })
+        .getByRole('link', { name: 'IV Рестайлинг, Седан', exact: true })
         .click();
-    await page.getByRole('link', { name: 'Медиа серии Седан' }).click();
     await expect(
-        page.getByRole('heading', { name: 'Медиа серии Седан' }),
+        page.getByRole('heading', { name: 'Kia Rio', level: 1 }),
     ).toBeVisible();
 
-    await addMediaSet(page, 'Белый', '#f4f4f4');
-    await addMediaSet(page, 'Красный', '#c62828');
+    await addColor(page, 'Белый', '#f4f4f4');
+    await addColor(page, 'Красный', '#c62828');
 
-    await page.getByRole('link', { name: 'Вернуться к каталогу' }).click();
-    await page
-        .getByRole('link', { name: '1.6 AT 123 л.с.', exact: true })
-        .click();
-    await page.getByRole('link', { name: 'Comfort', exact: true }).click();
-    await expect(
-        page.getByRole('heading', { name: 'Комплектация Comfort' }),
-    ).toBeVisible();
-    await page.getByLabel('Клиренс, мм').fill('165');
-    await page
-        .getByRole('button', { name: 'Сохранить характеристики' })
-        .click();
-    await expect(page.getByText('Сохранено')).toBeVisible();
-    await page.reload();
-    await expect(page.getByLabel('Клиренс, мм')).toHaveValue('165');
+    await page.getByRole('tab', { name: 'Модификации и комплектации' }).click();
+    await expect(page.getByText('Comfort', { exact: true })).toBeVisible();
 
-    // Dealer: new Site, vehicle by Series, offer with a price and a benefit.
+    // Dealer: new Site, vehicle through the wizard with photos and a priced trim.
     await context.clearCookies();
     const dealer = users.dealer;
     const siteName = `Автосалон E2E ${Date.now()}`;
@@ -104,36 +90,44 @@ test('platform admin prepares the catalog, dealer adds a priced vehicle and show
         .getByRole('link', { name: `Автомобили сайта «${siteName}»` })
         .click();
     await page.getByRole('link', { name: 'Добавить автомобиль' }).click();
-    await page.getByRole('link', { name: 'Kia', exact: true }).click();
-    await page.getByRole('link', { name: 'Rio', exact: true }).click();
+
+    await page.getByRole('button', { name: 'Kia', exact: true }).click();
+    await page.getByRole('button', { name: 'Rio', exact: true }).click();
     await page
-        .getByRole('link', { name: 'IV Рестайлинг', exact: true })
+        .getByRole('button', { name: 'IV Рестайлинг, Седан', exact: true })
         .click();
-    await page.getByRole('button', { name: 'Добавить серию Седан' }).click();
+    await expect(
+        page.getByRole('heading', { name: 'Фото', level: 2 }),
+    ).toBeVisible();
+    await expect(page.getByRole('checkbox').first()).toBeChecked();
+    await page.getByRole('button', { name: 'Далее' }).click();
+
+    await page
+        .getByRole('checkbox', { name: 'Выбрать комплектацию Comfort' })
+        .check();
+    await page
+        .getByRole('textbox', { name: 'Цена со скидкой: Comfort' })
+        .fill('1 549 900');
+    await page.getByRole('button', { name: 'Далее' }).click();
+    await expect(
+        page.getByRole('heading', { name: 'Проверьте и добавьте' }),
+    ).toBeVisible();
+    await page.getByRole('button', { name: 'Добавить', exact: true }).click();
+
     await expect(
         page.getByRole('heading', { name: 'Kia Rio', level: 1 }),
     ).toBeVisible();
+    const offers = page.getByRole('region', { name: 'Комплектации и цены' });
+    await expect(offers).toContainText(/1\s549\s900\s₽/);
 
-    await page.getByRole('button', { name: 'Добавить предложение' }).click();
+    await offers.getByRole('button', { name: 'Изменить' }).click();
     const offerDialog = page.getByRole('dialog', {
-        name: 'Новое предложение',
+        name: 'Изменить предложение',
     });
-    const modification = offerDialog.getByLabel('Модификация');
-    const modificationValue = await modification
-        .locator('option', { hasText: '1.6 AT 123 л.с.' })
-        .getAttribute('value');
-    await modification.selectOption(modificationValue ?? '');
-    await offerDialog
-        .getByLabel('Комплектация')
-        .selectOption({ label: 'Comfort' });
-    await offerDialog.getByLabel('Цена, ₽', { exact: true }).fill('1 549 900');
     await offerDialog.getByRole('button', { name: 'Добавить выгоду' }).click();
     await offerDialog.getByLabel('Сумма, ₽').fill('100 000');
     await offerDialog.getByRole('button', { name: 'Сохранить' }).click();
     await expect(offerDialog).toBeHidden();
-    await expect(
-        page.getByRole('region', { name: 'Предложения' }),
-    ).toContainText(/1\s549\s900\s₽/);
 
     // Designer: Vehicle Grid shows every Site vehicle; an Offers block is bound explicitly.
     await page.goto('/dashboard');
@@ -160,7 +154,7 @@ test('platform admin prepares the catalog, dealer adds a priced vehicle and show
     await expect(page.getByText('Сохранено', { exact: true })).toBeVisible();
     await expect(canvas).toContainText('Comfort');
 
-    // Preview: price, image and color switching; the offer expands to catalog data.
+    // Preview: price, the copied photo and colour switching; the trim expands to catalog data.
     const previewOpened = context.waitForEvent('page');
     await page.getByRole('link', { name: 'Предпросмотр' }).click();
     const preview = await previewOpened;
@@ -187,6 +181,6 @@ test('platform admin prepares the catalog, dealer adds a priced vehicle and show
         main.getByRole('button', { name: 'Скрыть подробности' }),
     ).toHaveAttribute('aria-expanded', 'true');
     await expect(main).toContainText('Клиренс');
-    await expect(main).toContainText('165 мм');
+    await expect(main).toContainText('160 мм');
     await expect(main).toContainText('Подогрев передних сидений');
 });

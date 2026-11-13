@@ -112,8 +112,8 @@ class ChatSelectionSiteFlowTest extends TestCase
     {
         $mark = AutoMark::factory()->create(['name' => 'Changan', 'url' => 'changan-'.$site->id]);
         $model = AutoModel::factory()->for($mark, 'mark')->create(['name' => 'UNI-K', 'url' => 'uni-k']);
-        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'I', 'url' => 'i']);
-        $series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Кроссовер', 'url' => 'suv']);
+        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'I']);
+        $series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Кроссовер']);
 
         return SiteVehicle::factory()->for($site)->forSeries($series)->create();
     }

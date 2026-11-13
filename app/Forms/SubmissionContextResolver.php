@@ -2,17 +2,15 @@
 
 namespace App\Forms;
 
-use App\Automotive\VehicleCatalog;
 use App\Blocks\OfficialBlockCatalog;
+use App\Catalog\AutoCatalog;
 use App\Models\BlockInstance;
-use App\Models\Catalog\AutoEquipment;
-use App\Models\Catalog\AutoSeries;
 use App\Models\Form;
 use App\Models\Page;
 use App\Models\Popup;
-use App\Models\SeriesMediaSet;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
+use App\Models\VehicleColor;
 use App\Support\Money;
 use Illuminate\Support\Str;
 
@@ -35,7 +33,7 @@ class SubmissionContextResolver
 
     public const UTM_KEYS = ['utm_source', 'utm_medium', 'utm_campaign', 'utm_content', 'utm_term'];
 
-    public function __construct(private VehicleCatalog $catalog) {}
+    public function __construct(private AutoCatalog $catalog) {}
 
     /**
      * @return Context|null Null when a hint is malformed or does not belong to this Form's Site.
@@ -150,20 +148,20 @@ class SubmissionContextResolver
             $vehicle ??= $offer->vehicle;
         }
 
-        if ($vehicle !== null) {
-            $series = AutoSeries::query()->available()->with('generation.model.mark')
-                ->where('public_id', $vehicle->catalog_series_public_id)->first();
+        $series = $vehicle === null ? null : $this->catalog->series($vehicle->catalog_series_ref);
 
+        if ($vehicle !== null) {
             if ($series === null) {
                 return null;
             }
 
-            $trusted['vehicle'] = ['public_id' => $vehicle->public_id, ...$this->catalog->seriesTitle($series)];
+            $title = $this->catalog->title($series);
+            unset($title['years']);
+            $trusted['vehicle'] = ['public_id' => $vehicle->public_id, ...$title];
         }
 
         if ($offer !== null) {
-            $equipment = AutoEquipment::query()->available()->with('modification')
-                ->where('public_id', $offer->catalog_equipment_public_id)->first();
+            $equipment = $series === null ? null : $this->catalog->equipment($series, $offer->catalog_equipment_ref);
 
             if ($equipment === null) {
                 return null;
@@ -171,22 +169,22 @@ class SubmissionContextResolver
 
             $trusted['offer'] = [
                 'public_id' => $offer->public_id,
-                'modification' => $equipment->modification->name,
-                'equipment' => $equipment->name,
+                'modification' => $this->catalog->facts([$equipment->modification])[$equipment->modification_id]->label(),
+                'equipment' => $equipment->displayName(),
                 'price_minor' => $offer->price_minor,
                 'currency' => $offer->currency,
-                'price_label' => Money::format($offer->price_minor, $offer->currency),
+                'price_label' => $offer->price_minor === null ? 'Цена по запросу' : Money::format($offer->price_minor, $offer->currency),
             ];
         }
 
         if (isset($ids['media_set'])) {
-            $set = $vehicle?->mediaSets()->active()->where('series_media_sets.public_id', $ids['media_set'])->first();
+            $color = $vehicle?->colors()->where('public_id', $ids['media_set'])->first();
 
-            if (! $set instanceof SeriesMediaSet) {
+            if (! $color instanceof VehicleColor) {
                 return null;
             }
 
-            $trusted['media_set'] = ['public_id' => $set->public_id, 'name' => $set->name];
+            $trusted['media_set'] = ['public_id' => $color->public_id, 'name' => $color->name];
         }
 
         return $trusted;

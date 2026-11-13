@@ -2,9 +2,9 @@
 
 namespace Database\Factories;
 
+use App\Catalog\AutoCatalog;
 use App\Models\Catalog\AutoEquipment;
 use App\Models\Catalog\AutoModification;
-use App\Models\Catalog\AutoSeries;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use Illuminate\Database\Eloquent\Factories\Factory;
@@ -21,14 +21,14 @@ class SiteOfferFactory extends Factory
     {
         return [
             'site_vehicle_id' => SiteVehicle::factory(),
-            'catalog_equipment_public_id' => function (array $attributes): string {
+            'catalog_equipment_ref' => function (array $attributes): string {
                 $vehicle = SiteVehicle::query()->whereKey($attributes['site_vehicle_id'])->firstOrFail();
-                $series = AutoSeries::query()->where('public_id', $vehicle->catalog_series_public_id)->firstOrFail();
+                $series = app(AutoCatalog::class)->series($vehicle->catalog_series_ref) ?? throw new \RuntimeException('Vehicle Series is missing.');
 
                 return AutoEquipment::factory()
                     ->for(AutoModification::factory()->for($series, 'series'), 'modification')
                     ->create()
-                    ->public_id;
+                    ->external_key;
             },
             'price_minor' => 185_000_000,
             'rrp_minor' => null,
@@ -42,6 +42,6 @@ class SiteOfferFactory extends Factory
 
     public function forEquipment(AutoEquipment $equipment): static
     {
-        return $this->state(['catalog_equipment_public_id' => $equipment->public_id]);
+        return $this->state(['catalog_equipment_ref' => $equipment->external_key]);
     }
 }

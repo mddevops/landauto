@@ -363,12 +363,13 @@ test('vehicle offer reuses a popup with trusted context; anti-spam, captcha, car
     const lightbox = preview.getByRole('dialog', {
         name: /Фото: Lada Vesta/,
     });
-    await expect(lightbox).toContainText('1 из 2');
+    // The gallery opens on the primary angle (3/4), the second of the two angles.
+    await expect(lightbox).toContainText('2 из 2');
     await expect(lightbox.getByRole('img')).toHaveAccessibleName(/Серебристый/);
     await lightbox.getByRole('button', { name: 'Следующее фото' }).click();
-    await expect(lightbox).toContainText('2 из 2');
-    await preview.keyboard.press('ArrowRight');
     await expect(lightbox).toContainText('1 из 2');
+    await preview.keyboard.press('ArrowRight');
+    await expect(lightbox).toContainText('2 из 2');
     await preview.keyboard.press('Escape');
     await expect(lightbox).toBeHidden();
     await expect(photo).toBeFocused();

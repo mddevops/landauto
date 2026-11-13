@@ -3,47 +3,35 @@
 namespace App\Models\Catalog;
 
 use Database\Factories\Catalog\AutoGenerationFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Поколение. A restyling is its own generation row.
+ * Поколение.
  *
  * @property int $model_id
+ * @property int|null $external_id
  * @property string $name
- * @property string $url
  * @property int|null $year_from
  * @property int|null $year_to
- * @property bool $status
- * @property int $sort_order
  * @property-read AutoModel $model
  */
-#[Fillable(['name', 'url', 'year_from', 'year_to', 'status', 'sort_order'])]
-#[Hidden(['id', 'model_id'])]
 class AutoGeneration extends CatalogModel
 {
     /** @use HasFactory<AutoGenerationFactory> */
     use HasFactory;
 
-    protected const PARENT_KEY = 'model_id';
-
     protected $table = 'auto_generations';
+
+    protected $hidden = ['id', 'model_id'];
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return [
-            'status' => 'boolean',
-            'sort_order' => 'integer',
-            'year_from' => 'integer',
-            'year_to' => 'integer',
-        ];
+        return ['external_id' => 'integer', 'year_from' => 'integer', 'year_to' => 'integer'];
     }
 
     /**
@@ -63,11 +51,14 @@ class AutoGeneration extends CatalogModel
     }
 
     /**
-     * @param  Builder<static>  $query
+     * «2020–2024», «с 2021» or null.
      */
-    public function scopeAvailable(Builder $query): void
+    public function years(): ?string
     {
-        $query->where($this->qualifyColumn('status'), true)
-            ->whereHas('model', fn (Builder $model) => $model->available());
+        return match (true) {
+            $this->year_from !== null && $this->year_to !== null => $this->year_from === $this->year_to ? (string) $this->year_from : "{$this->year_from}–{$this->year_to}",
+            $this->year_from !== null => "с {$this->year_from}",
+            default => null,
+        };
     }
 }

@@ -18,7 +18,7 @@ class SiteVehicleFactory extends Factory
     {
         return [
             'site_id' => Site::factory(),
-            'catalog_series_public_id' => fn (): string => AutoSeries::factory()->create()->public_id,
+            'catalog_series_ref' => fn (): string => (string) AutoSeries::factory()->create()->ref(),
             'status' => true,
             'sort_order' => 0,
         ];
@@ -26,6 +26,6 @@ class SiteVehicleFactory extends Factory
 
     public function forSeries(AutoSeries $series): static
     {
-        return $this->state(['catalog_series_public_id' => $series->public_id]);
+        return $this->state(['catalog_series_ref' => (string) $series->ref()]);
     }
 }

@@ -3,6 +3,7 @@
 namespace Database\Seeders;
 
 use App\Actions\Sites\CreateSite;
+use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockStateDefaults;
 use App\Enums\BlockCategory;
 use App\Enums\CatalogAccessMode;
@@ -18,8 +19,11 @@ use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Catalog\AutoEquipment;
+use App\Models\Catalog\AutoGeneration;
 use App\Models\Catalog\AutoMark;
+use App\Models\Catalog\AutoModel;
 use App\Models\Catalog\AutoModification;
+use App\Models\Catalog\AutoSeries;
 use App\Models\DeveloperProfile;
 use App\Models\Form;
 use App\Models\Page;
@@ -372,14 +376,8 @@ class E2eSeeder extends Seeder
         $form = Form::factory()->for($siteA)->withLeadFields()->create(['name' => 'Заявка команды']);
         Submission::factory()->create(['form_id' => $form->id]);
 
-        $mark = AutoMark::query()->firstOrCreate(['url' => 'testmash'], ['name' => 'Тестмаш', 'name_ru' => 'Тестмаш', 'country' => 'Россия', 'status' => true]);
-        $model = $mark->models()->firstOrCreate(['url' => 't-1'], ['name' => 'Т-1', 'name_ru' => 'Т-1', 'year_from' => 2024, 'status' => true]);
-        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2024, 'status' => true]);
-        $hatchback = $generation->series()->firstOrCreate(['url' => 'hatchback'], ['name' => 'Хэтчбек', 'status' => true]);
-        $generation->series()->firstOrCreate(['url' => 'wagon'], ['name' => 'Универсал', 'status' => true]);
-        $equipment = AutoEquipment::factory()
-            ->for(AutoModification::factory()->for($hatchback, 'series')->state(['name' => '1.6 MT 110 л.с.']), 'modification')
-            ->create(['name' => 'Стандарт']);
+        [$hatchback] = $this->catalogBranch('testmash', 'Тестмаш', 't-1', 'Т-1', 2024, ['Хэтчбек', 'Универсал']);
+        $equipment = $this->catalogEquipment($hatchback, '1.6 MT (110 л.с.)', 'Стандарт');
         $vehicle = SiteVehicle::factory()->for($siteA)->forSeries($hatchback)->create(['sort_order' => 0]);
         SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 200_000_000]);
 
@@ -417,13 +415,8 @@ class E2eSeeder extends Seeder
         $popup = Popup::factory()->for($site)->create(['name' => 'Обратный звонок', 'title' => 'Перезвоним за 5 минут']);
         $popup->form()->associate($form)->save();
 
-        $mark = AutoMark::query()->firstOrCreate(['url' => 'moskvich'], ['name' => 'Moskvich', 'name_ru' => 'Москвич', 'country' => 'Россия', 'status' => true]);
-        $model = $mark->models()->firstOrCreate(['url' => 'moskvich-6'], ['name' => 'Moskvich 6', 'name_ru' => 'Москвич 6', 'year_from' => 2023, 'status' => true]);
-        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2023, 'status' => true]);
-        $series = $generation->series()->firstOrCreate(['url' => 'liftback'], ['name' => 'Лифтбек', 'status' => true]);
-        $equipment = AutoEquipment::factory()
-            ->for(AutoModification::factory()->for($series, 'series')->state(['name' => '1.5 CVT 174 л.с.']), 'modification')
-            ->create(['name' => 'Престиж']);
+        [$series] = $this->catalogBranch('moskvich', 'Moskvich', 'moskvich-6', 'Moskvich 6', 2023, ['Лифтбек']);
+        $equipment = $this->catalogEquipment($series, '1.5 CVT (174 л.с.)', 'Престиж');
         $vehicle = SiteVehicle::factory()->for($site)->forSeries($series)->create(['sort_order' => 0]);
         SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 254_000_000]);
 
@@ -461,39 +454,15 @@ class E2eSeeder extends Seeder
         $popup = Popup::factory()->for($site)->create(['name' => 'Тест-драйв', 'title' => 'Тест-драйв за 15 минут']);
         $popup->form()->associate($form)->save();
 
-        $mark = AutoMark::query()->firstOrCreate(['url' => 'moskvich'], ['name' => 'Moskvich', 'name_ru' => 'Москвич', 'country' => 'Россия', 'status' => true]);
-        $model = $mark->models()->firstOrCreate(['url' => 'moskvich-3'], ['name' => 'Moskvich 3', 'name_ru' => 'Москвич 3', 'year_from' => 2022, 'status' => true]);
-        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2022, 'status' => true]);
-        $series = $generation->series()->firstOrCreate(['url' => 'crossover'], ['name' => 'Кроссовер', 'status' => true]);
-        $liftback = $generation->series()->firstOrCreate(['url' => 'liftback'], ['name' => 'Лифтбек', 'status' => true]);
-        $equipment = AutoEquipment::factory()
-            ->for(AutoModification::factory()->for($series, 'series')->state(['name' => '1.5 CVT 150 л.с.']), 'modification')
-            ->create(['name' => 'Люкс']);
+        [$series, $liftback] = $this->catalogBranch('moskvich', 'Moskvich', 'moskvich-3', 'Moskvich 3', 2022, ['Кроссовер', 'Лифтбек']);
+        $equipment = $this->catalogEquipment($series, '1.5 CVT (150 л.с.)', 'Люкс');
         $vehicle = SiteVehicle::factory()->for($site)->forSeries($series)->create(['sort_order' => 0]);
         SiteVehicle::factory()->for($site)->forSeries($liftback)->create(['sort_order' => 1]);
         SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 199_000_000]);
-
-        $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-        $colors = [['Белый', '#f4f4f4', [MediaAngle::FrontThreeQuarter, MediaAngle::Side]], ['Красный', '#c62828', [MediaAngle::FrontThreeQuarter]]];
-
-        foreach ($colors as $order => [$name, $swatch, $angles]) {
-            $set = new SeriesMediaSet(['name' => $name, 'swatch_hex' => $swatch, 'status' => true, 'sort_order' => $order]);
-            $set->catalog_series_public_id = $series->public_id;
-            $set->save();
-
-            foreach ($angles as $angle) {
-                $path = "series-media/e2e-lifecycle/{$order}-{$angle->value}.png";
-                Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
-                SeriesMediaImage::factory()->for($set, 'set')->create([
-                    'angle' => $angle,
-                    'path' => $path,
-                    'original_name' => "{$angle->value}.png",
-                    'size_bytes' => strlen($png),
-                    'width' => 1,
-                    'height' => 1,
-                ]);
-            }
-        }
+        $this->vehicleColors($vehicle, $series, 'e2e-lifecycle', [
+            ['Белый', '#f4f4f4', [MediaAngle::FrontThreeQuarterLeft, MediaAngle::SideLeft]],
+            ['Красный', '#c62828', [MediaAngle::FrontThreeQuarterLeft]],
+        ]);
 
         $popupAction = ['type' => 'open_popup', 'popup' => $popup->public_id];
         $home = $site->pages()->where('is_home', true)->firstOrFail();
@@ -542,36 +511,69 @@ class E2eSeeder extends Seeder
         // Many preview submissions from one IP across retries must not hit the default IP limit.
         $site->forceFill(['form_security' => ['ip_limit' => 1000]])->save();
 
-        $mark = AutoMark::query()->firstOrCreate(['url' => 'lada'], ['name' => 'Lada', 'name_ru' => 'Лада', 'country' => 'Россия', 'status' => true]);
-        $model = $mark->models()->firstOrCreate(['url' => 'vesta'], ['name' => 'Vesta', 'name_ru' => 'Веста', 'year_from' => 2015, 'status' => true]);
-        $generation = $model->generations()->firstOrCreate(['url' => 'i'], ['name' => 'I', 'year_from' => 2015, 'status' => true]);
-        $sedan = $generation->series()->firstOrCreate(['url' => 'sedan'], ['name' => 'Седан', 'status' => true]);
-        $wagon = $generation->series()->firstOrCreate(['url' => 'sw-cross'], ['name' => 'SW Cross', 'status' => true]);
-        $equipment = AutoEquipment::factory()
-            ->for(AutoModification::factory()->for($sedan, 'series')->state(['name' => '1.6 MT 106 л.с.']), 'modification')
-            ->create(['name' => 'Comfort']);
+        [$sedan, $wagon] = $this->catalogBranch('lada', 'Lada', 'vesta', 'Vesta', 2015, ['Седан', 'SW Cross']);
+        $equipment = $this->catalogEquipment($sedan, '1.6 MT (106 л.с.)', 'Comfort');
 
         $vehicle = SiteVehicle::factory()->for($site)->forSeries($sedan)->create(['sort_order' => 0]);
         SiteVehicle::factory()->for($site)->forSeries($wagon)->create(['sort_order' => 1]);
         SiteOffer::factory()->forEquipment($equipment)->create(['site_vehicle_id' => $vehicle->id, 'price_minor' => 125_000_000]);
+        $this->vehicleColors($vehicle, $sedan, 'e2e', [['Серебристый', '#c0c0c0', [MediaAngle::FrontThreeQuarterLeft, MediaAngle::SideLeft]]]);
+    }
 
-        $set = new SeriesMediaSet(['name' => 'Серебристый', 'swatch_hex' => '#c0c0c0', 'status' => true, 'sort_order' => 0]);
-        $set->catalog_series_public_id = $sedan->public_id;
-        $set->save();
+    /**
+     * One auto.ru-shaped catalog branch: mark → model → generation → the given series.
+     *
+     * @param  list<string>  $seriesNames
+     * @return list<AutoSeries>
+     */
+    private function catalogBranch(string $markUrl, string $markName, string $modelUrl, string $modelName, int $year, array $seriesNames): array
+    {
+        $mark = AutoMark::query()->where('url', $markUrl)->first() ?? AutoMark::factory()->create(['url' => $markUrl, 'name' => $markName, 'popular' => 1]);
+        $model = AutoModel::factory()->for($mark, 'mark')->create(['url' => $modelUrl, 'name' => $modelName, 'year_from' => $year]);
+        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'I', 'year_from' => $year]);
+
+        return array_map(
+            fn (string $name): AutoSeries => AutoSeries::factory()->for($generation, 'generation')->create(['name' => $name]),
+            $seriesNames,
+        );
+    }
+
+    private function catalogEquipment(AutoSeries $series, string $modification, string $name): AutoEquipment
+    {
+        return AutoEquipment::factory()
+            ->for(AutoModification::factory()->for($series, 'series')->state(['name' => $modification]), 'modification')
+            ->create(['name' => $name]);
+    }
+
+    /**
+     * Platform colours with real image files, copied into the vehicle as the wizard does.
+     *
+     * @param  list<array{0: string, 1: string, 2: list<MediaAngle>}>  $colors
+     */
+    private function vehicleColors(SiteVehicle $vehicle, AutoSeries $series, string $folder, array $colors): void
+    {
         $png = (string) base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
+        $sets = [];
 
-        foreach ([MediaAngle::FrontThreeQuarter, MediaAngle::Side] as $angle) {
-            $path = "series-media/e2e/{$angle->value}.png";
-            Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
-            SeriesMediaImage::factory()->for($set, 'set')->create([
-                'angle' => $angle,
-                'path' => $path,
-                'original_name' => "{$angle->value}.png",
-                'size_bytes' => strlen($png),
-                'width' => 1,
-                'height' => 1,
-            ]);
+        foreach ($colors as $order => [$name, $swatch, $angles]) {
+            $set = SeriesMediaSet::factory()->forSeries($series)->create(['name' => $name, 'swatch_hex' => $swatch, 'sort_order' => $order]);
+            $sets[] = $set->public_id;
+
+            foreach ($angles as $angle) {
+                $path = "series-media/{$folder}/{$order}-{$angle->value}.png";
+                Storage::disk(SeriesMediaImage::DISK)->put($path, $png);
+                SeriesMediaImage::factory()->for($set, 'set')->create([
+                    'angle' => $angle,
+                    'path' => $path,
+                    'original_name' => "{$angle->value}.png",
+                    'size_bytes' => strlen($png),
+                    'width' => 1,
+                    'height' => 1,
+                ]);
+            }
         }
+
+        app(VehiclePhotos::class)->copyFromLibrary($vehicle, $sets, []);
     }
 
     private function createUser(string $name, string $email, bool $verified = true): User

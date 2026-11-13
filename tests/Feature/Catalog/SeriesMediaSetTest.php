@@ -24,17 +24,17 @@ class SeriesMediaSetTest extends TestCase
         $this->assertFalse(Schema::hasTable('auto_colors'));
     }
 
-    public function test_set_references_an_existing_series_by_public_id(): void
+    public function test_set_references_an_existing_series_by_ref(): void
     {
         $series = AutoSeries::factory()->create();
         $white = SeriesMediaSet::factory()->forSeries($series)->create(['name' => 'Белый', 'swatch_hex' => '#f5f5f5', 'sort_order' => 2]);
         SeriesMediaSet::factory()->forSeries($series)->create(['name' => 'Черный', 'swatch_hex' => null, 'sort_order' => 1]);
 
-        $this->assertSame($series->public_id, $white->catalog_series_public_id);
+        $this->assertSame($series->ref(), $white->catalog_series_ref);
         $this->assertArrayNotHasKey('id', $white->toArray());
         $this->assertSame(
             ['Черный', 'Белый'],
-            SeriesMediaSet::query()->where('catalog_series_public_id', $series->public_id)->active()->ordered()->pluck('name')->all(),
+            SeriesMediaSet::query()->where('catalog_series_ref', $series->ref())->active()->ordered()->pluck('name')->all(),
         );
 
         $this->expectException(QueryException::class);
@@ -47,10 +47,10 @@ class SeriesMediaSetTest extends TestCase
         $rejected = 0;
 
         foreach ([
-            fn () => SeriesMediaSet::factory()->create(['catalog_series_public_id' => '01hzzzzzzzzzzzzzzzzzzzzzzz']),
+            fn () => SeriesMediaSet::factory()->create(['catalog_series_ref' => '1:2']),
             fn () => SeriesMediaSet::factory()->create(['swatch_hex' => 'red']),
             fn () => SeriesMediaSet::factory()->create(['swatch_hex' => '#FFFFFF']),
-            fn () => $set->forceFill(['catalog_series_public_id' => AutoSeries::factory()->create()->public_id])->save(),
+            fn () => $set->forceFill(['catalog_series_ref' => AutoSeries::factory()->create()->ref()])->save(),
         ] as $attempt) {
             try {
                 $attempt();

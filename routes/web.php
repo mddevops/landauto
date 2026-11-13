@@ -1,9 +1,9 @@
 <?php
 
-use App\Catalog\CatalogLevel;
 use App\Enums\DeveloperPermission;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
+use App\Http\Controllers\CatalogImageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Developer\DeveloperBlockController;
 use App\Http\Controllers\Developer\DeveloperDashboardController;
@@ -26,15 +26,13 @@ use App\Http\Controllers\PageBlockController;
 use App\Http\Controllers\PageSeoController;
 use App\Http\Controllers\Platform\CatalogAccessMatrixController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
-use App\Http\Controllers\Platform\CatalogDictionaryController;
-use App\Http\Controllers\Platform\CatalogEntryController;
-use App\Http\Controllers\Platform\CatalogEquipmentController;
 use App\Http\Controllers\Platform\CatalogLicenseController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
 use App\Http\Controllers\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\PlatformTemplateController;
+use App\Http\Controllers\Platform\SeriesGalleryController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
 use App\Http\Controllers\Popups\SitePopupController;
@@ -58,6 +56,8 @@ use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\Vehicles\SiteVehicleImportController;
+use App\Http\Controllers\Vehicles\VehicleCollectionController;
+use App\Http\Controllers\Vehicles\VehiclePhotoController;
 use App\Http\Controllers\Vehicles\WorkspaceVehicleController;
 use App\Http\Controllers\WorkspaceAssetController;
 use App\Http\Controllers\WorkspaceContextController;
@@ -116,13 +116,28 @@ Route::middleware(['auth', 'verified'])->group(function () {
         Route::prefix('workspace/vehicles')->name('workspace.vehicles.')->group(function () {
             Route::get('/', [WorkspaceVehicleController::class, 'index'])->name('index');
             Route::get('create', [WorkspaceVehicleController::class, 'create'])->name('create');
-            Route::post('/', [WorkspaceVehicleController::class, 'store'])->name('store');
+            Route::post('/', [WorkspaceVehicleController::class, 'store'])->middleware('throttle:30,1')->name('store');
+            Route::post('bulk', [WorkspaceVehicleController::class, 'bulk'])->middleware('throttle:30,1')->name('bulk');
+            Route::post('collections', [VehicleCollectionController::class, 'store'])->name('collections.store');
+            Route::patch('collections/{collection}', [VehicleCollectionController::class, 'update'])->whereUlid('collection')->name('collections.update');
+            Route::delete('collections/{collection}', [VehicleCollectionController::class, 'destroy'])->whereUlid('collection')->name('collections.destroy');
             Route::get('{vehicle}', [WorkspaceVehicleController::class, 'show'])->whereUlid('vehicle')->name('show');
             Route::patch('{vehicle}', [WorkspaceVehicleController::class, 'update'])->whereUlid('vehicle')->name('update');
-            Route::put('{vehicle}/media', [WorkspaceVehicleController::class, 'media'])->whereUlid('vehicle')->name('media');
+            Route::put('{vehicle}/offers', [WorkspaceVehicleController::class, 'offers'])->whereUlid('vehicle')->name('offers');
+            Route::put('{vehicle}/collections', [WorkspaceVehicleController::class, 'collections'])->whereUlid('vehicle')->name('collections');
             Route::delete('{vehicle}', [WorkspaceVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('destroy');
             Route::post('{vehicle}/sites', [WorkspaceVehicleController::class, 'copyToSite'])->whereUlid('vehicle')->name('copy');
+
+            Route::post('{vehicle}/photos', [VehiclePhotoController::class, 'catalogUpload'])->whereUlid('vehicle')->middleware('throttle:60,1')->name('photos.store');
+            Route::post('{vehicle}/photos/library', [VehiclePhotoController::class, 'catalogLibrary'])->whereUlid('vehicle')->middleware('throttle:30,1')->name('photos.library');
+            Route::delete('{vehicle}/photos/{photo}', [VehiclePhotoController::class, 'catalogDestroy'])->whereUlid(['vehicle', 'photo'])->name('photos.destroy');
+            Route::put('{vehicle}/angle', [VehiclePhotoController::class, 'catalogAngle'])->whereUlid('vehicle')->name('angle');
+            Route::post('{vehicle}/colors', [VehiclePhotoController::class, 'catalogColor'])->whereUlid('vehicle')->name('colors.store');
+            Route::patch('{vehicle}/colors/{color}', [VehiclePhotoController::class, 'catalogUpdateColor'])->whereUlid(['vehicle', 'color'])->name('colors.update');
+            Route::delete('{vehicle}/colors/{color}', [VehiclePhotoController::class, 'catalogDestroyColor'])->whereUlid(['vehicle', 'color'])->name('colors.destroy');
         });
+
+        Route::get('vehicle-photos/{photo:public_id}', [VehiclePhotoController::class, 'show'])->whereUlid('photo')->name('vehicle-photos.show');
 
         Route::prefix('workspace/assets')->name('workspace.assets.')->group(function () {
             Route::get('/', [WorkspaceAssetController::class, 'index'])->name('index');
@@ -258,11 +273,17 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
             Route::get('vehicles/import', [SiteVehicleImportController::class, 'create'])->name('vehicles.imports.create');
             Route::post('vehicles/import', [SiteVehicleImportController::class, 'store'])->middleware('throttle:20,1')->name('vehicles.imports.store');
-            Route::post('vehicles', [SiteVehicleController::class, 'store'])->name('vehicles.store');
+            Route::post('vehicles', [SiteVehicleController::class, 'store'])->middleware('throttle:30,1')->name('vehicles.store');
             Route::get('vehicles/{vehicle}', [SiteVehicleController::class, 'show'])->whereUlid('vehicle')->name('vehicles.show');
             Route::patch('vehicles/{vehicle}', [SiteVehicleController::class, 'update'])->whereUlid('vehicle')->name('vehicles.update');
-            Route::put('vehicles/{vehicle}/media', [SiteVehicleController::class, 'media'])->whereUlid('vehicle')->name('vehicles.media');
             Route::delete('vehicles/{vehicle}', [SiteVehicleController::class, 'destroy'])->whereUlid('vehicle')->name('vehicles.destroy');
+            Route::post('vehicles/{vehicle}/photos', [VehiclePhotoController::class, 'siteUpload'])->whereUlid('vehicle')->middleware('throttle:60,1')->name('vehicles.photos.store');
+            Route::post('vehicles/{vehicle}/photos/library', [VehiclePhotoController::class, 'siteLibrary'])->whereUlid('vehicle')->middleware('throttle:30,1')->name('vehicles.photos.library');
+            Route::delete('vehicles/{vehicle}/photos/{photo}', [VehiclePhotoController::class, 'siteDestroy'])->whereUlid(['vehicle', 'photo'])->name('vehicles.photos.destroy');
+            Route::put('vehicles/{vehicle}/angle', [VehiclePhotoController::class, 'siteAngle'])->whereUlid('vehicle')->name('vehicles.angle');
+            Route::post('vehicles/{vehicle}/colors', [VehiclePhotoController::class, 'siteColor'])->whereUlid('vehicle')->name('vehicles.colors.store');
+            Route::patch('vehicles/{vehicle}/colors/{color}', [VehiclePhotoController::class, 'siteUpdateColor'])->whereUlid(['vehicle', 'color'])->name('vehicles.colors.update');
+            Route::delete('vehicles/{vehicle}/colors/{color}', [VehiclePhotoController::class, 'siteDestroyColor'])->whereUlid(['vehicle', 'color'])->name('vehicles.colors.destroy');
             Route::post('vehicles/{vehicle}/library', [SiteVehicleController::class, 'saveToLibrary'])->whereUlid('vehicle')->name('vehicles.library');
             Route::post('vehicles/{vehicle}/offers', [SiteOfferController::class, 'store'])->whereUlid('vehicle')->name('offers.store');
             Route::patch('offers/{offer}', [SiteOfferController::class, 'update'])->whereUlid('offer')->name('offers.update');
@@ -272,32 +293,33 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::get('media/series/{image}', [SeriesMediaImageController::class, 'show'])
         ->whereUlid('image')
         ->name('catalog-media.show');
+    Route::get('media/series-gallery/{image:public_id}', [SeriesGalleryController::class, 'show'])
+        ->whereUlid('image')
+        ->name('catalog-gallery.show');
+    Route::get('media/catalog/{path}', [CatalogImageController::class, 'show'])
+        ->where('path', '(mark_small|mark_big|mark_dark|serie)/[A-Za-z0-9_/.-]+')
+        ->name('catalog-images.show');
 
     // Platform surface: explicit platform permissions only, never Workspace roles (D-058).
     Route::prefix('platform/catalog')
         ->name('platform.catalog.')
         ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ViewCatalog->value)
         ->group(function () {
-            $levels = array_column(CatalogLevel::cases(), 'value');
-            $dictionaries = ['characteristics', 'options'];
+            $seriesRef = '\d{1,20}:\d{1,20}';
 
-            Route::get('/', CatalogBrowserController::class)->name('index');
-            Route::get('equipments/{equipment}', [CatalogEquipmentController::class, 'show'])->whereUlid('equipment')->name('equipments.show');
-            Route::get('dictionaries/{dictionary}', [CatalogDictionaryController::class, 'show'])->whereIn('dictionary', $dictionaries)->name('dictionaries.show');
-            Route::get('series/{series}/media', [SeriesMediaController::class, 'show'])->whereUlid('series')->name('media.show');
+            Route::get('/', [CatalogBrowserController::class, 'index'])->name('index');
+            Route::get('series/{series}', [CatalogBrowserController::class, 'series'])->where('series', $seriesRef)->name('series');
 
-            Route::middleware(EnsurePlatformPermission::class.':'.PlatformPermission::EditCatalog->value)->group(function () use ($levels, $dictionaries) {
-                Route::post('entries/{level}', [CatalogEntryController::class, 'store'])->whereIn('level', $levels)->name('entries.store');
-                Route::patch('entries/{level}/{entry}', [CatalogEntryController::class, 'update'])->whereIn('level', $levels)->whereUlid('entry')->name('entries.update');
-                Route::put('equipments/{equipment}/characteristics', [CatalogEquipmentController::class, 'characteristics'])->whereUlid('equipment')->name('equipments.characteristics');
-                Route::put('equipments/{equipment}/options', [CatalogEquipmentController::class, 'options'])->whereUlid('equipment')->name('equipments.options');
-                Route::post('dictionaries/{dictionary}', [CatalogDictionaryController::class, 'store'])->whereIn('dictionary', $dictionaries)->name('dictionaries.store');
-                Route::patch('dictionaries/{dictionary}/{entry}', [CatalogDictionaryController::class, 'update'])->whereIn('dictionary', $dictionaries)->whereUlid('entry')->name('dictionaries.update');
-            });
-
-            Route::middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageCatalogMedia->value)->group(function () {
-                Route::post('series/{series}/media-sets', [SeriesMediaController::class, 'store'])->whereUlid('series')->name('media.sets.store');
+            Route::middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageCatalogMedia->value)->group(function () use ($seriesRef) {
+                Route::post('series/{series}/media-sets', [SeriesMediaController::class, 'store'])->where('series', $seriesRef)->name('media.sets.store');
                 Route::patch('media-sets/{set}', [SeriesMediaController::class, 'update'])->whereUlid('set')->name('media.sets.update');
+                Route::delete('media-sets/{set}', [SeriesMediaController::class, 'destroy'])->whereUlid('set')->name('media.sets.destroy');
+                Route::post('series/{series}/gallery', [SeriesGalleryController::class, 'store'])
+                    ->where('series', $seriesRef)
+                    ->middleware('throttle:30,1')
+                    ->name('gallery.store');
+                Route::put('series/{series}/gallery', [SeriesGalleryController::class, 'reorder'])->where('series', $seriesRef)->name('gallery.reorder');
+                Route::delete('gallery/{image:public_id}', [SeriesGalleryController::class, 'destroy'])->whereUlid('image')->name('gallery.destroy');
                 Route::post('media-sets/{set}/images', [SeriesMediaImageController::class, 'store'])
                     ->whereUlid('set')
                     ->middleware('throttle:60,1')
@@ -306,6 +328,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     ->whereUlid('image')
                     ->name('media.images.destroy');
             });
+
+            Route::get('{mark}', [CatalogBrowserController::class, 'mark'])->where('mark', '[a-z0-9_-]+')->name('mark');
+            Route::get('{mark}/{model}', [CatalogBrowserController::class, 'model'])->where(['mark' => '[a-z0-9_-]+', 'model' => '[a-z0-9_-]+'])->name('model');
         });
 
     Route::prefix('platform/developers')

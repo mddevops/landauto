@@ -30,14 +30,14 @@ class SeriesMediaImagesTest extends TestCase
         $this->actingAs($manager)
             ->post(route('platform.catalog.media.images.store', $set), [
                 'file' => UploadedFile::fake()->image('../../front evil.png', 1600, 900),
-                'angle' => 'front_3_4',
+                'angle' => 'front_3_4_left',
             ])
             ->assertSessionHasNoErrors()
             ->assertRedirect();
 
         $image = SeriesMediaImage::query()->sole();
         $this->assertSame("series-media/{$set->public_id}/{$image->public_id}.png", $image->path);
-        $this->assertSame('front_3_4', $image->angle->value);
+        $this->assertSame('front_3_4_left', $image->angle->value);
         $this->assertSame([1600, 900], [$image->width, $image->height]);
         Storage::disk(SeriesMediaImage::DISK)->assertExists($image->path);
         $this->assertSame(0, SiteAsset::query()->count(), 'platform media is never a Site Asset');
@@ -46,7 +46,7 @@ class SeriesMediaImagesTest extends TestCase
         $this->actingAs($manager)
             ->post(route('platform.catalog.media.images.store', $set), [
                 'file' => UploadedFile::fake()->image('again.webp', 100, 100),
-                'angle' => 'front_3_4',
+                'angle' => 'front_3_4_left',
             ])
             ->assertSessionHasErrors('angle');
 
@@ -59,7 +59,7 @@ class SeriesMediaImagesTest extends TestCase
         Storage::fake(SeriesMediaImage::DISK);
         $manager = $this->platformUser(PlatformRole::SuperAdmin);
         $set = SeriesMediaSet::factory()->create();
-        $store = fn (UploadedFile $file, string $angle = 'side') => $this->actingAs($manager)
+        $store = fn (UploadedFile $file, string $angle = 'side_left') => $this->actingAs($manager)
             ->post(route('platform.catalog.media.images.store', $set), ['file' => $file, 'angle' => $angle]);
 
         $store(UploadedFile::fake()->createWithContent('car.svg', '<svg xmlns="http://www.w3.org/2000/svg"/>'))->assertSessionHasErrors('file');

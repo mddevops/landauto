@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Vehicles;
 
+use App\Automotive\VehiclePhotos;
 use App\Enums\BenefitType;
 use App\Enums\OfferAvailability;
 use App\Enums\SiteAccessMode;
@@ -20,15 +21,17 @@ use App\Models\Workspace;
 use App\Models\WorkspaceMember;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Testing\TestResponse;
 use Inertia\Testing\AssertableInertia as Assert;
+use Tests\Concerns\CreatesCatalogMedia;
 use Tests\Concerns\GrantsRolePermissions;
 use Tests\Concerns\RefreshCatalogDatabase;
 use Tests\TestCase;
 
 class SiteVehicleCopyTest extends TestCase
 {
-    use GrantsRolePermissions, RefreshCatalogDatabase, RefreshDatabase;
+    use CreatesCatalogMedia, GrantsRolePermissions, RefreshCatalogDatabase, RefreshDatabase;
 
     private Workspace $workspace;
 
@@ -42,6 +45,8 @@ class SiteVehicleCopyTest extends TestCase
 
     private SeriesMediaSet $white;
 
+    private AutoSeries $series;
+
     private AutoModification $modification;
 
     private AutoEquipment $comfort;
@@ -49,6 +54,7 @@ class SiteVehicleCopyTest extends TestCase
     protected function setUp(): void
     {
         parent::setUp();
+        Storage::fake('local');
 
         $this->workspace = Workspace::factory()->create();
         $this->owner = User::factory()->create();
@@ -56,21 +62,21 @@ class SiteVehicleCopyTest extends TestCase
         $this->source = Site::factory()->for($this->workspace)->create(['name' => 'Сайт А']);
         $this->destination = Site::factory()->for($this->workspace)->create(['name' => 'Сайт Б']);
 
-        $series = AutoSeries::factory()->create();
+        $this->series = $series = AutoSeries::factory()->create();
         $this->modification = $modification = AutoModification::factory()->for($series, 'series')->create();
         $this->comfort = $comfort = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Comfort']);
         $prestige = AutoEquipment::factory()->for($modification, 'modification')->create(['name' => 'Prestige']);
-        $this->white = SeriesMediaSet::factory()->forSeries($series)->create();
+        $this->white = $this->colorSet($series, 'Белый');
 
         $this->vehicle = SiteVehicle::factory()->for($this->source)->forSeries($series)->create([
             'custom_name' => 'Rio А',
             'custom_description' => 'Описание А',
             'status' => false,
         ]);
-        $this->vehicle->selectMediaSets([$this->white->public_id]);
+        app(VehiclePhotos::class)->copyFromLibrary($this->vehicle, [$this->white->public_id], []);
 
         $first = SiteOffer::factory()->for($this->vehicle, 'vehicle')->create([
-            'catalog_equipment_public_id' => $comfort->public_id,
+            'catalog_equipment_ref' => $comfort->external_key,
             'price_minor' => 123_456_789,
             'rrp_minor' => 130_000_001,
             'availability' => OfferAvailability::InTransit,
@@ -82,7 +88,7 @@ class SiteVehicleCopyTest extends TestCase
             ['type' => BenefitType::Credit, 'amount_minor' => 1_000_000],
         ]);
         SiteOffer::factory()->for($this->vehicle, 'vehicle')->create([
-            'catalog_equipment_public_id' => $prestige->public_id,
+            'catalog_equipment_ref' => $prestige->external_key,
             'price_minor' => 150_000_000,
             'status' => false,
             'sort_order' => 1,
@@ -107,7 +113,8 @@ class SiteVehicleCopyTest extends TestCase
         $copy = $this->destination->vehicles()->sole();
         $this->assertNotSame($this->vehicle->public_id, $copy->public_id);
         $this->assertSame(['Rio А', 'Описание А', false, null], [$copy->custom_name, $copy->custom_description, $copy->status, $copy->source_workspace_vehicle_id]);
-        $this->assertSame([$this->white->public_id], $copy->mediaSets()->pluck('series_media_sets.public_id')->all());
+        $this->assertSame(['Белый'], $copy->colors()->pluck('name')->all());
+        $this->assertSame(1, $copy->photos()->count());
 
         $offers = $copy->offers()->ordered()->with('benefits')->get();
         $this->assertCount(2, $offers);
@@ -139,7 +146,7 @@ class SiteVehicleCopyTest extends TestCase
 
         $copy = $this->destination->vehicles()->sole();
         $this->assertSame(0, $copy->offers()->count());
-        $this->assertSame(1, $copy->mediaSets()->count());
+        $this->assertSame(1, $copy->colors()->count());
 
         $this->as($this->owner)
             ->post(route('sites.vehicles.imports.store', $this->destination), [
@@ -152,7 +159,7 @@ class SiteVehicleCopyTest extends TestCase
 
     public function test_an_existing_series_is_reported_as_a_conflict_and_left_untouched(): void
     {
-        $existing = SiteVehicle::factory()->for($this->destination)->forSeries(AutoSeries::query()->where('public_id', $this->vehicle->catalog_series_public_id)->sole())->create(['custom_name' => 'Своё имя']);
+        $existing = SiteVehicle::factory()->for($this->destination)->forSeries($this->series)->create(['custom_name' => 'Своё имя']);
 
         $this->as($this->owner)
             ->post(route('sites.vehicles.imports.store', $this->destination), [
@@ -318,12 +325,12 @@ class SiteVehicleCopyTest extends TestCase
         $this->resolve(['text'])->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'updated']]);
         $target->refresh();
         $this->assertSame(['Rio А', 'Описание А', true], [$target->custom_name, $target->custom_description, $target->status]);
-        $this->assertSame([], $target->mediaSets()->pluck('series_media_sets.public_id')->all());
+        $this->assertSame([], $target->colors()->pluck('name')->all());
         $this->assertSame($offersBefore, $this->snapshot($target)['offers']);
 
         $this->resolve(['media', 'status']);
         $target->refresh();
-        $this->assertSame([$this->white->public_id], $target->mediaSets()->pluck('series_media_sets.public_id')->all());
+        $this->assertSame(['Белый'], $target->colors()->pluck('name')->all());
         $this->assertFalse($target->status);
         $this->assertSame($offersBefore, $this->snapshot($target)['offers']);
     }
@@ -335,9 +342,9 @@ class SiteVehicleCopyTest extends TestCase
 
         $this->resolve(['offers'])->assertSessionHas('vehicle_import', [['vehicle' => $this->vehicle->public_id, 'title' => 'Rio А', 'result' => 'updated']]);
 
-        $offers = $target->offers()->with('benefits')->get()->keyBy('catalog_equipment_public_id');
+        $offers = $target->offers()->with('benefits')->get()->keyBy('catalog_equipment_ref');
         $this->assertCount(3, $offers);
-        $comfort = $offers[$this->comfort->public_id];
+        $comfort = $offers[$this->comfort->external_key];
         $this->assertSame([123_456_789, 130_000_001, OfferAvailability::InTransit, 'Хит'], [$comfort->price_minor, $comfort->rrp_minor, $comfort->availability, $comfort->badge]);
         $this->assertSame([5], [$comfort->sort_order]);
         $this->assertSame([['discount', 777]], $comfort->benefits->map(fn (SiteOfferBenefit $benefit): array => [$benefit->type->value, $benefit->amount_minor])->all());
@@ -349,7 +356,7 @@ class SiteVehicleCopyTest extends TestCase
         $this->assertSame(3, $target->offers()->count());
         $this->assertSame(
             [['trade_in', 5_000_099], ['credit', 1_000_000]],
-            $target->offers()->where('catalog_equipment_public_id', $this->comfort->public_id)->sole()->benefits->map(fn (SiteOfferBenefit $benefit): array => [$benefit->type->value, $benefit->amount_minor])->all(),
+            $target->offers()->where('catalog_equipment_ref', $this->comfort->external_key)->sole()->benefits->map(fn (SiteOfferBenefit $benefit): array => [$benefit->type->value, $benefit->amount_minor])->all(),
         );
 
         $this->assertSame($sourceBefore, $this->snapshot($this->vehicle->fresh() ?? $this->vehicle));
@@ -359,7 +366,7 @@ class SiteVehicleCopyTest extends TestCase
     {
         $target = $this->conflictingVehicle();
         SiteOffer::factory()->for($target, 'vehicle')->create([
-            'catalog_equipment_public_id' => $this->comfort->public_id,
+            'catalog_equipment_ref' => $this->comfort->external_key,
             'price_minor' => 210_000_000,
             'sort_order' => 6,
         ]);
@@ -416,18 +423,18 @@ class SiteVehicleCopyTest extends TestCase
      */
     private function conflictingVehicle(): SiteVehicle
     {
-        $target = SiteVehicle::factory()->for($this->destination)->forSeries(AutoSeries::query()->where('public_id', $this->vehicle->catalog_series_public_id)->sole())->create([
+        $target = SiteVehicle::factory()->for($this->destination)->forSeries($this->series)->create([
             'custom_name' => 'Своё имя',
             'status' => true,
         ]);
         $comfort = SiteOffer::factory()->for($target, 'vehicle')->create([
-            'catalog_equipment_public_id' => $this->comfort->public_id,
+            'catalog_equipment_ref' => $this->comfort->external_key,
             'price_minor' => 200_000_000,
             'sort_order' => 5,
         ]);
         $comfort->replaceBenefits([['type' => BenefitType::Discount, 'amount_minor' => 777]]);
         SiteOffer::factory()->for($target, 'vehicle')->create([
-            'catalog_equipment_public_id' => AutoEquipment::factory()->for($this->modification, 'modification')->create(['name' => 'Luxe'])->public_id,
+            'catalog_equipment_ref' => AutoEquipment::factory()->for($this->modification, 'modification')->create(['name' => 'Luxe'])->external_key,
             'price_minor' => 99_000_000,
             'badge' => 'Только здесь',
         ]);
@@ -470,10 +477,10 @@ class SiteVehicleCopyTest extends TestCase
         return [
             'vehicle' => $vehicle->only(['public_id', 'custom_name', 'custom_description', 'status', 'sort_order']),
             'offers' => $vehicle->offers()->ordered()->with('benefits')->get()->map(fn (SiteOffer $offer): array => [
-                ...$offer->only(['public_id', 'catalog_equipment_public_id', 'price_minor', 'rrp_minor', 'badge', 'status', 'sort_order']),
+                ...$offer->only(['public_id', 'catalog_equipment_ref', 'price_minor', 'rrp_minor', 'badge', 'status', 'sort_order']),
                 'benefits' => $offer->benefits->map(fn (SiteOfferBenefit $benefit): array => [$benefit->type->value, $benefit->amount_minor, $benefit->label])->all(),
             ])->all(),
-            'media' => $vehicle->mediaSets()->pluck('series_media_sets.public_id')->all(),
+            'media' => $vehicle->colors()->pluck('name')->all(),
         ];
     }
 

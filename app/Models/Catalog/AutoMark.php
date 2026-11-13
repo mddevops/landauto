@@ -3,8 +3,6 @@
 namespace App\Models\Catalog;
 
 use Database\Factories\Catalog\AutoMarkFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -12,17 +10,17 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 /**
  * Марка.
  *
+ * @property int|null $external_id
  * @property string $name
  * @property string|null $name_ru
  * @property string $url
  * @property string|null $logo_min
  * @property string|null $logo_big
+ * @property string|null $logo_dark
  * @property string|null $country
- * @property bool $status
- * @property int $sort_order
+ * @property int|null $popular
+ * @property int|null $ordering
  */
-#[Fillable(['name', 'name_ru', 'url', 'logo_min', 'logo_big', 'country', 'status', 'sort_order'])]
-#[Hidden(['id'])]
 class AutoMark extends CatalogModel
 {
     /** @use HasFactory<AutoMarkFactory> */
@@ -30,13 +28,7 @@ class AutoMark extends CatalogModel
 
     protected $table = 'auto_marks';
 
-    /**
-     * @return array<string, string>
-     */
-    protected function casts(): array
-    {
-        return ['status' => 'boolean', 'sort_order' => 'integer'];
-    }
+    protected $hidden = ['id'];
 
     /**
      * @return HasMany<AutoModel, $this>
@@ -47,12 +39,12 @@ class AutoMark extends CatalogModel
     }
 
     /**
-     * Visible in customer selection: active itself and through the whole parent chain.
+     * Popular marks first (catalog `ordering`), then alphabetically.
      *
      * @param  Builder<static>  $query
      */
-    public function scopeAvailable(Builder $query): void
+    public function scopeOrdered(Builder $query): void
     {
-        $query->where($this->qualifyColumn('status'), true);
+        $query->orderByRaw('ordering is null')->orderBy('ordering')->orderBy('name');
     }
 }

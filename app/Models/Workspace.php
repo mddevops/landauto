@@ -79,6 +79,14 @@ class Workspace extends Model
     }
 
     /**
+     * @return HasMany<VehicleCollection, $this>
+     */
+    public function vehicleCollections(): HasMany
+    {
+        return $this->hasMany(VehicleCollection::class);
+    }
+
+    /**
      * @return HasMany<WorkspaceAsset, $this>
      */
     public function assets(): HasMany

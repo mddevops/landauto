@@ -3,41 +3,37 @@
 namespace App\Models\Catalog;
 
 use Database\Factories\Catalog\AutoSeriesFactory;
-use Illuminate\Database\Eloquent\Attributes\Fillable;
-use Illuminate\Database\Eloquent\Attributes\Hidden;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 
 /**
- * Серия: the concrete body inside a generation (Седан, Универсал 5 дв.).
+ * Серия (кузов) of a generation. Customer rows reference it by {@see ref()}.
  *
+ * @property int $model_id
  * @property int $generation_id
+ * @property int|null $external_id
  * @property string $name
  * @property string $url
  * @property string|null $image
- * @property bool $status
- * @property int $sort_order
  * @property-read AutoGeneration $generation
+ * @property-read AutoModel $model
  */
-#[Fillable(['name', 'url', 'image', 'status', 'sort_order'])]
-#[Hidden(['id', 'generation_id'])]
 class AutoSeries extends CatalogModel
 {
     /** @use HasFactory<AutoSeriesFactory> */
     use HasFactory;
 
-    protected const PARENT_KEY = 'generation_id';
-
     protected $table = 'auto_series';
+
+    protected $hidden = ['id', 'model_id', 'generation_id'];
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['status' => 'boolean', 'sort_order' => 'integer'];
+        return ['external_id' => 'integer'];
     }
 
     /**
@@ -49,6 +45,14 @@ class AutoSeries extends CatalogModel
     }
 
     /**
+     * @return BelongsTo<AutoModel, $this>
+     */
+    public function model(): BelongsTo
+    {
+        return $this->belongsTo(AutoModel::class, 'model_id');
+    }
+
+    /**
      * @return HasMany<AutoModification, $this>
      */
     public function modifications(): HasMany
@@ -57,11 +61,20 @@ class AutoSeries extends CatalogModel
     }
 
     /**
-     * @param  Builder<static>  $query
+     * @return HasMany<AutoEquipment, $this>
      */
-    public function scopeAvailable(Builder $query): void
+    public function equipments(): HasMany
     {
-        $query->where($this->qualifyColumn('status'), true)
-            ->whereHas('generation', fn (Builder $generation) => $generation->available());
+        return $this->hasMany(AutoEquipment::class, 'series_id');
+    }
+
+    /**
+     * Stable cross-environment reference `{generation external id}:{series external id}`.
+     */
+    public function ref(): ?string
+    {
+        $generation = $this->generation->external_id;
+
+        return $generation === null || $this->external_id === null ? null : "{$generation}:{$this->external_id}";
     }
 }

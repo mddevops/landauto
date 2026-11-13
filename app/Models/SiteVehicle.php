@@ -2,10 +2,11 @@
 
 namespace App\Models;
 
-use App\Catalog\CatalogReferences;
+use App\Catalog\AutoCatalog;
+use App\Enums\MediaAngle;
 use App\Exceptions\InvalidCatalogDataException;
 use App\Models\Concerns\HasImmutablePublicId;
-use App\Models\Concerns\SelectsSeriesMediaSets;
+use App\Models\Concerns\HasVehiclePhotos;
 use Database\Factories\SiteVehicleFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
@@ -13,54 +14,64 @@ use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
-use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 use LogicException;
 
 /**
- * Site-owned vehicle page at catalog Series level (D-104). The catalog row lives in another
- * database, so the Series is referenced by public_id and validated by the application.
+ * Site-owned vehicle page at catalog Series level (D-104, ADR-010) with its own photo copies.
  * source_workspace_vehicle_id is provenance only (D-083): the library never changes this copy.
  *
  * @property int $id
  * @property string $public_id
  * @property int $site_id
  * @property int|null $source_workspace_vehicle_id
- * @property string $catalog_series_public_id
+ * @property string $catalog_series_ref
  * @property string|null $custom_name
  * @property string|null $custom_description
+ * @property MediaAngle|null $primary_angle
  * @property bool $status
  * @property int $sort_order
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
+ * @property-read Site|null $site
  */
-#[Fillable(['status', 'sort_order', 'custom_name', 'custom_description'])]
+#[Fillable(['status', 'sort_order', 'custom_name', 'custom_description', 'primary_angle'])]
 #[Hidden(['id', 'site_id', 'source_workspace_vehicle_id'])]
 class SiteVehicle extends Model
 {
     /** @use HasFactory<SiteVehicleFactory> */
-    use HasFactory, HasImmutablePublicId, SelectsSeriesMediaSets;
+    use HasFactory, HasImmutablePublicId, HasVehiclePhotos;
 
     /**
      * @return array<string, string>
      */
     protected function casts(): array
     {
-        return ['status' => 'boolean', 'sort_order' => 'integer'];
+        return ['status' => 'boolean', 'sort_order' => 'integer', 'primary_angle' => MediaAngle::class];
     }
 
     protected static function booted(): void
     {
         static::saving(function (SiteVehicle $vehicle): void {
-            if ($vehicle->exists && $vehicle->isDirty(['site_id', 'catalog_series_public_id'])) {
+            if ($vehicle->exists && $vehicle->isDirty(['site_id', 'catalog_series_ref'])) {
                 throw new LogicException('Site vehicle Site and Series are immutable.');
             }
 
-            if (! $vehicle->exists && app(CatalogReferences::class)->series($vehicle->catalog_series_public_id) === null) {
+            if (! $vehicle->exists && app(AutoCatalog::class)->series($vehicle->catalog_series_ref) === null) {
                 throw new InvalidCatalogDataException('Site vehicle Series does not exist in the catalog.');
             }
         });
+    }
+
+    public function photoOwnerColumn(): string
+    {
+        return 'site_vehicle_id';
+    }
+
+    public function photoWorkspaceId(): int
+    {
+        return (int) ($this->site->workspace_id ?? throw new LogicException('Site vehicle has no Site.'));
     }
 
     /**
@@ -85,20 +96,6 @@ class SiteVehicle extends Model
     public function offers(): HasMany
     {
         return $this->hasMany(SiteOffer::class);
-    }
-
-    /**
-     * Platform media sets selected for this vehicle (references only; files are never copied).
-     *
-     * @return BelongsToMany<SeriesMediaSet, $this>
-     */
-    public function mediaSets(): BelongsToMany
-    {
-        return $this->belongsToMany(SeriesMediaSet::class, 'site_vehicle_media_sets')
-            ->withPivot('sort_order')
-            ->withTimestamps()
-            ->orderByPivot('sort_order')
-            ->orderBy('series_media_sets.id');
     }
 
     /**

@@ -24,13 +24,7 @@ import {
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { store, update } from '@/routes/sites/offers';
-
-export type ModificationChoice = {
-    public_id: string;
-    name: string;
-    summary: string;
-    equipments: { public_id: string; name: string }[];
-};
+import type { EquipmentLabel, Trim } from '@/types/catalog';
 
 export type OfferBenefit = {
     type: string;
@@ -38,16 +32,10 @@ export type OfferBenefit = {
     label: string | null;
 };
 
-export type Offer = {
+export type Offer = EquipmentLabel & {
     public_id: string;
-    equipment: {
-        public_id: string;
-        name: string;
-        modification: string;
-        modification_name: string;
-    } | null;
     price: string;
-    price_label: string;
+    price_label: string | null;
     rrp: string;
     availability: string | null;
     badge: string | null;
@@ -63,7 +51,7 @@ type BenefitRow = { key: number; type: string; amount: string; label: string };
 type OfferDialogProps = {
     sitePublicId: string;
     vehiclePublicId: string;
-    modifications: ModificationChoice[];
+    trims: Trim[];
     choices: OfferChoices;
     canEditPrices: boolean;
     canEditBenefits: boolean;
@@ -87,7 +75,7 @@ function benefitRows(benefits: OfferBenefit[]): BenefitRow[] {
 export function OfferDialog({
     sitePublicId,
     vehiclePublicId,
-    modifications,
+    trims,
     choices,
     canEditPrices,
     canEditBenefits,
@@ -97,8 +85,13 @@ export function OfferDialog({
     const [open, setOpen] = useState(false);
     const prefix = `offer-${offer?.public_id ?? 'new'}`;
     const form = useForm({
-        modification: offer?.equipment?.modification ?? '',
-        equipment: offer?.equipment?.public_id ?? '',
+        modification:
+            trims.find((trim) =>
+                trim.equipments.some(
+                    (equipment) => equipment.key === offer?.equipment,
+                ),
+            )?.key ?? '',
+        equipment: offer?.equipment ?? '',
         price: offer?.price ?? '',
         rrp: offer?.rrp ?? '',
         availability: offer?.availability ?? '',
@@ -109,9 +102,8 @@ export function OfferDialog({
     });
     const errors = form.errors as Record<string, string | undefined>;
     const equipments =
-        modifications.find(
-            (modification) => modification.public_id === form.data.modification,
-        )?.equipments ?? [];
+        trims.find((trim) => trim.key === form.data.modification)?.equipments ??
+        [];
 
     function submit(event: FormEvent) {
         event.preventDefault();
@@ -181,11 +173,11 @@ export function OfferDialog({
                         <SelectField
                             id={`${prefix}-modification`}
                             label="Модификация"
-                            choices={modifications.map((modification) => ({
-                                value: modification.public_id,
-                                label: modification.summary
-                                    ? `${modification.name} — ${modification.summary}`
-                                    : modification.name,
+                            choices={trims.map((trim) => ({
+                                value: trim.key,
+                                label: trim.summary
+                                    ? `${trim.label} — ${trim.summary}`
+                                    : trim.label,
                             }))}
                             emptyLabel="Выберите модификацию"
                             value={form.data.modification}
@@ -202,7 +194,7 @@ export function OfferDialog({
                             id={`${prefix}-equipment`}
                             label="Комплектация"
                             choices={equipments.map((equipment) => ({
-                                value: equipment.public_id,
+                                value: equipment.key,
                                 label: equipment.name,
                             }))}
                             emptyLabel={
@@ -221,15 +213,15 @@ export function OfferDialog({
                         <div className="grid gap-4 sm:grid-cols-2">
                             <TextField
                                 id={`${prefix}-price`}
-                                label="Цена, ₽"
+                                label="Цена со скидкой, ₽"
                                 inputMode="decimal"
                                 autoComplete="off"
                                 placeholder="1 850 000"
+                                hint="Пусто — «Цена по запросу»"
                                 value={form.data.price}
                                 onChange={(event) =>
                                     form.setData('price', event.target.value)
                                 }
-                                required
                                 error={errors.price}
                             />
                             <TextField

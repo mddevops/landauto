@@ -19,10 +19,10 @@ use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Page;
 use App\Models\Popup;
-use App\Models\SeriesMediaImage;
 use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\User;
+use App\Models\VehiclePhoto;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Storage;
@@ -333,12 +333,12 @@ final class PublishValidator
 
         foreach ($bindings as $publicId => $binding) {
             if ($binding['offers'] === []) {
-                $this->warning('vehicle_without_offers', 'У автомобиля нет доступных предложений с ценой.', target: $publicId);
+                $this->warning('vehicle_without_offers', 'У автомобиля нет комплектаций.', target: $publicId);
             } elseif (count($binding['offers']) < (int) ($activeOffers[$publicId] ?? 0)) {
-                $this->warning('offer_unavailable', 'Часть предложений автомобиля недоступна в каталоге и не будет показана.', target: $publicId);
+                $this->warning('offer_unavailable', 'Часть комплектаций автомобиля недоступна в каталоге и не будет показана.', target: $publicId);
             }
 
-            if ($binding['media']['sets'] === []) {
+            if ($binding['media']['sets'] === [] && $binding['media']['gallery'] === []) {
                 $this->warning('vehicle_without_media', 'У автомобиля нет фотографий.', target: $publicId);
             }
         }
@@ -351,25 +351,27 @@ final class PublishValidator
      */
     private function validateMediaFiles(array $bindings): void
     {
-        $setIds = [];
+        $photoIds = [];
 
         foreach ($bindings as $binding) {
             foreach ($binding['media']['sets'] as $set) {
-                $setIds[$set['public_id']] = true;
+                foreach ($set['images'] as $image) {
+                    $photoIds[] = $image['public_id'];
+                }
+            }
+
+            foreach ($binding['media']['gallery'] as $image) {
+                $photoIds[] = $image['public_id'];
             }
         }
 
-        if ($setIds === []) {
+        if ($photoIds === []) {
             return;
         }
 
-        $images = SeriesMediaImage::query()
-            ->whereHas('set', fn ($query) => $query->whereIn('public_id', array_keys($setIds)))
-            ->get();
-
-        foreach ($images as $image) {
-            if (! Storage::disk(SeriesMediaImage::DISK)->exists($image->path)) {
-                $this->error('media_file_missing', 'Файл фотографии автомобиля не найден в хранилище.', target: $image->public_id);
+        foreach (VehiclePhoto::query()->whereIn('public_id', $photoIds)->get() as $photo) {
+            if (! Storage::disk(VehiclePhoto::DISK)->exists($photo->path)) {
+                $this->error('media_file_missing', 'Файл фотографии автомобиля не найден в хранилище.', target: $photo->public_id);
             }
         }
     }

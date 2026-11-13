@@ -2,8 +2,10 @@
 
 namespace App\Publishing;
 
+use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockVersionGrants;
-use App\Catalog\CatalogReferences;
+use App\Catalog\AutoCatalog;
+use App\Enums\MediaAngle;
 use App\Enums\PublishedVersionStatus;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
@@ -13,12 +15,13 @@ use App\Models\FormField;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\PublishedVersion;
-use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use App\Models\SiteVersionRestore;
 use App\Models\User;
+use App\Models\VehicleColor;
+use App\Models\VehiclePhoto;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Support\Facades\DB;
 
@@ -39,8 +42,9 @@ final class RestoreVersion
     private int $skippedOffers = 0;
 
     public function __construct(
-        private CatalogReferences $catalog,
+        private AutoCatalog $catalog,
         private BlockVersionGrants $grants,
+        private VehiclePhotos $photos,
     ) {}
 
     /**
@@ -186,7 +190,7 @@ final class RestoreVersion
             $vehicle = $this->ownRow(SiteVehicle::class, $site, (string) $data['public_id']);
 
             if ($vehicle === null) {
-                if ($this->catalog->series((string) $data['catalog_series_public_id']) === null) {
+                if ($this->catalog->series((string) $data['catalog_series_ref']) === null) {
                     $this->skippedVehicles++;
                     $this->skippedOffers += count(self::list($data['offers'] ?? []));
 
@@ -197,7 +201,7 @@ final class RestoreVersion
                 $vehicle->forceFill([
                     'public_id' => $data['public_id'],
                     'site_id' => $site->id,
-                    'catalog_series_public_id' => $data['catalog_series_public_id'],
+                    'catalog_series_ref' => $data['catalog_series_ref'],
                 ]);
             }
 
@@ -210,17 +214,72 @@ final class RestoreVersion
                 }
             }
 
+            $vehicle->primary_angle = MediaAngle::tryFrom((string) ($data['primary_angle'] ?? ''));
             $vehicle->save();
 
-            $available = SeriesMediaSet::query()
-                ->where('catalog_series_public_id', $vehicle->catalog_series_public_id)
-                ->active()
-                ->whereIn('public_id', self::strings($data['media_sets'] ?? []))
-                ->pluck('public_id')
-                ->all();
-            $vehicle->selectMediaSets(array_values(array_filter(self::strings($data['media_sets'] ?? []), fn (string $id): bool => in_array($id, $available, true))));
+            if (array_key_exists('colors', $data)) {
+                $this->restorePhotos($site, $vehicle, self::list($data['colors']), self::list($data['photos'] ?? []));
+            }
 
             $this->restoreOffers($vehicle, self::list($data['offers'] ?? []));
+        }
+    }
+
+    /**
+     * Photo rows are never hard-deleted while a version references them, so the version's photos
+     * are re-attached to the vehicle; photos now owned by another vehicle are left alone.
+     *
+     * @param  list<array<string, mixed>>  $colors
+     * @param  list<array<string, mixed>>  $photos
+     */
+    private function restorePhotos(Site $site, SiteVehicle $vehicle, array $colors, array $photos): void
+    {
+        $keepPhotos = array_map(fn (array $photo): string => (string) $photo['public_id'], $photos);
+        $vehicle->photos()->whereNotIn('public_id', $keepPhotos)->get()->each(fn (VehiclePhoto $photo) => $this->photos->remove($photo));
+        $existingColors = $vehicle->colors()->get()->keyBy('public_id');
+        $vehicle->colors()->whereNotIn('public_id', array_map(fn (array $color): string => (string) $color['public_id'], $colors))->delete();
+        $colorIds = [];
+
+        foreach ($colors as $data) {
+            $color = $existingColors->get((string) $data['public_id']);
+
+            if ($color === null) {
+                $color = new VehicleColor;
+                $color->forceFill([
+                    'public_id' => VehicleColor::query()->where('public_id', $data['public_id'])->exists() ? $color->newUniqueId() : $data['public_id'],
+                    'workspace_id' => $site->workspace_id,
+                    'site_vehicle_id' => $vehicle->id,
+                ]);
+            }
+
+            $color->forceFill([
+                'name' => (string) $data['name'],
+                'swatch_hex' => is_string($data['swatch_hex'] ?? null) ? $data['swatch_hex'] : null,
+                'sort_order' => (int) $data['sort_order'],
+            ])->save();
+            $colorIds[(string) $data['public_id']] = $color->id;
+        }
+
+        $rows = VehiclePhoto::withTrashed()
+            ->where('workspace_id', $site->workspace_id)
+            ->whereIn('public_id', $keepPhotos)
+            ->get()
+            ->keyBy('public_id');
+
+        foreach ($photos as $data) {
+            $photo = $rows->get((string) $data['public_id']);
+
+            if ($photo === null || ($photo->site_vehicle_id !== null && $photo->site_vehicle_id !== $vehicle->id) || $photo->workspace_vehicle_id !== null) {
+                continue;
+            }
+
+            $photo->forceFill([
+                'site_vehicle_id' => $vehicle->id,
+                'vehicle_color_id' => is_string($data['color'] ?? null) ? ($colorIds[$data['color']] ?? null) : null,
+                'angle' => MediaAngle::tryFrom((string) ($data['angle'] ?? '')),
+                'sort_order' => (int) $data['sort_order'],
+                'deleted_at' => null,
+            ])->save();
         }
     }
 
@@ -245,9 +304,9 @@ final class RestoreVersion
             }
 
             if ($offer === null) {
-                $equipment = $this->catalog->equipment((string) $data['catalog_equipment_public_id']);
+                $series = $this->catalog->series($vehicle->catalog_series_ref);
 
-                if ($equipment === null || ! $this->catalog->equipmentBelongsToSeries($equipment, $vehicle->catalog_series_public_id)) {
+                if ($series === null || $this->catalog->equipment($series, $data['catalog_equipment_ref'] ?? null) === null) {
                     $this->skippedOffers++;
 
                     continue;
@@ -259,8 +318,8 @@ final class RestoreVersion
             }
 
             $offer->forceFill([
-                'catalog_equipment_public_id' => $data['catalog_equipment_public_id'],
-                'price_minor' => (int) $data['price_minor'],
+                'catalog_equipment_ref' => $data['catalog_equipment_ref'],
+                'price_minor' => isset($data['price_minor']) ? (int) $data['price_minor'] : null,
                 'rrp_minor' => isset($data['rrp_minor']) ? (int) $data['rrp_minor'] : null,
                 'currency' => $data['currency'],
                 'availability' => $data['availability'] ?? null,
@@ -412,13 +471,5 @@ final class RestoreVersion
     private static function list(mixed $value): array
     {
         return is_array($value) ? array_values(array_filter($value, 'is_array')) : [];
-    }
-
-    /**
-     * @return list<string>
-     */
-    private static function strings(mixed $value): array
-    {
-        return is_array($value) ? array_values(array_filter($value, 'is_string')) : [];
     }
 }

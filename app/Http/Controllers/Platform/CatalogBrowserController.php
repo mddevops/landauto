@@ -2,85 +2,86 @@
 
 namespace App\Http\Controllers\Platform;
 
-use App\Catalog\CatalogLevel;
-use App\Enums\Catalog\DriveType;
-use App\Enums\Catalog\EngineType;
-use App\Enums\Catalog\TransmissionType;
+use App\Catalog\AutoCatalog;
+use App\Catalog\CatalogPresenter;
+use App\Enums\MediaAngle;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Controller;
-use App\Models\Catalog\CatalogModel;
+use App\Models\Catalog\AutoMark;
+use App\Models\Catalog\AutoModel;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Inertia\Inertia;
 use Inertia\Response;
 
 /**
- * Cascading platform catalog browser. A lower selection is honoured only when it belongs to
- * the selected parent, so changing an upper level clears everything below it.
+ * Read-only platform browser of the auto.ru catalog (ADR-010), page by page as on auto.ru:
+ * marks → models → generations with series → series with photos, modifications and trims.
+ * The catalog team fills the data; the platform manages only the Series photo library here.
  */
 class CatalogBrowserController extends Controller
 {
-    public function __invoke(Request $request): Response
+    public function __construct(
+        private AutoCatalog $catalog,
+        private CatalogPresenter $presenter,
+    ) {}
+
+    public function index(): Response
     {
-        $levels = [];
-        $parent = null;
-
-        foreach (CatalogLevel::cases() as $level) {
-            if ($level->parent() !== null && $parent === null) {
-                break;
-            }
-
-            $query = $level->modelClass()::query()->ordered();
-
-            if ($parent !== null) {
-                $query->where((string) $level->parentKey(), $parent->getKey());
-            }
-
-            if ($level === CatalogLevel::Models) {
-                $query->with('parent');
-            }
-
-            $items = $query->get();
-            $requested = $request->query($level->selectionKey());
-            $selected = is_string($requested) && $level !== CatalogLevel::Equipments
-                ? $items->first(fn (CatalogModel $item): bool => $item->public_id === $requested)
-                : null;
-
-            $levels[] = [
-                'key' => $level->value,
-                'label' => $level->label(),
-                'selectionKey' => $level->selectionKey(),
-                'parent' => $parent?->public_id,
-                'selected' => $selected?->public_id,
-                'items' => $items->map(fn (CatalogModel $item): array => $level->present($item))->values()->all(),
-            ];
-
-            $parent = $selected;
-        }
-
         return Inertia::render('platform/catalog/index', [
-            'levels' => $levels,
-            'choices' => [
-                'engine' => self::choices(EngineType::cases()),
-                'transmission' => self::choices(TransmissionType::cases()),
-                'drive' => self::choices(DriveType::cases()),
-            ],
-            'can' => [
-                'edit' => Gate::allows(PlatformPermission::EditCatalog->value),
-                'manageMedia' => Gate::allows(PlatformPermission::ManageCatalogMedia->value),
-            ],
+            'marks' => $this->presenter->marks(),
         ]);
     }
 
-    /**
-     * @param  list<EngineType|TransmissionType|DriveType>  $cases
-     * @return list<array{value: string, label: string}>
-     */
-    public static function choices(array $cases): array
+    public function mark(string $mark): Response
     {
-        return array_map(fn (EngineType|TransmissionType|DriveType $case): array => [
-            'value' => $case->value,
-            'label' => $case->label(),
-        ], $cases);
+        $mark = $this->findMark($mark);
+
+        return Inertia::render('platform/catalog/mark', [
+            'mark' => [...$this->presenter->mark($mark), 'country' => $mark->country],
+            'models' => $this->presenter->models($mark),
+        ]);
+    }
+
+    public function model(string $mark, string $model): Response
+    {
+        $mark = $this->findMark($mark);
+        $model = $this->findModel($mark, $model);
+
+        return Inertia::render('platform/catalog/model', [
+            'mark' => $this->presenter->mark($mark),
+            'model' => [
+                'url' => $model->url,
+                'name' => $model->name,
+                'years' => CatalogPresenter::years($model->year_from, $model->year_to),
+                'class' => $model->class,
+            ],
+            'generations' => $this->presenter->generations($model, withMediaCounts: true),
+        ]);
+    }
+
+    public function series(Request $request, string $series): Response
+    {
+        $row = $this->catalog->series($series) ?? abort(404);
+
+        return Inertia::render('platform/catalog/series', [
+            'series' => $this->presenter->series($row),
+            'library' => $this->presenter->library((string) $row->ref(), activeOnly: false),
+            'trims' => fn (): array => $this->presenter->trims($row),
+            'characteristics' => fn (): array => $this->presenter->characteristics($row, $request->query('modification')),
+            'options' => fn (): array => $this->presenter->options($row, $request->query('equipment')),
+            'angles' => MediaAngle::options(),
+            'can' => ['manageMedia' => Gate::allows(PlatformPermission::ManageCatalogMedia->value)],
+        ]);
+    }
+
+    private function findMark(string $url): AutoMark
+    {
+        return $this->catalog->mark($url) ?? abort(404);
+    }
+
+    private function findModel(AutoMark $mark, string $url): AutoModel
+    {
+        return $this->catalog->model($mark, $url) ?? abort(404);
     }
 }

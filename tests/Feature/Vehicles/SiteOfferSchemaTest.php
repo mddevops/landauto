@@ -22,7 +22,7 @@ class SiteOfferSchemaTest extends TestCase
 
     public function test_offer_stores_integer_money_for_an_equipment_of_the_vehicle_series(): void
     {
-        $this->assertTrue(Schema::hasColumns('site_offers', ['price_minor', 'rrp_minor', 'currency', 'catalog_equipment_public_id']));
+        $this->assertTrue(Schema::hasColumns('site_offers', ['price_minor', 'rrp_minor', 'currency', 'catalog_equipment_ref']));
         $this->assertFalse(Schema::hasColumn('site_offers', 'price'));
         $this->assertFalse(Schema::connection('catalog')->hasTable('site_offers'));
 
@@ -43,9 +43,12 @@ class SiteOfferSchemaTest extends TestCase
         $this->assertSame(OfferAvailability::InStock, $offer->availability);
         $this->assertArrayNotHasKey('site_vehicle_id', $offer->toArray());
 
-        $offer->update(['catalog_equipment_public_id' => $prestige->public_id]);
-        $this->assertSame($prestige->public_id, $offer->fresh()?->catalog_equipment_public_id);
+        $offer->update(['catalog_equipment_ref' => $prestige->external_key]);
+        $this->assertSame($prestige->external_key, $offer->fresh()?->catalog_equipment_ref);
         $this->assertSame(1, $vehicle->offers()->count());
+
+        $onRequest = SiteOffer::factory()->for($vehicle, 'vehicle')->forEquipment($comfort)->create(['price_minor' => null]);
+        $this->assertNull($onRequest->fresh()?->price_minor);
     }
 
     public function test_equipment_from_another_series_or_unknown_equipment_is_rejected(): void
@@ -57,8 +60,8 @@ class SiteOfferSchemaTest extends TestCase
 
         foreach ([
             fn () => SiteOffer::factory()->for($vehicle, 'vehicle')->forEquipment($foreign)->create(),
-            fn () => SiteOffer::factory()->for($vehicle, 'vehicle')->create(['catalog_equipment_public_id' => '01hzzzzzzzzzzzzzzzzzzzzzzz']),
-            fn () => $offer->update(['catalog_equipment_public_id' => $foreign->public_id]),
+            fn () => SiteOffer::factory()->for($vehicle, 'vehicle')->create(['catalog_equipment_ref' => '1_2_3']),
+            fn () => $offer->update(['catalog_equipment_ref' => $foreign->external_key]),
             fn () => SiteOffer::factory()->for($vehicle, 'vehicle')->create(['currency' => 'USD']),
             fn () => SiteOffer::factory()->for($vehicle, 'vehicle')->create(['price_minor' => -1]),
         ] as $attempt) {

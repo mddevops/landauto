@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Publishing;
 
-use App\Enums\PlatformRole;
 use App\Enums\PublishedVersionStatus;
 use App\Enums\SubmissionMode;
 use App\Models\BlockDefinition;
@@ -13,12 +12,10 @@ use App\Models\Catalog\AutoMark;
 use App\Models\Catalog\AutoSeries;
 use App\Models\Form;
 use App\Models\Page;
-use App\Models\PlatformRoleAssignment;
 use App\Models\PublishedVersion;
 use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\Submission;
-use App\Models\User;
 use App\Publishing\PublishOutcome;
 use App\Publishing\PublishSite;
 use App\Publishing\Rendering\PageRenderer;
@@ -157,16 +154,27 @@ class PublishedRuntimeTest extends TestCase
         $this->assertNull($foreign->active_published_version_id);
     }
 
-    public function test_a_published_series_media_image_cannot_be_deleted(): void
+    public function test_a_published_vehicle_photo_survives_removal_and_vehicle_deletion(): void
     {
-        $this->publish();
-        $manager = User::factory()->create();
-        PlatformRoleAssignment::query()->create(['user_id' => $manager->id, 'role' => PlatformRole::CatalogManager]);
+        $v1 = $this->publish()->version;
+        $this->assertNotNull($v1);
 
-        $this->actingAs($manager)->delete(route('platform.catalog.media.images.destroy', $this->image))->assertRedirect();
+        $this->actAsMember($this->owner);
+        $this->delete(route('sites.vehicles.photos.destroy', [$this->site, $this->vehicle, $this->image->public_id]))->assertRedirect();
+        $this->delete(route('sites.vehicles.destroy', [$this->site, $this->vehicle]))->assertRedirect();
 
-        $this->assertNotNull($this->image->fresh());
+        $this->assertSoftDeleted($this->image);
         Storage::disk('local')->assertExists($this->image->path);
+        $this->visit("/_landflow/media/{$v1->public_id}/{$this->image->public_id}")->assertOk();
+    }
+
+    public function test_an_unpublished_vehicle_photo_is_removed_with_its_file(): void
+    {
+        $this->actAsMember($this->owner);
+        $this->delete(route('sites.vehicles.photos.destroy', [$this->site, $this->vehicle, $this->image->public_id]))->assertRedirect();
+
+        $this->assertModelMissing($this->image);
+        Storage::disk('local')->assertMissing($this->image->path);
     }
 
     public function test_public_leads_use_the_published_form_and_price_not_the_draft(): void

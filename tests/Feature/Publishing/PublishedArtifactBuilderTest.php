@@ -61,7 +61,7 @@ class PublishedArtifactBuilderTest extends TestCase
         $this->assertSame(['title' => 'Главная', 'description' => null, 'indexable' => true], $pages[0]->seo_json);
 
         $this->assertSame(
-            [[PublishedAssetKind::SeriesMediaImage, $this->image->public_id]],
+            [[PublishedAssetKind::VehiclePhoto, $this->image->public_id]],
             $version->assetReferences()->get()->map(fn ($reference): array => [$reference->kind, $reference->reference_public_id])->all(),
         );
         $this->assertSame(PublishedVersionStatus::Building, $version->fresh()?->status);

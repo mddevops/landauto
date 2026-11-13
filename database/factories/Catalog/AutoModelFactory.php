@@ -18,15 +18,10 @@ class AutoModelFactory extends Factory
     {
         return [
             'mark_id' => AutoMark::factory(),
-            'name' => 'Модель '.Str::upper(Str::random(4)),
+            'external_id' => fake()->unique()->numberBetween(10_000_000, 19_999_999),
+            'name' => 'Модель '.Str::upper(Str::random(3)),
             'url' => 'model-'.Str::lower(Str::random(8)),
-            'status' => true,
-            'sort_order' => 0,
+            'status' => 1,
         ];
-    }
-
-    public function inactive(): static
-    {
-        return $this->state(['status' => false]);
     }
 }

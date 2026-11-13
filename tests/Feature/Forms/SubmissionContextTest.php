@@ -2,6 +2,7 @@
 
 namespace Tests\Feature\Forms;
 
+use App\Automotive\VehiclePhotos;
 use App\Enums\FormFieldType;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
@@ -14,7 +15,6 @@ use App\Models\Form;
 use App\Models\FormField;
 use App\Models\Page;
 use App\Models\Popup;
-use App\Models\SeriesMediaSet;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
@@ -63,16 +63,15 @@ class SubmissionContextTest extends TestCase
 
         $mark = AutoMark::factory()->create(['name' => 'Changan', 'url' => 'changan']);
         $model = AutoModel::factory()->for($mark, 'mark')->create(['name' => 'UNI-K', 'url' => 'uni-k']);
-        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'I', 'url' => 'i']);
-        $this->series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Кроссовер', 'url' => 'suv']);
+        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'I']);
+        $this->series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Кроссовер']);
     }
 
     public function test_same_popup_records_different_trusted_context_per_vehicle_with_server_price(): void
     {
         [$vehicleA, $offerA] = $this->vehicleWithOffer(389_000_000, mainSeries: true);
         [$vehicleB, $offerB] = $this->vehicleWithOffer(415_000_000);
-        $black = SeriesMediaSet::factory()->forSeries($this->series)->create(['name' => 'Чёрный']);
-        $vehicleA->selectMediaSets([$black->public_id]);
+        $black = app(VehiclePhotos::class)->addColor($vehicleA, 'Чёрный', '#000000');
 
         $this->submit($this->context(['vehicle' => $vehicleA->public_id, 'offer' => $offerA->public_id, 'media_set' => $black->public_id]))->assertCreated();
         $this->submit($this->context(['vehicle' => $vehicleB->public_id, 'offer' => $offerB->public_id]), fields: ['phone' => '+7 (999) 222-33-44'])->assertCreated();
@@ -86,7 +85,7 @@ class SubmissionContextTest extends TestCase
         $this->assertSame(['public_id' => $this->popup->public_id, 'name' => 'Получить предложение'], $trustedA['popup']);
         $this->assertSame([$vehicleA->public_id, 'Changan UNI-K', 'Кроссовер'], [$trustedA['vehicle']['public_id'], $trustedA['vehicle']['title'], $trustedA['vehicle']['series']]);
         $this->assertSame([$offerA->public_id, 389_000_000, 'RUB'], [$trustedA['offer']['public_id'], $trustedA['offer']['price_minor'], $trustedA['offer']['currency']]);
-        $this->assertSame(AutoEquipment::query()->where('public_id', $offerA->catalog_equipment_public_id)->value('name'), $trustedA['offer']['equipment']);
+        $this->assertSame(AutoEquipment::query()->where('external_key', $offerA->catalog_equipment_ref)->value('name'), $trustedA['offer']['equipment']);
         $this->assertSame(['public_id' => $black->public_id, 'name' => 'Чёрный'], $trustedA['media_set']);
 
         $this->assertSame([$vehicleB->public_id, 'Лифтбек', 415_000_000], [$trustedB['vehicle']['public_id'], $trustedB['vehicle']['series'], $trustedB['offer']['price_minor']]);
@@ -125,7 +124,7 @@ class SubmissionContextTest extends TestCase
         $otherForm = Form::factory()->for($this->site)->create();
         $otherPopup = Popup::factory()->for($this->site)->create();
         $otherPopup->form()->associate($otherForm)->save();
-        $foreignSet = SeriesMediaSet::factory()->forSeries($this->series)->create();
+        $foreignSet = app(VehiclePhotos::class)->addColor($otherVehicle, 'Белый', null);
 
         $cases = [
             'foreign vehicle' => ['vehicle' => $foreignVehicle->public_id],
@@ -180,7 +179,7 @@ class SubmissionContextTest extends TestCase
     {
         $series = $mainSeries
             ? $this->series
-            : AutoSeries::factory()->for($this->series->generation, 'generation')->create(['name' => 'Лифтбек', 'url' => 'lift-'.$price]);
+            : AutoSeries::factory()->for($this->series->generation, 'generation')->create(['name' => 'Лифтбек']);
         $vehicle = SiteVehicle::factory()->for($this->site)->forSeries($series)->create();
 
         return [$vehicle, SiteOffer::factory()->for($vehicle, 'vehicle')->create(['price_minor' => $price])];

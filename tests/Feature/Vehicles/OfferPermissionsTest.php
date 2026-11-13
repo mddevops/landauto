@@ -48,8 +48,8 @@ class OfferPermissionsTest extends TestCase
 
         $mark = AutoMark::factory()->create(['name' => 'Kia', 'url' => 'kia']);
         $model = AutoModel::factory()->for($mark, 'mark')->create(['name' => 'Rio', 'url' => 'rio']);
-        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV', 'url' => 'iv']);
-        $series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Седан', 'url' => 'sedan']);
+        $generation = AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV']);
+        $series = AutoSeries::factory()->for($generation, 'generation')->create(['name' => 'Седан']);
 
         $this->vehicle = SiteVehicle::factory()->for($this->site)->forSeries($series)->create();
         $this->offer = SiteOffer::factory()->for($this->vehicle, 'vehicle')->create(['price_minor' => 185_000_000]);
@@ -121,10 +121,10 @@ class OfferPermissionsTest extends TestCase
         $this->assertSame(179_900_000, $this->offer->fresh()?->price_minor);
         $this->assertSame(1, $this->offer->benefits()->count());
 
-        $modification = AutoEquipment::query()->where('public_id', $this->offer->catalog_equipment_public_id)->sole()->modification;
+        $modification = AutoEquipment::query()->where('external_key', $this->offer->catalog_equipment_ref)->sole()->modification;
         $this->as($this->admin)
             ->post(route('sites.offers.store', [$this->site, $this->vehicle]), $this->payload([
-                'equipment' => AutoEquipment::factory()->for($modification, 'modification')->create()->public_id,
+                'equipment' => AutoEquipment::factory()->for($modification, 'modification')->create()->external_key,
             ]))
             ->assertForbidden();
         $this->assertSame(1, SiteOffer::query()->count());
@@ -137,7 +137,7 @@ class OfferPermissionsTest extends TestCase
     private function payload(array $overrides = []): array
     {
         return [
-            'equipment' => $this->offer->catalog_equipment_public_id,
+            'equipment' => $this->offer->catalog_equipment_ref,
             'price' => '1 850 000',
             'rrp' => '',
             'availability' => '',
