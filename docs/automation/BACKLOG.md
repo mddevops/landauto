@@ -4528,9 +4528,11 @@ Result: `SectionManifest` turns an enabled catalog section into manifest pages �
 
 ## X-036 — Landing Vehicle Card Page
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** X-035
 **Decision:** ADR-011 §7
+
+Result: section type `card` («Карточка автомобиля»), offered only to Landings in «Разделах» (Multi-page Sites keep catalog / used / specials); empty prefix, one `item` template Page; vehicle addresses at the Site root (`/rio-iv-restyling`, same model + generation slug as D-131, body on clash), unique on the Landing and free of reserved paths and Page slugs; preview, Designer, publishing, sitemap and slug redirects serve root card addresses; vehicle cards on the Landing link to them.
 
 Scope: a Landing (one mark) may enable one vehicle card template Page; its vehicle cards open the card at the Site root `/{model}-{vehicle slug}` (e.g. `/rio-iv-restyling`, editable, 301 history, no clash with reserved paths); no index / mark / model pages on Landing.
 

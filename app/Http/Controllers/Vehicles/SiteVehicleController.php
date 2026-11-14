@@ -159,9 +159,11 @@ class SiteVehicleController extends Controller
                 'string',
                 'max:'.VehiclePages::SLUG_MAX,
                 'regex:'.SitePaths::PATTERN,
-                function (string $attribute, mixed $value, Closure $fail) use ($vehicle, $pages): void {
+                function (string $attribute, mixed $value, Closure $fail) use ($site, $vehicle, $pages): void {
                     if ($pages->slugTaken($vehicle, (string) $value)) {
-                        $fail('Такой адрес уже есть у другого автомобиля этой марки.');
+                        $fail(VehiclePages::atRoot($site)
+                            ? 'Такой адрес уже занят на этом сайте, выберите другой.'
+                            : 'Такой адрес уже есть у другого автомобиля этой марки.');
                     }
                 },
             ],
@@ -187,7 +189,7 @@ class SiteVehicleController extends Controller
     }
 
     /**
-     * «Адрес страницы» of the vehicle card in the catalog section (ADR-011 §4).
+     * «Адрес страницы» of the vehicle card in the catalog section or on a Landing (ADR-011 §4, §7).
      *
      * @return array{slug: string, base_url: string|null, redirects: list<string>}|null
      */
@@ -204,10 +206,10 @@ class SiteVehicleController extends Controller
 
         return [
             'slug' => (string) $vehicle->slug,
-            'base_url' => $section === null ? null : PublicSiteResolver::primaryUrl($site, '/'.implode('/', [
+            'base_url' => $section === null ? null : PublicSiteResolver::primaryUrl($site, rtrim('/'.SitePaths::join(
                 $section->prefix,
-                VehiclePages::segment($model->mark->url),
-            ]).'/'),
+                $section->type->atRoot() ? '' : VehiclePages::segment($model->mark->url),
+            ), '/').'/'),
             'redirects' => array_values($vehicle->slugRedirects()->latest('id')->get()
                 ->map(fn (SiteVehicleSlugRedirect $redirect): string => $redirect->slug)
                 ->all()),

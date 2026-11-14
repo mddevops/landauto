@@ -120,9 +120,14 @@ final class PublishedPages
             $moved = true;
         }
 
-        $vehicle = count($segments) >= 3 ? ($catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null) : null;
+        // The Landing vehicle card has no prefix: its previous slug is the whole path.
+        $vehicle = match (true) {
+            $catalog['prefix'] === '' => count($segments) === 1 ? ($catalog['vehicles'][$segments[0]] ?? null) : null,
+            $segments[0] === $catalog['prefix'] && count($segments) >= 3 => $catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null,
+            default => null,
+        };
 
-        if ($segments[0] === $catalog['prefix'] && $vehicle !== null && ! isset($this->index($site, $version)[implode('/', $segments)])) {
+        if ($vehicle !== null && ! isset($this->index($site, $version)[implode('/', $segments)])) {
             $segments[count($segments) - 1] = $vehicle;
             $moved = true;
         }

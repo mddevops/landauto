@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\SiteSection;
 use App\Models\SiteVehicle;
 use App\Models\SiteVehicleSlugRedirect;
+use App\Support\SitePaths;
 use Symfony\Component\Uid\Ulid;
 
 /**
@@ -58,7 +59,7 @@ final class SectionManifest
         foreach ($this->addresses($section, $vehicles) as $address) {
             $template = $templates->get($address['context']['role']);
 
-            $path = implode('/', [$section->prefix, ...$address['segments']]);
+            $path = SitePaths::join($section->prefix, ...$address['segments']);
 
             if (! $template instanceof Page || strlen($path) > self::PATH_MAX) {
                 continue;
@@ -90,6 +91,7 @@ final class SectionManifest
                 'public_id' => $section->public_id,
                 'title' => $section->title,
                 'prefix' => $section->prefix,
+                'root' => $props['root'],
                 'pages' => $props['pages'],
                 'vehicles' => $vehicles,
                 'redirects' => $this->redirects($site, $section, $vehicles),
@@ -114,6 +116,15 @@ final class SectionManifest
      */
     private function addresses(SiteSection $section, array $vehicles): array
     {
+        if ($section->type->atRoot()) {
+            return array_map(fn (array $vehicle): array => [
+                'segments' => [$vehicle['slug']],
+                'title' => $vehicle['title'],
+                'seo_title' => $vehicle['title'],
+                'context' => ['role' => SectionPageRole::Item->value, 'mark' => $vehicle['mark']['segment'], 'vehicle' => $vehicle['public_id']],
+            ], $vehicles);
+        }
+
         $addresses = [[
             'segments' => [],
             'title' => $section->title,
@@ -158,14 +169,15 @@ final class SectionManifest
         $byId = collect($vehicles)->keyBy('public_id');
         $moved = [];
 
+        $root = $section->type->atRoot();
         $site->vehicles()->whereIn('public_id', $byId->keys()->all())->with('slugRedirects')->get()
-            ->each(function (SiteVehicle $vehicle) use ($byId, &$moved): void {
+            ->each(function (SiteVehicle $vehicle) use ($byId, $root, &$moved): void {
                 /** @var VehiclePage $page */
                 $page = $byId->get($vehicle->public_id);
 
                 foreach ($vehicle->slugRedirects as $redirect) {
                     /** @var SiteVehicleSlugRedirect $redirect */
-                    $moved["{$page['mark']['segment']}/{$redirect->slug}"] = $page['slug'];
+                    $moved[$root ? $redirect->slug : "{$page['mark']['segment']}/{$redirect->slug}"] = $page['slug'];
                 }
             });
 

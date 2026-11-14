@@ -47,7 +47,7 @@ final class SectionPages
         $existing = $section->pages()->pluck('section_role')
             ->map(fn (SectionPageRole|string $role): string => $role instanceof SectionPageRole ? $role->value : $role)
             ->all();
-        $missing = array_values(array_filter(SectionPageRole::cases(), fn (SectionPageRole $role): bool => ! in_array($role->value, $existing, true)));
+        $missing = array_values(array_filter($section->type->roles(), fn (SectionPageRole $role): bool => ! in_array($role->value, $existing, true)));
 
         if ($missing === []) {
             return;

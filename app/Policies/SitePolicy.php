@@ -58,11 +58,11 @@ final class SitePolicy
     }
 
     /**
-     * Vehicle sections live on multi-page Sites and follow Page management (ADR-011 §9).
+     * Vehicle sections (and the Landing vehicle card) follow Page management (ADR-011 §7, §9).
      */
     public function manageSections(User $user, Site $site): bool
     {
-        return $this->addPage($user, $site);
+        return $site->site_type->allowsSections() && $this->editDesign($user, $site);
     }
 
     public function editContent(User $user, Site $site): bool

@@ -23,6 +23,14 @@ final class SitePaths
         'search', 'login', 'logout', 'register', 'account', 'cart', 'feed', 'rss', 'landflow',
     ];
 
+    /**
+     * Path of section segments; the Landing vehicle card has an empty prefix and sits at the root.
+     */
+    public static function join(string ...$segments): string
+    {
+        return implode('/', array_filter($segments, fn (string $segment): bool => $segment !== ''));
+    }
+
     public static function isReserved(string $segment): bool
     {
         return in_array($segment, self::RESERVED, true);

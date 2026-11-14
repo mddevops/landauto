@@ -13,6 +13,8 @@ export type CatalogProps = {
     public_id: string;
     title: string;
     prefix: string;
+    /** Landing vehicle card: addresses at the Site root, no catalog or mark pages. */
+    root: boolean;
     enabled: boolean;
     pages: Partial<Record<SectionPageRole, string>>;
     vehicles: CatalogVehicle[];
@@ -37,24 +39,31 @@ export type CatalogRuntime = {
     href: (target: CatalogTarget) => string | null;
 };
 
-/** Address of a section page relative to the Site root: `catalog/kia/rio-iv-restyling`. */
+/**
+ * Address of a section page relative to the Site root: `catalog/kia/rio-iv-restyling`, or
+ * `rio-iv-restyling` for the Landing vehicle card.
+ */
 export function catalogPath(
     catalog: CatalogProps,
     target: CatalogTarget,
 ): string | null {
     switch (target.role) {
         case 'index':
-            return catalog.prefix;
+            return catalog.root ? null : catalog.prefix;
         case 'mark':
-            return `${catalog.prefix}/${target.mark}`;
+            return catalog.root ? null : `${catalog.prefix}/${target.mark}`;
         case 'item': {
             const vehicle = catalog.vehicles.find(
                 (candidate) => candidate.public_id === target.vehicle,
             );
 
-            return vehicle
-                ? `${catalog.prefix}/${vehicle.mark.segment}/${vehicle.slug}`
-                : null;
+            if (!vehicle) {
+                return null;
+            }
+
+            return catalog.root
+                ? vehicle.slug
+                : `${catalog.prefix}/${vehicle.mark.segment}/${vehicle.slug}`;
         }
     }
 }

@@ -35,7 +35,12 @@ type PagesPanelProps = {
     currentPageId: string;
     canEdit: boolean;
     canAddPages: boolean;
-    catalog?: { title: string; prefix: string; enabled: boolean } | null;
+    catalog?: {
+        title: string;
+        prefix: string;
+        root: boolean;
+        enabled: boolean;
+    } | null;
 };
 
 const sectionRoles: SectionPageRole[] = ['index', 'mark', 'item'];
@@ -47,10 +52,14 @@ const exampleSegments: Record<SectionPageRole, string> = {
 };
 
 function examplePath(
-    prefix: string,
+    catalog: { prefix: string; root: boolean },
     role: SectionPageRole | null | undefined,
 ): string {
-    return `/${prefix}${role ? exampleSegments[role] : ''}`;
+    if (catalog.root) {
+        return '/rio-iv-restyling';
+    }
+
+    return `/${catalog.prefix}${role ? exampleSegments[role] : ''}`;
 }
 
 type DialogState =
@@ -217,7 +226,7 @@ export function PagesPanel({
                                                 </span>
                                                 <span className="max-w-full truncate font-mono text-xs font-normal text-muted-foreground">
                                                     {examplePath(
-                                                        catalog.prefix,
+                                                        catalog,
                                                         page.section_role,
                                                     )}
                                                 </span>

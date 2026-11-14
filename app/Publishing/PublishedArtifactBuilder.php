@@ -153,6 +153,7 @@ final class PublishedArtifactBuilder
                 'public_id' => $catalog['public_id'],
                 'title' => $catalog['title'],
                 'prefix' => $catalog['prefix'],
+                'root' => (bool) ($catalog['root'] ?? false),
                 'enabled' => true,
                 'pages' => (object) $catalog['pages'],
                 'vehicles' => $catalog['vehicles'],
