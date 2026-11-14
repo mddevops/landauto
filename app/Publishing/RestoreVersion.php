@@ -2,6 +2,7 @@
 
 namespace App\Publishing;
 
+use App\Automotive\VehiclePages;
 use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockVersionGrants;
 use App\Catalog\AutoCatalog;
@@ -17,6 +18,7 @@ use App\Models\Popup;
 use App\Models\PublishedVersion;
 use App\Models\Site;
 use App\Models\SiteOffer;
+use App\Models\SiteSection;
 use App\Models\SiteVehicle;
 use App\Models\SiteVersionRestore;
 use App\Models\User;
@@ -45,6 +47,7 @@ final class RestoreVersion
         private AutoCatalog $catalog,
         private BlockVersionGrants $grants,
         private VehiclePhotos $photos,
+        private VehiclePages $vehiclePages,
     ) {}
 
     /**
@@ -73,6 +76,11 @@ final class RestoreVersion
             $this->restorePopups($site, self::list($snapshot['popups'] ?? []));
             $this->restoreVehicles($site, self::list($snapshot['vehicles'] ?? []));
             $this->restorePages($site, self::list($snapshot['pages'] ?? []));
+
+            // Snapshots from before X-035 have no sections; the current sections are kept then.
+            if (array_key_exists('sections', $snapshot)) {
+                $this->restoreSections($site, self::list($snapshot['sections']));
+            }
 
             SiteVersionRestore::query()->create([
                 'site_id' => $site->id,
@@ -217,6 +225,10 @@ final class RestoreVersion
             $vehicle->primary_angle = MediaAngle::tryFrom((string) ($data['primary_angle'] ?? ''));
             $vehicle->save();
 
+            if (is_string($data['slug'] ?? null)) {
+                $this->vehiclePages->rename($vehicle, $data['slug']);
+            }
+
             if (array_key_exists('colors', $data)) {
                 $this->restorePhotos($site, $vehicle, self::list($data['colors']), self::list($data['photos'] ?? []));
             }
@@ -342,10 +354,59 @@ final class RestoreVersion
     }
 
     /**
+     * Sections, their previous prefixes and template Pages. Sections the version did not have are
+     * removed with their template Pages, like in «Разделах».
+     *
+     * @param  list<array<string, mixed>>  $sections
+     */
+    private function restoreSections(Site $site, array $sections): void
+    {
+        $keep = array_map(fn (array $section): string => (string) $section['public_id'], $sections);
+
+        foreach ($site->sections()->whereNotIn('public_id', $keep)->get() as $removed) {
+            foreach ($removed->pages()->get() as $page) {
+                $page->blocks()->delete();
+                $page->delete();
+            }
+
+            $removed->delete();
+        }
+
+        foreach ($sections as $data) {
+            $section = $this->ownRow(SiteSection::class, $site, (string) $data['public_id']);
+
+            if ($section === null) {
+                $section = new SiteSection;
+                $section->forceFill(['public_id' => $data['public_id'], 'site_id' => $site->id, 'type' => $data['type']]);
+            }
+
+            $section->forceFill([
+                'title' => (string) $data['title'],
+                'prefix' => (string) $data['prefix'],
+                'enabled' => (bool) $data['enabled'],
+                'sort_order' => (int) $data['sort_order'],
+            ])->save();
+
+            $section->redirects()->delete();
+
+            foreach (array_unique(array_map('strval', (array) ($data['redirects'] ?? []))) as $prefix) {
+                $redirect = $section->redirects()->make(['prefix' => $prefix]);
+                $redirect->site_id = $site->id;
+                $redirect->save();
+            }
+
+            $this->restorePages($site, self::list($data['pages'] ?? []), $section);
+        }
+    }
+
+    /**
+     * Ordinary Pages, or the template Pages of one section.
+     *
      * @param  list<array<string, mixed>>  $pages
      */
-    private function restorePages(Site $site, array $pages): void
+    private function restorePages(Site $site, array $pages, ?SiteSection $section = null): void
     {
+        $scope = fn () => $section === null ? $site->pages()->regular() : $section->pages();
         $keepPages = array_map(fn (array $page): string => (string) $page['public_id'], $pages);
         $targets = [];
 
@@ -360,7 +421,7 @@ final class RestoreVersion
 
         // Blocks that leave the Draft or would change their (immutable) Page or Block Version go first.
         BlockInstance::query()
-            ->whereIn('page_id', $site->pages()->regular()->select('id'))
+            ->whereIn('page_id', $scope()->select('id'))
             ->with('page')
             ->get()
             ->each(function (BlockInstance $block) use ($targets): void {
@@ -371,15 +432,30 @@ final class RestoreVersion
                 }
             });
 
-        $site->pages()->regular()->whereNotIn('public_id', $keepPages)->delete();
+        $scope()->whereNotIn('public_id', $keepPages)->delete();
 
         // Free the per-Site slug and home slots before the snapshot values are written.
-        foreach ($site->pages()->regular()->get() as $existing) {
-            $existing->forceFill(['slug' => 'restore-'.$existing->id, 'is_home' => false])->save();
+        if ($section === null) {
+            foreach ($scope()->get() as $existing) {
+                $existing->forceFill(['slug' => 'restore-'.$existing->id, 'is_home' => false])->save();
+            }
         }
 
         foreach ($pages as $data) {
-            $page = $this->ownRow(Page::class, $site, (string) $data['public_id']) ?? new Page;
+            $page = $this->ownRow(Page::class, $site, (string) $data['public_id']);
+
+            if ($page !== null && $page->site_section_id !== $section?->id) {
+                throw new RestoreFailed('Эту версию нельзя восстановить.');
+            }
+
+            if ($page === null) {
+                $page = new Page;
+
+                if ($section !== null) {
+                    $page->forceFill(['site_section_id' => $section->id, 'section_role' => $data['role'] ?? null]);
+                }
+            }
+
             $seo = self::map($data['seo'] ?? []);
             $page->forceFill([
                 'public_id' => $data['public_id'],
@@ -437,7 +513,7 @@ final class RestoreVersion
      * The Site's own row with this public ID, or null when it does not exist yet. A public ID owned
      * by another Site aborts the restore.
      *
-     * @template TModel of Page|Form|Popup|SiteVehicle
+     * @template TModel of Page|Form|Popup|SiteVehicle|SiteSection
      *
      * @param  class-string<TModel>  $model
      * @return TModel|null

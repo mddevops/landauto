@@ -4514,13 +4514,15 @@ Result: `pages.site_section_id` + `section_role` (`SectionPageRole`); `SectionPa
 
 ## X-035 — Publishing, Sitemap and Links for Sections
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** X-034
 **Decision:** ADR-011; ADR-006; D-127
 
 Scope: Published Version snapshot of sections, template Pages, slugs and redirects; public runtime routing for section addresses on the Landflow address and custom domains; canonical URLs; sitemap entries; vehicle cards and breadcrumbs link to generated pages automatically; restore of versions with sections.
 
 Acceptance: published Site serves all section pages from the snapshot only (Draft changes invisible until publish); prefix / slug redirects work after publish; sitemap lists generated pages; `composer quality` and `npm run test:e2e` pass.
+
+Result: `SectionManifest` turns an enabled catalog section into manifest pages — section, each mark, model and vehicle (`catalog/kia/rio/<slug>`) — with the blocks of the role's template Page, generated titles («KIA — Каталог», vehicle title), the template's description / noindex and deterministic ULID-shaped ids (stable manifest hash, valid lead context); manifest key `catalog` (vehicles, previous prefixes, previous vehicle slugs) only while enabled. Artifacts get `catalog` (all pages: cards link to generated pages) and `page_context`; generated pages keep full offer details only for their own and referenced vehicles. Public route accepts up to four segments; a miss checks the catalog redirects and answers 301 (query kept). Sitemap / canonical come from the artifacts. Publish validation checks template Blocks (access, state; not emptiness). Draft snapshot stores sections (title, prefix, enabled, prefix history, template Pages with blocks) and vehicle slugs; restore brings them back (older snapshots keep current sections). `vehicle-section` shows breadcrumbs on mark / model pages. Checks: `PublishedSectionsTest` (5), `composer quality` PASS (PHPUnit 1,319: 1,317 passed, 2 skipped), real Node SSR render checked manually; Playwright `site-sections.spec.ts` publishes and visits the section (verified by CI).
 
 ---
 

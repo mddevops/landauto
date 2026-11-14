@@ -1,6 +1,8 @@
 import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { CaptchaConfig } from '@/blocks/captcha';
+import { catalogPath, runtimeCatalog } from '@/blocks/catalog';
+import type { CatalogProps, PageContext } from '@/blocks/catalog';
 import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
 import { currentTracking, submitForm } from '@/blocks/form-submit';
@@ -29,6 +31,10 @@ export type PublishedPagePayload = {
     site: { name: string };
     page: { public_id: string; title: string };
     pages: { public_id: string; path: string }[];
+    /** Present while the catalog section is published; `base` prefixes its addresses. */
+    catalog?: CatalogProps & { base: string };
+    /** Present on generated section pages: the mark, model or vehicle the page shows. */
+    page_context?: PageContext;
     design: DesignTokens;
     blocks: {
         public_id: string;
@@ -72,8 +78,18 @@ export function PublishedSite({
         const popups = new Map(
             payload.popups.map((popup) => [popup.public_id, popup]),
         );
+        const base = payload.catalog?.base ?? '';
 
         return {
+            catalog: runtimeCatalog(
+                payload.catalog ?? null,
+                (catalog, target) => {
+                    const path = catalogPath(catalog, target);
+
+                    return path === null ? null : `${base}/${path}`;
+                },
+            ),
+            pageContext: payload.page_context ?? null,
             assetUrl: (id) => urls.get(id) ?? null,
             pageHref: (id) => paths.get(id) ?? null,
             vehicle: (id) => vehicles.get(id) ?? null,
