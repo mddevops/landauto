@@ -1,3 +1,4 @@
+import type { SectionPageRole } from '@/blocks/catalog';
 import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockSchema } from '@/blocks/schema';
 import type { BlockState } from '@/blocks/state';
@@ -14,6 +15,8 @@ export type DesignerPage = {
     title: string;
     slug: string;
     is_home: boolean;
+    /** Set on generated catalog template Pages (Site Designer only). */
+    section_role?: SectionPageRole | null;
     seo: {
         title: string | null;
         description: string | null;

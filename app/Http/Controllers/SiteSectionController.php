@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers;
 
+use App\Automotive\SectionPages;
+use App\Enums\SectionPageRole;
 use App\Enums\SiteSectionType;
 use App\Http\Requests\SaveSiteSectionRequest;
 use App\Models\Site;
@@ -22,14 +24,19 @@ use Inertia\Response;
  */
 class SiteSectionController extends Controller
 {
-    public function __construct(private DesignerScope $scope) {}
+    public function __construct(
+        private DesignerScope $scope,
+        private SectionPages $pages,
+    ) {}
 
     public function index(Site $site): Response
     {
         $this->scope->site($site);
         Gate::authorize('manageSections', $site);
 
-        $sections = $site->sections()->with('redirects')->orderBy('sort_order')->orderBy('id')->get();
+        $sections = $site->sections()->orderBy('sort_order')->orderBy('id')->get();
+        $sections->each(fn (SiteSection $section) => $this->pages->ensure($section));
+        $sections->load(['redirects', 'pages']);
         $existing = $sections->map(fn (SiteSection $section): string => $section->type->value)->all();
 
         return Inertia::render('sites/sections', [
@@ -43,6 +50,16 @@ class SiteSectionController extends Controller
                 'prefix' => $section->prefix,
                 'enabled' => $section->enabled,
                 'redirects' => $section->redirects->sortByDesc('id')->pluck('prefix')->values()->all(),
+                'pages' => collect(SectionPageRole::cases())
+                    ->map(fn (SectionPageRole $role): ?array => ($page = $section->pages->firstWhere('section_role', $role)) === null ? null : [
+                        'public_id' => $page->public_id,
+                        'role' => $role->value,
+                        'label' => $role->label(),
+                        'path' => implode('/', [$section->prefix, ...$role->exampleSegments()]),
+                    ])
+                    ->filter()
+                    ->values()
+                    ->all(),
             ])->values()->all(),
             'types' => array_map(fn (SiteSectionType $type): array => [
                 'value' => $type->value,
@@ -78,6 +95,7 @@ class SiteSectionController extends Controller
             ]);
             $section->site()->associate($site);
             $section->save();
+            $this->pages->ensure($section);
         });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Раздел добавлен.']);
@@ -116,7 +134,14 @@ class SiteSectionController extends Controller
         $this->scope->section($site, $section);
         Gate::authorize('manageSections', $site);
 
-        $section->delete();
+        DB::transaction(function () use ($section): void {
+            foreach ($section->pages()->get() as $page) {
+                $page->blocks()->delete();
+                $page->delete();
+            }
+
+            $section->delete();
+        });
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Раздел удалён.']);
 

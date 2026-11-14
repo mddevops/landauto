@@ -1,5 +1,12 @@
-import { Head, router, useForm } from '@inertiajs/react';
-import { ArrowRight, FolderTree, Plus, Trash2 } from 'lucide-react';
+import { Head, Link, router, useForm } from '@inertiajs/react';
+import {
+    ArrowRight,
+    Eye,
+    FolderTree,
+    PencilRuler,
+    Plus,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
 import { ConfirmDialog } from '@/components/catalog/photo-parts';
@@ -18,6 +25,7 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Spinner } from '@/components/ui/spinner';
 import { dashboard } from '@/routes';
+import { designer, preview } from '@/routes/sites';
 import {
     destroy as destroySection,
     store as storeSection,
@@ -32,6 +40,7 @@ type Section = {
     prefix: string;
     enabled: boolean;
     redirects: string[];
+    pages: { public_id: string; role: string; label: string; path: string }[];
 };
 
 type SectionType = {
@@ -261,6 +270,69 @@ function SectionCard({
                             Показывать раздел на сайте
                         </Label>
                     </div>
+                    {section.pages.length > 0 && (
+                        <div className="grid gap-2">
+                            <p className="text-sm font-medium">
+                                Страницы раздела
+                            </p>
+                            <p className="text-xs text-muted-foreground">
+                                Шаблоны: одна страница для всех автомобилей.
+                                Внешний вид настраивается в дизайнере, данные
+                                автомобилей — в разделе «Автомобили».
+                            </p>
+                            <ul className="divide-y rounded-md border">
+                                {section.pages.map((page) => (
+                                    <li
+                                        key={page.public_id}
+                                        className="flex flex-wrap items-center justify-between gap-2 px-3 py-2"
+                                    >
+                                        <div className="min-w-0">
+                                            <p className="text-sm">
+                                                {page.label}
+                                            </p>
+                                            <p className="font-mono text-xs break-all text-muted-foreground">
+                                                /{page.path}
+                                            </p>
+                                        </div>
+                                        <Button
+                                            asChild
+                                            variant="outline"
+                                            size="sm"
+                                        >
+                                            <Link
+                                                href={designer.url(
+                                                    site.public_id,
+                                                    {
+                                                        query: {
+                                                            page: page.public_id,
+                                                        },
+                                                    },
+                                                )}
+                                                aria-label={`Открыть в дизайнере: ${page.label}`}
+                                            >
+                                                <PencilRuler aria-hidden="true" />
+                                                Открыть в дизайнере
+                                            </Link>
+                                        </Button>
+                                    </li>
+                                ))}
+                            </ul>
+                            <div>
+                                <Button asChild variant="ghost" size="sm">
+                                    <a
+                                        href={preview.url(site.public_id, {
+                                            query: { path: section.prefix },
+                                        })}
+                                        target="_blank"
+                                        rel="noopener"
+                                    >
+                                        <Eye aria-hidden="true" />
+                                        Посмотреть в предпросмотре
+                                    </a>
+                                </Button>
+                            </div>
+                        </div>
+                    )}
                     {section.redirects.length > 0 && (
                         <div className="space-y-1 text-sm">
                             <p className="text-muted-foreground">
@@ -291,7 +363,7 @@ function SectionCard({
                         </Button>
                         <ConfirmDialog
                             title={`Удалить раздел «${section.title}»?`}
-                            description="Страницы раздела перестанут открываться после следующей публикации. Автомобили сайта останутся."
+                            description="Шаблоны страниц раздела будут удалены вместе с оформлением, а страницы перестанут открываться после следующей публикации. Автомобили сайта останутся."
                             onConfirm={() =>
                                 router.delete(
                                     destroySection({

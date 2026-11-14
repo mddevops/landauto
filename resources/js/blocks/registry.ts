@@ -1,4 +1,5 @@
 import type { ComponentType } from 'react';
+import { VehicleSectionBlock } from '@/blocks/catalog-blocks';
 import { ChatSelectionBlock } from '@/blocks/chat-selection-block';
 import {
     BenefitsBlock,
@@ -35,6 +36,7 @@ const officialBlockRenderers: Record<
     'vehicle-offers': VehicleOffersBlock,
     'vehicle-characteristics': VehicleCharacteristicsBlock,
     'vehicle-equipment': VehicleEquipmentBlock,
+    'vehicle-section': VehicleSectionBlock,
     quiz: QuizBlock,
     'chat-selection': ChatSelectionBlock,
 };

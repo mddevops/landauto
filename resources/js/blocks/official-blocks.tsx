@@ -1,5 +1,5 @@
 import type { ReactNode } from 'react';
-import { actionHref, actionPopupId } from '@/blocks/actions';
+import { actionHref, actionPopupId, isActionType } from '@/blocks/actions';
 import { useButtonStyle } from '@/blocks/design';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import { useTriggerContext } from '@/blocks/trigger-context';
@@ -28,16 +28,21 @@ export function Container({
 
 function ActionLink({
     action,
+    fallbackHref,
     className,
     children,
 }: {
     action: unknown;
+    /** Link used while no action is chosen, e.g. the card of a vehicle. */
+    fallbackHref?: string | null;
     className?: string;
     children: ReactNode;
 }) {
     const context = useBlockRenderContext();
     const trigger = useTriggerContext();
-    const href = actionHref(action, context);
+    const href =
+        actionHref(action, context) ??
+        (hasActionType(action) ? null : (fallbackHref ?? null));
     const popupId = actionPopupId(action);
     const open = context.openPopup;
 
@@ -69,12 +74,22 @@ function ActionLink({
     );
 }
 
+function hasActionType(action: unknown): boolean {
+    return (
+        typeof action === 'object' &&
+        action !== null &&
+        isActionType((action as BlockState).type)
+    );
+}
+
 export function ButtonPreview({
     button,
     variant = 'primary',
+    fallbackHref,
 }: {
     button: BlockState;
     variant?: 'primary' | 'secondary' | 'inverted';
+    fallbackHref?: string | null;
 }) {
     const outline = useButtonStyle() === 'outline';
     const label = text(button, 'label');
@@ -86,6 +101,7 @@ export function ButtonPreview({
     return (
         <ActionLink
             action={button.action}
+            fallbackHref={fallbackHref}
             className={cn(
                 'inline-flex items-center rounded-(--lf-radius) border-2 px-5 py-2 text-sm font-medium',
                 variant === 'primary' &&

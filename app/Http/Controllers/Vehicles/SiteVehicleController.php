@@ -2,6 +2,8 @@
 
 namespace App\Http\Controllers\Vehicles;
 
+use App\Automotive\SectionCatalog;
+use App\Automotive\VehiclePages;
 use App\Automotive\VehiclePhotos;
 use App\Automotive\VehiclePresenter;
 use App\Automotive\VehicleWizard;
@@ -13,16 +15,23 @@ use App\Enums\OfferAvailability;
 use App\Enums\WorkspacePermission;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Vehicles\StoreVehicleRequest;
+use App\Models\Catalog\AutoSeries;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteOfferBenefit;
 use App\Models\SiteVehicle;
+use App\Models\SiteVehicleSlugRedirect;
+use App\Publishing\Runtime\PublicSiteResolver;
 use App\Support\DesignerScope;
 use App\Support\Money;
+use App\Support\SitePaths;
+use Closure;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
+use Illuminate\Support\Str;
 use Inertia\Inertia;
 use Inertia\Response;
 
@@ -82,7 +91,7 @@ class SiteVehicleController extends Controller
         return to_route('sites.vehicles.show', [$site, $vehicle]);
     }
 
-    public function show(Request $request, Site $site, SiteVehicle $vehicle, CatalogPresenter $catalog, AutoCatalog $auto): Response
+    public function show(Request $request, Site $site, SiteVehicle $vehicle, CatalogPresenter $catalog, AutoCatalog $auto, VehiclePages $pages, SectionCatalog $sections): Response
     {
         $this->scope->vehicle($site, $vehicle);
         Gate::authorize('viewVehicles', $site);
@@ -99,6 +108,7 @@ class SiteVehicleController extends Controller
                 'in_library' => $canManageLibrary && $vehicle->source_workspace_vehicle_id !== null
                     && $site->workspace->vehicleLibrary()->whereKey($vehicle->source_workspace_vehicle_id)->exists(),
             ],
+            'address' => $this->address($site, $vehicle, $series, $pages, $sections),
             'offers' => $offers->map(fn (SiteOffer $offer): array => [
                 'public_id' => $offer->public_id,
                 ...$labels[$offer->public_id],
@@ -132,24 +142,77 @@ class SiteVehicleController extends Controller
         ]);
     }
 
-    public function update(Request $request, Site $site, SiteVehicle $vehicle): RedirectResponse
+    public function update(Request $request, Site $site, SiteVehicle $vehicle, VehiclePages $pages): RedirectResponse
     {
         $this->scope->vehicle($site, $vehicle);
         Gate::authorize('editVehicles', $site);
 
-        $vehicle->update($request->validate([
+        $request->merge($request->has('slug') ? ['slug' => Str::lower(trim((string) $request->input('slug')))] : []);
+        $validated = $request->validate([
             'status' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:4294967295'],
             'custom_name' => ['sometimes', 'nullable', 'string', 'max:120'],
             'custom_description' => ['sometimes', 'nullable', 'string', 'max:2000'],
-        ], [], [
+            'slug' => [
+                'sometimes',
+                'required',
+                'string',
+                'max:'.VehiclePages::SLUG_MAX,
+                'regex:'.SitePaths::PATTERN,
+                function (string $attribute, mixed $value, Closure $fail) use ($vehicle, $pages): void {
+                    if ($pages->slugTaken($vehicle, (string) $value)) {
+                        $fail('Такой адрес уже есть у другого автомобиля этой модели.');
+                    }
+                },
+            ],
+        ], [
+            'slug.regex' => 'Адрес может содержать только строчные латинские буквы, цифры и дефисы.',
+        ], [
             'status' => 'Показ на сайте',
             'sort_order' => 'Сортировка',
             'custom_name' => 'Название',
             'custom_description' => 'Описание',
-        ]));
+            'slug' => 'Адрес страницы',
+        ]);
+
+        DB::transaction(function () use ($vehicle, $validated, $pages): void {
+            $vehicle->update(Arr::except($validated, 'slug'));
+
+            if (isset($validated['slug'])) {
+                $pages->rename($vehicle, $validated['slug']);
+            }
+        });
 
         return back();
+    }
+
+    /**
+     * «Адрес страницы» of the vehicle card in the catalog section (ADR-011 §4).
+     *
+     * @return array{slug: string, base_url: string|null, redirects: list<string>}|null
+     */
+    private function address(Site $site, SiteVehicle $vehicle, ?AutoSeries $series, VehiclePages $pages, SectionCatalog $catalog): ?array
+    {
+        if ($series === null) {
+            return null;
+        }
+
+        $pages->ensureSlugs($site);
+        $vehicle->refresh();
+        $section = $catalog->section($site);
+        $model = $series->generation->model;
+
+        return [
+            'slug' => (string) $vehicle->slug,
+            'base_url' => $section === null ? null : PublicSiteResolver::primaryUrl($site, '/'.implode('/', [
+                $section->prefix,
+                VehiclePages::segment($model->mark->url),
+                VehiclePages::segment($model->url),
+            ]).'/'),
+            'redirects' => array_values($vehicle->slugRedirects()->latest('id')->get()
+                ->map(fn (SiteVehicleSlugRedirect $redirect): string => $redirect->slug)
+                ->all()),
+        ];
     }
 
     /**

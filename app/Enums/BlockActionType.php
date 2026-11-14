@@ -13,6 +13,8 @@ enum BlockActionType: string
     case Phone = 'phone';
     case Email = 'email';
     case OpenPopup = 'open_popup';
+    /** Card of a Site vehicle in the catalog section (ADR-011). */
+    case OpenVehicle = 'open_vehicle';
 
     /** State key holding the action target next to `type`. */
     public function targetKey(): string
@@ -24,6 +26,7 @@ enum BlockActionType: string
             self::Phone => 'phone',
             self::Email => 'email',
             self::OpenPopup => 'popup',
+            self::OpenVehicle => 'vehicle',
         };
     }
 }

@@ -43,7 +43,7 @@ final class PublishedSnapshotBuilder
         // One read transaction gives a consistent view of the Draft rows on the main database.
         return DB::transaction(function () use ($site): PublishedSnapshot {
             $site = Site::query()->with('workspace')->findOrFail($site->id);
-            $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
+            $pages = $site->pages()->regular()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
             $vehicles = $this->vehicles->forPublication($site);
             $popups = $site->popups()->active()->with('form.fields')->orderBy('name')->orderBy('id')->get();
             $manifest = $this->manifest($site, array_values($pages->all()), $vehicles['vehicles'], $vehicles['offers'], array_values($popups->all()));

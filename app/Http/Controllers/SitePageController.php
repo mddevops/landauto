@@ -38,7 +38,7 @@ class SitePageController extends Controller
     {
         $page->title = $request->string('title')->toString();
 
-        if (! $page->is_home && $request->filled('slug')) {
+        if (! $page->is_home && ! $page->isSectionPage() && $request->filled('slug')) {
             $page->slug = $request->string('slug')->toString();
         }
 
@@ -60,6 +60,10 @@ class SitePageController extends Controller
 
         if ($page->is_home) {
             throw ValidationException::withMessages(['page' => 'Главную страницу удалить нельзя.']);
+        }
+
+        if ($page->isSectionPage()) {
+            throw ValidationException::withMessages(['page' => 'Страница раздела удаляется вместе с разделом в «Разделах».']);
         }
 
         DB::transaction(function () use ($page): void {

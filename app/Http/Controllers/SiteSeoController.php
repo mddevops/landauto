@@ -25,7 +25,7 @@ class SiteSeoController extends Controller
 
         return Inertia::render('sites/seo', [
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
-            'pages' => $site->pages()
+            'pages' => $site->pages()->regular()
                 ->orderBy('sort_order')
                 ->orderBy('id')
                 ->get(['id', 'public_id', 'site_id', 'title', 'slug', 'is_home', 'seo_title', 'seo_description', 'seo_noindex'])

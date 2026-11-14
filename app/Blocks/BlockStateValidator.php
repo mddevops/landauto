@@ -321,6 +321,7 @@ final class BlockStateValidator
                 ? null
                 : $this->errors[$targetPath] = 'Укажите корректный email.',
             BlockActionType::OpenPopup => $this->reference('popups', $target, $targetPath, 'Выберите попап этого сайта.'),
+            BlockActionType::OpenVehicle => $this->reference('vehicles', $target, $targetPath, 'Выберите автомобиль этого сайта.'),
         };
     }
 

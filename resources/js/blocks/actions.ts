@@ -9,6 +9,7 @@ export const actionTypes = {
     phone: { label: 'Позвонить', target: 'phone' },
     email: { label: 'Написать на email', target: 'email' },
     open_popup: { label: 'Открыть попап', target: 'popup' },
+    open_vehicle: { label: 'Открыть карточку автомобиля', target: 'vehicle' },
 } as const;
 
 export type ActionType = keyof typeof actionTypes;
@@ -59,6 +60,10 @@ export function actionHref(
             return `mailto:${target}`;
         case 'open_popup':
             return null;
+        case 'open_vehicle':
+            return context.catalog?.enabled
+                ? context.catalog.href({ role: 'item', vehicle: target })
+                : null;
     }
 }
 

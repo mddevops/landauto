@@ -27,6 +27,7 @@ use LogicException;
  * @property int $site_id
  * @property int|null $source_workspace_vehicle_id
  * @property string $catalog_series_ref
+ * @property string|null $slug
  * @property string|null $custom_name
  * @property string|null $custom_description
  * @property MediaAngle|null $primary_angle
@@ -96,6 +97,14 @@ class SiteVehicle extends Model
     public function offers(): HasMany
     {
         return $this->hasMany(SiteOffer::class);
+    }
+
+    /**
+     * @return HasMany<SiteVehicleSlugRedirect, $this>
+     */
+    public function slugRedirects(): HasMany
+    {
+        return $this->hasMany(SiteVehicleSlugRedirect::class);
     }
 
     /**

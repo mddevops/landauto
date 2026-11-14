@@ -63,6 +63,16 @@ class SiteSection extends Model
     }
 
     /**
+     * Generated template Pages (ADR-011 §3).
+     *
+     * @return HasMany<Page, $this>
+     */
+    public function pages(): HasMany
+    {
+        return $this->hasMany(Page::class);
+    }
+
+    /**
      * @return HasMany<SiteSectionRedirect, $this>
      */
     public function redirects(): HasMany

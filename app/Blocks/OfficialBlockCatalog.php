@@ -200,6 +200,13 @@ final class OfficialBlockCatalog
                 self::text('title', 'Заголовок', 120, 'Оснащение'),
                 ['key' => 'show_optional', 'type' => 'boolean', 'label' => 'Показывать опции за доплату', 'default' => true],
             ]),
+            self::block('vehicle-section', 'Марки и модели каталога', [
+                [...self::text('title', 'Заголовок', 120), 'help' => 'Если оставить пустым, на странице марки или модели подставится её название.'],
+                self::textarea('subtitle', 'Подзаголовок', 500),
+                self::select('columns', 'Колонок', ['two' => '2', 'three' => '3', 'four' => '4'], 'three'),
+                ['key' => 'show_price', 'type' => 'boolean', 'label' => 'Показывать цену', 'default' => true],
+                self::text('button_label', 'Текст кнопки', 40, 'Подробнее'),
+            ]),
             self::block(self::QUIZ_SLUG, 'Квиз', [
                 self::text('title', 'Заголовок', 120, 'Подберём автомобиль за минуту', required: true),
                 self::textarea('subtitle', 'Подзаголовок', 500),

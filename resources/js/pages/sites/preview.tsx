@@ -3,6 +3,8 @@ import { ArrowLeft } from 'lucide-react';
 import { useMemo, useState } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { CaptchaConfig } from '@/blocks/captcha';
+import type { CatalogProps, PageContext } from '@/blocks/catalog';
+import { catalogPath, runtimeCatalog } from '@/blocks/catalog';
 import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
 import { currentTracking, submitForm } from '@/blocks/form-submit';
@@ -38,6 +40,8 @@ type PreviewProps = {
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
     captcha: CaptchaConfig | null;
+    catalog: CatalogProps | null;
+    pageContext: PageContext | null;
 };
 
 type OpenedPopup = {
@@ -56,6 +60,8 @@ export default function Preview({
     vehicles,
     popups,
     captcha,
+    catalog,
+    pageContext,
 }: PreviewProps) {
     const [opened, setOpened] = useState<OpenedPopup | null>(null);
     const renderContext = useMemo(() => {
@@ -73,9 +79,13 @@ export default function Preview({
         return {
             assetUrl: (id: string) => urls.get(id) ?? null,
             pageHref: (id: string) =>
-                pageIds.has(id)
-                    ? preview.url(site.public_id, { query: { page: id } })
-                    : null,
+                catalog && catalog.pages.index === id
+                    ? preview.url(site.public_id, {
+                          query: { path: catalog.prefix },
+                      })
+                    : pageIds.has(id)
+                      ? preview.url(site.public_id, { query: { page: id } })
+                      : null,
             vehicle: (id: string) => vehicleMap.get(id) ?? null,
             vehicles,
             hasPopup: (id: string) => popupMap.has(id),
@@ -90,9 +100,27 @@ export default function Preview({
                     setOpened({ popup, context, trigger });
                 }
             },
+            catalog: runtimeCatalog(catalog, (current, target) => {
+                const path = catalogPath(current, target);
+
+                return path
+                    ? preview.url(site.public_id, { query: { path } })
+                    : null;
+            }),
+            pageContext,
         };
-    }, [assets, pages, vehicles, popups, site.public_id]);
+    }, [assets, pages, vehicles, popups, site.public_id, catalog, pageContext]);
     const openedForm = opened?.popup.form ?? null;
+    const sample =
+        pageContext?.vehicle ??
+        catalog?.vehicles.find(
+            (vehicle) =>
+                pageContext?.mark !== null &&
+                vehicle.mark.segment === pageContext?.mark &&
+                (!pageContext.model ||
+                    vehicle.model.segment === pageContext.model),
+        )?.public_id ??
+        null;
 
     return (
         <>
@@ -104,7 +132,10 @@ export default function Preview({
                     <Button asChild variant="ghost" size="sm">
                         <Link
                             href={designer(site.public_id, {
-                                query: { page: page.public_id },
+                                query: {
+                                    page: page.public_id,
+                                    ...(sample ? { sample } : {}),
+                                },
                             })}
                         >
                             <ArrowLeft aria-hidden="true" />

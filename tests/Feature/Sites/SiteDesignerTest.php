@@ -35,7 +35,9 @@ class SiteDesignerTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->component('sites/designer')
                 ->where('site', ['public_id' => $site->public_id, 'name' => 'Автосалон Север'])
-                ->where('page', ['public_id' => $home->public_id, 'title' => 'Главная'])
+                ->where('page', ['public_id' => $home->public_id, 'title' => 'Главная', 'section_role' => null])
+                ->where('catalog', null)
+                ->where('pageContext', null)
                 ->has('blocks', 2)
                 ->where('blocks.0.public_id', $header->public_id)
                 ->where('blocks.0.slug', 'header')

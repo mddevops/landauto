@@ -1,4 +1,5 @@
 import { createContext, use } from 'react';
+import type { CatalogRuntime, PageContext } from '@/blocks/catalog';
 import type { TriggerContextValue } from '@/blocks/trigger-context';
 import type { VehicleBinding } from '@/blocks/vehicles';
 
@@ -18,6 +19,10 @@ export type BlockRenderContextValue = {
     hasPopup: (popupId: string) => boolean;
     /** Present only where Popups can actually open (the preview runtime). */
     openPopup: OpenPopup | null;
+    /** Catalog section of the Site, when it has one. */
+    catalog?: CatalogRuntime | null;
+    /** Set on catalog template Pages: the mark, model or vehicle the Page shows. */
+    pageContext?: PageContext | null;
 };
 
 export const BlockRenderContext = createContext<BlockRenderContextValue>({
@@ -27,7 +32,19 @@ export const BlockRenderContext = createContext<BlockRenderContextValue>({
     vehicles: [],
     hasPopup: () => false,
     openPopup: null,
+    catalog: null,
+    pageContext: null,
 });
+
+/** Card address of a vehicle while the catalog section is on. */
+export function useVehicleHref(): (vehicleId: string) => string | null {
+    const { catalog } = useBlockRenderContext();
+
+    return (vehicleId) =>
+        catalog?.enabled
+            ? catalog.href({ role: 'item', vehicle: vehicleId })
+            : null;
+}
 
 export function useBlockRenderContext(): BlockRenderContextValue {
     return use(BlockRenderContext);
