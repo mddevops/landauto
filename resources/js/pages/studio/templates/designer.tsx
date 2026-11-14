@@ -4,13 +4,9 @@ import { useMemo, useState } from 'react';
 import type { DesignTokens } from '@/blocks/design';
 import { BlockRenderContext } from '@/blocks/render-context';
 import { SiteTheme } from '@/blocks/theme';
-import {
-    AutosaveIndicator,
-    CanvasBlock,
-    DesignerTabs as Tabs,
-} from '@/components/designer/canvas';
+import { AutosaveIndicator, CanvasBlock } from '@/components/designer/canvas';
 import { DesignerContext } from '@/components/designer/designer-context';
-import { Navigator } from '@/components/designer/navigator';
+import { DesignerSidebar } from '@/components/designer/designer-sidebar';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import { PropertiesPanel } from '@/components/designer/properties-panel';
 import type {
@@ -67,11 +63,8 @@ function templatePageRoutes(template: string): DesignerPageRoutes {
         store: storePage.form(template),
         update: (page) => updatePage.form({ template, page }),
         destroy: (page) => destroyPage.form({ template, page }),
-        seo: null,
     };
 }
-
-type LeftTab = 'pages' | 'blocks';
 
 export default function TemplateDesigner({
     template,
@@ -117,7 +110,6 @@ export default function TemplateDesigner({
         setSelectedId(selectedBlock);
     }
 
-    const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
     const blockRoutes = templateBlockRoutes(template.public_id);
     const autosave = useBlockAutosave(blockRoutes.state);
     const { errors } = usePage<{ errors: Record<string, string> }>().props;
@@ -182,50 +174,25 @@ export default function TemplateDesigner({
                 </header>
 
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-                    <aside
-                        aria-label="Левая панель"
-                        className="border-b bg-background lg:w-72 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0"
-                    >
-                        <Tabs
-                            value={leftTab}
-                            onChange={setLeftTab}
-                            tabs={[
-                                { value: 'pages', label: 'Страницы' },
-                                { value: 'blocks', label: 'Блоки' },
-                            ]}
-                        />
-                        <div
-                            role="tabpanel"
-                            id={`designer-panel-${leftTab}`}
-                            aria-labelledby={`designer-tab-${leftTab}`}
-                            className="p-4"
-                        >
-                            {leftTab === 'pages' ? (
-                                <PagesPanel
-                                    routes={templatePageRoutes(
-                                        template.public_id,
-                                    )}
-                                    pages={pages}
-                                    currentPageId={page.public_id}
-                                    canEdit
-                                    canAddPages
-                                    canEditSeo={false}
-                                    canEditSeoIndexing={false}
-                                />
-                            ) : (
-                                <Navigator
-                                    routes={blockRoutes}
-                                    pageId={page.public_id}
-                                    blocks={blocks}
-                                    referenceIssues={{}}
-                                    library={library}
-                                    selectedId={selectedId}
-                                    onSelect={setSelectedId}
-                                    canEdit
-                                />
-                            )}
-                        </div>
-                    </aside>
+                    <DesignerSidebar
+                        blockRoutes={blockRoutes}
+                        pageId={page.public_id}
+                        blocks={blocks}
+                        referenceIssues={{}}
+                        library={library}
+                        selectedId={selectedId}
+                        onSelect={setSelectedId}
+                        canEditStructure
+                        pages={
+                            <PagesPanel
+                                routes={templatePageRoutes(template.public_id)}
+                                pages={pages}
+                                currentPageId={page.public_id}
+                                canEdit
+                                canAddPages
+                            />
+                        }
+                    />
 
                     <main
                         aria-label="Холст"

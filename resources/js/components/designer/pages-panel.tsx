@@ -1,15 +1,14 @@
-import { Form, Link, useForm } from '@inertiajs/react';
+import { Form, Link } from '@inertiajs/react';
 import {
+    ChevronDown,
     FileText,
     FolderTree,
     House,
     Pencil,
     Plus,
-    Search,
     Trash2,
 } from 'lucide-react';
 import { useState } from 'react';
-import type { FormEvent } from 'react';
 import type { SectionPageRole } from '@/blocks/catalog';
 import type {
     DesignerPage,
@@ -17,7 +16,6 @@ import type {
 } from '@/components/designer/types';
 import InputError from '@/components/input-error';
 import { Button } from '@/components/ui/button';
-import { Checkbox } from '@/components/ui/checkbox';
 import {
     Dialog,
     DialogContent,
@@ -29,7 +27,7 @@ import {
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
-import type { RouteDefinition, RouteFormDefinition } from '@/wayfinder';
+import type { RouteFormDefinition } from '@/wayfinder';
 
 type PagesPanelProps = {
     routes: DesignerPageRoutes;
@@ -37,8 +35,6 @@ type PagesPanelProps = {
     currentPageId: string;
     canEdit: boolean;
     canAddPages: boolean;
-    canEditSeo: boolean;
-    canEditSeoIndexing: boolean;
     catalog?: { title: string; prefix: string; enabled: boolean } | null;
 };
 
@@ -61,9 +57,11 @@ function examplePath(
 type DialogState =
     | { mode: 'create' }
     | { mode: 'edit'; page: DesignerPage }
-    | { mode: 'seo'; page: DesignerPage }
     | { mode: 'delete'; page: DesignerPage }
     | null;
+
+const linkClass =
+    'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
 export function PagesPanel({
     routes,
@@ -71,8 +69,6 @@ export function PagesPanel({
     currentPageId,
     canEdit,
     canAddPages,
-    canEditSeo,
-    canEditSeoIndexing,
     catalog = null,
 }: PagesPanelProps) {
     const [dialog, setDialog] = useState<DialogState>(null);
@@ -80,6 +76,9 @@ export function PagesPanel({
     const regularPages = pages.filter((page) => !page.section_role);
     const sectionPages = sectionRoles.flatMap((role) =>
         pages.filter((page) => page.section_role === role),
+    );
+    const [catalogOpen, setCatalogOpen] = useState(() =>
+        sectionPages.some((page) => page.public_id === currentPageId),
     );
 
     return (
@@ -98,7 +97,7 @@ export function PagesPanel({
                                     : undefined
                             }
                             className={cn(
-                                'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                linkClass,
                                 page.public_id === currentPageId &&
                                     'bg-muted font-medium',
                             )}
@@ -116,18 +115,6 @@ export function PagesPanel({
                             )}
                             <span className="truncate">{page.title}</span>
                         </Link>
-                        {canEditSeo && routes.seo && (
-                            <Button
-                                type="button"
-                                variant="ghost"
-                                size="icon"
-                                className="size-8"
-                                aria-label={`SEO страницы «${page.title}»`}
-                                onClick={() => setDialog({ mode: 'seo', page })}
-                            >
-                                <Search aria-hidden="true" />
-                            </Button>
-                        )}
                         {canEdit && (
                             <>
                                 <Button
@@ -160,6 +147,106 @@ export function PagesPanel({
                         )}
                     </li>
                 ))}
+                {catalog && sectionPages.length > 0 && (
+                    <li>
+                        <section
+                            aria-labelledby="designer-catalog-pages"
+                            className="flex flex-col gap-1"
+                        >
+                            <h2 id="designer-catalog-pages">
+                                <button
+                                    type="button"
+                                    aria-expanded={catalogOpen}
+                                    aria-controls="designer-catalog-pages-list"
+                                    onClick={() =>
+                                        setCatalogOpen((open) => !open)
+                                    }
+                                    className={cn(linkClass, 'w-full')}
+                                >
+                                    <FolderTree
+                                        className="size-4 shrink-0"
+                                        aria-hidden="true"
+                                    />
+                                    <span className="flex-1 truncate text-left">
+                                        {catalog.title}
+                                        {!catalog.enabled && (
+                                            <span className="text-muted-foreground">
+                                                {' '}
+                                                (выключен)
+                                            </span>
+                                        )}
+                                    </span>
+                                    <ChevronDown
+                                        aria-hidden="true"
+                                        className={cn(
+                                            'size-4 shrink-0 text-muted-foreground transition-transform',
+                                            !catalogOpen && '-rotate-90',
+                                        )}
+                                    />
+                                </button>
+                            </h2>
+                            {catalogOpen && (
+                                <ul
+                                    id="designer-catalog-pages-list"
+                                    className="ml-4 flex flex-col gap-1 border-l pl-2"
+                                >
+                                    {sectionPages.map((page) => (
+                                        <li
+                                            key={page.public_id}
+                                            className="flex items-center gap-1"
+                                        >
+                                            <Link
+                                                href={routes.href(
+                                                    page.public_id,
+                                                )}
+                                                aria-current={
+                                                    page.public_id ===
+                                                    currentPageId
+                                                        ? 'page'
+                                                        : undefined
+                                                }
+                                                className={cn(
+                                                    linkClass,
+                                                    'flex-col items-start gap-0',
+                                                    page.public_id ===
+                                                        currentPageId &&
+                                                        'bg-muted font-medium',
+                                                )}
+                                            >
+                                                <span className="max-w-full truncate">
+                                                    {page.title}
+                                                </span>
+                                                <span className="max-w-full truncate font-mono text-xs font-normal text-muted-foreground">
+                                                    {examplePath(
+                                                        catalog.prefix,
+                                                        page.section_role,
+                                                    )}
+                                                </span>
+                                            </Link>
+                                            {canEdit && (
+                                                <Button
+                                                    type="button"
+                                                    variant="ghost"
+                                                    size="icon"
+                                                    className="size-8"
+                                                    aria-label={`Изменить страницу «${page.title}»`}
+                                                    onClick={() =>
+                                                        setDialog({
+                                                            mode: 'edit',
+                                                            page,
+                                                        })
+                                                    }
+                                                >
+                                                    <Pencil aria-hidden="true" />
+                                                </Button>
+                                            )}
+                                        </li>
+                                    ))}
+                                </ul>
+                            )}
+                        </section>
+                    </li>
+                )}
             </ul>
 
             {canAddPages && (
@@ -172,78 +259,6 @@ export function PagesPanel({
                     <Plus aria-hidden="true" />
                     Добавить страницу
                 </Button>
-            )}
-
-            {catalog && sectionPages.length > 0 && (
-                <section
-                    aria-labelledby="designer-catalog-pages"
-                    className="flex flex-col gap-2 border-t pt-3"
-                >
-                    <div className="flex flex-col gap-0.5 px-2">
-                        <h2
-                            id="designer-catalog-pages"
-                            className="flex items-center gap-2 text-sm font-semibold"
-                        >
-                            <FolderTree
-                                className="size-4 shrink-0"
-                                aria-hidden="true"
-                            />
-                            {catalog.title}
-                        </h2>
-                        <p className="text-xs text-muted-foreground">
-                            Шаблоны: одна страница для всех автомобилей.
-                            {catalog.enabled
-                                ? ''
-                                : ' Раздел выключен в «Разделах».'}
-                        </p>
-                    </div>
-                    <ul className="flex flex-col gap-1">
-                        {sectionPages.map((page) => (
-                            <li
-                                key={page.public_id}
-                                className="flex items-center gap-1"
-                            >
-                                <Link
-                                    href={routes.href(page.public_id)}
-                                    aria-current={
-                                        page.public_id === currentPageId
-                                            ? 'page'
-                                            : undefined
-                                    }
-                                    className={cn(
-                                        'flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
-                                        page.public_id === currentPageId &&
-                                            'bg-muted font-medium',
-                                    )}
-                                >
-                                    <span className="truncate">
-                                        {page.title}
-                                    </span>
-                                    <span className="truncate font-mono text-xs font-normal text-muted-foreground">
-                                        {examplePath(
-                                            catalog.prefix,
-                                            page.section_role,
-                                        )}
-                                    </span>
-                                </Link>
-                                {canEdit && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-8"
-                                        aria-label={`Изменить страницу «${page.title}»`}
-                                        onClick={() =>
-                                            setDialog({ mode: 'edit', page })
-                                        }
-                                    >
-                                        <Pencil aria-hidden="true" />
-                                    </Button>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                </section>
             )}
 
             <Dialog
@@ -287,14 +302,6 @@ export function PagesPanel({
                                 </>
                             )}
                         </Form>
-                    ) : dialog?.mode === 'seo' && routes.seo ? (
-                        <SeoForm
-                            key={dialog.page.public_id}
-                            action={routes.seo(dialog.page.public_id)}
-                            page={dialog.page}
-                            canEditIndexing={canEditSeoIndexing}
-                            onDone={close}
-                        />
                     ) : dialog ? (
                         <PageForm
                             key={
@@ -314,111 +321,6 @@ export function PagesPanel({
                 </DialogContent>
             </Dialog>
         </div>
-    );
-}
-
-function SeoForm({
-    action,
-    page,
-    canEditIndexing,
-    onDone,
-}: {
-    action: RouteDefinition<'patch'>;
-    page: DesignerPage;
-    canEditIndexing: boolean;
-    onDone: () => void;
-}) {
-    const form = useForm({
-        seo_title: page.seo.title ?? '',
-        seo_description: page.seo.description ?? '',
-        seo_noindex: page.seo.noindex,
-    });
-
-    function save(event: FormEvent) {
-        event.preventDefault();
-        form.transform((data) =>
-            canEditIndexing
-                ? data
-                : {
-                      seo_title: data.seo_title,
-                      seo_description: data.seo_description,
-                  },
-        );
-        form.submit(action, {
-            preserveScroll: true,
-            onSuccess: onDone,
-        });
-    }
-
-    return (
-        <form onSubmit={save} className="flex flex-col gap-4">
-            <DialogHeader>
-                <DialogTitle>{`SEO страницы «${page.title}»`}</DialogTitle>
-                <DialogDescription>
-                    Посетители и поисковики увидят изменения после публикации.
-                </DialogDescription>
-            </DialogHeader>
-            <div className="grid gap-2">
-                <Label htmlFor="seo-title">Заголовок для поисковиков</Label>
-                <Input
-                    id="seo-title"
-                    value={form.data.seo_title}
-                    onChange={(event) =>
-                        form.setData('seo_title', event.target.value)
-                    }
-                    maxLength={120}
-                    placeholder={page.title}
-                    aria-invalid={Boolean(form.errors.seo_title)}
-                    aria-describedby="seo-title-help"
-                />
-                <p
-                    id="seo-title-help"
-                    className="text-xs text-muted-foreground"
-                >
-                    Если оставить пустым, используется название страницы.
-                </p>
-                <InputError message={form.errors.seo_title} />
-            </div>
-            <div className="grid gap-2">
-                <Label htmlFor="seo-description">
-                    Описание для поисковиков
-                </Label>
-                <textarea
-                    id="seo-description"
-                    value={form.data.seo_description}
-                    onChange={(event) =>
-                        form.setData('seo_description', event.target.value)
-                    }
-                    maxLength={300}
-                    rows={3}
-                    aria-invalid={Boolean(form.errors.seo_description)}
-                    className="min-h-20 w-full rounded-md border border-input bg-transparent px-3 py-2 text-sm shadow-xs outline-none focus-visible:border-ring focus-visible:ring-[3px] focus-visible:ring-ring/50 aria-invalid:border-destructive"
-                />
-                <InputError message={form.errors.seo_description} />
-            </div>
-            {canEditIndexing && (
-                <div className="flex items-start gap-2">
-                    <Checkbox
-                        id="seo-noindex"
-                        checked={form.data.seo_noindex}
-                        onCheckedChange={(checked) =>
-                            form.setData('seo_noindex', checked === true)
-                        }
-                    />
-                    <Label htmlFor="seo-noindex" className="leading-snug">
-                        Скрыть страницу от поисковых систем
-                    </Label>
-                </div>
-            )}
-            <DialogFooter>
-                <Button type="button" variant="outline" onClick={onDone}>
-                    Отмена
-                </Button>
-                <Button type="submit" disabled={form.processing}>
-                    Сохранить
-                </Button>
-            </DialogFooter>
-        </form>
     );
 }
 

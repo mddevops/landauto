@@ -115,6 +115,7 @@ test('owner builds a page in the designer, autosaves, reloads and previews it', 
     await expect(saved).toBeVisible();
 
     // Reorder, then reload: order and draft state come back from the server.
+    await left.getByRole('tab', { name: 'Навигатор' }).click();
     await left
         .getByRole('button', { name: 'Переместить «Преимущества» выше' })
         .click();
