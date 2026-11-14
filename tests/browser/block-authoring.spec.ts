@@ -15,6 +15,10 @@ async function login(page: Page, account: Account) {
     await expect(page).toHaveURL('/dashboard');
 }
 
+/** A 1×1 PNG used as a Block version preview screenshot. */
+const PREVIEW_PNG =
+    'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mNk+M9QDwADhgGAWjR9awAAAABJRU5ErkJggg==';
+
 /** Block slugs are globally unique, so every run and project creates its own Block. */
 function uniqueSuffix(testInfo: TestInfo): string {
     return `${Date.now().toString(36)}-${testInfo.project.name}`;
@@ -413,6 +417,21 @@ test('developer previews a Block in the sandbox and publishes it @responsive', a
     });
     await expect(publish).toBeEnabled();
     await publish.click();
+    // The optional preview screenshot is attached in the approval dialog.
+    const approval = page.getByRole('dialog', {
+        name: 'Одобрить и опубликовать',
+    });
+    await approval.getByLabel('Превью версии').setInputFiles({
+        name: 'preview.png',
+        mimeType: 'image/png',
+        buffer: Buffer.from(PREVIEW_PNG, 'base64'),
+    });
+    await expect(
+        approval.getByRole('img', { name: 'Превью версии' }),
+    ).toBeVisible();
+    await approval
+        .getByRole('button', { name: 'Опубликовать', exact: true })
+        .click();
     await expect(page.getByText('Опубликована версия 1.0.0.')).toBeVisible();
     await expect(
         page.getByRole('tab', { name: 'Версии', selected: true }),
@@ -420,11 +439,17 @@ test('developer previews a Block in the sandbox and publishes it @responsive', a
     await expect(page.getByTestId('block-version')).toHaveCount(1);
     await expect(page.getByTestId('block-version')).toContainText('1.0.0');
     await expect(page.getByTestId('block-version')).toContainText('Нативный');
+    await expect(
+        page.getByRole('img', { name: 'Превью версии 1.0.0' }),
+    ).toBeVisible();
     await expect(page.getByText('1 версия', { exact: true })).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
     // Nothing changed since 1.0.0: publishing again is refused and creates nothing.
     await publish.click();
+    await approval
+        .getByRole('button', { name: 'Опубликовать', exact: true })
+        .click();
     await expect(page.getByText('Версия не опубликована')).toBeVisible();
     await expect(page.getByText('Изменений с версии 1.0.0 нет.')).toBeVisible();
     await expect(page.getByTestId('block-version')).toHaveCount(1);

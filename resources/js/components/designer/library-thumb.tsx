@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from 'react';
 import { createPortal } from 'react-dom';
-import { BlockWireframe } from '@/components/designer/block-wireframe';
+import { BlockThumbnail } from '@/components/designer/block-thumbnail';
 import type { DesignerLibraryBlock } from '@/components/designer/types';
 import { cn } from '@/lib/utils';
 
@@ -96,7 +96,11 @@ export function LibraryThumb({ item, onAdd }: LibraryThumbProps) {
                 )}
             >
                 <div className="aspect-[5/3] overflow-hidden rounded-md border border-neutral-200 bg-white">
-                    <BlockWireframe slug={item.slug} category={item.category} />
+                    <BlockThumbnail
+                        previewUrl={item.preview_url}
+                        slug={item.slug}
+                        category={item.category}
+                    />
                 </div>
                 <span className="truncate px-0.5 text-xs font-medium text-neutral-700">
                     {item.name}
@@ -136,7 +140,8 @@ export function LibraryThumb({ item, onAdd }: LibraryThumbProps) {
                             </p>
                         </div>
                         <div className="aspect-[16/10] p-3">
-                            <BlockWireframe
+                            <BlockThumbnail
+                                previewUrl={item.preview_url}
                                 slug={item.slug}
                                 category={item.category}
                                 className="rounded-md"

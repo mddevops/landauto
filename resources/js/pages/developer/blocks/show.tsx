@@ -26,6 +26,9 @@ export default function DeveloperBlockStudio(props: BlockStudioPageProps) {
                 copyLegacyVersionUrl={(version) =>
                     versions.draft.url({ block: id, version })
                 }
+                versionPreviewUrl={(version) =>
+                    versions.preview.url({ block: id, version })
+                }
             />
         </>
     );

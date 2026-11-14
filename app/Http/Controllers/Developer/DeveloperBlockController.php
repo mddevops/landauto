@@ -15,6 +15,7 @@ use App\Http\Requests\Blocks\SaveBlockDraftRequest;
 use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockAccessRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
+use App\Http\Requests\Blocks\UploadBlockPreviewRequest;
 use App\Models\BlockDefinition;
 use App\Models\BlockGroup;
 use App\Models\DeveloperProfile;
@@ -43,17 +44,14 @@ class DeveloperBlockController extends Controller
     public function index(Request $request): Response
     {
         return Inertia::render('developer/blocks/index', [
-            'blocks' => BlockDefinition::query()
+            'blocks' => $this->presenter->listItems(BlockDefinition::query()
                 ->ownedByDeveloper($this->profile($request))
                 ->withCount('versions')
                 ->with('group')
                 ->withLatestRuntime()
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
-                ->get()
-                ->map(fn (BlockDefinition $block): array => $this->presenter->listItem($block))
-                ->values()
-                ->all(),
+                ->get()),
         ]);
     }
 
@@ -120,6 +118,22 @@ class DeveloperBlockController extends Controller
     {
         $definition = $this->find($request, $block);
         $this->copyLegacyVersionToDraft($this->studio, $request, $this->actor($request), $definition, $version);
+
+        return to_route('developer.blocks.show', $definition);
+    }
+
+    public function preview(UploadBlockPreviewRequest $request, string $block, string $version): RedirectResponse
+    {
+        $definition = $this->find($request, $block);
+        $this->saveVersionPreview($request, $this->actor($request), $definition, $version);
+
+        return to_route('developer.blocks.show', $definition);
+    }
+
+    public function removePreview(Request $request, string $block, string $version): RedirectResponse
+    {
+        $definition = $this->find($request, $block);
+        $this->removeVersionPreview($this->actor($request), $definition, $version);
 
         return to_route('developer.blocks.show', $definition);
     }

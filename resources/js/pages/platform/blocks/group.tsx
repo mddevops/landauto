@@ -2,7 +2,7 @@ import { Head, Link, router } from '@inertiajs/react';
 import { Blocks, Pencil, Plus, Trash2 } from 'lucide-react';
 import { useState } from 'react';
 import { BlockGroupDialog } from '@/components/block-authoring/block-group-dialog';
-import { BlockRows } from '@/components/block-authoring/block-list';
+import { BlockCards } from '@/components/block-authoring/block-list';
 import type { Choice } from '@/components/platform/form-fields';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
@@ -98,7 +98,7 @@ export default function PlatformBlockGroup({
                         </p>
                     </section>
                 ) : (
-                    <BlockRows
+                    <BlockCards
                         label={`Блоки группы «${group.name}»`}
                         blocks={blocks}
                         showHref={(publicId) => show(publicId)}

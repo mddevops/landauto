@@ -1,5 +1,6 @@
 import { Link } from '@inertiajs/react';
 import { Blocks, Plus } from 'lucide-react';
+import { BlockThumbnail } from '@/components/designer/block-thumbnail';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import type { AuthoringBlock } from '@/types/blocks';
@@ -137,6 +138,62 @@ export function BlockRows({
                             <span>
                                 Обновлён {formatBlockDate(block.updated_at)}
                             </span>
+                        </div>
+                    </Link>
+                </li>
+            ))}
+        </ul>
+    );
+}
+
+/** Blocks of a group as cards with the preview of their newest version that has one. */
+export function BlockCards({
+    label,
+    blocks,
+    showHref,
+}: {
+    label: string;
+    blocks: AuthoringBlock[];
+    showHref: (publicId: string) => RouteDefinition<'get'>;
+}) {
+    return (
+        <ul
+            aria-label={label}
+            className="grid gap-4 sm:grid-cols-2 xl:grid-cols-3"
+        >
+            {blocks.map((block) => (
+                <li key={block.public_id} data-testid="authoring-block">
+                    <Link
+                        href={showHref(block.public_id)}
+                        className="flex h-full flex-col overflow-hidden rounded-xl border bg-card shadow-sm transition-colors outline-none hover:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50"
+                    >
+                        <div className="aspect-[16/10] overflow-hidden border-b bg-muted/30">
+                            <BlockThumbnail
+                                previewUrl={block.preview_url}
+                                slug={block.slug}
+                                category={block.category}
+                            />
+                        </div>
+                        <div className="flex flex-1 flex-col gap-2 p-4">
+                            <p className="font-medium break-words">
+                                {block.name}
+                            </p>
+                            <p className="text-xs break-all text-muted-foreground">
+                                <code>{block.slug}</code>
+                            </p>
+                            <div className="mt-auto flex flex-wrap items-center gap-2 text-xs text-muted-foreground">
+                                <Badge variant="outline">
+                                    {versionsLabel(block.versions_count)}
+                                </Badge>
+                                {block.needs_migration && (
+                                    <Badge variant="destructive">
+                                        Нужна миграция
+                                    </Badge>
+                                )}
+                                <span>
+                                    Обновлён {formatBlockDate(block.updated_at)}
+                                </span>
+                            </div>
                         </div>
                     </Link>
                 </li>

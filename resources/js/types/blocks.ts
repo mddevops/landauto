@@ -4,8 +4,10 @@ export type AuthoringBlock = {
     public_id: string;
     name: string;
     slug: string;
+    category: string;
     group: string | null;
     group_label: string;
+    preview_url: string | null;
     versions_count: number;
     needs_migration: boolean;
     updated_at: string | null;
@@ -35,6 +37,7 @@ export type PublishedBlockVersion = {
     runtime_label: string;
     legacy: boolean;
     published_at: string | null;
+    preview_url: string | null;
 };
 
 /** Public access card of a catalog item (D-121); mode values come from the backend enum. */

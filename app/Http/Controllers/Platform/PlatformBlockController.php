@@ -16,6 +16,7 @@ use App\Http\Requests\Blocks\SaveBlockDraftRequest;
 use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockAccessRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
+use App\Http\Requests\Blocks\UploadBlockPreviewRequest;
 use App\Models\BlockDefinition;
 use App\Models\BlockGroup;
 use App\Models\User;
@@ -57,16 +58,13 @@ class PlatformBlockController extends Controller
                 ])
                 ->values()
                 ->all(),
-            'ungrouped' => BlockDefinition::query()
+            'ungrouped' => $this->presenter->listItems(BlockDefinition::query()
                 ->platformOwned()
                 ->whereNull('block_group_id')
                 ->withCount('versions')
                 ->withLatestRuntime()
                 ->orderBy('name')
-                ->get()
-                ->map(fn (BlockDefinition $block): array => $this->presenter->listItem($block))
-                ->values()
-                ->all(),
+                ->get()),
             'kinds' => BlockCategory::options(),
         ]);
     }
@@ -137,6 +135,22 @@ class PlatformBlockController extends Controller
     {
         $definition = $this->find($block);
         $this->copyLegacyVersionToDraft($this->studio, $request, $this->actor($request), $definition, $version);
+
+        return to_route('platform.blocks.show', $definition);
+    }
+
+    public function preview(UploadBlockPreviewRequest $request, string $block, string $version): RedirectResponse
+    {
+        $definition = $this->find($block);
+        $this->saveVersionPreview($request, $this->actor($request), $definition, $version);
+
+        return to_route('platform.blocks.show', $definition);
+    }
+
+    public function removePreview(Request $request, string $block, string $version): RedirectResponse
+    {
+        $definition = $this->find($block);
+        $this->removeVersionPreview($this->actor($request), $definition, $version);
 
         return to_route('platform.blocks.show', $definition);
     }
