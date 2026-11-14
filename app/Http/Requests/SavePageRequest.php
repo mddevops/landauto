@@ -5,6 +5,8 @@ namespace App\Http\Requests;
 use App\Models\Page;
 use App\Models\Site;
 use App\Support\DesignerScope;
+use App\Support\SitePaths;
+use Closure;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\Rule;
@@ -42,6 +44,11 @@ class SavePageRequest extends FormRequest
                 Rule::unique('pages', 'slug')
                     ->where('site_id', $site->id)
                     ->ignore($page instanceof Page ? $page->id : null),
+                function (string $attribute, mixed $value, Closure $fail) use ($site): void {
+                    if (SitePaths::usedBySection($site, (string) $value)) {
+                        $fail('Такой адрес уже занят разделом сайта.');
+                    }
+                },
             ],
         ];
     }

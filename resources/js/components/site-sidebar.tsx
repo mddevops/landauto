@@ -4,6 +4,7 @@ import {
     Car,
     Eye,
     FileText,
+    FolderTree,
     Globe,
     Inbox,
     LayoutDashboard,
@@ -35,6 +36,7 @@ import { index as forms } from '@/routes/sites/forms';
 import { index as integrations } from '@/routes/sites/integrations';
 import { index as popups } from '@/routes/sites/popups';
 import { show as publishing } from '@/routes/sites/publishing';
+import { index as sections } from '@/routes/sites/sections';
 import { index as seo } from '@/routes/sites/seo';
 import { index as submissions } from '@/routes/sites/submissions';
 import { index as vehicles } from '@/routes/sites/vehicles';
@@ -55,6 +57,11 @@ export function SiteSidebar({ site }: { site: SiteContext }) {
     ]);
 
     const content = visible([
+        can.manageSections && {
+            title: 'Разделы',
+            href: sections(id),
+            icon: FolderTree,
+        },
         can.viewVehicles && {
             title: 'Автомобили',
             href: vehicles(id),

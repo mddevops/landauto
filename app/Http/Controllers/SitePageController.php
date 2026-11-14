@@ -6,6 +6,7 @@ use App\Http\Requests\SavePageRequest;
 use App\Models\Page;
 use App\Models\Site;
 use App\Support\DesignerScope;
+use App\Support\SitePaths;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
@@ -25,7 +26,10 @@ class SitePageController extends Controller
             'sort_order' => (int) $site->pages()->max('sort_order') + 1,
         ]);
         $page->site()->associate($site);
-        $page->save();
+        DB::transaction(function () use ($site, $page): void {
+            SitePaths::releaseRedirect($site, $page->slug);
+            $page->save();
+        });
 
         return to_route('sites.designer', ['site' => $site, 'page' => $page->public_id]);
     }
@@ -38,7 +42,13 @@ class SitePageController extends Controller
             $page->slug = $request->string('slug')->toString();
         }
 
-        $page->save();
+        DB::transaction(function () use ($site, $page): void {
+            if ($page->isDirty('slug')) {
+                SitePaths::releaseRedirect($site, $page->slug);
+            }
+
+            $page->save();
+        });
 
         return to_route('sites.designer', ['site' => $site, 'page' => $page->public_id]);
     }
@@ -65,7 +75,7 @@ class SitePageController extends Controller
         $base = Str::limit(Str::slug($title), 90, '') ?: 'page';
         $slug = $base;
 
-        for ($suffix = 2; $site->pages()->where('slug', $slug)->exists(); $suffix++) {
+        for ($suffix = 2; SitePaths::usedByPage($site, $slug) || SitePaths::usedBySection($site, $slug); $suffix++) {
             $slug = "{$base}-{$suffix}";
         }
 

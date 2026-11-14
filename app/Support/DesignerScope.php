@@ -9,6 +9,7 @@ use App\Models\Popup;
 use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\SiteOffer;
+use App\Models\SiteSection;
 use App\Models\SiteVehicle;
 
 /**
@@ -39,6 +40,14 @@ final class DesignerScope
         abort_unless($page->site_id === $site->id, 404);
 
         return $page;
+    }
+
+    public function section(Site $site, SiteSection $section): SiteSection
+    {
+        $this->site($site);
+        abort_unless($section->site_id === $site->id, 404);
+
+        return $section;
     }
 
     public function block(Site $site, BlockInstance $block): BlockInstance

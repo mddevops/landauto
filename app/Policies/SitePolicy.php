@@ -57,6 +57,14 @@ final class SitePolicy
         return $site->site_type->allowsPageCreation() && $this->editDesign($user, $site);
     }
 
+    /**
+     * Vehicle sections live on multi-page Sites and follow Page management (ADR-011 §9).
+     */
+    public function manageSections(User $user, Site $site): bool
+    {
+        return $this->addPage($user, $site);
+    }
+
     public function editContent(User $user, Site $site): bool
     {
         return $this->can($user, $site, WorkspacePermission::EditContent);
