@@ -548,6 +548,10 @@ test('legacy sandboxed version can be copied into a migration draft', async ({
 
     await login(page, users.catalogAdmin);
     await page.goto('/platform/blocks');
+    await page
+        .getByTestId('block-group')
+        .getByRole('link', { name: 'Призыв к действию', exact: true })
+        .click();
     await page.getByRole('link', { name: /Промо из студии/ }).click();
     await openMode(page, 'Версии');
 
