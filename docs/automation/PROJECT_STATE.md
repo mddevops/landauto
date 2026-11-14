@@ -388,7 +388,7 @@ Implemented core domains (Phases 0–8 COMPLETED):
 
 The Global Automotive Catalog is implemented on the separate `catalog` connection.
 
-`X-031` (ADR-010) code complete on `feature/autoru-catalog`, staging rollout pending owner approval: the `catalog` connection reads the auto.ru tables (`auto_*`) read-only; customer rows reference them by stable strings (`catalog_series_ref`, `catalog_equipment_ref`), never numeric ids. Platform browser `/platform/catalog` (marks → models → series page with colours × five angles `side_left` … `side_right`, gallery, trims with characteristics / options). Workspace vehicles copy photos (copy_now), own uploads, default trims with prices (`workspace_vehicle_offers`) and collections; six-step add wizard for the Catalog and for a Site; published vehicle blocks show colours, gallery from the primary angle, trims with «Цена по запросу» fallback.
+`X-031` (ADR-010) DONE, merged (PR #11) and deployed to staging: the `catalog` connection reads the auto.ru tables (`auto_*`) read-only; customer rows reference them by stable strings (`catalog_series_ref`, `catalog_equipment_ref`), never numeric ids. Platform browser `/platform/catalog` (marks → models → series page with colours × five angles `side_left` … `side_right`, gallery, trims with characteristics / options). Workspace vehicles copy photos (copy_now), own uploads, default trims with prices (`workspace_vehicle_offers`) and collections; six-step add wizard for the Catalog and for a Site; published vehicle blocks show colours, gallery from the primary angle, trims with «Цена по запросу» fallback.
 
 Phase 9 — Developer Platform is COMPLETED for planned scope: Developer Profiles and creator permissions, Block Studio (Drafts, Schema Builder, sandboxed preview, automated checks, immutable versions), Site types, customer catalog access with Site / Workspace licenses and installed-version grandfathering, Template Builder / installation and the quiz / chat formats exist; live operator chat (P9-018) and AI authoring (P9-010) are DEFERRED. Architecture documents also describe planned target models; agents must check the code to tell implemented from planned.
 
@@ -1528,7 +1528,8 @@ Phase 8 — Team: COMPLETED
 Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 DEFERRED, P9-010 DEFERRED)
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125; P10-001, P10-004 DONE)
 Cross-cutting — Native First-Party Block Runtime: X-023 through X-029 DONE
-Cross-cutting — X-031 auto.ru Catalog: IN PROGRESS (code complete, staging rollout pending)
+Cross-cutting — X-031 auto.ru Catalog: DONE
+Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): X-032 owner acceptance pending; X-033 … X-038 NOT_STARTED
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 

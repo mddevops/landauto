@@ -4462,7 +4462,7 @@ Result: gates PASS — `composer quality` (PHPUnit 1,308: 1,306 passed, 2 skippe
 
 ## X-031 — auto.ru Catalog, Vehicle Photos and Customer Catalog
 
-**Status:** IN PROGRESS
+**Status:** DONE
 **Trigger:** owner request 2026-11-12 (real catalog data loaded from auto.ru)
 **Decision:** ADR-010; D-128; D-115; D-083
 
@@ -4470,7 +4470,85 @@ Scope: read-only auto.ru catalog models and string references (`catalog_series_r
 
 Acceptance: customers add a vehicle from real auto.ru data in the wizard and see it in the Catalog or on the Site; published Site shows colours, gallery, trims with prices and characteristics; no auto.ru numeric ids in customer rows or browser props; `composer quality` and `npm run test:e2e` pass.
 
-Progress: code complete on `feature/autoru-catalog`; gates PASS locally — `composer quality` (PHPUnit 1,294: 1,292 passed, 2 skipped; PHPStan / Pint / frontend check / build PASS) and `npm run test:e2e` 96 / 96 (one ENOSPC infrastructure failure re-run green). Remaining: merge approval and staging rollout (drop empty V2 `auto_*` tables, restore auto.ru tables, copy catalog images, migrate, smoke) — needs explicit owner approval.
+Progress: code complete on `feature/autoru-catalog`; gates PASS locally — `composer quality` (PHPUnit 1,294: 1,292 passed, 2 skipped; PHPStan / Pint / frontend check / build PASS) and `npm run test:e2e` 96 / 96 (one ENOSPC infrastructure failure re-run green). Result: merged in PR #11 and deployed to staging 2026-11-13 (auto.ru tables in `user_lfcatalog`, 12,479 catalog images on the `auto_catalog` disk, migrations, smoke 200). About a quarter of server Series image paths have no file in the copied set; the catalog team adds them.
+
+---
+
+## X-032 — Site Sections ADR Acceptance
+
+**Status:** READY (owner action)
+**Trigger:** before X-033
+**Resolves:** D-129 technical details
+
+Owner reviews `ADR-011` (prefix rules, reserved list, generated page set, Landing card address, publishing and redirects) and marks it Accepted or requests changes. Agents must not start X-033 while ADR-011 is Proposed (`BLOCKED_DECISION`).
+
+---
+
+## X-033 — Site Sections Foundation and Prefix Settings
+
+**Status:** NOT_STARTED
+**Dependencies:** X-032
+**Decision:** ADR-011; D-129; D-119
+
+Scope: `site_sections` (type, title, prefix, enabled, order; one per type; Multi-page Sites only), prefix validation (format, uniqueness against sections and Page slugs, reserved list), prefix history with 301 redirects, section management UI in the Site («Разделы»), Russian copy, permissions via existing Page management.
+
+Acceptance: customer enables the Catalog section, renames `catalog` → `autos`, the old address 301-redirects; invalid / reserved / clashing prefixes are refused by the backend; Landing / Quiz / Chat cannot create sections; focused PHPUnit + Playwright.
+
+---
+
+## X-034 — Catalog Section Generated Pages
+
+**Status:** NOT_STARTED
+**Dependencies:** X-033
+**Decision:** ADR-011; ADR-010
+
+Scope: template Pages `index` / `mark` / `model` / `item` per section edited in the Designer; page context (section, mark, model, vehicle); vehicle Blocks get «Автомобиль страницы» binding, `vehicle-grid` gets «Автомобили раздела»; mark / model address parts from auto.ru `url`; vehicle slugs generated from generation + body, editable, unique per section + model, history with 301; model page lists generations / bodies; Designer preview with a chosen sample vehicle.
+
+Acceptance: `catalog/baic/x35/i-restayling-sedan` renders the shared card template with that vehicle's colours, trims, characteristics and options; mark and model pages list the Site's vehicles; hidden / archived vehicles give 404; slug edit redirects; focused tests.
+
+---
+
+## X-035 — Publishing, Sitemap and Links for Sections
+
+**Status:** NOT_STARTED
+**Dependencies:** X-034
+**Decision:** ADR-011; ADR-006; D-127
+
+Scope: Published Version snapshot of sections, template Pages, slugs and redirects; public runtime routing for section addresses on the Landflow address and custom domains; canonical URLs; sitemap entries; vehicle cards and breadcrumbs link to generated pages automatically; restore of versions with sections.
+
+Acceptance: published Site serves all section pages from the snapshot only (Draft changes invisible until publish); prefix / slug redirects work after publish; sitemap lists generated pages; `composer quality` and `npm run test:e2e` pass.
+
+---
+
+## X-036 — Landing Vehicle Card Page
+
+**Status:** NOT_STARTED
+**Dependencies:** X-035
+**Decision:** ADR-011 §7
+
+Scope: a Landing may enable one vehicle card template Page; its vehicle cards open the card at `catalog/{mark}/{model}/{vehicle}` (prefix editable); no index / mark / model pages on Landing.
+
+Acceptance: Landing with two vehicles opens each card from its block; publishing and sitemap include the card pages; focused tests.
+
+---
+
+## X-037 — Stock («Склад авто») ADR
+
+**Status:** NOT_STARTED
+**Trigger:** owner specification of the Stock section
+**Decision:** D-129
+
+Stock holds concrete vehicles for sale (new and used), created like an auto.ru listing. ADR must define the listing fields, link to the auto.ru catalog, photos, prices, statuses, ownership (Workspace) and how Used / Specials sections select items. Replaces P11-007 / P11-008 for this product. `BLOCKED_DECISION` until the owner provides the Stock specification.
+
+---
+
+## X-038 — Used and Specials Sections from Stock
+
+**Status:** NOT_STARTED
+**Dependencies:** X-035; X-037 and the Stock implementation tasks it defines
+**Decision:** ADR-011; X-037
+
+Scope: section types `used` and `specials` with the same generated pages, fed by Stock items; card template per section.
 
 ---
 

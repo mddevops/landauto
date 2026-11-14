@@ -2382,6 +2382,26 @@ Owner decisions 2026-11-12. Details: `docs/architecture/decisions/ADR-010-autoru
 
 ---
 
+## D-129 — Site Sections and Generated Vehicle Pages
+
+**Status:** APPROVED for the owner answers below (2026-11-14); technical details in ADR-011 are PROPOSED until owner acceptance.
+
+### Decision
+
+- Site types stay four (D-119): Chat selection and Quiz are single pages; Landing is one page plus an optional vehicle card page; Multi-page Sites have unlimited regular Pages and vehicle sections.
+- Multi-page sections: Catalog (Site Vehicles from the auto.ru catalog), Used and Specials (both from the future Stock). Addresses: `{prefix}/{mark}/{model}/{vehicle}`, e.g. `catalog/baic/x35/i-restayling-sedan`.
+- The customer can change a section prefix (`catalog` → `autos`).
+- A model page lists its generations / bodies; the vehicle card is one level below the model.
+- The vehicle address part is a readable slug generated automatically and editable by the customer.
+- One card template per section, shared by all its vehicles, edited in the Designer.
+- Delivery order: sections + Catalog + prefix settings first; Stock and the Used / Specials sections later.
+
+### Resolved By
+
+Owner answers 2026-11-14. Details: `docs/architecture/decisions/ADR-011-site-sections-and-vehicle-pages.md`.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).
