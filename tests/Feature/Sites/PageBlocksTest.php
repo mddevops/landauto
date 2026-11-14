@@ -5,6 +5,7 @@ namespace Tests\Feature\Sites;
 use App\Blocks\OfficialBlockCatalog;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Page;
@@ -67,7 +68,8 @@ class PageBlocksTest extends TestCase
                     'slug' => 'hero',
                     'name' => 'Первый экран',
                     'category' => 'hero',
-                    'category_label' => 'Первый экран',
+                    'group' => BlockGroup::query()->where('name', 'Первый экран')->value('public_id'),
+                    'group_label' => 'Первый экран',
                     'author' => null,
                     'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
                     'available' => true,

@@ -2,11 +2,14 @@ import { Head } from '@inertiajs/react';
 import { BlockCreateForm } from '@/components/block-authoring/block-create-form';
 import type { Choice } from '@/components/platform/form-fields';
 import { create, index, store } from '@/routes/platform/blocks';
+import { show as showGroup } from '@/routes/platform/blocks/groups';
 
 export default function CreatePlatformBlock({
-    categories,
+    groups,
+    group,
 }: {
-    categories: Choice[];
+    groups: Choice[];
+    group: string | null;
 }) {
     return (
         <>
@@ -15,9 +18,10 @@ export default function CreatePlatformBlock({
                 title="Новый официальный блок"
                 description="Блок будет принадлежать платформе Landflow. Пока у него нет версии, клиенты его не видят."
                 action={store.form()}
-                cancelHref={index()}
-                submitLabel="Создать официальный блок"
-                categories={categories}
+                cancelHref={group ? showGroup(group) : index()}
+                submitLabel="Создать блок"
+                groups={groups}
+                defaultGroup={group}
             />
         </>
     );

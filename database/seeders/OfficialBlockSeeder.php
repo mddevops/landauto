@@ -2,6 +2,7 @@
 
 namespace Database\Seeders;
 
+use App\Blocks\BlockGroups;
 use App\Blocks\BlockSchemaValidator;
 use App\Blocks\OfficialBlockCatalog;
 use App\Enums\BlockOwnerScope;
@@ -15,7 +16,7 @@ use LogicException;
  */
 class OfficialBlockSeeder extends Seeder
 {
-    public function run(BlockSchemaValidator $validator): void
+    public function run(BlockSchemaValidator $validator, BlockGroups $groups): void
     {
         foreach (OfficialBlockCatalog::blocks() as $block) {
             // Seeders may run without model events, which would skip the Block Version hook.
@@ -40,5 +41,7 @@ class OfficialBlockSeeder extends Seeder
                 ['schema_json' => $block['schema']],
             );
         }
+
+        $groups->backfill();
     }
 }

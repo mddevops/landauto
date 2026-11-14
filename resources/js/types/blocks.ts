@@ -4,8 +4,8 @@ export type AuthoringBlock = {
     public_id: string;
     name: string;
     slug: string;
-    category: string;
-    category_label: string;
+    group: string | null;
+    group_label: string;
     versions_count: number;
     needs_migration: boolean;
     updated_at: string | null;

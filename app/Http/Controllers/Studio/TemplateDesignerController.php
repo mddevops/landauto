@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Studio;
 
 use App\Blocks\BlockCatalogAccess;
+use App\Blocks\BlockGroups;
 use App\Blocks\LegacyBlockMigration;
 use App\Http\Controllers\Concerns\ResolvesEditableTemplates;
 use App\Http\Controllers\Controller;
@@ -130,22 +131,23 @@ class TemplateDesignerController extends Controller
     /**
      * Catalog Blocks with a published version; access applies when a Site uses the Template (P9-015).
      *
-     * @return list<array{slug: string, name: string, category: string, category_label: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: null}>
+     * @return list<array{slug: string, name: string, category: string, group: string, group_label: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: null}>
      */
     private function library(): array
     {
         return array_values(BlockDefinition::query()
             ->inCatalog()
             ->whereHas('versions')
-            ->with('developerProfile')
+            ->with(['developerProfile', 'group'])
             ->orderBy('id')
             ->get()
-            ->sortBy(fn (BlockDefinition $definition): int => $definition->isPlatformOwned() ? 0 : 1)
+            ->sortBy(fn (BlockDefinition $definition): string => BlockGroups::libraryOrder($definition))
             ->map(fn (BlockDefinition $definition): array => [
                 'slug' => $definition->slug,
                 'name' => $definition->name,
                 'category' => $definition->category->value,
-                'category_label' => $definition->category->label(),
+                'group' => $definition->group->public_id ?? 'none',
+                'group_label' => $definition->group->name ?? 'Другие блоки',
                 'author' => $definition->developerProfile?->display_name,
                 'access' => BlockCatalogAccess::card($definition),
                 'available' => true,

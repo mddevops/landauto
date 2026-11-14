@@ -2,14 +2,14 @@
 
 namespace App\Http\Requests\Blocks;
 
-use App\Enums\BlockCategory;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Name, category and globally unique technical slug. Ownership is never accepted from the browser.
+ * Name, group and globally unique technical slug. Ownership is never accepted from the browser.
  */
 class StoreBlockDefinitionRequest extends FormRequest
 {
@@ -28,7 +28,7 @@ class StoreBlockDefinitionRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:'.BlockDefinition::NAME_MAX],
-            'category' => ['required', Rule::enum(BlockCategory::class)],
+            'group' => ['required', 'string', Rule::exists('block_groups', 'public_id')],
             'slug' => [
                 'required',
                 'string',
@@ -48,8 +48,8 @@ class StoreBlockDefinitionRequest extends FormRequest
         return [
             'slug.regex' => 'Slug может содержать только строчные латинские буквы, цифры и одиночные дефисы между ними.',
             'slug.unique' => 'Этот slug уже используется другим блоком.',
-            'category.required' => 'Выберите категорию.',
-            'category.enum' => 'Выберите категорию из списка.',
+            'group.required' => 'Выберите группу.',
+            'group.exists' => 'Выберите группу из списка.',
         ];
     }
 
@@ -58,11 +58,11 @@ class StoreBlockDefinitionRequest extends FormRequest
      */
     public function attributes(): array
     {
-        return ['name' => 'Название', 'slug' => 'Slug', 'category' => 'Категория'];
+        return ['name' => 'Название', 'slug' => 'Slug', 'group' => 'Группа'];
     }
 
-    public function category(): BlockCategory
+    public function group(): BlockGroup
     {
-        return BlockCategory::from($this->string('category')->toString());
+        return BlockGroup::query()->where('public_id', $this->string('group')->toString())->firstOrFail();
     }
 }

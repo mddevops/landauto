@@ -2,14 +2,14 @@
 
 namespace App\Http\Requests\Blocks;
 
-use App\Enums\BlockCategory;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
 /**
- * Name and category are editable; the slug and ownership never change after creation.
+ * Name and group are editable; the slug and ownership never change after creation.
  */
 class UpdateBlockDefinitionRequest extends FormRequest
 {
@@ -25,7 +25,7 @@ class UpdateBlockDefinitionRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:'.BlockDefinition::NAME_MAX],
-            'category' => ['required', Rule::enum(BlockCategory::class)],
+            'group' => ['required', 'string', Rule::exists('block_groups', 'public_id')],
         ];
     }
 
@@ -35,8 +35,8 @@ class UpdateBlockDefinitionRequest extends FormRequest
     public function messages(): array
     {
         return [
-            'category.required' => 'Выберите категорию.',
-            'category.enum' => 'Выберите категорию из списка.',
+            'group.required' => 'Выберите группу.',
+            'group.exists' => 'Выберите группу из списка.',
         ];
     }
 
@@ -45,11 +45,11 @@ class UpdateBlockDefinitionRequest extends FormRequest
      */
     public function attributes(): array
     {
-        return ['name' => 'Название', 'category' => 'Категория'];
+        return ['name' => 'Название', 'group' => 'Группа'];
     }
 
-    public function category(): BlockCategory
+    public function group(): BlockGroup
     {
-        return BlockCategory::from($this->string('category')->toString());
+        return BlockGroup::query()->where('public_id', $this->string('group')->toString())->firstOrFail();
     }
 }

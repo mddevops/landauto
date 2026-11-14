@@ -8,6 +8,7 @@ import {
     publish,
     update,
 } from '@/routes/platform/blocks';
+import { show as showGroup } from '@/routes/platform/blocks/groups';
 import versions from '@/routes/platform/blocks/versions';
 
 export default function PlatformBlockStudio(props: BlockStudioPageProps) {
@@ -30,6 +31,16 @@ export default function PlatformBlockStudio(props: BlockStudioPageProps) {
     );
 }
 
-PlatformBlockStudio.layout = {
-    breadcrumbs: [{ title: 'Блоки Landflow', href: index() }],
-};
+PlatformBlockStudio.layout = (props: BlockStudioPageProps) => ({
+    breadcrumbs: [
+        { title: 'Блоки Landflow', href: index() },
+        ...(props.block.group
+            ? [
+                  {
+                      title: props.block.group_label,
+                      href: showGroup(props.block.group),
+                  },
+              ]
+            : []),
+    ],
+});

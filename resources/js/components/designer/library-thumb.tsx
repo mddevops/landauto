@@ -131,7 +131,7 @@ export function LibraryThumb({ item, onAdd }: LibraryThumbProps) {
                                 {item.name}
                             </p>
                             <p className="truncate text-xs text-neutral-500">
-                                {item.category_label}
+                                {item.group_label}
                                 {item.author ? ` · ${item.author}` : ''}
                             </p>
                         </div>

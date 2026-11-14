@@ -7,6 +7,7 @@ use App\Enums\BlockOwnerScope;
 use App\Enums\PlatformRole;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use App\Models\BlockVersion;
 use App\Models\DeveloperProfile;
 use App\Models\PlatformRoleAssignment;
@@ -29,12 +30,15 @@ class DeveloperBlockAuthoringTest extends TestCase
 
     private User $developer;
 
+    private BlockGroup $menu;
+
     protected function setUp(): void
     {
         parent::setUp();
 
         $this->profile = DeveloperProfile::factory()->withPermissions()->create(['display_name' => 'Студия А']);
         $this->developer = $this->profile->user;
+        $this->menu = BlockGroup::factory()->create(['name' => 'Шапка', 'kind' => BlockCategory::Menu]);
     }
 
     public function test_developer_creates_a_block_owned_by_their_own_profile(): void
@@ -48,12 +52,12 @@ class DeveloperBlockAuthoringTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page->component('developer/blocks/index')->has('blocks', 0));
         $this->actingAs($this->developer)->get(route('developer.blocks.create'))
             ->assertOk()
-            ->assertInertia(fn (Assert $page) => $page->component('developer/blocks/create'));
+            ->assertInertia(fn (Assert $page) => $page->component('developer/blocks/create')->where('groups.0.value', $this->menu->public_id));
 
         $response = $this->actingAs($this->developer)->post(route('developer.blocks.store'), [
             'name' => ' Карточка акции ',
             'slug' => 'promo-card',
-            'category' => 'menu',
+            'group' => $this->menu->public_id,
             'owner_scope' => 'platform',
             'developer_profile_id' => $other->id,
             'workspace_id' => $workspace->id,
@@ -70,7 +74,7 @@ class DeveloperBlockAuthoringTest extends TestCase
         $this->assertNull($block->workspace_id);
         $this->assertSame($this->developer->id, $block->created_by_user_id);
         $this->assertSame($this->developer->id, $block->updated_by_user_id);
-        $this->assertSame(['Карточка акции', 'promo-card', BlockCategory::Menu], [$block->name, $block->slug, $block->category]);
+        $this->assertSame(['Карточка акции', 'promo-card', BlockCategory::Menu, $this->menu->id], [$block->name, $block->slug, $block->category, $block->block_group_id]);
         $this->assertNull($block->draft, 'no Draft is created before the first save');
         $this->assertTrue(Str::isUlid($block->public_id));
         $this->assertSame(0, BlockVersion::query()->count(), 'no Block Version is created');
@@ -117,7 +121,7 @@ class DeveloperBlockAuthoringTest extends TestCase
         $this->actingAs($this->developer)
             ->patch(route('developer.blocks.update', $block), [
                 'name' => 'Новое название',
-                'category' => 'menu',
+                'group' => $this->menu->public_id,
                 'slug' => 'hijacked',
                 'owner_scope' => 'platform',
                 'developer_profile_id' => $other->id,
@@ -141,13 +145,13 @@ class DeveloperBlockAuthoringTest extends TestCase
 
         foreach (['Promo', 'promo card', '-promo', 'promo-', 'pro--mo', 'промо', 'ab', str_repeat('a', 61)] as $slug) {
             $this->actingAs($this->developer)
-                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => $slug])
+                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'group' => $this->menu->public_id, 'slug' => $slug])
                 ->assertSessionHasErrors('slug');
         }
 
         foreach (['hero', 'vehicle-card', 'taken-by-b'] as $slug) {
             $this->actingAs($this->developer)
-                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => $slug])
+                ->post(route('developer.blocks.store'), ['name' => 'Блок', 'group' => $this->menu->public_id, 'slug' => $slug])
                 ->assertSessionHasErrors(['slug' => 'Этот slug уже используется другим блоком.']);
         }
 
@@ -167,7 +171,7 @@ class DeveloperBlockAuthoringTest extends TestCase
 
         foreach ([$foreign, $platform, $private] as $block) {
             $this->actingAs($this->developer)->get(route('developer.blocks.show', $block))->assertNotFound();
-            $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом', 'category' => 'other'])->assertNotFound();
+            $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом', 'group' => $this->menu->public_id])->assertNotFound();
             $this->assertNotSame('Взлом', $block->fresh()?->name);
             $this->actingAs($this->developer)->put(route('developer.blocks.draft', $block), self::draftPayload())->assertNotFound();
         }
@@ -215,7 +219,7 @@ class DeveloperBlockAuthoringTest extends TestCase
         // Workspace roles and platform staff authority never grant Developer authoring.
         foreach ([$owner, $catalogManager, $superAdmin, User::factory()->create()] as $user) {
             $this->actingAs($user)->get(route('developer.blocks.index'))->assertForbidden();
-            $this->actingAs($user)->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => 'user-'.$user->id])->assertForbidden();
+            $this->actingAs($user)->post(route('developer.blocks.store'), ['name' => 'Блок', 'group' => $this->menu->public_id, 'slug' => 'user-'.$user->id])->assertForbidden();
             $this->actingAs($user)->get(route('developer.blocks.show', $block))->assertForbidden();
         }
 
@@ -230,9 +234,9 @@ class DeveloperBlockAuthoringTest extends TestCase
         $requests = [
             fn (): TestResponse => $this->actingAs($this->developer)->get(route('developer.blocks.index')),
             fn (): TestResponse => $this->actingAs($this->developer)->get(route('developer.blocks.create')),
-            fn (): TestResponse => $this->actingAs($this->developer)->post(route('developer.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => 'denied-block']),
+            fn (): TestResponse => $this->actingAs($this->developer)->post(route('developer.blocks.store'), ['name' => 'Блок', 'group' => $this->menu->public_id, 'slug' => 'denied-block']),
             fn (): TestResponse => $this->actingAs($this->developer)->get(route('developer.blocks.show', $block)),
-            fn (): TestResponse => $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом', 'category' => 'other']),
+            fn (): TestResponse => $this->actingAs($this->developer)->patch(route('developer.blocks.update', $block), ['name' => 'Взлом', 'group' => $this->menu->public_id]),
             fn (): TestResponse => $this->actingAs($this->developer)->put(route('developer.blocks.draft', $block), self::draftPayload()),
         ];
 

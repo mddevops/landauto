@@ -51,15 +51,15 @@ class BlockStudioDraftTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('developer/blocks/show')
-                ->where('block.category', 'other')
-                ->where('block.category_label', 'Другое')
+                ->where('block.group', null)
+                ->where('block.group_label', 'Без группы')
                 ->where('draft.revision', 0)
                 ->where('draft.saved_at', null)
                 ->where('draft.checks', [])
                 ->where('draft.preview', [])
                 ->where('draft.sources.js', '')
                 ->where('draft.sources.html', fn (string $html): bool => str_contains($html, '{{ title }}'))
-                ->has('categories', 11)
+                ->has('groups', 0)
                 ->where('sourceMaxBytes', BlockStudio::SOURCE_MAX_BYTES)
                 ->missing('draft.id')
                 ->missing('draft.block_definition_id'));

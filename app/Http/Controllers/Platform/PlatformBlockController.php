@@ -7,6 +7,7 @@ use App\Blocks\BlockAuthoringPresenter;
 use App\Blocks\BlockPublisher;
 use App\Blocks\BlockStudio;
 use App\Enums\BlockCategory;
+use App\Enums\BlockOwnerScope;
 use App\Http\Controllers\Concerns\PublishesBlockVersions;
 use App\Http\Controllers\Concerns\SavesBlockDrafts;
 use App\Http\Controllers\Controller;
@@ -16,7 +17,9 @@ use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockAccessRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\UniqueConstraintViolationException;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -41,22 +44,39 @@ class PlatformBlockController extends Controller
     public function index(): Response
     {
         return Inertia::render('platform/blocks/index', [
-            'blocks' => BlockDefinition::query()
+            'groups' => BlockGroup::query()
+                ->withCount(['blocks' => fn (Builder $query) => $query->where('owner_scope', BlockOwnerScope::Platform->value)])
+                ->orderBy('sort_order')
+                ->orderBy('id')
+                ->get()
+                ->map(fn (BlockGroup $group): array => [
+                    'public_id' => $group->public_id,
+                    'name' => $group->name,
+                    'kind_label' => $group->kind->label(),
+                    'blocks_count' => (int) $group->getAttribute('blocks_count'),
+                ])
+                ->values()
+                ->all(),
+            'ungrouped' => BlockDefinition::query()
                 ->platformOwned()
+                ->whereNull('block_group_id')
                 ->withCount('versions')
                 ->withLatestRuntime()
                 ->orderBy('name')
-                ->orderBy('id')
                 ->get()
                 ->map(fn (BlockDefinition $block): array => $this->presenter->listItem($block))
                 ->values()
                 ->all(),
+            'kinds' => BlockCategory::options(),
         ]);
     }
 
-    public function create(): Response
+    public function create(Request $request): Response
     {
-        return Inertia::render('platform/blocks/create', ['categories' => BlockCategory::options()]);
+        return Inertia::render('platform/blocks/create', [
+            'groups' => BlockGroup::options(),
+            'group' => BlockGroup::query()->where('public_id', $request->string('group')->toString())->value('public_id'),
+        ]);
     }
 
     public function store(StoreBlockDefinitionRequest $request): RedirectResponse
@@ -66,13 +86,13 @@ class PlatformBlockController extends Controller
                 $this->actor($request),
                 $request->string('name')->toString(),
                 $request->string('slug')->toString(),
-                $request->category(),
+                $request->group(),
             );
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['slug' => 'Этот slug уже используется другим блоком.']);
         }
 
-        Inertia::flash('toast', ['type' => 'success', 'message' => "Официальный блок «{$block->name}» создан."]);
+        Inertia::flash('toast', ['type' => 'success', 'message' => "Блок «{$block->name}» создан."]);
 
         return to_route('platform.blocks.show', $block);
     }
@@ -89,7 +109,7 @@ class PlatformBlockController extends Controller
             $this->actor($request),
             $definition,
             $request->string('name')->toString(),
-            $request->category(),
+            $request->group(),
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Изменения сохранены.']);
 
