@@ -9,9 +9,10 @@ use App\Models\SiteVehicle;
 use Illuminate\Support\Str;
 
 /**
- * Addresses of Site vehicles inside a vehicle section (ADR-011 §4): mark and model segments come
- * from the auto.ru `url` of the catalog row, the last segment is the vehicle's own slug, unique
- * among vehicles of the same model and editable by the customer.
+ * Addresses of Site vehicles inside a vehicle section (ADR-011 §4, D-131): the mark segment comes
+ * from the auto.ru `url` of the catalog row, the last segment is the vehicle's own slug (model and
+ * generation, plus the body when the generation repeats), unique among vehicles of the same mark
+ * and editable by the customer.
  *
  * @phpstan-type VehiclePage array{public_id: string, mark: array{name: string, segment: string}, model: array{name: string, segment: string}, slug: string, title: string}
  */
@@ -55,7 +56,7 @@ final class VehiclePages
     }
 
     /**
-     * Gives every vehicle without an address one built from its generation and body.
+     * Gives every vehicle without an address one built from its model and generation.
      */
     public function ensureSlugs(Site $site): void
     {
@@ -71,7 +72,7 @@ final class VehiclePages
             $row = $series->get($vehicle->catalog_series_ref);
 
             if ($row instanceof AutoSeries && $vehicle->slug !== null) {
-                $taken[$row->generation->model_id][$vehicle->slug] = true;
+                $taken[$row->generation->model->mark_id][$vehicle->slug] = true;
             }
         }
 
@@ -82,21 +83,26 @@ final class VehiclePages
                 continue;
             }
 
-            $base = self::baseSlug($row);
-            $slug = $base;
+            $markId = $row->generation->model->mark_id;
+            $slug = self::baseSlug($row);
 
-            for ($suffix = 2; isset($taken[$row->generation->model_id][$slug]); $suffix++) {
-                $slug = "{$base}-{$suffix}";
+            if (isset($taken[$markId][$slug])) {
+                $base = self::bodySlug($row);
+                $slug = $base;
+
+                for ($suffix = 2; isset($taken[$markId][$slug]); $suffix++) {
+                    $slug = "{$base}-{$suffix}";
+                }
             }
 
-            $taken[$row->generation->model_id][$slug] = true;
+            $taken[$markId][$slug] = true;
             $vehicle->slug = $slug;
             $vehicle->save();
         }
     }
 
     /**
-     * Whether another vehicle of the same catalog model already uses the address.
+     * Whether another vehicle of the same catalog mark already uses the address.
      */
     public function slugTaken(SiteVehicle $vehicle, string $slug): bool
     {
@@ -118,7 +124,7 @@ final class VehiclePages
 
         $series = $this->catalog->seriesByRefs($others->map(fn (SiteVehicle $other): string => $other->catalog_series_ref)->all());
 
-        return $series->contains(fn (AutoSeries $other): bool => $other->generation->model_id === $row->generation->model_id);
+        return $series->contains(fn (AutoSeries $other): bool => $other->generation->model->mark_id === $row->generation->model->mark_id);
     }
 
     /**
@@ -141,9 +147,25 @@ final class VehiclePages
         }
     }
 
+    /**
+     * Model and generation: `rio-iv-restyling`.
+     */
     public static function baseSlug(AutoSeries $series): string
     {
-        $name = (string) preg_replace('/рестайлинг/iu', 'restyling', "{$series->generation->name} {$series->name}");
+        return self::slugOf(str_replace('_', '-', $series->generation->model->url).' '.$series->generation->name);
+    }
+
+    /**
+     * Model, generation and body for a second vehicle of the same generation: `rio-iv-restyling-hatchback`.
+     */
+    public static function bodySlug(AutoSeries $series): string
+    {
+        return self::slugOf(str_replace('_', '-', $series->generation->model->url)." {$series->generation->name} {$series->name}");
+    }
+
+    private static function slugOf(string $name): string
+    {
+        $name = (string) preg_replace('/рестайлинг/iu', 'restyling', $name);
 
         return rtrim(Str::limit(Str::slug($name), self::SLUG_MAX - 10, ''), '-') ?: 'auto';
     }

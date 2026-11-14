@@ -59,8 +59,8 @@ class CatalogSectionPagesTest extends TestCase
         $section = $this->site->sections()->sole();
         $pages = $section->pages()->with('blocks.version.definition')->get()->keyBy(fn (Page $page): string => $page->section_role->value);
 
-        $this->assertSame(['index', 'mark', 'model', 'item'], array_map(fn (SectionPageRole $role): string => $role->value, SectionPageRole::cases()));
-        $this->assertEqualsCanonicalizing(['index', 'mark', 'model', 'item'], $pages->keys()->all());
+        $this->assertSame(['index', 'mark', 'item'], array_map(fn (SectionPageRole $role): string => $role->value, SectionPageRole::cases()));
+        $this->assertEqualsCanonicalizing(['index', 'mark', 'item'], $pages->keys()->all());
         $this->assertSame('_catalog-item', $pages['item']->slug);
         $this->assertSame(
             ['header', 'vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment'],
@@ -70,7 +70,7 @@ class CatalogSectionPagesTest extends TestCase
         $this->assertSame('Киа Центр', $pages['index']->blocks->first()?->state_json['logo_text']);
 
         app(SectionPages::class)->ensure($section);
-        $this->assertSame(4, $section->pages()->count());
+        $this->assertSame(3, $section->pages()->count());
     }
 
     public function test_template_pages_cannot_be_deleted_alone_and_go_with_the_section(): void
@@ -90,7 +90,7 @@ class CatalogSectionPagesTest extends TestCase
         $this->assertModelExists($this->home);
     }
 
-    public function test_vehicles_get_unique_addresses_per_model_and_keep_old_ones(): void
+    public function test_vehicles_get_unique_addresses_per_mark_and_keep_old_ones(): void
     {
         [$rio, $rioWagon, $ceed] = $this->vehicles();
 
@@ -101,20 +101,22 @@ class CatalogSectionPagesTest extends TestCase
         $this->as()->get(route('sites.vehicles.show', [$this->site, $rio]))
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('address.slug', 'iv-restyling-sedan')
-                ->where('address.base_url', 'http://localhost/'.$this->site->public_number.'/catalog/kia/rio/'));
+                ->where('address.slug', 'rio-iv-restyling')
+                ->where('address.base_url', 'http://localhost/'.$this->site->public_number.'/catalog/kia/'));
 
-        $this->assertSame('iv-restyling-sedan-2', $rioWagon->fresh()?->slug);
-        $this->assertSame('iv-restyling-sedan', $ceed->fresh()?->slug, 'another model may reuse the address');
+        $this->assertSame('rio-iv-restyling-universal', $rioWagon->fresh()?->slug, 'the body is added only when the generation repeats');
+        $this->assertSame('ceed-iv-restyling', $ceed->fresh()?->slug);
 
-        $this->as()->patch(route('sites.vehicles.update', [$this->site, $rioWagon]), ['slug' => 'iv-restyling-sedan'])
-            ->assertSessionHasErrors(['slug' => 'Такой адрес уже есть у другого автомобиля этой модели.']);
+        $this->as()->patch(route('sites.vehicles.update', [$this->site, $rioWagon]), ['slug' => 'rio-iv-restyling'])
+            ->assertSessionHasErrors(['slug' => 'Такой адрес уже есть у другого автомобиля этой марки.']);
+        $this->as()->patch(route('sites.vehicles.update', [$this->site, $ceed]), ['slug' => 'rio-iv-restyling'])
+            ->assertSessionHasErrors('slug');
         $this->as()->patch(route('sites.vehicles.update', [$this->site, $rioWagon]), ['slug' => 'Bad slug'])
             ->assertSessionHasErrors('slug');
 
         $this->as()->patch(route('sites.vehicles.update', [$this->site, $rioWagon]), ['slug' => 'IV-Restyling-Universal'])->assertSessionHasNoErrors();
         $this->assertSame('iv-restyling-universal', $rioWagon->fresh()?->slug);
-        $this->assertSame(['iv-restyling-sedan-2'], $rioWagon->slugRedirects()->pluck('slug')->all());
+        $this->assertSame(['rio-iv-restyling-universal'], $rioWagon->slugRedirects()->pluck('slug')->all());
     }
 
     public function test_designer_shows_template_page_on_a_sample_vehicle(): void
@@ -131,7 +133,7 @@ class CatalogSectionPagesTest extends TestCase
                 ->where('catalog.pages.item', $item->public_id)
                 ->has('catalog.vehicles', 3)
                 ->where('catalog.vehicles.0.mark.segment', 'kia')
-                ->where('pageContext', ['role' => 'item', 'mark' => 'kia', 'model' => 'rio', 'vehicle' => $rio->public_id])
+                ->where('pageContext', ['role' => 'item', 'mark' => 'kia', 'vehicle' => $rio->public_id])
                 ->where('pages', fn ($pages): bool => collect($pages)->where('section_role', 'item')->count() === 1));
     }
 
@@ -142,19 +144,18 @@ class CatalogSectionPagesTest extends TestCase
         $pages = $section->pages()->get()->keyBy(fn (Page $page): string => $page->section_role->value);
 
         foreach ([
-            'catalog' => ['index', null, null, null],
-            'catalog/kia' => ['mark', 'kia', null, null],
-            'catalog/kia/rio' => ['model', 'kia', 'rio', null],
-            'catalog/kia/rio/iv-restyling-sedan' => ['item', 'kia', 'rio', $rio->public_id],
-        ] as $path => [$role, $mark, $model, $vehicle]) {
+            'catalog' => ['index', null, null],
+            'catalog/kia' => ['mark', 'kia', null],
+            'catalog/kia/rio-iv-restyling' => ['item', 'kia', $rio->public_id],
+        ] as $path => [$role, $mark, $vehicle]) {
             $this->as()->get(route('sites.preview', ['site' => $this->site, 'path' => $path]))
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('page.public_id', $pages[$role]->public_id)
-                    ->where('pageContext', ['role' => $role, 'mark' => $mark, 'model' => $model, 'vehicle' => $vehicle]));
+                    ->where('pageContext', ['role' => $role, 'mark' => $mark, 'vehicle' => $vehicle]));
         }
 
-        foreach (['catalog/bmw', 'catalog/kia/x5', 'catalog/kia/rio/unknown', 'autos/kia', 'catalog/kia/rio/iv-restyling-sedan/extra'] as $path) {
+        foreach (['catalog/bmw', 'catalog/kia/x5', 'catalog/kia/rio', 'catalog/kia/rio/iv-restyling-sedan', 'autos/kia', 'catalog/kia/rio-iv-restyling/extra'] as $path) {
             $this->as()->get(route('sites.preview', ['site' => $this->site, 'path' => $path]))->assertNotFound();
         }
     }
@@ -190,7 +191,7 @@ class CatalogSectionPagesTest extends TestCase
     }
 
     /**
-     * Kia Rio sedan and wagon share the generated address base; Kia Ceed is another model.
+     * Kia Rio sedan and wagon share the generation; Kia Ceed is another model of the same mark.
      *
      * @return array{SiteVehicle, SiteVehicle, SiteVehicle}
      */
@@ -199,14 +200,14 @@ class CatalogSectionPagesTest extends TestCase
         $kia = AutoMark::factory()->create(['name' => 'Kia', 'url' => 'kia']);
         $rio = AutoModel::factory()->for($kia, 'mark')->create(['name' => 'Rio', 'url' => 'rio']);
         $ceed = AutoModel::factory()->for($kia, 'mark')->create(['name' => 'Ceed', 'url' => 'ceed']);
-        $series = fn (AutoModel $model): AutoSeries => AutoSeries::factory()
-            ->for(AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV Рестайлинг']), 'generation')
-            ->create(['name' => 'Седан']);
+        $generation = fn (AutoModel $model): AutoGeneration => AutoGeneration::factory()->for($model, 'model')->create(['name' => 'IV Рестайлинг']);
+        $rioGeneration = $generation($rio);
+        $series = fn (AutoGeneration $generation, string $body): AutoSeries => AutoSeries::factory()->for($generation, 'generation')->create(['name' => $body]);
 
         return [
-            SiteVehicle::factory()->for($this->site)->forSeries($series($rio))->create(['sort_order' => 1]),
-            SiteVehicle::factory()->for($this->site)->forSeries($series($rio))->create(['sort_order' => 2]),
-            SiteVehicle::factory()->for($this->site)->forSeries($series($ceed))->create(['sort_order' => 3]),
+            SiteVehicle::factory()->for($this->site)->forSeries($series($rioGeneration, 'Седан'))->create(['sort_order' => 1]),
+            SiteVehicle::factory()->for($this->site)->forSeries($series($rioGeneration, 'Универсал'))->create(['sort_order' => 2]),
+            SiteVehicle::factory()->for($this->site)->forSeries($series($generation($ceed), 'Седан'))->create(['sort_order' => 3]),
         ];
     }
 

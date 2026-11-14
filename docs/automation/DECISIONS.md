@@ -2422,6 +2422,23 @@ Owner answers 2026-11-14. Tasks: X-039 (groups), X-040 (previews and cards), X-0
 
 ---
 
+## D-131 — Catalog Section Without the Model Level
+
+**Status:** APPROVED (owner decisions 2026-11-14; amends ADR-011 §3–§4)
+
+### Decision
+
+- The catalog section has three page levels: catalog (`/{prefix}`, lists marks), mark (`/{prefix}/{mark}`, lists every vehicle of the mark as cards) and vehicle (`/{prefix}/{mark}/{vehicle}`). There is no model page and no model template Page.
+- The vehicle segment is the model `url` plus the generation: `rio-iv-restyling`. The body is appended only when another vehicle of the same mark already uses that segment (`rio-iv-restyling-hatchback`), then `-2`, `-3`. Unique per mark; editable with 301 history as before.
+- The vehicle page keeps its Blocks: gallery with colours, offers, characteristics / modifications, equipment / trims.
+- No redirects from the former `mark/model/vehicle` addresses or model pages: no Site was live yet.
+
+### Resolved By
+
+Owner answers 2026-11-14. Task: X-042.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

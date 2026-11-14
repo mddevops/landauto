@@ -14,7 +14,7 @@ use App\Models\SiteSection;
  *
  * @phpstan-import-type VehiclePage from VehiclePages
  *
- * @phpstan-type PageContext array{role: string, mark: string|null, model: string|null, vehicle: string|null}
+ * @phpstan-type PageContext array{role: string, mark: string|null, vehicle: string|null}
  * @phpstan-type CatalogProps array{public_id: string, title: string, prefix: string, enabled: bool, pages: array<string, string>, vehicles: list<VehiclePage>}
  */
 final class SectionCatalog
@@ -67,19 +67,18 @@ final class SectionCatalog
         $vehicle = collect($catalog['vehicles'])->firstWhere('public_id', $sample) ?? ($catalog['vehicles'][0] ?? null);
 
         if ($role === SectionPageRole::Index || $vehicle === null) {
-            return ['role' => $role->value, 'mark' => null, 'model' => null, 'vehicle' => null];
+            return ['role' => $role->value, 'mark' => null, 'vehicle' => null];
         }
 
         return [
             'role' => $role->value,
             'mark' => $vehicle['mark']['segment'],
-            'model' => $role === SectionPageRole::Mark ? null : $vehicle['model']['segment'],
             'vehicle' => $role === SectionPageRole::Item ? $vehicle['public_id'] : null,
         ];
     }
 
     /**
-     * Resolves a section address (`catalog/kia/rio/iv-restyling-sedan`) to its template Page and
+     * Resolves a section address (`catalog/kia/rio-iv-restyling`) to its template Page and
      * context; null when no vehicle of the section matches.
      *
      * @param  CatalogProps  $catalog
@@ -88,19 +87,15 @@ final class SectionCatalog
      */
     public static function resolve(array $catalog, array $segments): ?array
     {
-        if (($segments[0] ?? null) !== $catalog['prefix'] || count($segments) > 4) {
+        if (($segments[0] ?? null) !== $catalog['prefix'] || count($segments) > 3) {
             return null;
         }
 
-        [, $mark, $model, $slug] = array_pad($segments, 4, null);
+        [, $mark, $slug] = array_pad($segments, 3, null);
         $vehicles = collect($catalog['vehicles']);
 
         if ($mark !== null) {
             $vehicles = $vehicles->filter(fn (array $vehicle): bool => $vehicle['mark']['segment'] === $mark);
-        }
-
-        if ($model !== null) {
-            $vehicles = $vehicles->filter(fn (array $vehicle): bool => $vehicle['model']['segment'] === $model);
         }
 
         $item = $slug === null ? null : $vehicles->firstWhere('slug', $slug);
@@ -111,14 +106,13 @@ final class SectionCatalog
 
         $role = match (true) {
             $slug !== null => SectionPageRole::Item,
-            $model !== null => SectionPageRole::Model,
             $mark !== null => SectionPageRole::Mark,
             default => SectionPageRole::Index,
         };
 
         return [
             'role' => $role,
-            'context' => ['role' => $role->value, 'mark' => $mark, 'model' => $model, 'vehicle' => $item['public_id'] ?? null],
+            'context' => ['role' => $role->value, 'mark' => $mark, 'vehicle' => $item['public_id'] ?? null],
         ];
     }
 }

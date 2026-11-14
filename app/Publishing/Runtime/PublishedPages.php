@@ -120,10 +120,10 @@ final class PublishedPages
             $moved = true;
         }
 
-        $vehicle = count($segments) === 4 ? ($catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null) : null;
+        $vehicle = count($segments) >= 3 ? ($catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null) : null;
 
         if ($segments[0] === $catalog['prefix'] && $vehicle !== null && ! isset($this->index($site, $version)[implode('/', $segments)])) {
-            $segments[3] = $vehicle;
+            $segments[count($segments) - 1] = $vehicle;
             $moved = true;
         }
 

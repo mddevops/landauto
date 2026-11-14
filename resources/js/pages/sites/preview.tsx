@@ -116,9 +116,7 @@ export default function Preview({
         catalog?.vehicles.find(
             (vehicle) =>
                 pageContext?.mark !== null &&
-                vehicle.mark.segment === pageContext?.mark &&
-                (!pageContext.model ||
-                    vehicle.model.segment === pageContext.model),
+                vehicle.mark.segment === pageContext?.mark,
         )?.public_id ??
         null;
 

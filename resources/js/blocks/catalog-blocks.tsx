@@ -88,8 +88,8 @@ function GroupCard({
 }
 
 /**
- * «Марки и модели каталога» (ADR-011): on the catalog page it lists marks, on a mark page the
- * models of the mark, on a model page its generations and bodies as vehicle cards.
+ * «Марки и модели каталога» (ADR-011, D-131): on the catalog page it lists marks, on a mark page
+ * every vehicle of the mark as a card leading to its page.
  */
 export function VehicleSectionBlock({ state }: BlockRendererProps) {
     const { catalog, pageContext } = useBlockRenderContext();
@@ -99,24 +99,18 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
             : columnsClass.three;
     const buttonLabel = text(state, 'button_label') ?? 'Подробнее';
     const mark = pageContext?.mark ?? null;
-    const model = pageContext?.model ?? null;
     const vehicles = (catalog?.vehicles ?? []).filter(
-        (vehicle) =>
-            (mark === null || vehicle.mark.segment === mark) &&
-            (model === null || vehicle.model.segment === model),
+        (vehicle) => mark === null || vehicle.mark.segment === mark,
     );
-    const level = model !== null ? 'model' : mark !== null ? 'mark' : 'index';
+    const level = mark !== null ? 'mark' : 'index';
     const first = vehicles[0];
     const autoTitle =
-        level === 'model' && first
-            ? `${first.mark.name} ${first.model.name}`
-            : level === 'mark' && first
-              ? first.mark.name
-              : (catalog?.title ?? null);
+        level === 'mark' && first ? first.mark.name : (catalog?.title ?? null);
     const title = text(state, 'title') ?? autoTitle;
     const subtitle = text(state, 'subtitle');
     const href = (target: CatalogTarget) =>
         catalog?.enabled ? catalog.href(target) : null;
+    const indexHref = href({ role: 'index' });
 
     return (
         <section className="bg-white py-16 text-neutral-900">
@@ -124,47 +118,24 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
                 {catalog && first && level !== 'index' && (
                     <nav aria-label="Навигация по каталогу">
                         <ol className="flex flex-wrap items-center gap-2 text-sm text-neutral-500">
-                            {[
-                                {
-                                    label: catalog.title,
-                                    href: href({ role: 'index' }),
-                                },
-                                ...(level === 'model'
-                                    ? [
-                                          {
-                                              label: first.mark.name,
-                                              href: href({
-                                                  role: 'mark',
-                                                  mark: first.mark.segment,
-                                              }),
-                                          },
-                                      ]
-                                    : []),
-                            ].map((crumb) => (
-                                <li
-                                    key={crumb.label}
-                                    className="flex items-center gap-2"
-                                >
-                                    {crumb.href ? (
-                                        <a
-                                            href={crumb.href}
-                                            className="transition-colors hover:text-neutral-900"
-                                        >
-                                            {crumb.label}
-                                        </a>
-                                    ) : (
-                                        <span>{crumb.label}</span>
-                                    )}
-                                    <span aria-hidden="true">/</span>
-                                </li>
-                            ))}
+                            <li className="flex items-center gap-2">
+                                {indexHref ? (
+                                    <a
+                                        href={indexHref}
+                                        className="transition-colors hover:text-neutral-900"
+                                    >
+                                        {catalog.title}
+                                    </a>
+                                ) : (
+                                    <span>{catalog.title}</span>
+                                )}
+                                <span aria-hidden="true">/</span>
+                            </li>
                             <li
                                 aria-current="page"
                                 className="text-neutral-900"
                             >
-                                {level === 'model'
-                                    ? first.model.name
-                                    : first.mark.name}
+                                {first.mark.name}
                             </li>
                         </ol>
                     </nav>
@@ -189,7 +160,7 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
                     <Placeholder>
                         Добавьте автомобили в разделе «Автомобили» сайта.
                     </Placeholder>
-                ) : level === 'model' ? (
+                ) : level === 'mark' ? (
                     <VehicleCards
                         ids={vehicles.map((vehicle) => vehicle.public_id)}
                         columns={columns}
@@ -198,26 +169,15 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
                     />
                 ) : (
                     <ul className={cn('grid gap-6', columns)}>
-                        {groupVehicles(
-                            vehicles,
-                            level === 'index' ? 'mark' : 'model',
-                        ).map((group) => (
+                        {groupVehicles(vehicles).map((group) => (
                             <li key={group.segment}>
                                 <GroupCard
                                     group={group}
                                     label={buttonLabel}
-                                    href={href(
-                                        level === 'index'
-                                            ? {
-                                                  role: 'mark',
-                                                  mark: group.segment,
-                                              }
-                                            : {
-                                                  role: 'model',
-                                                  mark: mark ?? '',
-                                                  model: group.segment,
-                                              },
-                                    )}
+                                    href={href({
+                                        role: 'mark',
+                                        mark: group.segment,
+                                    })}
                                 />
                             </li>
                         ))}

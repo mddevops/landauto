@@ -1,5 +1,5 @@
-/** Catalog section of a Site (ADR-011): template Pages render every mark, model or vehicle. */
-export type SectionPageRole = 'index' | 'mark' | 'model' | 'item';
+/** Catalog section of a Site (ADR-011, D-131): template Pages render every mark or vehicle. */
+export type SectionPageRole = 'index' | 'mark' | 'item';
 
 export type CatalogVehicle = {
     public_id: string;
@@ -18,18 +18,16 @@ export type CatalogProps = {
     vehicles: CatalogVehicle[];
 };
 
-/** What a template Page is currently showing: segments of its mark / model and the vehicle. */
+/** What a template Page is currently showing: segment of its mark and the vehicle. */
 export type PageContext = {
     role: SectionPageRole;
     mark: string | null;
-    model: string | null;
     vehicle: string | null;
 };
 
 export type CatalogTarget =
     | { role: 'index' }
     | { role: 'mark'; mark: string }
-    | { role: 'model'; mark: string; model: string }
     | { role: 'item'; vehicle: string };
 
 export type CatalogRuntime = {
@@ -39,7 +37,7 @@ export type CatalogRuntime = {
     href: (target: CatalogTarget) => string | null;
 };
 
-/** Address of a section page relative to the Site root: `catalog/kia/rio/iv-restyling-sedan`. */
+/** Address of a section page relative to the Site root: `catalog/kia/rio-iv-restyling`. */
 export function catalogPath(
     catalog: CatalogProps,
     target: CatalogTarget,
@@ -49,15 +47,13 @@ export function catalogPath(
             return catalog.prefix;
         case 'mark':
             return `${catalog.prefix}/${target.mark}`;
-        case 'model':
-            return `${catalog.prefix}/${target.mark}/${target.model}`;
         case 'item': {
             const vehicle = catalog.vehicles.find(
                 (candidate) => candidate.public_id === target.vehicle,
             );
 
             return vehicle
-                ? `${catalog.prefix}/${vehicle.mark.segment}/${vehicle.model.segment}/${vehicle.slug}`
+                ? `${catalog.prefix}/${vehicle.mark.segment}/${vehicle.slug}`
                 : null;
         }
     }
@@ -68,7 +64,7 @@ export function contextCatalogPath(
     catalog: CatalogProps,
     context: PageContext,
 ): string | null {
-    const { role, mark, model, vehicle } = context;
+    const { role, mark, vehicle } = context;
 
     if (role === 'index') {
         return catalogPath(catalog, { role });
@@ -76,10 +72,6 @@ export function contextCatalogPath(
 
     if (role === 'mark' && mark) {
         return catalogPath(catalog, { role, mark });
-    }
-
-    if (role === 'model' && mark && model) {
-        return catalogPath(catalog, { role, mark, model });
     }
 
     return role === 'item' && vehicle
@@ -99,11 +91,6 @@ export function sampleVehicle(
                     return true;
                 case 'mark':
                     return vehicle.mark.segment === target.mark;
-                case 'model':
-                    return (
-                        vehicle.mark.segment === target.mark &&
-                        vehicle.model.segment === target.model
-                    );
                 case 'item':
                     return vehicle.public_id === target.vehicle;
             }
@@ -117,22 +104,18 @@ export type CatalogGroup = {
     vehicles: CatalogVehicle[];
 };
 
-/** Marks (or models of one mark) in Site order with their vehicles. */
-export function groupVehicles(
-    vehicles: CatalogVehicle[],
-    by: 'mark' | 'model',
-): CatalogGroup[] {
+/** Marks in Site order with their vehicles. */
+export function groupVehicles(vehicles: CatalogVehicle[]): CatalogGroup[] {
     const groups = new Map<string, CatalogGroup>();
 
     for (const vehicle of vehicles) {
-        const key = vehicle[by];
-        const group = groups.get(key.segment) ?? {
-            segment: key.segment,
-            name: key.name,
+        const group = groups.get(vehicle.mark.segment) ?? {
+            segment: vehicle.mark.segment,
+            name: vehicle.mark.name,
             vehicles: [],
         };
         group.vehicles.push(vehicle);
-        groups.set(key.segment, group);
+        groups.set(vehicle.mark.segment, group);
     }
 
     return [...groups.values()];

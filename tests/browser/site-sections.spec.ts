@@ -97,7 +97,7 @@ test('owner adds the catalog section, renames its prefix and keeps the old addre
         section
             .getByRole('listitem')
             .filter({ hasText: 'Карточка автомобиля' }),
-    ).toContainText('/autos/kia/rio/iv-restyling-sedan');
+    ).toContainText('/autos/kia/rio-iv-restyling');
     await section
         .getByRole('link', {
             name: 'Открыть в дизайнере: Карточка автомобиля',
@@ -114,8 +114,11 @@ test('owner adds the catalog section, renames its prefix and keeps the old addre
         name: 'Каталог автомобилей',
     });
     await expect(
+        catalogPages.getByRole('link', { name: /Страница марки/ }),
+    ).toContainText('/autos/kia');
+    await expect(
         catalogPages.getByRole('link', { name: /Страница модели/ }),
-    ).toContainText('/autos/kia/rio');
+    ).toHaveCount(0);
     await expect(
         catalogPages.getByRole('button', { name: /Удалить страницу/ }),
     ).toHaveCount(0);
