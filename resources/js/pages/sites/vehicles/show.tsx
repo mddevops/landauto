@@ -22,6 +22,8 @@ import { Spinner } from '@/components/ui/spinner';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import type { Offer, OfferChoices } from '@/components/vehicles/offer-dialog';
 import { OfferDialog } from '@/components/vehicles/offer-dialog';
+import { VehicleAddressForm } from '@/components/vehicles/vehicle-address-form';
+import type { VehicleAddress } from '@/components/vehicles/vehicle-address-form';
 import { VehicleTextForm } from '@/components/vehicles/vehicle-text-form';
 import { dashboard } from '@/routes';
 import { destroy as destroyOffer } from '@/routes/sites/offers';
@@ -44,6 +46,7 @@ import type {
 type ShowVehicleProps = {
     site: { public_id: string; name: string };
     vehicle: VehicleDetail & { in_library: boolean };
+    address: VehicleAddress | null;
     offers: Offer[];
     trims: Trim[];
     library: SeriesLibrary;
@@ -142,6 +145,7 @@ export default function ShowVehicle({
     angles,
     choices,
     can,
+    address,
 }: ShowVehicleProps) {
     const ids = { site: site.public_id, vehicle: vehicle.public_id };
 
@@ -284,6 +288,15 @@ export default function ShowVehicle({
                             extra={{}}
                             canEdit={can.editVehicles}
                         />
+                        {address && (
+                            <div className="mt-6">
+                                <VehicleAddressForm
+                                    url={update.url(ids)}
+                                    address={address}
+                                    canEdit={can.editVehicles}
+                                />
+                            </div>
+                        )}
                     </TabsContent>
                 </Tabs>
             </main>

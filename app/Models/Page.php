@@ -2,10 +2,12 @@
 
 namespace App\Models;
 
+use App\Enums\SectionPageRole;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\PageFactory;
 use Illuminate\Database\Eloquent\Attributes\Fillable;
 use Illuminate\Database\Eloquent\Attributes\Hidden;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
@@ -18,6 +20,8 @@ use LogicException;
  * @property int $id
  * @property string $public_id
  * @property int $site_id
+ * @property int|null $site_section_id
+ * @property SectionPageRole|null $section_role
  * @property string $title
  * @property string $slug
  * @property string|null $seo_title
@@ -29,7 +33,7 @@ use LogicException;
  * @property Carbon|null $updated_at
  */
 #[Fillable(['title', 'slug', 'sort_order'])]
-#[Hidden(['id', 'site_id'])]
+#[Hidden(['id', 'site_id', 'site_section_id'])]
 class Page extends Model
 {
     /** @use HasFactory<PageFactory> */
@@ -47,16 +51,40 @@ class Page extends Model
         return [
             'sort_order' => 'integer',
             'seo_noindex' => 'boolean',
+            'section_role' => SectionPageRole::class,
         ];
     }
 
     protected static function booted(): void
     {
         static::updating(function (Page $page): void {
-            if ($page->isDirty('site_id')) {
-                throw new LogicException('Page site is immutable.');
+            if ($page->isDirty(['site_id', 'site_section_id', 'section_role'])) {
+                throw new LogicException('Page site and section role are immutable.');
             }
         });
+    }
+
+    /**
+     * Ordinary Pages: generated section template Pages are addressed through their section.
+     *
+     * @param  Builder<static>  $query
+     */
+    public function scopeRegular(Builder $query): void
+    {
+        $query->whereNull('site_section_id');
+    }
+
+    public function isSectionPage(): bool
+    {
+        return $this->site_section_id !== null;
+    }
+
+    /**
+     * @return BelongsTo<SiteSection, $this>
+     */
+    public function section(): BelongsTo
+    {
+        return $this->belongsTo(SiteSection::class, 'site_section_id');
     }
 
     /**

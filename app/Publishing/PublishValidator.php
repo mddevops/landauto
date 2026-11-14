@@ -76,7 +76,7 @@ final class PublishValidator
             $this->error('site_archived', 'Архивный сайт нельзя опубликовать.');
         }
 
-        $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
+        $pages = $site->pages()->regular()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
         $this->validatePages($pages);
         $referenced = $this->validateBlocks($site, $pages);
         $this->validateReferences($site);

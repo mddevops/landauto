@@ -9,14 +9,32 @@ export function VehicleControl({
     id,
     error,
     onChange,
+    followsPage = false,
 }: {
     field: SchemaField;
     value: unknown;
     id: string;
     error?: string;
     onChange: (value: string | null) => void;
+    /** Top-level vehicle field, which follows the page on a catalog card template. */
+    followsPage?: boolean;
 }) {
-    const { vehicles } = useDesignerContext();
+    const { vehicles, pageVehicle } = useDesignerContext();
+
+    if (followsPage && pageVehicle) {
+        return (
+            <div className="grid gap-1.5">
+                <span className="text-sm font-medium">{field.label}</span>
+                <p className="rounded-md border bg-muted/50 px-3 py-2 text-sm">
+                    Автомобиль этой страницы
+                </p>
+                <p className="text-xs text-muted-foreground">
+                    На карточке каждого автомобиля блок покажет его данные.
+                </p>
+            </div>
+        );
+    }
+
     const selected = typeof value === 'string' ? value : '';
     const missing =
         selected !== '' &&

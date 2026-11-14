@@ -1,7 +1,16 @@
 import { Form, Link, useForm } from '@inertiajs/react';
-import { FileText, House, Pencil, Plus, Search, Trash2 } from 'lucide-react';
+import {
+    FileText,
+    FolderTree,
+    House,
+    Pencil,
+    Plus,
+    Search,
+    Trash2,
+} from 'lucide-react';
 import { useState } from 'react';
 import type { FormEvent } from 'react';
+import type { SectionPageRole } from '@/blocks/catalog';
 import type {
     DesignerPage,
     DesignerPageRoutes,
@@ -30,7 +39,24 @@ type PagesPanelProps = {
     canAddPages: boolean;
     canEditSeo: boolean;
     canEditSeoIndexing: boolean;
+    catalog?: { title: string; prefix: string; enabled: boolean } | null;
 };
+
+const sectionRoles: SectionPageRole[] = ['index', 'mark', 'model', 'item'];
+
+const exampleSegments: Record<SectionPageRole, string> = {
+    index: '',
+    mark: '/kia',
+    model: '/kia/rio',
+    item: '/kia/rio/iv-restyling-sedan',
+};
+
+function examplePath(
+    prefix: string,
+    role: SectionPageRole | null | undefined,
+): string {
+    return `/${prefix}${role ? exampleSegments[role] : ''}`;
+}
 
 type DialogState =
     | { mode: 'create' }
@@ -47,14 +73,19 @@ export function PagesPanel({
     canAddPages,
     canEditSeo,
     canEditSeoIndexing,
+    catalog = null,
 }: PagesPanelProps) {
     const [dialog, setDialog] = useState<DialogState>(null);
     const close = () => setDialog(null);
+    const regularPages = pages.filter((page) => !page.section_role);
+    const sectionPages = sectionRoles.flatMap((role) =>
+        pages.filter((page) => page.section_role === role),
+    );
 
     return (
         <div className="flex flex-col gap-3">
             <ul className="flex flex-col gap-1">
-                {pages.map((page) => (
+                {regularPages.map((page) => (
                     <li
                         key={page.public_id}
                         className="flex items-center gap-1"
@@ -141,6 +172,78 @@ export function PagesPanel({
                     <Plus aria-hidden="true" />
                     Добавить страницу
                 </Button>
+            )}
+
+            {catalog && sectionPages.length > 0 && (
+                <section
+                    aria-labelledby="designer-catalog-pages"
+                    className="flex flex-col gap-2 border-t pt-3"
+                >
+                    <div className="flex flex-col gap-0.5 px-2">
+                        <h2
+                            id="designer-catalog-pages"
+                            className="flex items-center gap-2 text-sm font-semibold"
+                        >
+                            <FolderTree
+                                className="size-4 shrink-0"
+                                aria-hidden="true"
+                            />
+                            {catalog.title}
+                        </h2>
+                        <p className="text-xs text-muted-foreground">
+                            Шаблоны: одна страница для всех автомобилей.
+                            {catalog.enabled
+                                ? ''
+                                : ' Раздел выключен в «Разделах».'}
+                        </p>
+                    </div>
+                    <ul className="flex flex-col gap-1">
+                        {sectionPages.map((page) => (
+                            <li
+                                key={page.public_id}
+                                className="flex items-center gap-1"
+                            >
+                                <Link
+                                    href={routes.href(page.public_id)}
+                                    aria-current={
+                                        page.public_id === currentPageId
+                                            ? 'page'
+                                            : undefined
+                                    }
+                                    className={cn(
+                                        'flex min-w-0 flex-1 flex-col rounded-md px-2 py-1.5 text-sm hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none',
+                                        page.public_id === currentPageId &&
+                                            'bg-muted font-medium',
+                                    )}
+                                >
+                                    <span className="truncate">
+                                        {page.title}
+                                    </span>
+                                    <span className="truncate font-mono text-xs font-normal text-muted-foreground">
+                                        {examplePath(
+                                            catalog.prefix,
+                                            page.section_role,
+                                        )}
+                                    </span>
+                                </Link>
+                                {canEdit && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-8"
+                                        aria-label={`Изменить страницу «${page.title}»`}
+                                        onClick={() =>
+                                            setDialog({ mode: 'edit', page })
+                                        }
+                                    >
+                                        <Pencil aria-hidden="true" />
+                                    </Button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                </section>
             )}
 
             <Dialog
@@ -358,7 +461,7 @@ function PageForm({
                             message={errors.title}
                         />
                     </div>
-                    {!page?.is_home && (
+                    {!page?.is_home && !page?.section_role && (
                         <div className="grid gap-2">
                             <Label htmlFor="page-slug">Адрес страницы</Label>
                             <Input

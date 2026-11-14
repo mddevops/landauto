@@ -7,6 +7,16 @@ import {
     TriangleAlert,
 } from 'lucide-react';
 import { useMemo, useState } from 'react';
+import type {
+    CatalogProps,
+    PageContext,
+    SectionPageRole,
+} from '@/blocks/catalog';
+import {
+    contextCatalogPath,
+    runtimeCatalog,
+    sampleVehicle,
+} from '@/blocks/catalog';
 import type { DesignTokens } from '@/blocks/design';
 import type { PopupRuntime } from '@/blocks/popup';
 import { BlockRenderContext } from '@/blocks/render-context';
@@ -18,6 +28,7 @@ import {
     CanvasBlock,
     DesignerTabs as Tabs,
 } from '@/components/designer/canvas';
+import { CatalogSampleSelect } from '@/components/designer/catalog-sample-select';
 import { DesignerContext } from '@/components/designer/designer-context';
 import { DesignPanel } from '@/components/designer/design-panel';
 import { useBlockAutosave } from '@/components/designer/use-block-autosave';
@@ -79,7 +90,13 @@ import { index as submissionsIndex } from '@/routes/sites/submissions';
 type DesignerProps = {
     site: DesignerSite;
     design: DesignTokens;
-    page: { public_id: string; title: string };
+    page: {
+        public_id: string;
+        title: string;
+        section_role: SectionPageRole | null;
+    };
+    catalog: CatalogProps | null;
+    pageContext: PageContext | null;
     pages: DesignerPage[];
     blocks: DesignerBlock[];
     assets: DesignerAsset[];
@@ -132,6 +149,8 @@ export default function Designer({
     site,
     design,
     page,
+    catalog,
+    pageContext,
     pages,
     blocks,
     assets,
@@ -162,8 +181,24 @@ export default function Designer({
             hasPopup: (id: string) =>
                 popups.some((popup) => popup.public_id === id),
             openPopup: null,
+            catalog: runtimeCatalog(catalog, (current, target) => {
+                const pageId = current.pages[target.role];
+                const sample = sampleVehicle(current, target);
+
+                return pageId
+                    ? designer.url(site.public_id, {
+                          query: {
+                              page: pageId,
+                              ...(sample && target.role !== 'index'
+                                  ? { sample: sample.public_id }
+                                  : {}),
+                          },
+                      })
+                    : null;
+            }),
+            pageContext,
         };
-    }, [assets, pages, vehicles, popups, site.public_id]);
+    }, [assets, pages, vehicles, popups, site.public_id, catalog, pageContext]);
     const designerContext = useMemo(
         () => ({
             siteId: site.public_id,
@@ -179,6 +214,7 @@ export default function Designer({
                 public_id: popup.public_id,
                 name: popup.name,
             })),
+            pageVehicle: page.section_role === 'item',
         }),
         [
             site.public_id,
@@ -188,8 +224,16 @@ export default function Designer({
             blocks,
             vehicles,
             popups,
+            page.section_role,
         ],
     );
+    const contextPath =
+        catalog && pageContext
+            ? contextCatalogPath(catalog, pageContext)
+            : null;
+    const previewQuery = contextPath
+        ? { path: contextPath }
+        : { page: page.public_id };
     const [selectedId, setSelectedId] = useState<string | null>(selectedBlock);
     const [serverSelection, setServerSelection] = useState(selectedBlock);
 
@@ -259,6 +303,17 @@ export default function Designer({
                             {page.title}
                         </p>
                     </div>
+                    {catalog && pageContext && (
+                        <CatalogSampleSelect
+                            catalog={catalog}
+                            context={pageContext}
+                            href={(sample) =>
+                                designer.url(site.public_id, {
+                                    query: { page: page.public_id, sample },
+                                })
+                            }
+                        />
+                    )}
                     <AutosaveIndicator status={autosave.status} />
                     <Badge variant="outline">Черновик</Badge>
                     <SiteSectionsMenu
@@ -285,7 +340,7 @@ export default function Designer({
                             <Button asChild variant="outline" size="sm">
                                 <a
                                     href={preview.url(site.public_id, {
-                                        query: { page: page.public_id },
+                                        query: previewQuery,
                                     })}
                                     target="_blank"
                                     rel="noopener"
@@ -337,6 +392,7 @@ export default function Designer({
                                     canAddPages={can.addPage}
                                     canEditSeo={can.editSeo}
                                     canEditSeoIndexing={can.editSeoIndexing}
+                                    catalog={catalog}
                                 />
                             ) : (
                                 <Navigator

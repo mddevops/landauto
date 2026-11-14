@@ -29,7 +29,7 @@ export function ActionControl({
     errors: Record<string, string>;
     onChange: (value: Record<string, string | null> | null) => void;
 }) {
-    const { pages, blocks, popups } = useDesignerContext();
+    const { pages, blocks, popups, vehicles } = useDesignerContext();
     const action =
         typeof value === 'object' && value !== null
             ? (value as Record<string, unknown>)
@@ -106,12 +106,49 @@ export function ActionControl({
                         className={selectClass}
                     >
                         <option value="">Выберите страницу</option>
-                        {pages.map((page) => (
-                            <option key={page.public_id} value={page.public_id}>
-                                {page.title}
+                        {pages
+                            .filter(
+                                (page) =>
+                                    !page.section_role ||
+                                    page.section_role === 'index',
+                            )
+                            .map((page) => (
+                                <option
+                                    key={page.public_id}
+                                    value={page.public_id}
+                                >
+                                    {page.section_role
+                                        ? `Раздел: ${page.title}`
+                                        : page.title}
+                                </option>
+                            ))}
+                    </select>
+                </div>
+            )}
+            {targetKey === 'vehicle' && (
+                <div className="grid gap-1.5">
+                    <Label htmlFor={targetId}>Автомобиль</Label>
+                    <select
+                        id={targetId}
+                        value={target}
+                        aria-invalid={Boolean(targetError)}
+                        onChange={(event) => setTarget(event.target.value)}
+                        className={selectClass}
+                    >
+                        <option value="">Выберите автомобиль</option>
+                        {vehicles.map((vehicle) => (
+                            <option
+                                key={vehicle.public_id}
+                                value={vehicle.public_id}
+                            >
+                                {vehicle.title}
                             </option>
                         ))}
                     </select>
+                    <p className="text-xs text-muted-foreground">
+                        Ссылка работает, когда в «Разделах» включён каталог
+                        автомобилей.
+                    </p>
                 </div>
             )}
             {targetKey === 'block' && (

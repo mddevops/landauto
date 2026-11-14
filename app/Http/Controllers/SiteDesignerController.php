@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Automotive\SectionCatalog;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockReferenceInspector;
@@ -23,7 +24,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess, BlockVersionGrants $grants, LegacyBlockMigration $legacy): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess, BlockVersionGrants $grants, LegacyBlockMigration $legacy, SectionCatalog $sections): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -36,6 +37,8 @@ class SiteDesignerController extends Controller
 
         $blocks = $page->blocks()->with('version.definition')->get();
         $vehicles = $vehicleBindings->forSite($site);
+        $catalog = $sections->props($site);
+        $pages = $catalog === null ? $pages : $site->pages()->orderBy('sort_order')->orderBy('id')->get();
         $licensed = $access->licensedBlockIds($site);
         $granted = $grants->grantedVersionIds($site);
 
@@ -48,13 +51,19 @@ class SiteDesignerController extends Controller
             'page' => [
                 'public_id' => $page->public_id,
                 'title' => $page->title,
+                'section_role' => $page->section_role?->value,
             ],
+            'catalog' => $catalog,
+            'pageContext' => $catalog !== null && $page->isSectionPage()
+                ? SectionCatalog::sampleContext($page, $catalog, $request->string('sample')->toString() ?: null)
+                : null,
             'pages' => $pages
                 ->map(fn (Page $sitePage): array => [
                     'public_id' => $sitePage->public_id,
                     'title' => $sitePage->title,
                     'slug' => $sitePage->slug,
                     'is_home' => $sitePage->is_home,
+                    'section_role' => $sitePage->section_role?->value,
                     'seo' => [
                         'title' => $sitePage->seo_title,
                         'description' => $sitePage->seo_description,

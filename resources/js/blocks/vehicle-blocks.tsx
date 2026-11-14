@@ -2,7 +2,7 @@ import { Car } from 'lucide-react';
 import { useState } from 'react';
 import { Carousel, carouselSettings } from '@/blocks/carousel';
 import { ButtonPreview, Container } from '@/blocks/official-blocks';
-import { useBlockRenderContext } from '@/blocks/render-context';
+import { useBlockRenderContext, useVehicleHref } from '@/blocks/render-context';
 import type { BlockRendererProps, BlockState } from '@/blocks/state';
 import { flag, group, items, text } from '@/blocks/state';
 import { TriggerScope } from '@/blocks/trigger-context';
@@ -14,19 +14,26 @@ export function useVehicle(
     state: BlockState,
     key = 'vehicle',
 ): VehicleBinding | null {
-    const { vehicle } = useBlockRenderContext();
-    const id = text(state, key);
+    const { vehicle, pageContext } = useBlockRenderContext();
+    const id =
+        pageContext?.role === 'item' && key === 'vehicle'
+            ? pageContext.vehicle
+            : text(state, key);
 
     return id === null ? null : vehicle(id);
 }
 
 export function VehiclePlaceholder({ selected }: { selected: boolean }) {
+    const { pageContext } = useBlockRenderContext();
+
     return (
         <div className="flex flex-col items-center gap-2 rounded-(--lf-radius) border border-dashed border-neutral-300 bg-neutral-50 px-6 py-10 text-center text-sm text-neutral-500">
             <Car className="size-6" aria-hidden />
-            {selected
-                ? 'Автомобиль скрыт или недоступен в каталоге.'
-                : 'Выберите автомобиль в свойствах блока.'}
+            {pageContext?.role === 'item'
+                ? 'Добавьте автомобили на сайт — здесь появится автомобиль этой страницы.'
+                : selected
+                  ? 'Автомобиль скрыт или недоступен в каталоге.'
+                  : 'Выберите автомобиль в свойствах блока.'}
         </div>
     );
 }
@@ -97,6 +104,7 @@ export function VehicleCard({
     const [setId, setSetId] = useState(sets[0]?.public_id);
     const set = sets.find((candidate) => candidate.public_id === setId);
     const image = cardImage(vehicle, set ?? sets[0]);
+    const cardHref = useVehicleHref()(vehicle.public_id);
 
     return (
         <article className="flex h-full flex-col overflow-hidden rounded-(--lf-radius) border border-neutral-200 bg-white text-neutral-900">
@@ -156,7 +164,10 @@ export function VehicleCard({
                             media_set: set?.public_id,
                         }}
                     >
-                        <ButtonPreview button={button} />
+                        <ButtonPreview
+                            button={button}
+                            fallbackHref={cardHref}
+                        />
                     </TriggerScope>
                 </div>
             </div>
@@ -184,8 +195,9 @@ const gridColumns: Record<string, string> = {
 };
 
 export function VehicleGridBlock({ state }: BlockRendererProps) {
-    const { vehicle, vehicles } = useBlockRenderContext();
+    const { vehicle, vehicles, catalog } = useBlockRenderContext();
     const selectedOnly = state.source === 'selected';
+    const linksToCards = catalog?.enabled === true;
     const columns =
         typeof state.columns === 'string' && state.columns in gridColumns
             ? gridColumns[state.columns]
@@ -201,9 +213,13 @@ export function VehicleGridBlock({ state }: BlockRendererProps) {
                         {
                             key: item.id,
                             vehicle: binding,
-                            button: item.action
-                                ? { label: buttonLabel, action: item.action }
-                                : {},
+                            button:
+                                item.action || linksToCards
+                                    ? {
+                                          label: buttonLabel,
+                                          action: item.action,
+                                      }
+                                    : {},
                         },
                     ]
                   : [];
@@ -211,7 +227,7 @@ export function VehicleGridBlock({ state }: BlockRendererProps) {
         : vehicles.map((binding) => ({
               key: binding.public_id,
               vehicle: binding,
-              button: {},
+              button: linksToCards ? { label: buttonLabel } : {},
           }));
     const carousel = carouselSettings(state);
     const renderCard = (card: (typeof cards)[number]) => (

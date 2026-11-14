@@ -91,4 +91,32 @@ test('owner adds the catalog section, renames its prefix and keeps the old addre
             .getByText('Скоро'),
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
+
+    // The section comes with template pages edited in the Designer.
+    await expect(
+        section
+            .getByRole('listitem')
+            .filter({ hasText: 'Карточка автомобиля' }),
+    ).toContainText('/autos/kia/rio/iv-restyling-sedan');
+    await section
+        .getByRole('link', {
+            name: 'Открыть в дизайнере: Карточка автомобиля',
+        })
+        .click();
+    await expect(page).toHaveURL(/\/designer\?page=/);
+    await expect(
+        page.getByText(
+            'Добавьте автомобили на сайт — здесь появится автомобиль этой страницы.',
+        ),
+    ).toHaveCount(4);
+    await page.getByRole('tab', { name: 'Страницы' }).click();
+    const catalogPages = page.getByRole('region', {
+        name: 'Каталог автомобилей',
+    });
+    await expect(
+        catalogPages.getByRole('link', { name: /Страница модели/ }),
+    ).toContainText('/autos/kia/rio');
+    await expect(
+        catalogPages.getByRole('button', { name: /Удалить страницу/ }),
+    ).toHaveCount(0);
 });

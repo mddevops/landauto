@@ -115,7 +115,7 @@ final class BlockReferenceInspector
     {
         $flat = [];
 
-        foreach ($site->pages()->orderBy('sort_order')->orderBy('id')->get() as $page) {
+        foreach ($site->pages()->regular()->orderBy('sort_order')->orderBy('id')->get() as $page) {
             foreach ($this->inspectPage($page, null, $visibleOnly) as $blockId => $issues) {
                 foreach ($issues as $issue) {
                     $flat[] = ['page' => $page->public_id, 'block' => $blockId, ...$issue];

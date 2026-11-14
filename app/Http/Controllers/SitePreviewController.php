@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers;
 
+use App\Automotive\SectionCatalog;
 use App\Automotive\VehicleBindings;
 use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\SiteSecurityPolicy;
@@ -24,24 +25,39 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SitePreviewController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha, SectionCatalog $sections): Response
     {
-        $response = $this->page($request, $site, $scope, $vehicleBindings, $popups, $captcha)->toResponse($request);
+        $response = $this->page($request, $site, $scope, $vehicleBindings, $popups, $captcha, $sections)->toResponse($request);
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
 
         return $response;
     }
 
-    private function page(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha): InertiaResponse
+    private function page(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha, SectionCatalog $sections): InertiaResponse
     {
         $scope->site($site);
         Gate::authorize('preview', $site);
 
         $pages = $site->pages()->orderBy('sort_order')->orderBy('id')->get();
-        $page = $request->filled('page')
-            ? $pages->firstWhere('public_id', $request->string('page')->toString())
-            : $pages->firstWhere('is_home', true);
+        $catalog = $sections->props($site);
+        $context = null;
+
+        if ($request->filled('path')) {
+            $resolved = $catalog === null ? null : SectionCatalog::resolve($catalog, explode('/', trim($request->string('path')->toString(), '/')));
+            abort_if($resolved === null, 404);
+            $page = $pages->firstWhere('public_id', $catalog['pages'][$resolved['role']->value] ?? null);
+            $context = $resolved['context'];
+        } else {
+            $page = $request->filled('page')
+                ? $pages->firstWhere('public_id', $request->string('page')->toString())
+                : $pages->firstWhere('is_home', true);
+        }
+
         abort_if($page === null, 404);
+
+        if ($context === null && $catalog !== null && $page->isSectionPage()) {
+            $context = SectionCatalog::sampleContext($page, $catalog, $request->string('sample')->toString() ?: null);
+        }
 
         return Inertia::render('sites/preview', [
             'site' => ['public_id' => $site->public_id, 'name' => $site->name],
@@ -50,6 +66,8 @@ class SitePreviewController extends Controller
                 ->map(fn (Page $sitePage): array => ['public_id' => $sitePage->public_id, 'title' => $sitePage->title])
                 ->values()
                 ->all(),
+            'catalog' => $catalog,
+            'pageContext' => $context,
             'design' => SiteDesignTokens::resolve($site->design_tokens),
             'blocks' => $page->blocks()
                 ->where('is_hidden', false)

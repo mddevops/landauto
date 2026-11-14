@@ -4500,13 +4500,15 @@ Result: `site_sections` + `site_section_redirects`, `SiteSectionType` (Used / Sp
 
 ## X-034 — Catalog Section Generated Pages
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** X-033
 **Decision:** ADR-011; ADR-010
 
 Scope: template Pages `index` / `mark` / `model` / `item` per section edited in the Designer; page context (section, mark, model, vehicle); vehicle Blocks get «Автомобиль страницы» binding, `vehicle-grid` gets «Автомобили раздела»; mark / model address parts from auto.ru `url`; vehicle slugs generated from generation + body, editable, unique per section + model, history with 301; model page lists generations / bodies; Designer preview with a chosen sample vehicle.
 
 Acceptance: `catalog/baic/x35/i-restayling-sedan` renders the shared card template with that vehicle's colours, trims, characteristics and options; mark and model pages list the Site's vehicles; hidden / archived vehicles give 404; slug edit redirects; focused tests.
+
+Result: `pages.site_section_id` + `section_role` (`SectionPageRole`); `SectionPages` creates the four template Pages pre-filled (home header / footer copied; listing = new official Block `vehicle-section` «Марки и модели каталога» instead of a `vehicle-grid` source; card = gallery, offers, characteristics, equipment) when the section is added or first opened; they are renamed only, deleted with the section, and kept out of publishing, publish validation, SEO list and restore until X-035 (`Page::regular()`). `site_vehicles.slug` + `site_vehicle_slug_redirects`: `VehiclePages` generates `generation-body` slugs («Рестайлинг» → `restyling`), unique per catalog model, editable as «Адрес страницы» on the vehicle (old slug kept for the X-035 301); auto.ru `url` segments normalise `_` to `-`. Draft runtimes: `SectionCatalog` gives Designer / preview the catalog props and page context; vehicle Blocks on the card template follow «Автомобиль этой страницы»; Designer «Показывать на примере» sample, pages group «Каталог автомобилей»; preview resolves `?path=catalog/kia/rio/<slug>` (unknown or hidden → 404); vehicle cards link to their card automatically when the section is on, plus action `open_vehicle` «Открыть карточку автомобиля»; the section index Page can be an `open_page` target (menu). «Разделы» lists the template Pages with «Открыть в дизайнере» and preview. Checks: `CatalogSectionPagesTest` (7), `composer quality` PASS; Playwright `site-sections.spec.ts` extended (verified by CI).
 
 ---
 

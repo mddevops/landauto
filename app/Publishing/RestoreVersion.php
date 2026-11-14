@@ -360,7 +360,7 @@ final class RestoreVersion
 
         // Blocks that leave the Draft or would change their (immutable) Page or Block Version go first.
         BlockInstance::query()
-            ->whereIn('page_id', $site->pages()->select('id'))
+            ->whereIn('page_id', $site->pages()->regular()->select('id'))
             ->with('page')
             ->get()
             ->each(function (BlockInstance $block) use ($targets): void {
@@ -371,10 +371,10 @@ final class RestoreVersion
                 }
             });
 
-        $site->pages()->whereNotIn('public_id', $keepPages)->delete();
+        $site->pages()->regular()->whereNotIn('public_id', $keepPages)->delete();
 
         // Free the per-Site slug and home slots before the snapshot values are written.
-        foreach ($site->pages()->get() as $existing) {
+        foreach ($site->pages()->regular()->get() as $existing) {
             $existing->forceFill(['slug' => 'restore-'.$existing->id, 'is_home' => false])->save();
         }
 

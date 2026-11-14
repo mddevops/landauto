@@ -350,6 +350,7 @@ function FieldControl({
                     id={id}
                     error={error}
                     onChange={onChange}
+                    followsPage={path === 'state.vehicle'}
                 />
             );
         case 'repeater':
