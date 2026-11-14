@@ -81,7 +81,7 @@ class CatalogAccessTest extends TestCase
                 $items = collect($library)->keyBy('slug');
 
                 foreach ($items as $item) {
-                    $this->assertSame(['slug', 'name', 'category', 'group', 'group_label', 'author', 'access', 'available', 'reason'], array_keys($item));
+                    $this->assertSame(['slug', 'name', 'category', 'group', 'group_label', 'preview_url', 'author', 'access', 'available', 'reason'], array_keys($item));
                     $this->assertSame(['mode', 'restricted', 'label', 'detail'], array_keys($item['access']));
                 }
 

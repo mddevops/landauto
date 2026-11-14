@@ -6,6 +6,7 @@ use App\Automotive\SectionCatalog;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockGroups;
+use App\Blocks\BlockPreviews;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockVersionGrants;
 use App\Blocks\LegacyBlockMigration;
@@ -129,20 +130,22 @@ class SiteDesignerController extends Controller
      * access card and whether this Site may add it under current access; installation grants (D-122)
      * cover existing use only, never new acquisition. Identified by slug only.
      *
-     * @return list<array{slug: string, name: string, category: string, group: string, group_label: string, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: string|null}>
+     * @return list<array{slug: string, name: string, category: string, group: string, group_label: string, preview_url: string|null, author: string|null, access: array{mode: string, restricted: bool, label: string, detail: string|null}, available: bool, reason: string|null}>
      */
     private function library(Site $site, BlockCatalogAccess $access): array
     {
         $licensed = $access->licensedBlockIds($site);
-
-        return array_values(BlockDefinition::query()
+        $definitions = BlockDefinition::query()
             ->inCatalog()
             ->whereHas('versions')
             ->with(['developerProfile', 'group'])
             ->orderBy('id')
-            ->get()
+            ->get();
+        $previews = BlockPreviews::latestUrls(array_values($definitions->map(fn (BlockDefinition $definition): int => $definition->id)->all()));
+
+        return array_values($definitions
             ->sortBy(fn (BlockDefinition $definition): string => BlockGroups::libraryOrder($definition))
-            ->map(function (BlockDefinition $definition) use ($site, $access, $licensed): array {
+            ->map(function (BlockDefinition $definition) use ($site, $access, $licensed, $previews): array {
                 $reason = $access->denial($site, $definition, $licensed);
 
                 return [
@@ -151,6 +154,7 @@ class SiteDesignerController extends Controller
                     'category' => $definition->category->value,
                     'group' => $definition->group->public_id ?? 'none',
                     'group_label' => $definition->group->name ?? 'Другие блоки',
+                    'preview_url' => $previews[$definition->id] ?? null,
                     'author' => $definition->developerProfile?->display_name,
                     'access' => BlockCatalogAccess::card($definition),
                     'available' => $reason === null,

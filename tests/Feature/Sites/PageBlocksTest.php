@@ -70,6 +70,7 @@ class PageBlocksTest extends TestCase
                     'category' => 'hero',
                     'group' => BlockGroup::query()->where('name', 'Первый экран')->value('public_id'),
                     'group_label' => 'Первый экран',
+                    'preview_url' => null,
                     'author' => null,
                     'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
                     'available' => true,

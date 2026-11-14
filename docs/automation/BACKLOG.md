@@ -4574,9 +4574,11 @@ Acceptance: groups can be created, renamed and reordered; a Block is created ins
 
 ## X-040 — Block Version Preview Images and Cards
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** X-039
 **Decision:** D-130
+
+Result: lock_version_previews (one per Block Version, private disk, served by an authenticated route for catalog Blocks only; Block Versions stay immutable, a replacement gets a new public_id); the «Одобрить и опубликовать» dialog takes an optional screenshot (file, drag-and-drop or Ctrl+V); «Версии» adds / replaces / removes a preview of any version, including official ones; group pages show Block cards and the Designer library shows the newest preview instead of the wireframe.
 
 Scope: optional preview image per Block Version, uploaded or pasted from the clipboard when the version is published / approved; group pages and the Designer library show Blocks as cards with the preview of the latest published version.
 

@@ -89,6 +89,10 @@ test('a Block published in Block Studio reaches customers according to its catal
             exact: true,
         })
         .click();
+    await page
+        .getByRole('dialog', { name: 'Одобрить и опубликовать' })
+        .getByRole('button', { name: 'Опубликовать', exact: true })
+        .click();
     await expect(page.getByText('Опубликована версия 1.0.0.')).toBeVisible();
 
     // The author selects the «По тарифу» mode; Super Admin chooses the Plans that include it.

@@ -3,6 +3,7 @@
 use App\Enums\DeveloperPermission;
 use App\Enums\PlatformPermission;
 use App\Http\Controllers\Auth\YandexOAuthController;
+use App\Http\Controllers\BlockPreviewController;
 use App\Http\Controllers\CatalogImageController;
 use App\Http\Controllers\DashboardController;
 use App\Http\Controllers\Developer\DeveloperBlockController;
@@ -296,6 +297,9 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('offers/{offer}', [SiteOfferController::class, 'destroy'])->whereUlid('offer')->name('offers.destroy');
         });
 
+    Route::get('media/block-previews/{preview}', [BlockPreviewController::class, 'show'])
+        ->whereUlid('preview')
+        ->name('block-previews.show');
     Route::get('media/series/{image}', [SeriesMediaImageController::class, 'show'])
         ->whereUlid('image')
         ->name('catalog-media.show');
@@ -367,6 +371,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::patch('{block}', [PlatformBlockController::class, 'update'])->whereUlid('block')->name('update');
             Route::put('{block}/draft', [PlatformBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
             Route::post('{block}/versions/{version}/draft', [PlatformBlockController::class, 'copyVersion'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.draft');
+            Route::post('{block}/versions/{version}/preview', [PlatformBlockController::class, 'preview'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.preview');
+            Route::delete('{block}/versions/{version}/preview', [PlatformBlockController::class, 'removePreview'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->name('versions.preview.destroy');
             Route::post('{block}/publish', [PlatformBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
             Route::put('{block}/access', [PlatformBlockController::class, 'access'])->whereUlid('block')->name('access');
         });
@@ -440,6 +446,8 @@ Route::middleware(['auth', 'verified'])->group(function () {
                     Route::patch('{block}', [DeveloperBlockController::class, 'update'])->whereUlid('block')->name('update');
                     Route::put('{block}/draft', [DeveloperBlockController::class, 'draft'])->whereUlid('block')->middleware('throttle:block-draft')->name('draft');
                     Route::post('{block}/versions/{version}/draft', [DeveloperBlockController::class, 'copyVersion'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.draft');
+                    Route::post('{block}/versions/{version}/preview', [DeveloperBlockController::class, 'preview'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->middleware('throttle:block-draft')->name('versions.preview');
+                    Route::delete('{block}/versions/{version}/preview', [DeveloperBlockController::class, 'removePreview'])->whereUlid('block')->where('version', '[0-9]+\.[0-9]+\.[0-9]+')->name('versions.preview.destroy');
                     Route::post('{block}/publish', [DeveloperBlockController::class, 'publish'])->whereUlid('block')->middleware('throttle:block-publish')->name('publish');
                     Route::put('{block}/access', [DeveloperBlockController::class, 'access'])->whereUlid('block')->name('access');
                 });

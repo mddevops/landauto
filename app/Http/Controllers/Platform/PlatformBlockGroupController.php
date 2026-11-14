@@ -7,7 +7,6 @@ use App\Blocks\BlockGroups;
 use App\Enums\BlockCategory;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\Blocks\SaveBlockGroupRequest;
-use App\Models\BlockDefinition;
 use App\Models\BlockGroup;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -44,17 +43,14 @@ class PlatformBlockGroupController extends Controller
                 'kind' => $model->kind->value,
                 'kind_label' => $model->kind->label(),
             ],
-            'blocks' => $model->blocks()
+            'blocks' => $presenter->listItems($model->blocks()
                 ->platformOwned()
                 ->with('group')
                 ->withCount('versions')
                 ->withLatestRuntime()
                 ->orderBy('name')
                 ->orderBy('id')
-                ->get()
-                ->map(fn (BlockDefinition $block): array => $presenter->listItem($block))
-                ->values()
-                ->all(),
+                ->get()),
             'canDelete' => ! $model->blocks()->exists(),
             'kinds' => BlockCategory::options(),
         ]);

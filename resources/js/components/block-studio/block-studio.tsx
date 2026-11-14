@@ -1,10 +1,18 @@
 import { Form, router } from '@inertiajs/react';
-import { CircleCheck, FileCode2, TriangleAlert, Upload } from 'lucide-react';
+import {
+    CircleCheck,
+    FileCode2,
+    ImageIcon,
+    Trash2,
+    TriangleAlert,
+    Upload,
+} from 'lucide-react';
 import { useMemo, useState } from 'react';
 import {
     formatBlockDate,
     versionsLabel,
 } from '@/components/block-authoring/block-list';
+import { PreviewImageField } from '@/components/block-authoring/preview-image-field';
 import { BlockPreview } from '@/components/block-studio/block-preview';
 import {
     parseSchema,
@@ -22,6 +30,16 @@ import type { Choice } from '@/components/platform/form-fields';
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import {
+    Dialog,
+    DialogClose,
+    DialogContent,
+    DialogDescription,
+    DialogFooter,
+    DialogHeader,
+    DialogTitle,
+    DialogTrigger,
+} from '@/components/ui/dialog';
 import { Input } from '@/components/ui/input';
 import { Spinner } from '@/components/ui/spinner';
 import { cn } from '@/lib/utils';
@@ -89,6 +107,7 @@ type BlockStudioProps = BlockStudioPageProps & {
     publishUrl: string;
     accessUrl: string;
     copyLegacyVersionUrl: (version: string) => string;
+    versionPreviewUrl: (version: string) => string;
 };
 
 export function BlockStudio({
@@ -106,12 +125,16 @@ export function BlockStudio({
     publishUrl,
     accessUrl,
     copyLegacyVersionUrl,
+    versionPreviewUrl,
 }: BlockStudioProps) {
     const autosave = useDraftAutosave(draftUrl, draft);
     const { sources, status, errors } = autosave;
     const [mode, setMode] = useState<Mode>('code');
     const [publishing, setPublishing] = useState(false);
     const [publishError, setPublishError] = useState<string | null>(null);
+    const [publishOpen, setPublishOpen] = useState(false);
+    const [previewFile, setPreviewFile] = useState<File | null>(null);
+    const [previewError, setPreviewError] = useState<string | undefined>();
     const canPublish =
         status === 'saved' &&
         draft.saved_at !== null &&
@@ -122,20 +145,35 @@ export function BlockStudio({
 
     const publish = () => {
         setPublishError(null);
+        setPreviewError(undefined);
         router.post(
             publishUrl,
-            { revision: draft.revision },
+            previewFile
+                ? { revision: draft.revision, preview: previewFile }
+                : { revision: draft.revision },
             {
                 preserveScroll: true,
                 preserveState: true,
                 onStart: () => setPublishing(true),
-                onError: (failed) =>
+                onError: (failed) => {
+                    if (failed.preview) {
+                        setPreviewError(failed.preview);
+
+                        return;
+                    }
+
+                    setPublishOpen(false);
                     setPublishError(
                         failed.publish ??
                             failed.revision ??
                             'Не удалось опубликовать блок.',
-                    ),
-                onSuccess: () => setMode('versions'),
+                    );
+                },
+                onSuccess: () => {
+                    setPublishOpen(false);
+                    setPreviewFile(null);
+                    setMode('versions');
+                },
                 onFinish: () => setPublishing(false),
             },
         );
@@ -190,7 +228,7 @@ export function BlockStudio({
                     </Button>
                     <Button
                         type="button"
-                        onClick={publish}
+                        onClick={() => setPublishOpen(true)}
                         disabled={!canPublish}
                         aria-describedby="studio-publish-hint"
                     >
@@ -351,6 +389,7 @@ export function BlockStudio({
                             versions={versions}
                             revision={draft.revision}
                             copyLegacyVersionUrl={copyLegacyVersionUrl}
+                            versionPreviewUrl={versionPreviewUrl}
                             onCopied={() => setMode('code')}
                         />
                     )}
@@ -369,6 +408,58 @@ export function BlockStudio({
 
                 <DraftChecks draft={draft} stale={status !== 'saved'} />
             </div>
+
+            <Dialog
+                open={publishOpen}
+                onOpenChange={(open) => {
+                    if (!publishing) {
+                        setPublishOpen(open);
+                        setPreviewError(undefined);
+                    }
+                }}
+            >
+                <DialogContent className="sm:max-w-lg">
+                    <DialogHeader>
+                        <DialogTitle>Одобрить и опубликовать</DialogTitle>
+                        <DialogDescription>
+                            Сохранённый черновик станет новой неизменяемой
+                            версией блока. Превью необязательно — его можно
+                            добавить и позже во вкладке «Версии».
+                        </DialogDescription>
+                    </DialogHeader>
+                    <PreviewImageField
+                        value={previewFile}
+                        onChange={(file) => {
+                            setPreviewFile(file);
+                            setPreviewError(undefined);
+                        }}
+                        error={previewError}
+                    />
+                    <DialogFooter>
+                        <DialogClose asChild>
+                            <Button
+                                type="button"
+                                variant="outline"
+                                disabled={publishing}
+                            >
+                                Отмена
+                            </Button>
+                        </DialogClose>
+                        <Button
+                            type="button"
+                            onClick={publish}
+                            disabled={!canPublish}
+                        >
+                            {publishing ? (
+                                <Spinner />
+                            ) : (
+                                <Upload aria-hidden="true" />
+                            )}
+                            Опубликовать
+                        </Button>
+                    </DialogFooter>
+                </DialogContent>
+            </Dialog>
         </main>
     );
 }
@@ -454,11 +545,13 @@ function VersionList({
     versions,
     revision,
     copyLegacyVersionUrl,
+    versionPreviewUrl,
     onCopied,
 }: {
     versions: PublishedBlockVersion[];
     revision: number;
     copyLegacyVersionUrl: (version: string) => string;
+    versionPreviewUrl: (version: string) => string;
     onCopied: () => void;
 }) {
     return (
@@ -488,6 +581,13 @@ function VersionList({
                             data-testid="block-version"
                             className="flex flex-wrap items-center justify-between gap-2 px-3 py-2 text-sm"
                         >
+                            {version.preview_url ? (
+                                <img
+                                    src={version.preview_url}
+                                    alt={`Превью версии ${version.version}`}
+                                    className="h-12 w-20 shrink-0 rounded border object-cover object-top"
+                                />
+                            ) : null}
                             <span className="font-mono font-medium">
                                 {version.version}
                             </span>
@@ -516,6 +616,10 @@ function VersionList({
                                     Скопировать в черновик
                                 </Button>
                             )}
+                            <VersionPreviewDialog
+                                version={version}
+                                url={versionPreviewUrl(version.version)}
+                            />
                             <span className="text-muted-foreground">
                                 {formatBlockDate(version.published_at)}
                             </span>
@@ -524,6 +628,98 @@ function VersionList({
                 </ul>
             )}
         </section>
+    );
+}
+
+function VersionPreviewDialog({
+    version,
+    url,
+}: {
+    version: PublishedBlockVersion;
+    url: string;
+}) {
+    const [open, setOpen] = useState(false);
+    const [file, setFile] = useState<File | null>(null);
+    const [error, setError] = useState<string | undefined>();
+    const [processing, setProcessing] = useState(false);
+
+    const options = {
+        preserveScroll: true,
+        onStart: () => setProcessing(true),
+        onFinish: () => setProcessing(false),
+        onError: (failed: Record<string, string>) =>
+            setError(failed.preview ?? 'Не удалось сохранить превью.'),
+        onSuccess: () => {
+            setOpen(false);
+            setFile(null);
+        },
+    };
+
+    return (
+        <Dialog
+            open={open}
+            onOpenChange={(value) => {
+                setOpen(value);
+                setFile(null);
+                setError(undefined);
+            }}
+        >
+            <DialogTrigger asChild>
+                <Button type="button" variant="outline" size="sm">
+                    <ImageIcon aria-hidden="true" />
+                    {version.preview_url
+                        ? 'Заменить превью'
+                        : 'Добавить превью'}
+                </Button>
+            </DialogTrigger>
+            <DialogContent className="sm:max-w-lg">
+                <DialogHeader>
+                    <DialogTitle>Превью версии {version.version}</DialogTitle>
+                    <DialogDescription>
+                        Превью показывается на карточке блока в группе и в
+                        библиотеке дизайнера.
+                    </DialogDescription>
+                </DialogHeader>
+                <PreviewImageField
+                    value={file}
+                    onChange={(value) => {
+                        setFile(value);
+                        setError(undefined);
+                    }}
+                    currentUrl={version.preview_url}
+                    error={error}
+                />
+                <DialogFooter>
+                    {version.preview_url && (
+                        <Button
+                            type="button"
+                            variant="ghost"
+                            className="sm:mr-auto"
+                            disabled={processing}
+                            onClick={() => router.delete(url, options)}
+                        >
+                            <Trash2 aria-hidden="true" />
+                            Удалить превью
+                        </Button>
+                    )}
+                    <DialogClose asChild>
+                        <Button type="button" variant="outline">
+                            Отмена
+                        </Button>
+                    </DialogClose>
+                    <Button
+                        type="button"
+                        disabled={!file || processing}
+                        onClick={() =>
+                            file && router.post(url, { preview: file }, options)
+                        }
+                    >
+                        {processing && <Spinner />}
+                        Сохранить превью
+                    </Button>
+                </DialogFooter>
+            </DialogContent>
+        </Dialog>
     );
 }
 

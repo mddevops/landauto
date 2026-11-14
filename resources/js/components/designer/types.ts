@@ -86,6 +86,7 @@ export type DesignerLibraryBlock = {
     category: string;
     group: string;
     group_label: string;
+    preview_url: string | null;
     author: string | null;
     access: CatalogAccessCard;
     available: boolean;

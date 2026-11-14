@@ -10,6 +10,7 @@ use App\Models\BlockGroup;
 use App\Models\BlockVersion;
 use App\Models\User;
 use App\Support\Money;
+use Illuminate\Support\Collection;
 use stdClass;
 
 /**
@@ -27,20 +28,35 @@ final class BlockAuthoringPresenter
      * `needs_migration`: the latest version is legacy sandboxed (ADR-009 §10); needs the
      * {@see BlockDefinition::scopeWithLatestRuntime()} column.
      *
-     * @return array{public_id: string, name: string, slug: string, group: string|null, group_label: string, versions_count: int, needs_migration: bool, updated_at: string|null}
+     * @return array{public_id: string, name: string, slug: string, category: string, group: string|null, group_label: string, preview_url: string|null, versions_count: int, needs_migration: bool, updated_at: string|null}
      */
-    public function listItem(BlockDefinition $block): array
+    public function listItem(BlockDefinition $block, ?string $previewUrl = null): array
     {
         return [
             'public_id' => $block->public_id,
             'name' => $block->name,
             'slug' => $block->slug,
+            'category' => $block->category->value,
             'group' => $block->group?->public_id,
             'group_label' => $block->group->name ?? 'Без группы',
+            'preview_url' => $previewUrl,
             'versions_count' => (int) $block->getAttribute('versions_count'),
             'needs_migration' => $block->getAttribute('latest_runtime') === BlockRuntime::Sandboxed->value,
             'updated_at' => $block->updated_at?->toIso8601String(),
         ];
+    }
+
+    /**
+     * List items with the preview of each Block's newest version that has one.
+     *
+     * @param  Collection<int, BlockDefinition>  $blocks
+     * @return list<array<string, mixed>>
+     */
+    public function listItems(Collection $blocks): array
+    {
+        $previews = BlockPreviews::latestUrls(array_values($blocks->map(fn (BlockDefinition $block): int => $block->id)->all()));
+
+        return array_values($blocks->map(fn (BlockDefinition $block): array => $this->listItem($block, $previews[$block->id] ?? null))->all());
     }
 
     /**
@@ -49,7 +65,7 @@ final class BlockAuthoringPresenter
     public function detail(BlockDefinition $block): array
     {
         return [
-            ...$this->listItem($block),
+            ...$this->listItem($block, BlockPreviews::latestUrls([$block->id])[$block->id] ?? null),
             'owner_scope' => $block->owner_scope->value,
             'owner_scope_label' => $block->owner_scope->label(),
             'owner_name' => $block->isPlatformOwned() ? 'Landflow' : (string) $block->developerProfile?->display_name,
@@ -64,7 +80,7 @@ final class BlockAuthoringPresenter
      */
     public function studio(BlockDefinition $block, ?User $actor = null): array
     {
-        $versions = $block->versions()->latest('id')->get();
+        $versions = $block->versions()->with('preview')->latest('id')->get();
         $official = $versions->contains(fn (BlockVersion $version): bool => $version->runtime === BlockRuntime::Official);
 
         return [
@@ -75,6 +91,7 @@ final class BlockAuthoringPresenter
                 'runtime_label' => LegacyBlockMigration::isLegacy($version) ? 'Изолированный' : $version->runtime->label(),
                 'legacy' => LegacyBlockMigration::isLegacy($version),
                 'published_at' => $version->created_at?->toIso8601String(),
+                'preview_url' => BlockPreviews::url($version->preview),
             ])->values()->all(),
             'publishBlockedReason' => $official ? BlockPublisher::OFFICIAL_RUNTIME : null,
             'canApproveNative' => $this->authorization->canApproveNative($actor, $block),
