@@ -31,6 +31,9 @@ class Plan extends Model
     /** Stable system key of the default plan for new personal Workspaces (D-100). */
     public const FREE_KEY = 'free';
 
+    /** Stable system key of the operator-assigned plan with every capability enabled. */
+    public const FULL_KEY = 'full';
+
     /**
      * @return array<string, string>
      */
