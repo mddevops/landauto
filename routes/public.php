@@ -38,7 +38,8 @@ $runtime = function (string $name): void {
         Route::get('sitemap.xml', [PublishedSeoController::class, 'sitemap'])->name('sitemap');
         Route::get('robots.txt', [PublishedSeoController::class, 'robots'])->name('robots');
 
-        Route::get('{path?}', PublishedPageController::class)->where('path', '[a-z0-9-]*')->name('page');
+        // Pages are one segment; catalog section pages are up to four (ADR-011 §4).
+        Route::get('{path?}', PublishedPageController::class)->where('path', '(?:[a-z0-9-]+(?:/[a-z0-9-]+){0,3})?')->name('page');
         Route::any('{any?}', [PublishedPageController::class, 'missing'])->where('any', '.*')->name('missing');
     });
 };

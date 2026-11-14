@@ -127,14 +127,38 @@ final class PublishedArtifactBuilder
             $assetUrls[$assetId] = PublicBasePath::prefix("/_landflow/assets/{$versionId}/{$assetId}");
         }
 
+        $catalog = $manifest['catalog'] ?? null;
+        $section = $page['section'] ?? null;
+        // Generated pages carry full offer details only for the vehicles they show; the rest keep
+        // what cards and listings need, so a large catalog does not multiply into every page.
+        $detailed = $section === null ? null : array_filter([$section['context']['vehicle'], ...$section['vehicles']]);
+        $links = [];
+
+        foreach ($manifest['pages'] as $sitePage) {
+            if (! isset($sitePage['section'])) {
+                $links[] = ['public_id' => $sitePage['public_id'], 'path' => PublicBasePath::prefix($sitePage['is_home'] ? '/' : '/'.$sitePage['slug'])];
+            }
+        }
+
+        if (is_array($catalog) && isset($catalog['pages']['index'])) {
+            $links[] = ['public_id' => $catalog['pages']['index'], 'path' => PublicBasePath::prefix('/'.$catalog['prefix'])];
+        }
+
         return [
             'version' => $versionId,
             'site' => ['name' => $manifest['site']['name']],
             'page' => ['public_id' => $page['public_id'], 'title' => $page['title']],
-            'pages' => array_map(fn (array $sitePage): array => [
-                'public_id' => $sitePage['public_id'],
-                'path' => PublicBasePath::prefix($sitePage['is_home'] ? '/' : '/'.$sitePage['slug']),
-            ], $manifest['pages']),
+            'pages' => $links,
+            ...(is_array($catalog) ? ['catalog' => [
+                'public_id' => $catalog['public_id'],
+                'title' => $catalog['title'],
+                'prefix' => $catalog['prefix'],
+                'enabled' => true,
+                'pages' => (object) $catalog['pages'],
+                'vehicles' => $catalog['vehicles'],
+                'base' => PublicBasePath::prefix(''),
+            ]] : []),
+            ...($section === null ? [] : ['page_context' => $section['context']]),
             'design' => $manifest['design'],
             'blocks' => array_map(fn (array $block): array => [
                 'public_id' => $block['public_id'],
@@ -147,7 +171,16 @@ final class PublishedArtifactBuilder
                 'public_id' => $assetId,
                 'url' => $assetUrls[$assetId],
             ], $manifest['assets']),
-            'vehicles' => array_map(function (array $vehicle) use ($versionId): array {
+            'vehicles' => array_map(function (array $vehicle) use ($versionId, $detailed): array {
+                if ($detailed !== null && ! in_array($vehicle['public_id'], $detailed, true)) {
+                    $vehicle['offers'] = array_map(fn (array $offer): array => [
+                        ...$offer,
+                        'modification' => [...$offer['modification'], 'specs' => []],
+                        'characteristics' => [],
+                        'options' => [],
+                    ], $vehicle['offers']);
+                }
+
                 foreach ($vehicle['media']['sets'] as $s => $set) {
                     foreach ($set['images'] as $i => $image) {
                         $vehicle['media']['sets'][$s]['images'][$i]['url'] = PublicBasePath::prefix("/_landflow/media/{$versionId}/{$image['public_id']}");

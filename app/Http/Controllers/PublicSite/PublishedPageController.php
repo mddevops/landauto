@@ -27,9 +27,18 @@ class PublishedPageController extends Controller
     {
         $site = ResolvePublicSite::site($request);
         $version = $pages->activeVersion($site);
-        $artifact = $version === null ? null : $pages->find($site, $version, trim((string) $path, '/'));
+        $path = trim((string) $path, '/');
+        $artifact = $version === null ? null : $pages->find($site, $version, $path);
 
         if ($artifact === null) {
+            $target = $version === null || $path === '' ? null : $pages->redirect($site, $version, $path);
+
+            if ($target !== null) {
+                $query = $request->getQueryString();
+
+                return redirect()->to(ResolvePublicSite::basePath($request).'/'.$target.($query === null ? '' : "?{$query}"), 301);
+            }
+
             return ResolvePublicSite::notFound();
         }
 

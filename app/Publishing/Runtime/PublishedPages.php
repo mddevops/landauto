@@ -88,6 +88,51 @@ final class PublishedPages
     }
 
     /**
+     * Current path of a previous catalog address (old section prefix or old vehicle slug), when
+     * the version serves it; null otherwise.
+     */
+    public function redirect(Site $site, PublishedVersion $version, string $path): ?string
+    {
+        $catalog = Cache::remember(
+            "published:{$site->public_id}:{$version->public_id}:catalog-redirects",
+            (int) config('publishing.cache_ttl'),
+            function () use ($version): array {
+                $manifest = PublishedVersion::query()->whereKey($version->id)->first(['id', 'public_manifest_json'])?->public_manifest_json;
+                $catalog = $manifest['catalog'] ?? null;
+
+                return is_array($catalog) ? [
+                    'prefix' => (string) $catalog['prefix'],
+                    'prefixes' => array_values(array_map('strval', $catalog['redirects']['prefixes'] ?? [])),
+                    'vehicles' => array_map('strval', (array) ($catalog['redirects']['vehicles'] ?? [])),
+                ] : [];
+            },
+        );
+
+        if ($catalog === []) {
+            return null;
+        }
+
+        $segments = explode('/', $path);
+        $moved = false;
+
+        if ($segments[0] !== $catalog['prefix'] && in_array($segments[0], $catalog['prefixes'], true)) {
+            $segments[0] = $catalog['prefix'];
+            $moved = true;
+        }
+
+        $vehicle = count($segments) === 4 ? ($catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null) : null;
+
+        if ($segments[0] === $catalog['prefix'] && $vehicle !== null && ! isset($this->index($site, $version)[implode('/', $segments)])) {
+            $segments[3] = $vehicle;
+            $moved = true;
+        }
+
+        $target = implode('/', $segments);
+
+        return $moved && isset($this->index($site, $version)[$target]) ? $target : null;
+    }
+
+    /**
      * Yandex Metrica config frozen into the version's manifest; null when the version has none.
      * Re-validated here because it is printed into an inline script.
      *
