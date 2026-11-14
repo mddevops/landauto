@@ -16,6 +16,7 @@ use App\Publishing\RestoreVersion;
 use App\Publishing\SectionManifest;
 use App\Support\WorkspaceContext;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Str;
 use Illuminate\Testing\TestResponse;
 use Symfony\Component\HttpFoundation\Response;
 use Tests\Concerns\BuildsPublishableSite;
@@ -27,7 +28,7 @@ class PublishedSectionsTest extends TestCase
 {
     use BuildsPublishableSite, RefreshCatalogDatabase, RefreshDatabase, SubmitsPublishedForms;
 
-    private const ITEM = 'catalog/kia/rio/iv-sedan';
+    private const ITEM = 'catalog/kia/rio-iv';
 
     private SiteSection $section;
 
@@ -47,7 +48,7 @@ class PublishedSectionsTest extends TestCase
         $version = $this->publish();
 
         $this->assertSame(
-            ['', 'catalog', 'catalog/kia', 'catalog/kia/rio', self::ITEM],
+            ['', 'catalog', 'catalog/kia', self::ITEM],
             PublishedPage::query()->where('published_version_id', $version->id)->orderBy('sort_order')->pluck('slug')->map(fn (string $slug): string => $slug === $this->home->slug ? '' : $slug)->all(),
         );
 
@@ -58,20 +59,20 @@ class PublishedSectionsTest extends TestCase
         $this->visit('/catalog/kia')->assertOk()->assertSee('<title>KIA — Каталог</title>', false);
         $this->visit('/catalog')->assertOk()->assertSee('<title>Каталог</title>', false);
 
-        foreach (['/catalog/bmw', '/catalog/kia/rio/unknown', '/_catalog-item', '/catalog/kia/rio/iv-sedan/extra'] as $missing) {
+        foreach (['/catalog/bmw', '/catalog/kia/unknown', '/_catalog-item', '/catalog/kia/rio-iv/extra', '/catalog/kia/rio', '/catalog/kia/rio/iv-sedan'] as $missing) {
             $this->visit($missing)->assertNotFound();
         }
 
         $payload = $this->payload($version, self::ITEM);
-        $this->assertSame(['role' => 'item', 'mark' => 'kia', 'model' => 'rio', 'vehicle' => $this->vehicle->public_id], $payload['page_context']);
+        $this->assertSame(['role' => 'item', 'mark' => 'kia', 'vehicle' => $this->vehicle->public_id], $payload['page_context']);
         $this->assertSame('catalog', $payload['catalog']['prefix']);
-        $this->assertSame('iv-sedan', $payload['catalog']['vehicles'][0]['slug']);
+        $this->assertSame('rio-iv', $payload['catalog']['vehicles'][0]['slug']);
         $this->assertArrayHasKey('catalog', $this->payload($version, ''), 'vehicle cards on ordinary Pages link to section pages');
         $this->assertArrayNotHasKey('page_context', $this->payload($version, ''));
 
         $urls = $this->sitemap();
         $this->assertContains('http://localhost/100000000001/'.self::ITEM, $urls);
-        $this->assertContains('http://localhost/100000000001/catalog/kia/rio', $urls);
+        $this->assertContains('http://localhost/100000000001/catalog/kia', $urls);
     }
 
     public function test_draft_changes_reach_the_public_site_only_after_publish(): void
@@ -93,10 +94,10 @@ class PublishedSectionsTest extends TestCase
         app(VehiclePages::class)->rename($this->vehicle->fresh() ?? $this->vehicle, 'rio-sedan');
         $this->publish();
 
-        $this->visit('/auto/kia/rio/rio-sedan')->assertOk();
+        $this->visit('/auto/kia/rio-sedan')->assertOk();
         $this->visit('/catalog/kia?utm_source=ya')->assertStatus(301)->assertHeader('Location', 'http://localhost/100000000001/auto/kia?utm_source=ya');
-        $this->visit('/auto/kia/rio/iv-sedan')->assertStatus(301)->assertHeader('Location', 'http://localhost/100000000001/auto/kia/rio/rio-sedan');
-        $this->visit('/catalog/kia/rio/iv-sedan')->assertStatus(301)->assertHeader('Location', 'http://localhost/100000000001/auto/kia/rio/rio-sedan');
+        $this->visit('/auto/kia/rio-iv')->assertStatus(301)->assertHeader('Location', 'http://localhost/100000000001/auto/kia/rio-sedan');
+        $this->visit('/catalog/kia/rio-iv')->assertStatus(301)->assertHeader('Location', 'http://localhost/100000000001/auto/kia/rio-sedan');
         $this->visit('/catalog/kia/bmw')->assertNotFound();
     }
 
@@ -134,7 +135,7 @@ class PublishedSectionsTest extends TestCase
         $this->assertSame([], $section->redirects()->pluck('prefix')->all());
         $this->assertTrue($item->fresh()?->seo_noindex);
         $this->assertSame($blocks, $item->blocks()->count());
-        $this->assertSame('iv-sedan', $this->vehicle->fresh()?->slug);
+        $this->assertSame('rio-iv', $this->vehicle->fresh()?->slug);
         $this->assertSame(['rio-sedan'], $this->vehicle->slugRedirects()->pluck('slug')->all());
 
         $section->pages()->get()->each(function (Page $page): void {
@@ -146,8 +147,21 @@ class PublishedSectionsTest extends TestCase
 
         $restored = $this->site->sections()->sole();
         $this->assertSame($this->section->public_id, $restored->public_id);
-        $this->assertSame(4, $restored->pages()->count());
+        $this->assertSame(3, $restored->pages()->count());
         $this->assertSame($blocks, $restored->pages()->where('section_role', 'item')->sole()->blocks()->count());
+    }
+
+    public function test_restore_skips_model_pages_of_versions_before_d131(): void
+    {
+        $version = $this->publish();
+        $snapshot = $version->draft_snapshot_json;
+        $model = $snapshot['sections'][0]['pages'][0];
+        $snapshot['sections'][0]['pages'][] = [...$model, 'public_id' => strtolower((string) Str::ulid()), 'role' => 'model', 'slug' => '_catalog-model', 'blocks' => []];
+        PublishedVersion::query()->whereKey($version->id)->update(['draft_snapshot_json' => json_encode($snapshot)]);
+
+        app(RestoreVersion::class)->handle($this->site, $version->fresh() ?? $version, $this->owner);
+
+        $this->assertEqualsCanonicalizing(['index', 'mark', 'item'], $this->section->pages()->pluck('section_role')->map(fn ($role): string => $role->value)->all());
     }
 
     private function publish(): PublishedVersion

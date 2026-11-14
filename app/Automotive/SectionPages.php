@@ -31,7 +31,6 @@ final class SectionPages
     private const CONTENT = [
         'index' => [self::LISTING_BLOCK],
         'mark' => [self::LISTING_BLOCK],
-        'model' => [self::LISTING_BLOCK],
         'item' => ['vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment'],
     ];
 

@@ -7,7 +7,7 @@ import type {
 } from '@/blocks/catalog';
 
 /**
- * «Показывать на примере»: a catalog template Page renders every mark, model or vehicle, so the
+ * «Показывать на примере»: a catalog template Page renders every mark or vehicle, so the
  * Designer shows it on one real vehicle of the Site.
  */
 export function CatalogSampleSelect({
@@ -30,9 +30,7 @@ export function CatalogSampleSelect({
         catalog.vehicles.find((vehicle) =>
             context.role === 'item'
                 ? vehicle.public_id === context.vehicle
-                : vehicle.mark.segment === context.mark &&
-                  (context.role === 'mark' ||
-                      vehicle.model.segment === context.model),
+                : vehicle.mark.segment === context.mark,
         ) ?? null;
     const value =
         options.find((option) =>
@@ -82,17 +80,12 @@ function sameGroup(
     switch (role) {
         case 'mark':
             return a.mark.segment === b.mark.segment;
-        case 'model':
-            return (
-                a.mark.segment === b.mark.segment &&
-                a.model.segment === b.model.segment
-            );
         default:
             return a.public_id === b.public_id;
     }
 }
 
-/** One option per mark, per model or per vehicle, depending on the template Page. */
+/** One option per mark or per vehicle, depending on the template Page. */
 function sampleOptions(
     vehicles: CatalogVehicle[],
     role: PageContext['role'],
@@ -108,12 +101,7 @@ function sampleOptions(
 
         options.push({
             vehicle,
-            label:
-                role === 'mark'
-                    ? vehicle.mark.name
-                    : role === 'model'
-                      ? `${vehicle.mark.name} ${vehicle.model.name}`
-                      : vehicle.title,
+            label: role === 'mark' ? vehicle.mark.name : vehicle.title,
         });
     }
 

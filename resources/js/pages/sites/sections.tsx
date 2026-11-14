@@ -236,7 +236,7 @@ function SectionCard({
                             {limits.prefix} символов. Пример карточки:{' '}
                             <span className="font-mono break-all">
                                 /{form.data.prefix.trim() || section.prefix}
-                                /kia/rio/iv-restyling-sedan
+                                /kia/rio-iv-restyling
                             </span>
                         </p>
                         {prefixChanged && (

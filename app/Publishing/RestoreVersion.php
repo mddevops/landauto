@@ -8,6 +8,7 @@ use App\Blocks\BlockVersionGrants;
 use App\Catalog\AutoCatalog;
 use App\Enums\MediaAngle;
 use App\Enums\PublishedVersionStatus;
+use App\Enums\SectionPageRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
@@ -395,7 +396,12 @@ final class RestoreVersion
                 $redirect->save();
             }
 
-            $this->restorePages($site, self::list($data['pages'] ?? []), $section);
+            // Versions from before D-131 also carry a model template Page; that role no longer exists.
+            $pages = array_values(array_filter(
+                self::list($data['pages'] ?? []),
+                fn (array $page): bool => SectionPageRole::tryFrom((string) ($page['role'] ?? '')) !== null,
+            ));
+            $this->restorePages($site, $pages, $section);
         }
     }
 

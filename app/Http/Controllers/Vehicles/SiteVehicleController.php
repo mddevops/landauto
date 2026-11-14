@@ -161,7 +161,7 @@ class SiteVehicleController extends Controller
                 'regex:'.SitePaths::PATTERN,
                 function (string $attribute, mixed $value, Closure $fail) use ($vehicle, $pages): void {
                     if ($pages->slugTaken($vehicle, (string) $value)) {
-                        $fail('Такой адрес уже есть у другого автомобиля этой модели.');
+                        $fail('Такой адрес уже есть у другого автомобиля этой марки.');
                     }
                 },
             ],
@@ -207,7 +207,6 @@ class SiteVehicleController extends Controller
             'base_url' => $section === null ? null : PublicSiteResolver::primaryUrl($site, '/'.implode('/', [
                 $section->prefix,
                 VehiclePages::segment($model->mark->url),
-                VehiclePages::segment($model->url),
             ]).'/'),
             'redirects' => array_values($vehicle->slugRedirects()->latest('id')->get()
                 ->map(fn (SiteVehicleSlugRedirect $redirect): string => $redirect->slug)
