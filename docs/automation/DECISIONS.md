@@ -2384,7 +2384,7 @@ Owner decisions 2026-11-12. Details: `docs/architecture/decisions/ADR-010-autoru
 
 ## D-129 — Site Sections and Generated Vehicle Pages
 
-**Status:** APPROVED for the owner answers below (2026-11-14); technical details in ADR-011 are PROPOSED until owner acceptance.
+**Status:** APPROVED (owner decisions 2026-11-14; ADR-011 Accepted)
 
 ### Decision
 
@@ -2395,6 +2395,9 @@ Owner decisions 2026-11-12. Details: `docs/architecture/decisions/ADR-010-autoru
 - The vehicle address part is a readable slug generated automatically and editable by the customer.
 - One card template per section, shared by all its vehicles, edited in the Designer.
 - Delivery order: sections + Catalog + prefix settings first; Stock and the Used / Specials sections later.
+- Prefixes: reserved list, up to 60 characters.
+- A Landing presents one mark; its vehicle card is at the Site root: `domain.ru/rio-iv-restyling`.
+- In Used / Specials the vehicle address part is the Stock vehicle's unique id or `inner_id`.
 
 ### Resolved By
 

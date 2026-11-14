@@ -4476,17 +4476,17 @@ Progress: code complete on `feature/autoru-catalog`; gates PASS locally — `com
 
 ## X-032 — Site Sections ADR Acceptance
 
-**Status:** READY (owner action)
+**Status:** DONE
 **Trigger:** before X-033
 **Resolves:** D-129 technical details
 
-Owner reviews `ADR-011` (prefix rules, reserved list, generated page set, Landing card address, publishing and redirects) and marks it Accepted or requests changes. Agents must not start X-033 while ADR-011 is Proposed (`BLOCKED_DECISION`).
+Owner accepted `ADR-011` on 2026-11-14: reserved prefix list and 60-character limit; Landing card at the Site root (`/rio-iv-restyling`, one mark per Landing); Used / Specials vehicle address = Stock unique id or `inner_id`.
 
 ---
 
 ## X-033 — Site Sections Foundation and Prefix Settings
 
-**Status:** NOT_STARTED
+**Status:** READY
 **Dependencies:** X-032
 **Decision:** ADR-011; D-129; D-119
 
@@ -4526,7 +4526,7 @@ Acceptance: published Site serves all section pages from the snapshot only (Draf
 **Dependencies:** X-035
 **Decision:** ADR-011 §7
 
-Scope: a Landing may enable one vehicle card template Page; its vehicle cards open the card at `catalog/{mark}/{model}/{vehicle}` (prefix editable); no index / mark / model pages on Landing.
+Scope: a Landing (one mark) may enable one vehicle card template Page; its vehicle cards open the card at the Site root `/{model}-{vehicle slug}` (e.g. `/rio-iv-restyling`, editable, 301 history, no clash with reserved paths); no index / mark / model pages on Landing.
 
 Acceptance: Landing with two vehicles opens each card from its block; publishing and sitemap include the card pages; focused tests.
 
@@ -4548,7 +4548,7 @@ Stock holds concrete vehicles for sale (new and used), created like an auto.ru l
 **Dependencies:** X-035; X-037 and the Stock implementation tasks it defines
 **Decision:** ADR-011; X-037
 
-Scope: section types `used` and `specials` with the same generated pages, fed by Stock items; card template per section.
+Scope: section types `used` and `specials` with the same generated pages, fed by Stock items; card template per section; vehicle address part = Stock unique id or `inner_id` (ADR-011 §4).
 
 ---
 
