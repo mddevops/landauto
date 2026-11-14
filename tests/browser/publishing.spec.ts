@@ -79,7 +79,7 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
 
     // Draft SEO of the home Page (section «SEO») goes into the published head.
     const designerUrl = page.url();
-    await page.goto(designerUrl.replace(/\/designer$/, '/seo'));
+    await page.goto(designerUrl.replace(/\/designer(\?.*)?$/, '/seo'));
     const seo = page.getByTestId('seo-page').filter({ hasText: 'Главная' });
     await seo
         .getByLabel('Заголовок для поисковиков')
