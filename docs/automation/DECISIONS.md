@@ -2405,6 +2405,23 @@ Owner answers 2026-11-14. Details: `docs/architecture/decisions/ADR-011-site-sec
 
 ---
 
+## D-130 — Block Groups, Version Previews and Components
+
+**Status:** APPROVED (owner decisions 2026-11-14)
+
+### Decision
+
+- Block Groups replace the fixed category list: a super admin creates groups (e.g. «Шапка», «Подвал», «Контакты»); every Block Definition — official and developer — belongs to one group; a group holds any number of Blocks. The current official Blocks become groups of the same name, each Block the first one in its group.
+- The Blocks section lists groups first; a group page lists its Blocks as cards with a preview image.
+- A Block Version may carry a preview image, uploaded or pasted from the clipboard when the version is published / approved; the owner makes the screenshots himself. No headless-browser screenshots.
+- A Block Definition can be marked as a Component (headers, footers, small promo banners). On a Site a Component is one shared instance: added once, it appears on every Page, including Pages created later, at most once per Page; editing it on one Page changes it everywhere. Position by type: a header is always first, a footer always last, other Components stay where they were placed.
+
+### Resolved By
+
+Owner answers 2026-11-14. Tasks: X-039 (groups), X-040 (previews and cards), X-041 (Components).
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

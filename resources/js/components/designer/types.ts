@@ -84,7 +84,8 @@ export type DesignerLibraryBlock = {
     slug: string;
     name: string;
     category: string;
-    category_label: string;
+    group: string;
+    group_label: string;
     author: string | null;
     access: CatalogAccessCard;
     available: boolean;

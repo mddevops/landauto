@@ -270,7 +270,7 @@ type BlockLibraryProps = {
     emptyText: string;
 };
 
-/** Searchable catalog of Blocks grouped by collapsible category; a click adds the Block. */
+/** Searchable catalog of Blocks in collapsible Block Groups (backend order); a click adds the Block. */
 export function BlockLibrary({
     routes,
     pageId,
@@ -300,24 +300,22 @@ export function BlockLibrary({
                 needle === '' ||
                 item.name.toLocaleLowerCase('ru').includes(needle) ||
                 item.slug.includes(needle) ||
-                item.category_label.toLocaleLowerCase('ru').includes(needle);
+                item.group_label.toLocaleLowerCase('ru').includes(needle);
 
             if (!included || !matches) {
                 continue;
             }
 
-            const group = map.get(item.category) ?? {
-                key: item.category,
-                label: item.category_label,
+            const group = map.get(item.group) ?? {
+                key: item.group,
+                label: item.group_label,
                 items: [],
             };
             group.items.push(item);
-            map.set(item.category, group);
+            map.set(item.group, group);
         }
 
-        return [...map.values()].sort((a, b) =>
-            a.label.localeCompare(b.label, 'ru'),
-        );
+        return [...map.values()];
     }, [library, categories, query]);
 
     if (!canEdit) {

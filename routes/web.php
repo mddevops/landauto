@@ -29,6 +29,7 @@ use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogLicenseController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
 use App\Http\Controllers\Platform\PlatformBlockController;
+use App\Http\Controllers\Platform\PlatformBlockGroupController;
 use App\Http\Controllers\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\PlatformTemplateController;
@@ -355,6 +356,11 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManagePlatformContent->value)
         ->group(function () {
             Route::get('/', [PlatformBlockController::class, 'index'])->name('index');
+            Route::post('groups', [PlatformBlockGroupController::class, 'store'])->name('groups.store');
+            Route::get('groups/{group}', [PlatformBlockGroupController::class, 'show'])->whereUlid('group')->name('groups.show');
+            Route::patch('groups/{group}', [PlatformBlockGroupController::class, 'update'])->whereUlid('group')->name('groups.update');
+            Route::post('groups/{group}/move', [PlatformBlockGroupController::class, 'move'])->whereUlid('group')->name('groups.move');
+            Route::delete('groups/{group}', [PlatformBlockGroupController::class, 'destroy'])->whereUlid('group')->name('groups.destroy');
             Route::get('create', [PlatformBlockController::class, 'create'])->name('create');
             Route::post('/', [PlatformBlockController::class, 'store'])->middleware('throttle:block-create')->name('store');
             Route::get('{block}', [PlatformBlockController::class, 'show'])->whereUlid('block')->name('show');

@@ -1530,6 +1530,7 @@ Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125; P10-00
 Cross-cutting — Native First-Party Block Runtime: X-023 through X-029 DONE
 Cross-cutting — X-031 auto.ru Catalog: DONE
 Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): ADR-011 Accepted (X-032 DONE); X-033 DONE («Разделы», prefixes with history); X-034 DONE (catalog template Pages, vehicle slugs, Designer sample / preview addresses; Draft only — the published Site does not serve sections until X-035); X-035 … X-038 NOT_STARTED
+Cross-cutting — Block Groups / previews / components (D-130): X-039 DONE (Block Groups); X-040, X-041 NOT_STARTED
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 

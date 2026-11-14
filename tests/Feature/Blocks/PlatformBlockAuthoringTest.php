@@ -10,6 +10,7 @@ use App\Enums\BlockOwnerScope;
 use App\Enums\PlatformRole;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\DeveloperProfile;
@@ -50,15 +51,18 @@ class PlatformBlockAuthoringTest extends TestCase
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
                 ->component('platform/blocks/index')
-                ->has('blocks', count(OfficialBlocksTest::SLUGS))
-                ->where('blocks', fn ($blocks): bool => collect($blocks)->pluck('slug')->doesntContain('developer-only'))
-                ->missing('blocks.0.id'));
-        $this->actingAs($this->superAdmin)->get(route('platform.blocks.create'))->assertOk();
+                ->has('groups', BlockGroup::query()->count())
+                ->has('ungrouped', 0)
+                ->missing('groups.0.id'));
+        $forms = BlockGroup::factory()->create(['name' => 'Калькуляторы', 'kind' => BlockCategory::Forms]);
+        $this->actingAs($this->superAdmin)->get(route('platform.blocks.create', ['group' => $forms->public_id]))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page->where('group', $forms->public_id));
 
         $response = $this->actingAs($this->superAdmin)->post(route('platform.blocks.store'), [
             'name' => 'Кредитный калькулятор',
             'slug' => 'credit-calculator',
-            'category' => 'forms',
+            'group' => $forms->public_id,
             'owner_scope' => 'developer',
             'developer_profile_id' => DeveloperProfile::factory()->create()->id,
         ]);
@@ -73,6 +77,7 @@ class PlatformBlockAuthoringTest extends TestCase
         $this->assertSame($this->superAdmin->id, $block->created_by_user_id);
         $this->assertSame(0, $block->versions()->count());
         $this->assertSame(BlockCategory::Forms, $block->category);
+        $this->assertSame($forms->id, $block->block_group_id);
         Log::shouldHaveReceived('info')->with('platform.block_created', Mockery::on(fn (array $context): bool => $context === [
             'block' => $block->public_id,
             'owner_scope' => 'platform',
@@ -86,12 +91,12 @@ class PlatformBlockAuthoringTest extends TestCase
                 ->where('block.owner_scope_label', 'Платформа Landflow')
                 ->where('block.versions_count', 0));
 
-        $this->actingAs($this->superAdmin)->patch(route('platform.blocks.update', $block), ['name' => 'Калькулятор кредита', 'category' => 'forms', 'slug' => 'other'])
+        $this->actingAs($this->superAdmin)->patch(route('platform.blocks.update', $block), ['name' => 'Калькулятор кредита', 'group' => $forms->public_id, 'slug' => 'other'])
             ->assertSessionHasNoErrors();
         $this->assertSame(['Калькулятор кредита', 'credit-calculator'], [$block->fresh()?->name, $block->fresh()?->slug]);
         Log::shouldHaveReceived('info')->with('platform.block_updated', Mockery::any())->once();
 
-        $this->actingAs($this->superAdmin)->post(route('platform.blocks.store'), ['name' => 'Дубль', 'category' => 'other', 'slug' => 'developer-only'])
+        $this->actingAs($this->superAdmin)->post(route('platform.blocks.store'), ['name' => 'Дубль', 'group' => $forms->public_id, 'slug' => 'developer-only'])
             ->assertSessionHasErrors(['slug' => 'Этот slug уже используется другим блоком.']);
     }
 
@@ -110,7 +115,7 @@ class PlatformBlockAuthoringTest extends TestCase
     {
         foreach ([BlockDefinition::factory()->developer()->create(), BlockDefinition::factory()->workspacePrivate()->create()] as $block) {
             $this->actingAs($this->superAdmin)->get(route('platform.blocks.show', $block))->assertNotFound();
-            $this->actingAs($this->superAdmin)->patch(route('platform.blocks.update', $block), ['name' => 'Взлом', 'category' => 'other'])->assertNotFound();
+            $this->actingAs($this->superAdmin)->patch(route('platform.blocks.update', $block), ['name' => 'Взлом', 'group' => BlockGroup::query()->value('public_id')])->assertNotFound();
             $this->actingAs($this->superAdmin)->put(route('platform.blocks.draft', $block), self::draftPayload())->assertNotFound();
             $this->assertNotSame('Взлом', $block->fresh()?->name);
         }
@@ -140,9 +145,9 @@ class PlatformBlockAuthoringTest extends TestCase
         foreach ($users as $user) {
             $this->actingAs($user)->get(route('platform.blocks.index'))->assertForbidden();
             $this->actingAs($user)->get(route('platform.blocks.create'))->assertForbidden();
-            $this->actingAs($user)->post(route('platform.blocks.store'), ['name' => 'Блок', 'category' => 'other', 'slug' => 'forbidden-block'])->assertForbidden();
+            $this->actingAs($user)->post(route('platform.blocks.store'), ['name' => 'Блок', 'group' => BlockGroup::query()->value('public_id'), 'slug' => 'forbidden-block'])->assertForbidden();
             $this->actingAs($user)->get(route('platform.blocks.show', $hero))->assertForbidden();
-            $this->actingAs($user)->patch(route('platform.blocks.update', $hero), ['name' => 'Взлом', 'category' => 'other'])->assertForbidden();
+            $this->actingAs($user)->patch(route('platform.blocks.update', $hero), ['name' => 'Взлом', 'group' => BlockGroup::query()->value('public_id')])->assertForbidden();
             $this->actingAs($user)->put(route('platform.blocks.draft', $hero), self::draftPayload())->assertForbidden();
         }
 
@@ -166,12 +171,12 @@ class PlatformBlockAuthoringTest extends TestCase
         $private->workspace?->addMember($workspaceOwner, WorkspaceRole::Owner);
 
         $attempts = [
-            'developer creates platform block' => fn () => $authoring->createPlatform($developer->user, 'Блок', 'dev-platform', BlockCategory::Other),
-            'super admin without profile creates developer block' => fn () => $authoring->createDeveloper($this->superAdmin, 'Блок', 'admin-developer', BlockCategory::Other),
-            'developer edits platform block' => fn () => $authoring->updateMetadata($developer->user, $platformBlock, 'Взлом', BlockCategory::Other),
-            'super admin edits developer block' => fn () => $authoring->updateMetadata($this->superAdmin, $developerBlock, 'Взлом', BlockCategory::Other),
-            'workspace owner edits private block' => fn () => $authoring->updateMetadata($workspaceOwner, $private, 'Взлом', BlockCategory::Other),
-            'super admin edits private block' => fn () => $authoring->updateMetadata($this->superAdmin, $private, 'Взлом', BlockCategory::Other),
+            'developer creates platform block' => fn () => $authoring->createPlatform($developer->user, 'Блок', 'dev-platform', BlockGroup::factory()->create()),
+            'super admin without profile creates developer block' => fn () => $authoring->createDeveloper($this->superAdmin, 'Блок', 'admin-developer', BlockGroup::factory()->create()),
+            'developer edits platform block' => fn () => $authoring->updateMetadata($developer->user, $platformBlock, 'Взлом', BlockGroup::factory()->create()),
+            'super admin edits developer block' => fn () => $authoring->updateMetadata($this->superAdmin, $developerBlock, 'Взлом', BlockGroup::factory()->create()),
+            'workspace owner edits private block' => fn () => $authoring->updateMetadata($workspaceOwner, $private, 'Взлом', BlockGroup::factory()->create()),
+            'super admin edits private block' => fn () => $authoring->updateMetadata($this->superAdmin, $private, 'Взлом', BlockGroup::factory()->create()),
         ];
 
         foreach ($attempts as $case => $attempt) {
@@ -208,7 +213,7 @@ class PlatformBlockAuthoringTest extends TestCase
         $developerDraft = BlockDefinition::factory()->developer()->create(['slug' => 'developer-draft']);
         $developerVersioned = BlockDefinition::factory()->developer()->create(['slug' => 'developer-versioned']);
         $developerVersion = BlockVersion::factory()->for($developerVersioned, 'definition')->create();
-        app(BlockAuthoring::class)->createPlatform($this->superAdmin, 'Новый официальный', 'new-official', BlockCategory::Other);
+        app(BlockAuthoring::class)->createPlatform($this->superAdmin, 'Новый официальный', 'new-official', BlockGroup::factory()->create());
         $official = array_values(array_unique(array_column(OfficialBlockCatalog::blocks(), 'slug')));
         $catalog = collect([...$official, 'developer-versioned'])->sort()->values()->all();
 

@@ -4556,6 +4556,44 @@ Scope: section types `used` and `specials` with the same generated pages, fed by
 
 ---
 
+## X-039 — Block Groups
+
+**Status:** DONE
+**Trigger:** owner request 2026-11-14
+**Decision:** D-130
+
+Result: `block_groups` (name, kind = visual category of its Blocks, sort order) with `block_definitions.block_group_id`; the migration and `OfficialBlockSeeder` place ungrouped Blocks (`BlockGroups::backfill`); «Блоки Landflow» shows group cards (create, reorder), a group page edits / removes an empty group and creates Blocks inside it; create forms and Block Studio settings select a group; the Designer library is grouped by Block Group in group order.
+
+Scope: `block_groups` managed by the super admin (name, kind, sort order); every Block Definition belongs to a group (official and developer); existing official Blocks become groups of their own name with the Block as the first member, other Blocks move to the group of their former category; «Блоки Landflow» lists groups, a group page lists its Blocks and creates new ones inside it; Block create / settings choose a group; the Designer library groups by Block Group.
+
+Acceptance: groups can be created, renamed and reordered; a Block is created inside a group; existing Blocks keep working and appear in their groups; Designer library shows groups; focused tests.
+
+---
+
+## X-040 — Block Version Preview Images and Cards
+
+**Status:** NOT_STARTED
+**Dependencies:** X-039
+**Decision:** D-130
+
+Scope: optional preview image per Block Version, uploaded or pasted from the clipboard when the version is published / approved; group pages and the Designer library show Blocks as cards with the preview of the latest published version.
+
+Acceptance: a published version keeps its preview; cards show it; image type / size validated; focused tests.
+
+---
+
+## X-041 — Components (Shared Header, Footer, Banners)
+
+**Status:** NOT_STARTED
+**Dependencies:** X-039
+**Decision:** D-130; ADR draft required (shared Site-level Block Instance across Pages, publishing / restore / templates)
+
+Scope: Block Definition flag «Компонент» with a position (first / last / free); one shared instance per Site shown on every Page and on Pages created later, at most once per Page; editing on any Page changes all; header first, footer last; publishing, restore and Templates carry Components.
+
+Acceptance: adding a header on one Page shows it on all Pages and new ones; it cannot be added twice; editing changes all Pages; published pages render Components; focused tests and E2E.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---

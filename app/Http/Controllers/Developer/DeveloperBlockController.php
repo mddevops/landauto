@@ -6,7 +6,6 @@ use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockAuthoringPresenter;
 use App\Blocks\BlockPublisher;
 use App\Blocks\BlockStudio;
-use App\Enums\BlockCategory;
 use App\Http\Controllers\Concerns\PublishesBlockVersions;
 use App\Http\Controllers\Concerns\SavesBlockDrafts;
 use App\Http\Controllers\Controller;
@@ -17,6 +16,7 @@ use App\Http\Requests\Blocks\StoreBlockDefinitionRequest;
 use App\Http\Requests\Blocks\UpdateBlockAccessRequest;
 use App\Http\Requests\Blocks\UpdateBlockDefinitionRequest;
 use App\Models\BlockDefinition;
+use App\Models\BlockGroup;
 use App\Models\DeveloperProfile;
 use App\Models\User;
 use Illuminate\Database\UniqueConstraintViolationException;
@@ -46,6 +46,7 @@ class DeveloperBlockController extends Controller
             'blocks' => BlockDefinition::query()
                 ->ownedByDeveloper($this->profile($request))
                 ->withCount('versions')
+                ->with('group')
                 ->withLatestRuntime()
                 ->orderByDesc('updated_at')
                 ->orderByDesc('id')
@@ -58,7 +59,7 @@ class DeveloperBlockController extends Controller
 
     public function create(): Response
     {
-        return Inertia::render('developer/blocks/create', ['categories' => BlockCategory::options()]);
+        return Inertia::render('developer/blocks/create', ['groups' => BlockGroup::options()]);
     }
 
     public function store(StoreBlockDefinitionRequest $request): RedirectResponse
@@ -68,7 +69,7 @@ class DeveloperBlockController extends Controller
                 $this->actor($request),
                 $request->string('name')->toString(),
                 $request->string('slug')->toString(),
-                $request->category(),
+                $request->group(),
             );
         } catch (UniqueConstraintViolationException) {
             throw ValidationException::withMessages(['slug' => 'Этот slug уже используется другим блоком.']);
@@ -91,7 +92,7 @@ class DeveloperBlockController extends Controller
             $this->actor($request),
             $definition,
             $request->string('name')->toString(),
-            $request->category(),
+            $request->group(),
         );
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Изменения сохранены.']);
 

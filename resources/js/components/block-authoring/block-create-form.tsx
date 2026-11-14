@@ -11,7 +11,8 @@ type BlockCreateFormProps = {
     action: RouteFormDefinition<'post'>;
     cancelHref: RouteDefinition<'get'>;
     submitLabel: string;
-    categories: Choice[];
+    groups: Choice[];
+    defaultGroup?: string | null;
 };
 
 export function BlockCreateForm({
@@ -20,7 +21,8 @@ export function BlockCreateForm({
     action,
     cancelHref,
     submitLabel,
-    categories,
+    groups,
+    defaultGroup,
 }: BlockCreateFormProps) {
     return (
         <main className="flex min-w-0 flex-1 flex-col gap-6 p-4 sm:p-6">
@@ -48,13 +50,14 @@ export function BlockCreateForm({
                             error={errors.name}
                         />
                         <SelectField
-                            id="block-category"
-                            name="category"
-                            label="Категория"
-                            choices={categories}
-                            emptyLabel="Выберите категорию"
+                            id="block-group"
+                            name="group"
+                            label="Группа"
+                            choices={groups}
+                            defaultValue={defaultGroup ?? undefined}
+                            emptyLabel="Выберите группу"
                             required
-                            error={errors.category}
+                            error={errors.group}
                         />
                         <TextField
                             id="block-slug"

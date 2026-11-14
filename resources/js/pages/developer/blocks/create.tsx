@@ -4,11 +4,7 @@ import type { Choice } from '@/components/platform/form-fields';
 import { dashboard } from '@/routes/developer';
 import { create, index, store } from '@/routes/developer/blocks';
 
-export default function CreateDeveloperBlock({
-    categories,
-}: {
-    categories: Choice[];
-}) {
+export default function CreateDeveloperBlock({ groups }: { groups: Choice[] }) {
     return (
         <>
             <Head title="Новый блок" />
@@ -18,7 +14,7 @@ export default function CreateDeveloperBlock({
                 action={store.form()}
                 cancelHref={index()}
                 submitLabel="Создать блок"
-                categories={categories}
+                groups={groups}
             />
         </>
     );

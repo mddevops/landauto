@@ -62,7 +62,7 @@ test('a Block published in Block Studio reaches customers according to its catal
     await page.goto('/developer/blocks/create');
     await page.getByLabel('Название').fill(name);
     await page
-        .getByLabel('Категория')
+        .getByLabel('Группа')
         .selectOption({ label: 'Призыв к действию' });
     await page.getByLabel('Slug').fill(`e2e-platform-${suffix}`);
     await page

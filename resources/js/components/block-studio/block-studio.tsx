@@ -79,7 +79,7 @@ export type BlockStudioPageProps = {
     canApproveNative: boolean;
     access: BlockAccessSettings;
     accessModes: Choice[];
-    categories: Choice[];
+    groups: Choice[];
     sourceMaxBytes: number;
 };
 
@@ -99,7 +99,7 @@ export function BlockStudio({
     canApproveNative,
     access,
     accessModes,
-    categories,
+    groups,
     sourceMaxBytes,
     metadataAction,
     draftUrl,
@@ -155,9 +155,7 @@ export function BlockStudio({
                         <h1 className="min-w-0 text-2xl font-semibold tracking-tight break-words sm:text-3xl">
                             {block.name}
                         </h1>
-                        <Badge variant="secondary">
-                            {block.category_label}
-                        </Badge>
+                        <Badge variant="secondary">{block.group_label}</Badge>
                         <Badge variant="outline">
                             {versionsLabel(block.versions_count)}
                         </Badge>
@@ -360,7 +358,7 @@ export function BlockStudio({
                     {mode === 'settings' && (
                         <BlockSettings
                             block={block}
-                            categories={categories}
+                            groups={groups}
                             action={metadataAction}
                             access={access}
                             accessModes={accessModes}
@@ -621,14 +619,14 @@ function DraftChecks({ draft, stale }: { draft: BlockDraft; stale: boolean }) {
 
 function BlockSettings({
     block,
-    categories,
+    groups,
     action,
     access,
     accessModes,
     accessUrl,
 }: {
     block: AuthoringBlockDetail;
-    categories: Choice[];
+    groups: Choice[];
     action: RouteFormDefinition<'post'>;
     access: BlockAccessSettings;
     accessModes: Choice[];
@@ -662,13 +660,14 @@ function BlockSettings({
                                 error={errors.name}
                             />
                             <SelectField
-                                id="block-category"
-                                name="category"
-                                label="Категория"
-                                choices={categories}
-                                defaultValue={block.category}
+                                id="block-group"
+                                name="group"
+                                label="Группа"
+                                choices={groups}
+                                defaultValue={block.group ?? undefined}
+                                emptyLabel="Выберите группу"
                                 required
-                                error={errors.category}
+                                error={errors.group}
                             />
                             <Field
                                 id="block-slug"

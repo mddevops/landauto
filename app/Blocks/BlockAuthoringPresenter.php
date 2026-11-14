@@ -2,11 +2,11 @@
 
 namespace App\Blocks;
 
-use App\Enums\BlockCategory;
 use App\Enums\BlockRuntime;
 use App\Enums\CatalogAccessMode;
 use App\Models\BlockDefinition;
 use App\Models\BlockDraft;
+use App\Models\BlockGroup;
 use App\Models\BlockVersion;
 use App\Models\User;
 use App\Support\Money;
@@ -27,7 +27,7 @@ final class BlockAuthoringPresenter
      * `needs_migration`: the latest version is legacy sandboxed (ADR-009 §10); needs the
      * {@see BlockDefinition::scopeWithLatestRuntime()} column.
      *
-     * @return array{public_id: string, name: string, slug: string, category: string, category_label: string, versions_count: int, needs_migration: bool, updated_at: string|null}
+     * @return array{public_id: string, name: string, slug: string, group: string|null, group_label: string, versions_count: int, needs_migration: bool, updated_at: string|null}
      */
     public function listItem(BlockDefinition $block): array
     {
@@ -35,8 +35,8 @@ final class BlockAuthoringPresenter
             'public_id' => $block->public_id,
             'name' => $block->name,
             'slug' => $block->slug,
-            'category' => $block->category->value,
-            'category_label' => $block->category->label(),
+            'group' => $block->group?->public_id,
+            'group_label' => $block->group->name ?? 'Без группы',
             'versions_count' => (int) $block->getAttribute('versions_count'),
             'needs_migration' => $block->getAttribute('latest_runtime') === BlockRuntime::Sandboxed->value,
             'updated_at' => $block->updated_at?->toIso8601String(),
@@ -84,7 +84,7 @@ final class BlockAuthoringPresenter
                 'workspace_price' => $block->workspace_price_minor !== null ? Money::toInput($block->workspace_price_minor, $block->price_currency ?? Money::DEFAULT_CURRENCY) : '',
             ],
             'accessModes' => CatalogAccessMode::options(),
-            'categories' => BlockCategory::options(),
+            'groups' => BlockGroup::options(),
             'sourceMaxBytes' => BlockStudio::SOURCE_MAX_BYTES,
         ];
     }

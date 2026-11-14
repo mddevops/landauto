@@ -30,6 +30,7 @@ use LogicException;
  * @property string $name
  * @property string $slug
  * @property BlockCategory $category
+ * @property int|null $block_group_id
  * @property BlockOwnerScope $owner_scope
  * @property CatalogAccessMode $access_mode
  * @property Entitlement|null $access_entitlement
@@ -44,7 +45,7 @@ use LogicException;
  * @property Carbon|null $updated_at
  */
 #[Fillable(['name', 'slug', 'category'])]
-#[Hidden(['id', 'developer_profile_id', 'workspace_id', 'created_by_user_id', 'updated_by_user_id'])]
+#[Hidden(['id', 'block_group_id', 'developer_profile_id', 'workspace_id', 'created_by_user_id', 'updated_by_user_id'])]
 class BlockDefinition extends Model
 {
     /** @use HasFactory<BlockDefinitionFactory> */
@@ -169,6 +170,14 @@ class BlockDefinition extends Model
     public function draft(): HasOne
     {
         return $this->hasOne(BlockDraft::class);
+    }
+
+    /**
+     * @return BelongsTo<BlockGroup, $this>
+     */
+    public function group(): BelongsTo
+    {
+        return $this->belongsTo(BlockGroup::class, 'block_group_id');
     }
 
     /**

@@ -88,46 +88,59 @@ export function BlockList({
                     </Button>
                 </section>
             ) : (
-                <ul
-                    aria-label={title}
-                    className="divide-y rounded-xl border bg-card shadow-sm"
-                >
-                    {blocks.map((block) => (
-                        <li key={block.public_id} data-testid="authoring-block">
-                            <Link
-                                href={showHref(block.public_id)}
-                                className="flex flex-col gap-2 px-4 py-3 transition-colors outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:gap-4"
-                            >
-                                <div className="min-w-0 flex-1 space-y-0.5">
-                                    <p className="font-medium break-words">
-                                        {block.name}
-                                    </p>
-                                    <p className="text-xs break-all text-muted-foreground">
-                                        <code>{block.slug}</code>
-                                    </p>
-                                </div>
-                                <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
-                                    <Badge variant="secondary">
-                                        {block.category_label}
-                                    </Badge>
-                                    <Badge variant="outline">
-                                        {versionsLabel(block.versions_count)}
-                                    </Badge>
-                                    {block.needs_migration && (
-                                        <Badge variant="destructive">
-                                            Нужна миграция
-                                        </Badge>
-                                    )}
-                                    <span>
-                                        Обновлён{' '}
-                                        {formatBlockDate(block.updated_at)}
-                                    </span>
-                                </div>
-                            </Link>
-                        </li>
-                    ))}
-                </ul>
+                <BlockRows label={title} blocks={blocks} showHref={showHref} />
             )}
         </main>
+    );
+}
+
+export function BlockRows({
+    label,
+    blocks,
+    showHref,
+}: {
+    label: string;
+    blocks: AuthoringBlock[];
+    showHref: (publicId: string) => RouteDefinition<'get'>;
+}) {
+    return (
+        <ul
+            aria-label={label}
+            className="divide-y rounded-xl border bg-card shadow-sm"
+        >
+            {blocks.map((block) => (
+                <li key={block.public_id} data-testid="authoring-block">
+                    <Link
+                        href={showHref(block.public_id)}
+                        className="flex flex-col gap-2 px-4 py-3 transition-colors outline-none hover:bg-muted/50 focus-visible:bg-muted/50 focus-visible:ring-[3px] focus-visible:ring-ring/50 sm:flex-row sm:items-center sm:gap-4"
+                    >
+                        <div className="min-w-0 flex-1 space-y-0.5">
+                            <p className="font-medium break-words">
+                                {block.name}
+                            </p>
+                            <p className="text-xs break-all text-muted-foreground">
+                                <code>{block.slug}</code>
+                            </p>
+                        </div>
+                        <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-muted-foreground">
+                            <Badge variant="secondary">
+                                {block.group_label}
+                            </Badge>
+                            <Badge variant="outline">
+                                {versionsLabel(block.versions_count)}
+                            </Badge>
+                            {block.needs_migration && (
+                                <Badge variant="destructive">
+                                    Нужна миграция
+                                </Badge>
+                            )}
+                            <span>
+                                Обновлён {formatBlockDate(block.updated_at)}
+                            </span>
+                        </div>
+                    </Link>
+                </li>
+            ))}
+        </ul>
     );
 }

@@ -24,11 +24,11 @@ async function createBlock(
     page: Page,
     name: string,
     slug: string,
-    category: string,
+    group: string,
     submit: string,
 ) {
     await page.getByLabel('Название').fill(name);
-    await page.getByLabel('Категория').selectOption({ label: category });
+    await page.getByLabel('Группа').selectOption({ label: group });
     await page.getByLabel('Slug').fill(slug);
     await expectNoHorizontalOverflow(page);
     const button = page.getByRole('button', { name: submit, exact: true });
@@ -52,11 +52,16 @@ async function expectStudio(
     page: Page,
     name: string,
     slug: string,
-    category: string,
+    group: string,
 ) {
     await expect(page).toHaveTitle(/Студия блоков/);
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
-    await expect(page.getByText(category, { exact: true })).toBeVisible();
+    await expect(
+        page
+            .locator('header')
+            .filter({ has: page.getByRole('heading', { level: 1, name }) })
+            .getByText(group, { exact: true }),
+    ).toBeVisible();
     await expect(page.getByText('Нет версий', { exact: true })).toBeVisible();
     await expect(page.locator('[data-status]')).toHaveText('Черновик сохранён');
 
@@ -66,10 +71,10 @@ async function expectStudio(
     await expect(slugInput).not.toBeEditable();
 }
 
-async function renameBlock(page: Page, name: string, category: string) {
+async function renameBlock(page: Page, name: string, group: string) {
     const metadata = page.getByRole('region', { name: 'Основные данные' });
     await metadata.getByLabel('Название').fill(name);
-    await metadata.getByLabel('Категория').selectOption({ label: category });
+    await metadata.getByLabel('Группа').selectOption({ label: group });
     await metadata.getByRole('button', { name: 'Сохранить' }).click();
     await expect(page.getByText('Изменения сохранены.')).toBeVisible();
 
@@ -77,7 +82,9 @@ async function renameBlock(page: Page, name: string, category: string) {
     await expect(page.getByRole('heading', { level: 1, name })).toBeVisible();
     await openMode(page, 'Настройки');
     await expect(metadata.getByLabel('Название')).toHaveValue(name);
-    await expect(metadata.getByLabel('Категория')).toHaveValue('footer');
+    await expect(
+        metadata.getByLabel('Группа').locator('option:checked'),
+    ).toHaveText(group);
 }
 
 test('developer creates and renames an own Block @responsive', async ({
@@ -109,11 +116,11 @@ test('developer creates and renames an own Block @responsive', async ({
     await expect(
         page.getByRole('heading', { level: 1, name: 'Новый блок' }),
     ).toBeVisible();
-    await createBlock(page, name, slug, 'Меню', 'Создать блок');
+    await createBlock(page, name, slug, 'Шапка', 'Создать блок');
 
     await expect(page).toHaveURL(/\/developer\/blocks\/[0-9a-z]{26}$/i);
     await expect(page.getByText(`Блок «${name}» создан.`)).toBeVisible();
-    await expectStudio(page, name, slug, 'Меню');
+    await expectStudio(page, name, slug, 'Шапка');
 
     const ownership = page.getByRole('region', { name: 'Владение' });
     await expect(
@@ -568,6 +575,7 @@ test('super admin creates and renames a Platform Block', async ({
     const name = `E2E официальный блок ${suffix}`;
     const renamed = `E2E официальный блок обновлён ${suffix}`;
     const slug = `e2e-platform-block-${suffix}`;
+    const groupName = `E2E группа ${suffix}`;
 
     await login(page, users.catalogAdmin);
 
@@ -576,21 +584,36 @@ test('super admin creates and renames a Platform Block', async ({
         page.getByRole('heading', { level: 1, name: 'Блоки Landflow' }),
     ).toBeVisible();
     await expect(
-        page.getByTestId('authoring-block').filter({ hasText: 'Первый экран' }),
-    ).toContainText('hero');
-    await page.getByRole('link', { name: 'Создать официальный блок' }).click();
+        page.getByRole('link', { name: 'Создать официальный блок' }),
+    ).toHaveCount(0);
+    await expect(
+        page.getByTestId('block-group').filter({ hasText: 'Первый экран' }),
+    ).toBeVisible();
+    await expectNoHorizontalOverflow(page);
 
-    await expect(page).toHaveURL('/platform/blocks/create');
+    await page.getByRole('button', { name: 'Создать группу' }).click();
+    const dialog = page.getByRole('dialog', { name: 'Новая группа блоков' });
+    await dialog.getByLabel('Название').fill(groupName);
+    await dialog.getByLabel('Тип блоков').selectOption({ label: 'Контакты' });
+    await dialog.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(
+        page.getByRole('heading', { level: 1, name: groupName }),
+    ).toBeVisible();
+    await expect(page.getByText('В группе пока нет блоков.')).toBeVisible();
+
+    await page.getByRole('link', { name: 'Создать блок' }).click();
+    await expect(page).toHaveURL(/\/platform\/blocks\/create\?group=/);
     await expect(
         page.getByRole('heading', { level: 1, name: 'Новый официальный блок' }),
     ).toBeVisible();
-    await createBlock(page, name, slug, 'Контакты', 'Создать официальный блок');
+    await expect(
+        page.getByLabel('Группа').locator('option:checked'),
+    ).toHaveText(groupName);
+    await createBlock(page, name, slug, groupName, 'Создать блок');
 
     await expect(page).toHaveURL(/\/platform\/blocks\/[0-9a-z]{26}$/i);
-    await expect(
-        page.getByText(`Официальный блок «${name}» создан.`),
-    ).toBeVisible();
-    await expectStudio(page, name, slug, 'Контакты');
+    await expect(page.getByText(`Блок «${name}» создан.`)).toBeVisible();
+    await expectStudio(page, name, slug, groupName);
 
     const ownership = page.getByRole('region', { name: 'Владение' });
     await expect(
@@ -604,6 +627,13 @@ test('super admin creates and renames a Platform Block', async ({
     await renameBlock(page, renamed, 'Подвал');
 
     await page.goto('/platform/blocks');
+    await page
+        .getByTestId('block-group')
+        .getByRole('link', { name: 'Подвал', exact: true })
+        .click();
+    await expect(
+        page.getByRole('heading', { level: 1, name: 'Подвал' }),
+    ).toBeVisible();
     await expect(
         page.getByTestId('authoring-block').filter({ hasText: renamed }),
     ).toContainText(slug);

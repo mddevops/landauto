@@ -4,6 +4,7 @@ namespace Database\Seeders;
 
 use App\Actions\Sites\CreateSite;
 use App\Automotive\VehiclePhotos;
+use App\Blocks\BlockGroups;
 use App\Blocks\BlockStateDefaults;
 use App\Enums\BlockCategory;
 use App\Enums\CatalogAccessMode;
@@ -232,6 +233,8 @@ class E2eSeeder extends Seeder
                     ['key' => 'title', 'type' => 'text', 'label' => 'Заголовок', 'default' => 'Витрина', 'max_length' => 80],
                 ]]]);
         }
+
+        app(BlockGroups::class)->backfill();
     }
 
     private function createGrantOnlyDeveloperBlock(DeveloperProfile $profile): void
