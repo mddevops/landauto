@@ -26,8 +26,12 @@ enum SectionPageRole: string
      *
      * @return list<string>
      */
-    public function exampleSegments(): array
+    public function exampleSegments(SiteSectionType $section = SiteSectionType::Catalog): array
     {
+        if ($section->atRoot()) {
+            return $this === self::Item ? ['rio-iv-restyling'] : [];
+        }
+
         return match ($this) {
             self::Index => [],
             self::Mark => ['kia'],

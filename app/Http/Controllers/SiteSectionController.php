@@ -48,14 +48,15 @@ class SiteSectionController extends Controller
                 'type_label' => $section->type->label(),
                 'title' => $section->title,
                 'prefix' => $section->prefix,
+                'root' => $section->type->atRoot(),
                 'enabled' => $section->enabled,
                 'redirects' => $section->redirects->sortByDesc('id')->pluck('prefix')->values()->all(),
-                'pages' => collect(SectionPageRole::cases())
+                'pages' => collect($section->type->roles())
                     ->map(fn (SectionPageRole $role): ?array => ($page = $section->pages->firstWhere('section_role', $role)) === null ? null : [
                         'public_id' => $page->public_id,
                         'role' => $role->value,
                         'label' => $role->label(),
-                        'path' => implode('/', [$section->prefix, ...$role->exampleSegments()]),
+                        'path' => SitePaths::join($section->prefix, ...$role->exampleSegments($section->type)),
                     ])
                     ->filter()
                     ->values()
@@ -66,9 +67,10 @@ class SiteSectionController extends Controller
                 'label' => $type->label(),
                 'description' => $type->description(),
                 'prefix' => $type->defaultPrefix(),
+                'root' => $type->atRoot(),
                 'available' => $type->isAvailable(),
                 'added' => in_array($type->value, $existing, true),
-            ], SiteSectionType::cases()),
+            ], SiteSectionType::offeredFor($site->site_type)),
             'limits' => ['title' => 120, 'prefix' => SitePaths::PREFIX_MAX],
         ]);
     }
@@ -76,16 +78,19 @@ class SiteSectionController extends Controller
     public function store(SaveSiteSectionRequest $request, Site $site): RedirectResponse
     {
         $type = SiteSectionType::from($request->string('type')->toString());
-        $prefix = $request->filled('prefix') ? $request->string('prefix')->toString() : $type->defaultPrefix();
+        $prefix = $request->filled('prefix') && ! $type->atRoot() ? $request->string('prefix')->toString() : $type->defaultPrefix();
 
-        if (! $request->filled('prefix')) {
+        if (! $request->filled('prefix') && ! $type->atRoot()) {
             $request->checkPrefix($site, $prefix, null, function (string $message): never {
                 throw ValidationException::withMessages(['prefix' => "{$message} Укажите адрес раздела вручную."]);
             });
         }
 
         DB::transaction(function () use ($request, $site, $type, $prefix): void {
-            SitePaths::releaseRedirect($site, $prefix);
+            if ($prefix !== '') {
+                SitePaths::releaseRedirect($site, $prefix);
+            }
+
             $section = new SiteSection([
                 'type' => $type,
                 'title' => $request->filled('title') ? $request->string('title')->toString() : $type->label(),
@@ -105,7 +110,7 @@ class SiteSectionController extends Controller
 
     public function update(SaveSiteSectionRequest $request, Site $site, SiteSection $section): RedirectResponse
     {
-        $prefix = $request->string('prefix')->toString();
+        $prefix = $section->type->atRoot() ? $section->prefix : $request->string('prefix')->toString();
 
         DB::transaction(function () use ($request, $site, $section, $prefix): void {
             $previous = $section->prefix;

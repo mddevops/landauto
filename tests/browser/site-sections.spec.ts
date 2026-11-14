@@ -145,3 +145,49 @@ test('owner adds the catalog section, renames its prefix and keeps the old addre
     await visitor.goto(`${publicUrl}/catalog`);
     await expect(visitor).toHaveURL(`${publicUrl}/autos`);
 });
+
+test('landing enables the vehicle card at the site root', async ({ page }) => {
+    const siteName = `Лендинг E2E ${Date.now().toString(36)}`;
+
+    await page.goto('/login');
+    await page.getByLabel('Электронная почта').fill(dealer.email);
+    await page.getByLabel('Пароль', { exact: true }).fill(dealer.password);
+    await page.getByRole('button', { name: 'Войти', exact: true }).click();
+    await expect(page).toHaveURL('/dashboard');
+
+    await page.goto('/sites/create');
+    await page
+        .getByRole('group', { name: '1. Формат' })
+        .getByRole('radio', { name: /Лендинг/ })
+        .check();
+    await page.getByLabel('Название сайта').fill(siteName);
+    await page
+        .getByRole('button', { name: 'Создать и открыть дизайнер' })
+        .click();
+    await expect(page).toHaveURL(/\/designer$/);
+    const siteUrl = page.url().replace(/\/designer$/, '');
+
+    await page.goto(`${siteUrl}/sections`);
+    await expect(
+        page.getByRole('button', {
+            name: 'Добавить раздел «Каталог автомобилей»',
+        }),
+    ).toHaveCount(0);
+    await page
+        .getByRole('button', { name: 'Добавить раздел «Карточка автомобиля»' })
+        .click();
+    const section = page.getByRole('region', {
+        name: 'Раздел «Карточка автомобиля»',
+    });
+    await expect(section).toBeVisible();
+    await expect(section.getByLabel('Адрес раздела')).toHaveCount(0);
+    await expect(
+        section
+            .getByRole('listitem')
+            .filter({ hasText: 'Карточка автомобиля' }),
+    ).toContainText('/rio-iv-restyling');
+    await expect(
+        section.getByLabel('Показывать карточки автомобилей на сайте'),
+    ).toBeChecked();
+    await expectNoHorizontalOverflow(page);
+});

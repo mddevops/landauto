@@ -15,7 +15,7 @@ use App\Models\SiteSection;
  * @phpstan-import-type VehiclePage from VehiclePages
  *
  * @phpstan-type PageContext array{role: string, mark: string|null, vehicle: string|null}
- * @phpstan-type CatalogProps array{public_id: string, title: string, prefix: string, enabled: bool, pages: array<string, string>, vehicles: list<VehiclePage>}
+ * @phpstan-type CatalogProps array{public_id: string, title: string, prefix: string, root: bool, enabled: bool, pages: array<string, string>, vehicles: list<VehiclePage>}
  */
 final class SectionCatalog
 {
@@ -26,7 +26,10 @@ final class SectionCatalog
 
     public function section(Site $site): ?SiteSection
     {
-        return $site->sections()->where('type', SiteSectionType::Catalog->value)->first();
+        return $site->sections()
+            ->whereIn('type', array_map(fn (SiteSectionType $type): string => $type->value, SiteSectionType::vehicleSections()))
+            ->orderBy('id')
+            ->first();
     }
 
     /**
@@ -46,6 +49,7 @@ final class SectionCatalog
             'public_id' => $section->public_id,
             'title' => $section->title,
             'prefix' => $section->prefix,
+            'root' => $section->type->atRoot(),
             'enabled' => $section->enabled,
             'pages' => $section->pages()->get()
                 ->mapWithKeys(fn (Page $page): array => [$page->section_role->value => $page->public_id])
@@ -87,6 +91,15 @@ final class SectionCatalog
      */
     public static function resolve(array $catalog, array $segments): ?array
     {
+        if ($catalog['root']) {
+            $item = count($segments) === 1 ? collect($catalog['vehicles'])->firstWhere('slug', $segments[0]) : null;
+
+            return $item === null ? null : [
+                'role' => SectionPageRole::Item,
+                'context' => ['role' => SectionPageRole::Item->value, 'mark' => $item['mark']['segment'], 'vehicle' => $item['public_id']],
+            ];
+        }
+
         if (($segments[0] ?? null) !== $catalog['prefix'] || count($segments) > 3) {
             return null;
         }

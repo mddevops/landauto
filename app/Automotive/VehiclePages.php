@@ -3,9 +3,11 @@
 namespace App\Automotive;
 
 use App\Catalog\AutoCatalog;
+use App\Enums\SiteType;
 use App\Models\Catalog\AutoSeries;
 use App\Models\Site;
 use App\Models\SiteVehicle;
+use App\Support\SitePaths;
 use Illuminate\Support\Str;
 
 /**
@@ -66,13 +68,20 @@ final class VehiclePages
 
         $vehicles = $site->vehicles()->ordered()->get();
         $series = $this->catalog->seriesByRefs($vehicles->map(fn (SiteVehicle $vehicle): string => $vehicle->catalog_series_ref)->all());
+        $atRoot = self::atRoot($site);
         $taken = [];
+
+        if ($atRoot) {
+            foreach ([...SitePaths::RESERVED, ...$site->pages()->whereNull('site_section_id')->pluck('slug')->all()] as $used) {
+                $taken[0][(string) $used] = true;
+            }
+        }
 
         foreach ($vehicles as $vehicle) {
             $row = $series->get($vehicle->catalog_series_ref);
 
             if ($row instanceof AutoSeries && $vehicle->slug !== null) {
-                $taken[$row->generation->model->mark_id][$vehicle->slug] = true;
+                $taken[$atRoot ? 0 : $row->generation->model->mark_id][$vehicle->slug] = true;
             }
         }
 
@@ -83,7 +92,7 @@ final class VehiclePages
                 continue;
             }
 
-            $markId = $row->generation->model->mark_id;
+            $markId = $atRoot ? 0 : $row->generation->model->mark_id;
             $slug = self::baseSlug($row);
 
             if (isset($taken[$markId][$slug])) {
@@ -102,11 +111,18 @@ final class VehiclePages
     }
 
     /**
-     * Whether another vehicle of the same catalog mark already uses the address.
+     * Whether another vehicle of the same catalog mark already uses the address; on a Landing the
+     * address sits at the Site root, so it must be unique on the Site and free of Page slugs.
      */
     public function slugTaken(SiteVehicle $vehicle, string $slug): bool
     {
         $row = $this->catalog->series($vehicle->catalog_series_ref);
+        $site = $vehicle->site()->firstOrFail();
+        $atRoot = self::atRoot($site);
+
+        if ($atRoot && (SitePaths::isReserved($slug) || $site->pages()->whereNull('site_section_id')->where('slug', $slug)->exists())) {
+            return true;
+        }
 
         if ($row === null) {
             return false;
@@ -118,8 +134,8 @@ final class VehiclePages
             ->where('slug', $slug)
             ->get();
 
-        if ($others->isEmpty()) {
-            return false;
+        if ($others->isEmpty() || $atRoot) {
+            return $others->isNotEmpty();
         }
 
         $series = $this->catalog->seriesByRefs($others->map(fn (SiteVehicle $other): string => $other->catalog_series_ref)->all());
@@ -145,6 +161,14 @@ final class VehiclePages
         if ($previous !== null) {
             $vehicle->slugRedirects()->firstOrCreate(['slug' => $previous]);
         }
+    }
+
+    /**
+     * Landing vehicle cards sit at the Site root (ADR-011 §7).
+     */
+    public static function atRoot(Site $site): bool
+    {
+        return $site->site_type === SiteType::Landing;
     }
 
     /**

@@ -51,6 +51,14 @@ enum SiteType: string
     }
 
     /**
+     * Multi-page Sites hold vehicle sections; a Landing may enable its vehicle card (ADR-011 §7).
+     */
+    public function allowsSections(): bool
+    {
+        return $this === self::MultiPage || $this === self::Landing;
+    }
+
+    /**
      * Quiz and Chat Sites keep the Template structure: no Block add / remove / reorder.
      */
     public function hasLockedStructure(): bool

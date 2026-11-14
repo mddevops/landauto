@@ -47,14 +47,14 @@ class SaveSiteSectionRequest extends FormRequest
         return [
             'type' => $creating ? [
                 'required',
-                Rule::enum(SiteSectionType::class)->only(array_filter(
-                    SiteSectionType::cases(),
+                Rule::enum(SiteSectionType::class)->only(array_values(array_filter(
+                    SiteSectionType::offeredFor($site->site_type),
                     fn (SiteSectionType $type): bool => $type->isAvailable(),
-                )),
+                ))),
                 Rule::unique('site_sections', 'type')->where('site_id', $site->id),
             ] : ['prohibited'],
             'title' => [$creating ? 'nullable' : 'required', 'string', 'max:120'],
-            'prefix' => [
+            'prefix' => $this->type($section)?->atRoot() ? ['exclude'] : [
                 $creating ? 'nullable' : 'required',
                 'string',
                 'max:'.SitePaths::PREFIX_MAX,
@@ -65,6 +65,15 @@ class SaveSiteSectionRequest extends FormRequest
             ],
             'enabled' => [$creating ? 'nullable' : 'required', 'boolean'],
         ];
+    }
+
+    public function type(mixed $section = null): ?SiteSectionType
+    {
+        $section ??= $this->route('section');
+
+        return $section instanceof SiteSection
+            ? $section->type
+            : SiteSectionType::tryFrom(is_string($this->input('type')) ? $this->input('type') : '');
     }
 
     public function checkPrefix(Site $site, string $prefix, ?SiteSection $section, Closure $fail): void

@@ -5,6 +5,7 @@ namespace Tests\Concerns;
 use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockStateDefaults;
 use App\Enums\MediaAngle;
+use App\Enums\SiteType;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
@@ -54,7 +55,7 @@ trait BuildsPublishableSite
     /** The vehicle's own copy of the platform colour photo. */
     protected VehiclePhoto $image;
 
-    protected function buildPublishableSite(): void
+    protected function buildPublishableSite(SiteType $type = SiteType::MultiPage): void
     {
         Storage::fake('local');
         $this->seed(OfficialBlockSeeder::class);
@@ -62,7 +63,7 @@ trait BuildsPublishableSite
         $this->owner = User::factory()->create();
         $this->workspace = Workspace::factory()->create();
         $this->workspace->addMember($this->owner, WorkspaceRole::Owner);
-        $this->site = Site::factory()->for($this->workspace)->create(['name' => 'Дилер']);
+        $this->site = Site::factory()->for($this->workspace)->create(['name' => 'Дилер', 'site_type' => $type]);
         $this->home = Page::factory()->for($this->site)->home()->create();
 
         $this->form = Form::factory()->for($this->site)->withLeadFields()->create();

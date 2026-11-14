@@ -38,6 +38,8 @@ type Section = {
     type_label: string;
     title: string;
     prefix: string;
+    /** Landing vehicle card: addresses at the Site root, no prefix. */
+    root: boolean;
     enabled: boolean;
     redirects: string[];
     pages: { public_id: string; role: string; label: string; path: string }[];
@@ -48,6 +50,7 @@ type SectionType = {
     label: string;
     description: string;
     prefix: string;
+    root: boolean;
     available: boolean;
     added: boolean;
 };
@@ -109,7 +112,7 @@ function AddSectionCard({
                 )}
             </div>
             <p className="font-mono text-xs break-all text-muted-foreground">
-                /{type.prefix}/kia/rio/…
+                {type.root ? '/rio-iv-restyling' : `/${type.prefix}/kia/…`}
             </p>
             {type.available ? (
                 !type.added && (
@@ -205,56 +208,62 @@ function SectionCard({
                         />
                         <InputError message={form.errors.title} />
                     </div>
-                    <div className="grid gap-2">
-                        <Label htmlFor={`section-prefix-${id}`}>
-                            Адрес раздела
-                        </Label>
-                        <div className="flex min-w-0 items-stretch overflow-hidden rounded-md border shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
-                            <span className="hidden max-w-[50%] items-center truncate border-r bg-muted px-3 text-sm text-muted-foreground sm:flex">
-                                {addressOf(baseUrl, '')}
-                            </span>
-                            <input
-                                id={`section-prefix-${id}`}
-                                value={form.data.prefix}
-                                maxLength={limits.prefix}
-                                required
-                                autoComplete="off"
-                                spellCheck={false}
-                                onChange={(event) =>
-                                    form.setData('prefix', event.target.value)
-                                }
-                                aria-invalid={Boolean(form.errors.prefix)}
-                                aria-describedby={`section-prefix-help-${id}`}
-                                className="h-9 min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none"
-                            />
-                        </div>
-                        <p
-                            id={`section-prefix-help-${id}`}
-                            className="text-xs text-muted-foreground"
-                        >
-                            Строчные латинские буквы, цифры и дефисы, до{' '}
-                            {limits.prefix} символов. Пример карточки:{' '}
-                            <span className="font-mono break-all">
-                                /{form.data.prefix.trim() || section.prefix}
-                                /kia/rio-iv-restyling
-                            </span>
-                        </p>
-                        {prefixChanged && (
-                            <p className="flex items-center gap-1 text-xs text-muted-foreground">
-                                <span className="font-mono">
-                                    /{section.prefix}
+                    {!section.root && (
+                        <div className="grid gap-2">
+                            <Label htmlFor={`section-prefix-${id}`}>
+                                Адрес раздела
+                            </Label>
+                            <div className="flex min-w-0 items-stretch overflow-hidden rounded-md border shadow-xs focus-within:border-ring focus-within:ring-[3px] focus-within:ring-ring/50">
+                                <span className="hidden max-w-[50%] items-center truncate border-r bg-muted px-3 text-sm text-muted-foreground sm:flex">
+                                    {addressOf(baseUrl, '')}
                                 </span>
-                                <ArrowRight
-                                    className="size-3"
-                                    aria-hidden="true"
+                                <input
+                                    id={`section-prefix-${id}`}
+                                    value={form.data.prefix}
+                                    maxLength={limits.prefix}
+                                    required
+                                    autoComplete="off"
+                                    spellCheck={false}
+                                    onChange={(event) =>
+                                        form.setData(
+                                            'prefix',
+                                            event.target.value,
+                                        )
+                                    }
+                                    aria-invalid={Boolean(form.errors.prefix)}
+                                    aria-describedby={`section-prefix-help-${id}`}
+                                    className="h-9 min-w-0 flex-1 bg-transparent px-3 font-mono text-sm outline-none"
                                 />
-                                <span>
-                                    старый адрес будет перенаправлять на новый
+                            </div>
+                            <p
+                                id={`section-prefix-help-${id}`}
+                                className="text-xs text-muted-foreground"
+                            >
+                                Строчные латинские буквы, цифры и дефисы, до{' '}
+                                {limits.prefix} символов. Пример карточки:{' '}
+                                <span className="font-mono break-all">
+                                    /{form.data.prefix.trim() || section.prefix}
+                                    /kia/rio-iv-restyling
                                 </span>
                             </p>
-                        )}
-                        <InputError message={form.errors.prefix} />
-                    </div>
+                            {prefixChanged && (
+                                <p className="flex items-center gap-1 text-xs text-muted-foreground">
+                                    <span className="font-mono">
+                                        /{section.prefix}
+                                    </span>
+                                    <ArrowRight
+                                        className="size-3"
+                                        aria-hidden="true"
+                                    />
+                                    <span>
+                                        старый адрес будет перенаправлять на
+                                        новый
+                                    </span>
+                                </p>
+                            )}
+                            <InputError message={form.errors.prefix} />
+                        </div>
+                    )}
                     <div className="flex items-start gap-2">
                         <Checkbox
                             id={`section-enabled-${id}`}
@@ -267,7 +276,9 @@ function SectionCard({
                             htmlFor={`section-enabled-${id}`}
                             className="leading-snug"
                         >
-                            Показывать раздел на сайте
+                            {section.root
+                                ? 'Показывать карточки автомобилей на сайте'
+                                : 'Показывать раздел на сайте'}
                         </Label>
                     </div>
                     {section.pages.length > 0 && (
@@ -321,7 +332,12 @@ function SectionCard({
                                 <Button asChild variant="ghost" size="sm">
                                     <a
                                         href={preview.url(site.public_id, {
-                                            query: { path: section.prefix },
+                                            query: section.root
+                                                ? {
+                                                      page: section.pages[0]
+                                                          .public_id,
+                                                  }
+                                                : { path: section.prefix },
                                         })}
                                         target="_blank"
                                         rel="noopener"
@@ -398,6 +414,8 @@ export default function Sections({
     types,
     limits,
 }: SectionsProps) {
+    const landing = types.some((type) => type.root);
+
     return (
         <>
             <Head title={`Разделы — ${site.name}`} />
@@ -410,10 +428,9 @@ export default function Sections({
                         Разделы
                     </h1>
                     <p className="max-w-2xl text-sm text-muted-foreground">
-                        Разделы с автомобилями: страницы марок, моделей и
-                        карточки автомобилей создаются автоматически. Адрес
-                        раздела можно изменить. Изменения появятся на сайте
-                        после публикации.
+                        {landing
+                            ? 'Карточка автомобиля — отдельная страница каждой машины лендинга по адресу вида /rio-iv-restyling. Карточки машин в блоках лендинга открывают её. Изменения появятся на сайте после публикации.'
+                            : 'Разделы с автомобилями: страницы марок и карточки автомобилей создаются автоматически. Адрес раздела можно изменить. Изменения появятся на сайте после публикации.'}
                     </p>
                 </header>
 
@@ -440,8 +457,9 @@ export default function Sections({
                         />
                         <h2 className="font-medium">Разделов пока нет</h2>
                         <p className="max-w-md text-sm text-muted-foreground">
-                            Добавьте «Каталог автомобилей», чтобы у каждой
-                            машины сайта появилась своя страница.
+                            {landing
+                                ? 'Добавьте «Карточку автомобиля», чтобы у каждой машины лендинга появилась своя страница.'
+                                : 'Добавьте «Каталог автомобилей», чтобы у каждой машины сайта появилась своя страница.'}
                         </p>
                     </div>
                 )}

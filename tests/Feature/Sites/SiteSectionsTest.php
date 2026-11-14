@@ -162,9 +162,9 @@ class SiteSectionsTest extends TestCase
         $this->assertSame(0, SiteSectionRedirect::query()->count());
     }
 
-    public function test_landing_quiz_and_chat_sites_have_no_sections(): void
+    public function test_quiz_and_chat_sites_have_no_sections(): void
     {
-        foreach ([SiteType::Landing, SiteType::Quiz, SiteType::ChatSelection] as $type) {
+        foreach ([SiteType::Quiz, SiteType::ChatSelection] as $type) {
             $site = Site::factory()->for($this->workspace)->create(['site_type' => $type]);
 
             $this->as($this->owner)->get(route('sites.sections.index', $site))->assertForbidden();
