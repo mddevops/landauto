@@ -57,6 +57,7 @@ export type SiteContext = {
         publish: boolean;
         manageDomains: boolean;
         editSeo: boolean;
+        manageSections: boolean;
     };
 };
 

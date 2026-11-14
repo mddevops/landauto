@@ -191,6 +191,7 @@ test('designer sees only permitted site sections', async ({ browser }) => {
         'Общее',
         'Дизайнер',
         'Предпросмотр',
+        'Разделы',
         'Формы',
         'Попапы',
     ]);
@@ -234,6 +235,7 @@ test('admin site navigation includes leads and settings but not workspace settin
         'Общее',
         'Дизайнер',
         'Предпросмотр',
+        'Разделы',
         'Автомобили',
         'Формы',
         'Попапы',

@@ -43,6 +43,7 @@ use App\Http\Controllers\SiteDesignerController;
 use App\Http\Controllers\SitePageController;
 use App\Http\Controllers\SitePreviewController;
 use App\Http\Controllers\SitePublishingController;
+use App\Http\Controllers\SiteSectionController;
 use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteVersionRestoreController;
 use App\Http\Controllers\Studio\TemplateBlockController;
@@ -228,6 +229,10 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('pages/{page}', [SitePageController::class, 'destroy'])->name('pages.destroy');
             Route::patch('pages/{page}/seo', [PageSeoController::class, 'update'])->name('pages.seo.update');
             Route::get('seo', SiteSeoController::class)->name('seo.index');
+            Route::get('sections', [SiteSectionController::class, 'index'])->name('sections.index');
+            Route::post('sections', [SiteSectionController::class, 'store'])->middleware('throttle:30,1')->name('sections.store');
+            Route::patch('sections/{section}', [SiteSectionController::class, 'update'])->whereUlid('section')->middleware('throttle:30,1')->name('sections.update');
+            Route::delete('sections/{section}', [SiteSectionController::class, 'destroy'])->whereUlid('section')->name('sections.destroy');
 
             Route::post('pages/{page}/blocks', [PageBlockController::class, 'store'])->name('blocks.store');
             Route::patch('blocks/{block}/state', [PageBlockController::class, 'state'])->whereUlid('block')->name('blocks.state');

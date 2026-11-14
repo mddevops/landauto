@@ -116,6 +116,7 @@ class HandleInertiaRequests extends Middleware
                 'publish' => $gate->allows('publish', $site),
                 'manageDomains' => $gate->allows('manageDomains', $site),
                 'editSeo' => $gate->allows('editSeo', $site),
+                'manageSections' => $gate->allows('manageSections', $site),
             ],
         ];
     }

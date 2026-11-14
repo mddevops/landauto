@@ -106,6 +106,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteSection, $this>
+     */
+    public function sections(): HasMany
+    {
+        return $this->hasMany(SiteSection::class);
+    }
+
+    /**
      * @return HasMany<SiteAsset, $this>
      */
     public function assets(): HasMany

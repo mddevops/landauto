@@ -4486,13 +4486,15 @@ Owner accepted `ADR-011` on 2026-11-14: reserved prefix list and 60-character li
 
 ## X-033 — Site Sections Foundation and Prefix Settings
 
-**Status:** READY
+**Status:** DONE
 **Dependencies:** X-032
 **Decision:** ADR-011; D-129; D-119
 
 Scope: `site_sections` (type, title, prefix, enabled, order; one per type; Multi-page Sites only), prefix validation (format, uniqueness against sections and Page slugs, reserved list), prefix history with 301 redirects, section management UI in the Site («Разделы»), Russian copy, permissions via existing Page management.
 
 Acceptance: customer enables the Catalog section, renames `catalog` → `autos`, the old address 301-redirects; invalid / reserved / clashing prefixes are refused by the backend; Landing / Quiz / Chat cannot create sections; focused PHPUnit + Playwright.
+
+Result: `site_sections` + `site_section_redirects`, `SiteSectionType` (Used / Specials shown as «Скоро» until Stock), `SitePaths` (pattern, 60 chars, reserved list, Page / section namespace; a Page or section taking an old prefix releases its redirect), `manageSections` = Page management, «Разделы» page in the Site sidebar. Prefix history is stored now; serving the 301 on the published Site needs the section snapshot and moves to X-035. Checks: `SiteSectionsTest` (10), `SiteShellTest`, `composer quality` PASS (PHPUnit 1,304: 1,302 passed, 2 skipped); Playwright `site-sections.spec.ts` verified by CI (local run blocked by the running Vite dev server).
 
 ---
 
