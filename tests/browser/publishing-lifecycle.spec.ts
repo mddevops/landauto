@@ -312,6 +312,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
     // A broken action (scroll to a hidden block) blocks Publish until it is fixed.
     await page.goto(`${siteUrl}/designer`);
     const navigator = page.getByRole('complementary', { name: 'Левая панель' });
+    await navigator.getByRole('tab', { name: 'Навигатор' }).click();
     await navigator
         .getByRole('button', { name: 'Скрыть «Карточка автомобиля»' })
         .click();
@@ -334,6 +335,7 @@ test('full publishing lifecycle: draft, preview, publish, isolation, blocked pub
         'Цикл: версия 1',
     );
     await page.goto(`${siteUrl}/designer`);
+    await navigator.getByRole('tab', { name: 'Навигатор' }).click();
     await navigator
         .getByRole('button', { name: 'Показать «Карточка автомобиля»' })
         .click();

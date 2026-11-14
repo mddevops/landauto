@@ -77,21 +77,23 @@ test('owner publishes a Site; visitors get stored HTML, hydration and version-bo
         .selectOption({ label: 'Обратный звонок' });
     await expectSaved(page);
 
-    // Draft SEO of the home Page goes into the published head.
-    const left = page.getByRole('complementary', { name: 'Левая панель' });
-    await left.getByRole('tab', { name: 'Страницы' }).click();
-    await left.getByRole('button', { name: 'SEO страницы «Главная»' }).click();
-    const seo = page.getByRole('dialog', { name: 'SEO страницы «Главная»' });
+    // Draft SEO of the home Page (section «SEO») goes into the published head.
+    const designerUrl = page.url();
+    await page.goto(designerUrl.replace(/\/designer(\?.*)?$/, '/seo'));
+    const seo = page.getByTestId('seo-page').filter({ hasText: 'Главная' });
     await seo
         .getByLabel('Заголовок для поисковиков')
         .fill('Дилер — новые автомобили');
     await seo
         .getByLabel('Описание для поисковиков')
         .fill('Автомобили в наличии и спецпредложения.');
-    await seo.getByRole('button', { name: 'Сохранить' }).click();
+    await seo
+        .getByRole('button', { name: 'Сохранить SEO страницы «Главная»' })
+        .click();
     await expect(
         page.getByText('SEO страницы сохранено.').first(),
     ).toBeVisible();
+    await page.goto(designerUrl);
 
     await publish(page, 1);
 

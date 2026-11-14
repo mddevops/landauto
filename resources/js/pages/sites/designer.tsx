@@ -31,8 +31,8 @@ import {
 import { CatalogSampleSelect } from '@/components/designer/catalog-sample-select';
 import { DesignerContext } from '@/components/designer/designer-context';
 import { DesignPanel } from '@/components/designer/design-panel';
+import { DesignerSidebar } from '@/components/designer/designer-sidebar';
 import { useBlockAutosave } from '@/components/designer/use-block-autosave';
-import { Navigator } from '@/components/designer/navigator';
 import { PagesPanel } from '@/components/designer/pages-panel';
 import { PropertiesPanel } from '@/components/designer/properties-panel';
 import type {
@@ -77,7 +77,6 @@ import {
     store as storePage,
     update as updatePage,
 } from '@/routes/sites/pages';
-import { update as updatePageSeo } from '@/routes/sites/pages/seo';
 import { index as deliveriesIndex } from '@/routes/sites/deliveries';
 import { update as updateDesign } from '@/routes/sites/design';
 import { show as formSecurity } from '@/routes/sites/form-security';
@@ -138,11 +137,9 @@ function sitePageRoutes(site: string): DesignerPageRoutes {
         store: storePage.form(site),
         update: (page) => updatePage.form({ site, page }),
         destroy: (page) => destroyPage.form({ site, page }),
-        seo: (page) => updatePageSeo({ site, page }),
     };
 }
 
-type LeftTab = 'pages' | 'blocks';
 type RightTab = 'block' | 'design';
 
 export default function Designer({
@@ -242,7 +239,6 @@ export default function Designer({
         setSelectedId(selectedBlock);
     }
 
-    const [leftTab, setLeftTab] = useState<LeftTab>('blocks');
     const [rightTab, setRightTab] = useState<RightTab>('block');
     const [pendingDelete, setPendingDelete] = useState<DesignerBlock | null>(
         null,
@@ -365,49 +361,26 @@ export default function Designer({
                 </header>
 
                 <div className="flex min-h-0 flex-1 flex-col lg:flex-row">
-                    <aside
-                        aria-label="Левая панель"
-                        className="border-b bg-background lg:w-72 lg:shrink-0 lg:overflow-y-auto lg:border-r lg:border-b-0"
-                    >
-                        <Tabs
-                            value={leftTab}
-                            onChange={setLeftTab}
-                            tabs={[
-                                { value: 'pages', label: 'Страницы' },
-                                { value: 'blocks', label: 'Блоки' },
-                            ]}
-                        />
-                        <div
-                            role="tabpanel"
-                            id={`designer-panel-${leftTab}`}
-                            aria-labelledby={`designer-tab-${leftTab}`}
-                            className="p-4"
-                        >
-                            {leftTab === 'pages' ? (
-                                <PagesPanel
-                                    routes={sitePageRoutes(site.public_id)}
-                                    pages={pages}
-                                    currentPageId={page.public_id}
-                                    canEdit={can.editDesign}
-                                    canAddPages={can.addPage}
-                                    canEditSeo={can.editSeo}
-                                    canEditSeoIndexing={can.editSeoIndexing}
-                                    catalog={catalog}
-                                />
-                            ) : (
-                                <Navigator
-                                    routes={blockRoutes}
-                                    pageId={page.public_id}
-                                    blocks={blocks}
-                                    referenceIssues={referenceIssues}
-                                    library={library}
-                                    selectedId={selectedId}
-                                    onSelect={setSelectedId}
-                                    canEdit={can.editStructure}
-                                />
-                            )}
-                        </div>
-                    </aside>
+                    <DesignerSidebar
+                        blockRoutes={blockRoutes}
+                        pageId={page.public_id}
+                        blocks={blocks}
+                        referenceIssues={referenceIssues}
+                        library={library}
+                        selectedId={selectedId}
+                        onSelect={setSelectedId}
+                        canEditStructure={can.editStructure}
+                        pages={
+                            <PagesPanel
+                                routes={sitePageRoutes(site.public_id)}
+                                pages={pages}
+                                currentPageId={page.public_id}
+                                canEdit={can.editDesign}
+                                canAddPages={can.addPage}
+                                catalog={catalog}
+                            />
+                        }
+                    />
 
                     <main
                         aria-label="Холст"
