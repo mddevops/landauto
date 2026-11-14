@@ -19,6 +19,7 @@ use Symfony\Component\Uid\Ulid;
  * the address, so the same Draft keeps the same manifest hash.
  *
  * @phpstan-import-type VehiclePage from VehiclePages
+ * @phpstan-import-type PageContext from SectionCatalog
  */
 final class SectionManifest
 {
@@ -106,10 +107,10 @@ final class SectionManifest
     }
 
     /**
-     * Section addresses in reading order: the section, then each mark with its models and vehicles.
+     * Section addresses in reading order: the section, then each mark with its vehicles (D-131).
      *
      * @param  list<VehiclePage>  $vehicles
-     * @return list<array{segments: array<int, string>, title: string, seo_title: string|null, context: array{role: string, mark: string|null, model: string|null, vehicle: string|null}}>
+     * @return list<array{segments: array<int, string>, title: string, seo_title: string|null, context: PageContext}>
      */
     private function addresses(SiteSection $section, array $vehicles): array
     {
@@ -117,7 +118,7 @@ final class SectionManifest
             'segments' => [],
             'title' => $section->title,
             'seo_title' => null,
-            'context' => ['role' => SectionPageRole::Index->value, 'mark' => null, 'model' => null, 'vehicle' => null],
+            'context' => ['role' => SectionPageRole::Index->value, 'mark' => null, 'vehicle' => null],
         ]];
 
         foreach (collect($vehicles)->groupBy(fn (array $vehicle): string => $vehicle['mark']['segment']) as $mark => $byMark) {
@@ -127,27 +128,16 @@ final class SectionManifest
                 'segments' => [$mark],
                 'title' => $markName,
                 'seo_title' => "{$markName} — {$section->title}",
-                'context' => ['role' => SectionPageRole::Mark->value, 'mark' => $mark, 'model' => null, 'vehicle' => null],
+                'context' => ['role' => SectionPageRole::Mark->value, 'mark' => $mark, 'vehicle' => null],
             ];
 
-            foreach ($byMark->groupBy(fn (array $vehicle): string => $vehicle['model']['segment']) as $model => $byModel) {
-                $model = (string) $model;
-                $modelName = "{$markName} {$byModel->first()['model']['name']}";
+            foreach ($byMark as $vehicle) {
                 $addresses[] = [
-                    'segments' => [$mark, $model],
-                    'title' => $modelName,
-                    'seo_title' => "{$modelName} — {$section->title}",
-                    'context' => ['role' => SectionPageRole::Model->value, 'mark' => $mark, 'model' => $model, 'vehicle' => null],
+                    'segments' => [$mark, $vehicle['slug']],
+                    'title' => $vehicle['title'],
+                    'seo_title' => $vehicle['title'],
+                    'context' => ['role' => SectionPageRole::Item->value, 'mark' => $mark, 'vehicle' => $vehicle['public_id']],
                 ];
-
-                foreach ($byModel as $vehicle) {
-                    $addresses[] = [
-                        'segments' => [$mark, $model, $vehicle['slug']],
-                        'title' => $vehicle['title'],
-                        'seo_title' => $vehicle['title'],
-                        'context' => ['role' => SectionPageRole::Item->value, 'mark' => $mark, 'model' => $model, 'vehicle' => $vehicle['public_id']],
-                    ];
-                }
             }
         }
 
@@ -155,7 +145,7 @@ final class SectionManifest
     }
 
     /**
-     * Previous section prefixes and previous vehicle addresses (`kia/rio/old-slug` → `new-slug`).
+     * Previous section prefixes and previous vehicle addresses (`kia/old-slug` → `new-slug`).
      *
      * @param  list<VehiclePage>  $vehicles
      * @return array{prefixes: list<string>, vehicles: array<string, string>}
@@ -175,7 +165,7 @@ final class SectionManifest
 
                 foreach ($vehicle->slugRedirects as $redirect) {
                     /** @var SiteVehicleSlugRedirect $redirect */
-                    $moved["{$page['mark']['segment']}/{$page['model']['segment']}/{$redirect->slug}"] = $page['slug'];
+                    $moved["{$page['mark']['segment']}/{$redirect->slug}"] = $page['slug'];
                 }
             });
 

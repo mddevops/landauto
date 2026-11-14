@@ -3,6 +3,7 @@
 **Status:** Accepted (owner decisions 2026-11-14, D-129)
 **Resolves:** D-129
 **Relates to:** D-119 (Site types), ADR-006 (publishing runtime), D-127 (path-based address), ADR-010 (auto.ru catalog)
+**Amended by:** D-131 (2026-11-14) — the catalog section has no model level: template Pages `index`, `mark`, `item`; vehicle address `catalog/{mark}/{model}-{generation}` (`catalog/kia/rio-iv-restyling`, body appended only on clash within the mark); the mark page lists the vehicle cards. Where §3–§5 below mention model pages, D-131 wins.
 
 ## Context
 

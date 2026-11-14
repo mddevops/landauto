@@ -38,13 +38,12 @@ type PagesPanelProps = {
     catalog?: { title: string; prefix: string; enabled: boolean } | null;
 };
 
-const sectionRoles: SectionPageRole[] = ['index', 'mark', 'model', 'item'];
+const sectionRoles: SectionPageRole[] = ['index', 'mark', 'item'];
 
 const exampleSegments: Record<SectionPageRole, string> = {
     index: '',
     mark: '/kia',
-    model: '/kia/rio',
-    item: '/kia/rio/iv-restyling-sedan',
+    item: '/kia/rio-iv-restyling',
 };
 
 function examplePath(

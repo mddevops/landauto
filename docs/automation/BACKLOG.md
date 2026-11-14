@@ -4598,6 +4598,18 @@ Acceptance: adding a header on one Page shows it on all Pages and new ones; it c
 
 ---
 
+## X-042 — Catalog Section Without the Model Level
+
+**Status:** DONE
+**Trigger:** owner request 2026-11-14
+**Decision:** D-131 (amends ADR-011 §3–§4)
+
+Result: section template Pages are `index`, `mark`, `item`; vehicle address `/{prefix}/{mark}/{model}-{generation}` (`catalog/kia/rio-iv-restyling`), body appended only when the generation repeats within the mark (`rio-iv-restyling-hatchback`), then `-2`; uniqueness per mark; the mark page lists every vehicle of the mark as cards linking to the vehicle page; the catalog page lists marks. Migration removes model template Pages, resets vehicle slugs (rebuilt on the next read) and clears slug history; restore skips model Pages of older versions; previous vehicle slugs keep redirecting (`mark/old-slug`).
+
+Acceptance: no model addresses or model template Page; preview, Designer and published site serve `catalog`, `catalog/{mark}`, `catalog/{mark}/{vehicle}`; focused tests and E2E updated.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---
