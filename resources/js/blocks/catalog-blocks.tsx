@@ -121,6 +121,54 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
     return (
         <section className="bg-white py-16 text-neutral-900">
             <Container className="flex flex-col gap-8">
+                {catalog && first && level !== 'index' && (
+                    <nav aria-label="Навигация по каталогу">
+                        <ol className="flex flex-wrap items-center gap-2 text-sm text-neutral-500">
+                            {[
+                                {
+                                    label: catalog.title,
+                                    href: href({ role: 'index' }),
+                                },
+                                ...(level === 'model'
+                                    ? [
+                                          {
+                                              label: first.mark.name,
+                                              href: href({
+                                                  role: 'mark',
+                                                  mark: first.mark.segment,
+                                              }),
+                                          },
+                                      ]
+                                    : []),
+                            ].map((crumb) => (
+                                <li
+                                    key={crumb.label}
+                                    className="flex items-center gap-2"
+                                >
+                                    {crumb.href ? (
+                                        <a
+                                            href={crumb.href}
+                                            className="transition-colors hover:text-neutral-900"
+                                        >
+                                            {crumb.label}
+                                        </a>
+                                    ) : (
+                                        <span>{crumb.label}</span>
+                                    )}
+                                    <span aria-hidden="true">/</span>
+                                </li>
+                            ))}
+                            <li
+                                aria-current="page"
+                                className="text-neutral-900"
+                            >
+                                {level === 'model'
+                                    ? first.model.name
+                                    : first.mark.name}
+                            </li>
+                        </ol>
+                    </nav>
+                )}
                 {(title || subtitle) && (
                     <div className="flex flex-col gap-3">
                         {title && (

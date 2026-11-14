@@ -129,7 +129,8 @@ class SitePublicAddressTest extends TestCase
             $this->assertSame('public.root.missing', $name('https://my.landflow.test/'));
             $this->assertSame('public.root.missing', $name('https://my.landflow.test/login'));
             $this->assertSame('public.custom.page', $name('https://dealer.ru/'));
-            $this->assertSame('public.custom.missing', $name('https://dealer.ru/sites/abc/designer'));
+            $this->assertSame('public.custom.missing', $name('https://dealer.ru/sites/abc/pages/def/designer'));
+            $this->assertSame('public.custom.page', $name('https://dealer.ru/catalog/kia/rio/iv-restyling'));
             $this->assertSame('public.custom.sitemap', $name('https://www.dealer.ru/sitemap.xml'));
         } finally {
             app()->instance('router', $original);

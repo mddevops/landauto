@@ -119,4 +119,26 @@ test('owner adds the catalog section, renames its prefix and keeps the old addre
     await expect(
         catalogPages.getByRole('button', { name: /Удалить страницу/ }),
     ).toHaveCount(0);
+
+    // After publishing, the section is served at its address; the old prefix redirects there.
+    await page.goto(`${siteUrl}/publishing`);
+    await page.getByRole('button', { name: 'Опубликовать' }).click();
+    await expect(
+        page.getByText('Сайт опубликован. Версия 1.').first(),
+    ).toBeVisible();
+    const publicUrl = (
+        await page.getByTestId('public-url').getAttribute('href')
+    )?.replace(/\/$/, '');
+    expect(publicUrl).toBeTruthy();
+
+    const visitor = await page.context().newPage();
+    await visitor.goto(`${publicUrl}/autos`);
+    await expect(
+        visitor.getByRole('heading', { level: 2, name: 'Каталог автомобилей' }),
+    ).toBeVisible();
+    await expect(
+        visitor.getByText('Добавьте автомобили в разделе «Автомобили» сайта.'),
+    ).toBeVisible();
+    await visitor.goto(`${publicUrl}/catalog`);
+    await expect(visitor).toHaveURL(`${publicUrl}/autos`);
 });

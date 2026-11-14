@@ -78,7 +78,14 @@ final class PublishValidator
 
         $pages = $site->pages()->regular()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
         $this->validatePages($pages);
-        $referenced = $this->validateBlocks($site, $pages);
+        // Template Pages of an enabled catalog section publish as generated pages, so their Blocks
+        // pass the same access and state checks.
+        $templates = $site->pages()
+            ->whereHas('section', fn ($query) => $query->where('enabled', true))
+            ->orderBy('id')
+            ->with('blocks.version.definition')
+            ->get();
+        $referenced = $this->validateBlocks($site, $pages->concat($templates));
         $this->validateReferences($site);
         $this->validateAssetFiles($site, $referenced['assets']);
         $this->validateVehicles($site, $referenced['vehicles']);
@@ -216,7 +223,8 @@ final class PublishValidator
                     $this->validateNativeRender($version, $native, $block, $page);
                 }
 
-                foreach ($this->states->missing($version->schema_json, $block->state_json) as $path => $message) {
+                // Template Pages fill their vehicle from the address, so emptiness is not checked there.
+                foreach ($page->isSectionPage() ? [] : $this->states->missing($version->schema_json, $block->state_json) as $path => $message) {
                     $this->error('block_required_missing', $message, page: $page->public_id, block: $block->public_id, path: $path);
                 }
 

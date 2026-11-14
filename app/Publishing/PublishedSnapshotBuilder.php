@@ -15,6 +15,7 @@ use App\Models\Popup;
 use App\Models\Site;
 use App\Models\SiteOffer;
 use App\Models\SiteOfferBenefit;
+use App\Models\SiteSection;
 use App\Models\SiteVehicle;
 use App\Models\VehicleColor;
 use App\Models\VehiclePhoto;
@@ -36,6 +37,7 @@ final class PublishedSnapshotBuilder
         private VehicleBindings $vehicles,
         private PopupRuntime $popups,
         private BlockStateValidator $states,
+        private SectionManifest $sections,
     ) {}
 
     public function build(Site $site): PublishedSnapshot
@@ -91,13 +93,19 @@ final class PublishedSnapshotBuilder
     {
         $assets = [];
         $manifestPages = [];
-
-        foreach ($pages as $page) {
+        $content = function (Page $page) use (&$assets): array {
             $blocks = [];
+            $vehicleIds = [];
 
             foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) as $block) {
-                foreach ($this->states->references($block->version->schema_json, $block->state_json)['assets'] as $assetId) {
+                $references = $this->states->references($block->version->schema_json, $block->state_json);
+
+                foreach ($references['assets'] as $assetId) {
                     $assets[$assetId] = true;
+                }
+
+                foreach ($references['vehicles'] as $vehicleId) {
+                    $vehicleIds[$vehicleId] = true;
                 }
 
                 $entry = [
@@ -120,6 +128,13 @@ final class PublishedSnapshotBuilder
                 $blocks[] = $entry;
             }
 
+            $vehicleIds = array_map('strval', array_keys($vehicleIds));
+            sort($vehicleIds);
+
+            return ['blocks' => $blocks, 'vehicles' => $vehicleIds];
+        };
+
+        foreach ($pages as $page) {
             $manifestPages[] = [
                 'public_id' => $page->public_id,
                 'slug' => $page->slug,
@@ -131,8 +146,14 @@ final class PublishedSnapshotBuilder
                     'description' => $page->seo_description,
                     'indexable' => ! $page->seo_noindex,
                 ],
-                'blocks' => $blocks,
+                'blocks' => $content($page)['blocks'],
             ];
+        }
+
+        $section = $this->sections->build($site, array_column($vehicles, 'public_id'), $content);
+
+        if ($section !== null) {
+            array_push($manifestPages, ...$section['pages']);
         }
 
         $forms = [];
@@ -172,6 +193,11 @@ final class PublishedSnapshotBuilder
 
         if ($metrica !== null) {
             $manifest['analytics'] = ['yandex_metrica' => $metrica];
+        }
+
+        // Present only while the catalog section is on, so Sites without sections keep their manifest hash.
+        if ($section !== null) {
+            $manifest['catalog'] = $section['catalog'];
         }
 
         return $manifest;
@@ -245,28 +271,30 @@ final class PublishedSnapshotBuilder
             ->get();
         $forms = $site->forms()->with('fields')->orderBy('id')->get();
         $popups = $site->popups()->with('form')->orderBy('id')->get();
+        $sections = $site->sections()->orderBy('sort_order')->orderBy('id')
+            ->with(['redirects', 'pages' => fn ($query) => $query->orderBy('id'), 'pages.blocks.version.definition'])
+            ->get();
 
         return [
             'schema' => self::SCHEMA,
             'site' => ['name' => $site->name, 'design_tokens' => $site->design_tokens],
-            'pages' => array_map(fn (Page $page): array => [
-                'public_id' => $page->public_id,
-                'title' => $page->title,
-                'slug' => $page->slug,
-                'sort_order' => $page->sort_order,
-                'is_home' => $page->is_home,
-                'seo' => ['title' => $page->seo_title, 'description' => $page->seo_description, 'noindex' => $page->seo_noindex],
-                'blocks' => array_values($page->blocks->map(fn (BlockInstance $block): array => [
-                    'public_id' => $block->public_id,
-                    'definition' => $block->version->definition->slug,
-                    'version' => $block->version->version,
-                    'sort_order' => $block->sort_order,
-                    'is_hidden' => $block->is_hidden,
-                    'state' => $block->state_json,
+            'pages' => array_map($this->draftPage(...), $pages),
+            'sections' => array_values($sections->map(fn (SiteSection $section): array => [
+                'public_id' => $section->public_id,
+                'type' => $section->type->value,
+                'title' => $section->title,
+                'prefix' => $section->prefix,
+                'enabled' => $section->enabled,
+                'sort_order' => $section->sort_order,
+                'redirects' => array_values($section->redirects->sortBy('id')->pluck('prefix')->all()),
+                'pages' => array_values($section->pages->map(fn (Page $page): array => [
+                    ...$this->draftPage($page),
+                    'role' => $page->section_role?->value,
                 ])->all()),
-            ], $pages),
+            ])->all()),
             'vehicles' => array_values($vehicles->map(fn (SiteVehicle $vehicle): array => [
                 'public_id' => $vehicle->public_id,
+                'slug' => $vehicle->slug,
                 'catalog_series_ref' => $vehicle->catalog_series_ref,
                 'status' => $vehicle->status,
                 'sort_order' => $vehicle->sort_order,
@@ -333,6 +361,29 @@ final class PublishedSnapshotBuilder
                 'close_on_escape' => $popup->close_on_escape,
                 'show_close_button' => $popup->show_close_button,
                 'mobile_fullscreen' => $popup->mobile_fullscreen,
+            ])->all()),
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function draftPage(Page $page): array
+    {
+        return [
+            'public_id' => $page->public_id,
+            'title' => $page->title,
+            'slug' => $page->slug,
+            'sort_order' => $page->sort_order,
+            'is_home' => $page->is_home,
+            'seo' => ['title' => $page->seo_title, 'description' => $page->seo_description, 'noindex' => $page->seo_noindex],
+            'blocks' => array_values($page->blocks->map(fn (BlockInstance $block): array => [
+                'public_id' => $block->public_id,
+                'definition' => $block->version->definition->slug,
+                'version' => $block->version->version,
+                'sort_order' => $block->sort_order,
+                'is_hidden' => $block->is_hidden,
+                'state' => $block->state_json,
             ])->all()),
         ];
     }

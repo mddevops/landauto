@@ -1529,7 +1529,7 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 DEFERRED, P9
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125; P10-001, P10-004 DONE)
 Cross-cutting — Native First-Party Block Runtime: X-023 through X-029 DONE
 Cross-cutting — X-031 auto.ru Catalog: DONE
-Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): ADR-011 Accepted (X-032 DONE); X-033 DONE («Разделы», prefixes with history); X-034 DONE (catalog template Pages, vehicle slugs, Designer sample / preview addresses; Draft only — the published Site does not serve sections until X-035); X-035 … X-038 NOT_STARTED
+Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): ADR-011 Accepted (X-032 DONE); X-033 DONE («Разделы», prefixes with history); X-034 DONE (catalog template Pages, vehicle slugs, Designer sample / preview addresses); X-035 DONE (published section pages from the snapshot, 301 for old prefixes / vehicle slugs, sitemap, restore with sections); X-036 … X-038 NOT_STARTED
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 
