@@ -21,6 +21,7 @@ use App\Models\Page;
 use App\Models\Popup;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Models\SiteComponent;
 use App\Models\User;
 use App\Models\VehiclePhoto;
 use Illuminate\Database\Eloquent\Collection;
@@ -161,86 +162,132 @@ final class PublishValidator
         $referenced = ['assets' => [], 'vehicles' => []];
 
         foreach ($pages as $page) {
-            foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) as $block) {
-                $version = $block->version;
+            foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden || $block->version->definition->is_component) as $block) {
+                $block->setRelation('page', $page);
+                $this->validateOneBlock($site, $block, $page->public_id, $licensed, $granted, $acceptAll, $referenced, sectionPage: $page->isSectionPage());
+            }
+        }
 
-                if ($version->definition->isWorkspacePrivate()) {
-                    $this->error('block_version_unavailable', 'Блок недоступен для публикации.', page: $page->public_id, block: $block->public_id);
+        $home = $pages->firstWhere('is_home', true) ?? $pages->first();
+        $homeId = $home?->public_id;
 
-                    continue;
-                }
+        foreach ($site->components()->with('version.definition')->orderBy('id')->get() as $component) {
+            if ($component->is_hidden) {
+                continue;
+            }
 
-                // A lawfully installed exact version stays publishable (D-122); anything else must pass
-                // today's catalog access. Publishing itself never creates a grant.
-                $denial = isset($granted[$version->id]) ? null : $this->access->denial($site, $version->definition, $licensed);
+            $this->validateOneBlock($site, $component, $homeId, $licensed, $granted, $acceptAll, $referenced, sectionPage: false);
+        }
 
-                if ($denial !== null) {
-                    $this->error('block_access_denied', "«{$version->definition->name}»: {$denial}", page: $page->public_id, block: $block->public_id);
+        return $referenced;
+    }
 
-                    continue;
-                }
+    /**
+     * @param  array<int, true>  $licensed
+     * @param  array<int, true>  $granted
+     * @param  array{assets: array<string, true>, vehicles: array<string, true>}  $referenced
+     */
+    private function validateOneBlock(
+        Site $site,
+        BlockInstance|SiteComponent $block,
+        ?string $pageId,
+        array $licensed,
+        array $granted,
+        BlockReferenceResolver $acceptAll,
+        array &$referenced,
+        bool $sectionPage,
+    ): void {
+        $version = $block->version;
 
-                if (LegacyBlockMigration::isLegacy($version)) {
-                    $this->validateLegacy($site, $block->setRelation('page', $page), $licensed, $granted);
-                }
+        if ($version->definition->isWorkspacePrivate()) {
+            $this->error('block_version_unavailable', 'Блок недоступен для публикации.', page: $pageId, block: $block->public_id);
 
-                $native = NativeBlockCompiler::source($version);
+            return;
+        }
 
-                if ($native !== null && (
-                    $version->approved_revision === null || $version->approved_by_user_id === null || $version->approved_at === null
-                    || ! is_string($version->approved_source_hash)
-                    || preg_match('/^[a-f0-9]{64}$/', $version->approved_source_hash) !== 1
-                    || ! hash_equals($version->approved_source_hash, $this->fingerprint->fromVersion($version))
-                )) {
-                    $this->error('native_approval_invalid', 'Нативный блок не имеет действующего одобрения точной версии исходного кода.', page: $page->public_id, block: $block->public_id);
+        $denial = isset($granted[$version->id]) ? null : $this->access->denial($site, $version->definition, $licensed);
 
-                    continue;
-                }
+        if ($denial !== null) {
+            $this->error('block_access_denied', "«{$version->definition->name}»: {$denial}", page: $pageId, block: $block->public_id);
 
-                // Studio code passed the checks when it was published; re-checked so a version that
-                // fails today's rules never reaches a new Published Version.
-                $sourceIssues = $this->sources->checkVersion($version);
+            return;
+        }
 
-                if ($sourceIssues !== [] && $native !== null) {
-                    $this->error('native_block_invalid', "«{$version->definition->name}»: нативный блок не компилируется. {$sourceIssues[0]['message']}", page: $page->public_id, block: $block->public_id);
+        if (LegacyBlockMigration::isLegacy($version)) {
+            if ($block instanceof BlockInstance) {
+                $this->validateLegacy($site, $block, $licensed, $granted);
+            } else {
+                $upgrade = $this->legacy->forSiteComponent($site, $block, $licensed, $granted);
+                $prefix = "«{$version->definition->name}» использует устаревшую изолированную версию {$version->version}";
 
-                    continue;
-                }
-
-                if ($sourceIssues !== []) {
-                    $this->error('block_source_rejected', 'Код блока не проходит автоматические проверки. Обратитесь к автору блока.', page: $page->public_id, block: $block->public_id);
-
-                    continue;
-                }
-
-                $stateErrors = $this->states->errors($version->schema_json, $block->state_json, $acceptAll);
-
-                foreach ($stateErrors as $path => $message) {
-                    $this->error('block_state_invalid', $message, page: $page->public_id, block: $block->public_id, path: $path);
-                }
-
-                if ($native !== null && $stateErrors === []) {
-                    $this->validateNativeRender($version, $native, $block, $page);
-                }
-
-                // Template Pages fill their vehicle from the address, so emptiness is not checked there.
-                foreach ($page->isSectionPage() ? [] : $this->states->missing($version->schema_json, $block->state_json) as $path => $message) {
-                    $this->error('block_required_missing', $message, page: $page->public_id, block: $block->public_id, path: $path);
-                }
-
-                $refs = $this->states->references($version->schema_json, $block->state_json);
-
-                foreach ($refs['assets'] as $id) {
-                    $referenced['assets'][$id] = true;
-                }
-
-                foreach ($refs['vehicles'] as $id) {
-                    $referenced['vehicles'][$id] = true;
+                if ($upgrade->possible()) {
+                    $this->error('legacy_block_upgrade_required', "{$prefix}. Обновите блок до нативной версии {$upgrade->target->version} в редакторе и опубликуйте сайт.", page: $pageId, block: $block->public_id);
+                } else {
+                    $this->warning('legacy_block_sandboxed', "{$prefix} и будет показан во встроенном фрейме. {$upgrade->reason}", page: $pageId, block: $block->public_id);
                 }
             }
         }
 
-        return $referenced;
+        $native = NativeBlockCompiler::source($version);
+
+        if ($native !== null && (
+            $version->approved_revision === null || $version->approved_by_user_id === null || $version->approved_at === null
+            || ! is_string($version->approved_source_hash)
+            || preg_match('/^[a-f0-9]{64}$/', $version->approved_source_hash) !== 1
+            || ! hash_equals($version->approved_source_hash, $this->fingerprint->fromVersion($version))
+        )) {
+            $this->error('native_approval_invalid', 'Нативный блок не имеет действующего одобрения точной версии исходного кода.', page: $pageId, block: $block->public_id);
+
+            return;
+        }
+
+        $sourceIssues = $this->sources->checkVersion($version);
+
+        if ($sourceIssues !== [] && $native !== null) {
+            $this->error('native_block_invalid', "«{$version->definition->name}»: нативный блок не компилируется. {$sourceIssues[0]['message']}", page: $pageId, block: $block->public_id);
+
+            return;
+        }
+
+        if ($sourceIssues !== []) {
+            $this->error('block_source_rejected', 'Код блока не проходит автоматические проверки. Обратитесь к автору блока.', page: $pageId, block: $block->public_id);
+
+            return;
+        }
+
+        $stateErrors = $this->states->errors($version->schema_json, $block->state_json, $acceptAll);
+
+        foreach ($stateErrors as $path => $message) {
+            $this->error('block_state_invalid', $message, page: $pageId, block: $block->public_id, path: $path);
+        }
+
+        if ($native !== null && $stateErrors === [] && $block instanceof BlockInstance) {
+            $this->validateNativeRender($version, $native, $block, $block->page);
+        } elseif ($native !== null && $stateErrors === []) {
+            $scope = NativeBlockCompiler::scope($version->definition->slug, $version->version, $native);
+
+            try {
+                $this->native->render($scope, $native, $block->state_json, fn (string $assetId): string => "/_landflow/assets/validation/{$assetId}");
+            } catch (NativeCompileException $exception) {
+                $this->error('native_block_invalid', "«{$version->definition->name}»: {$exception->getMessage()}", page: $pageId, block: $block->public_id);
+            }
+        }
+
+        if (! $sectionPage) {
+            foreach ($this->states->missing($version->schema_json, $block->state_json) as $path => $message) {
+                $this->error('block_required_missing', $message, page: $pageId, block: $block->public_id, path: $path);
+            }
+        }
+
+        $refs = $this->states->references($version->schema_json, $block->state_json);
+
+        foreach ($refs['assets'] as $id) {
+            $referenced['assets'][$id] = true;
+        }
+
+        foreach ($refs['vehicles'] as $id) {
+            $referenced['vehicles'][$id] = true;
+        }
     }
 
     /**

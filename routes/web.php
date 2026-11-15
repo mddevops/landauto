@@ -48,6 +48,9 @@ use App\Http\Controllers\SitePublishingController;
 use App\Http\Controllers\SiteSectionController;
 use App\Http\Controllers\SiteSeoController;
 use App\Http\Controllers\SiteVersionRestoreController;
+use App\Http\Controllers\Stock\StockCatalogSelectionController;
+use App\Http\Controllers\Stock\StockPhotoController;
+use App\Http\Controllers\Stock\StockVehicleController;
 use App\Http\Controllers\Studio\TemplateBlockController;
 use App\Http\Controllers\Studio\TemplateController;
 use App\Http\Controllers\Studio\TemplateDesignerController;
@@ -115,6 +118,29 @@ Route::middleware(['auth', 'verified'])->group(function () {
     Route::middleware(RequireWorkspaceContext::class)->group(function () {
         Route::get('workspace/settings', [WorkspaceSettingsController::class, 'edit'])->name('workspace.settings.edit');
         Route::patch('workspace/settings', [WorkspaceSettingsController::class, 'update'])->name('workspace.settings.update');
+
+        Route::prefix('workspace/stock')->name('workspace.stock.')->group(function () {
+            Route::get('/', [StockVehicleController::class, 'index'])->name('index');
+            Route::get('create', [StockVehicleController::class, 'create'])->name('create');
+            Route::post('/', [StockVehicleController::class, 'store'])->middleware('throttle:30,1')->name('store');
+
+            Route::prefix('catalog')->name('catalog.')->middleware('throttle:120,1')->group(function () {
+                Route::get('marks', [StockCatalogSelectionController::class, 'marks'])->name('marks');
+                Route::get('models', [StockCatalogSelectionController::class, 'models'])->name('models');
+                Route::get('years', [StockCatalogSelectionController::class, 'years'])->name('years');
+                Route::get('bodies', [StockCatalogSelectionController::class, 'bodies'])->name('bodies');
+                Route::get('series', [StockCatalogSelectionController::class, 'series'])->name('series');
+                Route::get('equipment', [StockCatalogSelectionController::class, 'equipment'])->name('equipment');
+                Route::get('colors', [StockCatalogSelectionController::class, 'colors'])->name('colors');
+            });
+
+            Route::get('{vehicle}', [StockVehicleController::class, 'show'])->whereUlid('vehicle')->name('show');
+            Route::patch('{vehicle}', [StockVehicleController::class, 'update'])->whereUlid('vehicle')->middleware('throttle:60,1')->name('update');
+            Route::post('{vehicle}/archive', [StockVehicleController::class, 'archive'])->whereUlid('vehicle')->middleware('throttle:30,1')->name('archive');
+            Route::post('{vehicle}/restore', [StockVehicleController::class, 'restore'])->whereUlid('vehicle')->middleware('throttle:30,1')->name('restore');
+            Route::post('{vehicle}/photos', [StockPhotoController::class, 'store'])->whereUlid('vehicle')->middleware('throttle:60,1')->name('photos.store');
+            Route::delete('{vehicle}/photos/{photo}', [StockPhotoController::class, 'destroy'])->whereUlid(['vehicle', 'photo'])->name('photos.destroy');
+        });
 
         Route::prefix('workspace/vehicles')->name('workspace.vehicles.')->group(function () {
             Route::get('/', [WorkspaceVehicleController::class, 'index'])->name('index');

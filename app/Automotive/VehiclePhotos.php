@@ -10,6 +10,7 @@ use App\Models\SeriesGalleryImage;
 use App\Models\SeriesMediaImage;
 use App\Models\SeriesMediaSet;
 use App\Models\SiteVehicle;
+use App\Models\StockVehicle;
 use App\Models\VehicleColor;
 use App\Models\VehiclePhoto;
 use App\Models\WorkspaceVehicle;
@@ -94,10 +95,14 @@ final class VehiclePhotos
     /**
      * Customer upload: into a colour angle (replacing the previous photo of that angle) or the gallery.
      */
-    public function upload(WorkspaceVehicle|SiteVehicle $vehicle, UploadedFile $file, ?VehicleColor $color = null, ?MediaAngle $angle = null): VehiclePhoto
+    public function upload(WorkspaceVehicle|SiteVehicle|StockVehicle $vehicle, UploadedFile $file, ?VehicleColor $color = null, ?MediaAngle $angle = null): VehiclePhoto
     {
         $mime = (string) $file->getMimeType();
         $extension = ImageUpload::TYPES[$mime] ?? throw ValidationException::withMessages(['file' => 'Загрузите изображение JPG, PNG или WebP.']);
+
+        if ($vehicle instanceof StockVehicle && ($color !== null || $angle !== null)) {
+            throw ValidationException::withMessages(['file' => 'Фото склада загружаются в общую галерею.']);
+        }
 
         if ($color !== null && $angle !== null) {
             $color->photos()->where('angle', $angle->value)->get()->each(fn (VehiclePhoto $photo) => $this->remove($photo));
@@ -210,7 +215,7 @@ final class VehiclePhotos
     /**
      * @param  array{angle?: MediaAngle|null, source: string, original_name: string, mime_type: string, sort_order: int}  $attributes
      */
-    private function store(WorkspaceVehicle|SiteVehicle $vehicle, string $disk, string $path, array $attributes, ?VehicleColor $color = null): ?VehiclePhoto
+    private function store(WorkspaceVehicle|SiteVehicle|StockVehicle $vehicle, string $disk, string $path, array $attributes, ?VehicleColor $color = null): ?VehiclePhoto
     {
         $contents = Storage::disk($disk)->get($path);
         $extension = ImageUpload::TYPES[$attributes['mime_type']] ?? null;
@@ -228,7 +233,7 @@ final class VehiclePhotos
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function newPhoto(WorkspaceVehicle|SiteVehicle $vehicle, ?VehicleColor $color, array $attributes, string $extension): VehiclePhoto
+    private function newPhoto(WorkspaceVehicle|SiteVehicle|StockVehicle $vehicle, ?VehicleColor $color, array $attributes, string $extension): VehiclePhoto
     {
         $photo = new VehiclePhoto($attributes);
         $photo->public_id = $photo->newUniqueId();

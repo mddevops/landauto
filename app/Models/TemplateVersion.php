@@ -19,7 +19,7 @@ use LogicException;
  * @property int $id
  * @property int $template_id
  * @property string $version
- * @property array{pages: list<array{key: string, title: string, slug: string, is_home: bool, blocks: list<array{key: string, block_version_id: int, is_hidden: bool, state: array<string, mixed>}>}>}|null $content_json
+ * @property array{pages: list<array{key: string, title: string, slug: string, is_home: bool, blocks: list<array{key: string, block_version_id: int, is_hidden: bool, state: array<string, mixed>}>}>, components?: list<array{key?: string, block_version_id: int, is_hidden?: bool, state?: array<string, mixed>}>}|null $content_json
  * @property int|null $published_by_user_id
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
@@ -65,6 +65,12 @@ class TemplateVersion extends Model
                 if (is_int($block['block_version_id'] ?? null)) {
                     $ids[] = $block['block_version_id'];
                 }
+            }
+        }
+
+        foreach (is_array($content['components'] ?? null) ? $content['components'] : [] as $block) {
+            if (is_int($block['block_version_id'] ?? null)) {
+                $ids[] = $block['block_version_id'];
             }
         }
 

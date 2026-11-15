@@ -49,7 +49,8 @@ class SiteSectionsTest extends TestCase
                 ->has('types', 3)
                 ->where('types.0.value', 'catalog')
                 ->where('types.0.available', true)
-                ->where('types.1.available', false)
+                ->where('types.1.available', true)
+                ->where('types.2.available', true)
                 ->where('baseUrl', 'http://localhost/100000000001/')
                 ->where('siteContext.can.manageSections', true));
     }
@@ -69,12 +70,21 @@ class SiteSectionsTest extends TestCase
             ->assertSessionHasErrors(['type' => 'Такой раздел уже есть на сайте.']);
     }
 
-    public function test_stock_sections_are_not_available_yet(): void
+    public function test_owner_adds_used_and_specials_stock_sections(): void
     {
         $this->as($this->owner)->post(route('sites.sections.store', $this->site), ['type' => 'used'])
-            ->assertSessionHasErrors('type');
+            ->assertRedirect(route('sites.sections.index', $this->site));
 
-        $this->assertSame(0, $this->site->sections()->count());
+        $used = $this->site->sections()->where('type', 'used')->sole();
+        $this->assertSame('used', $used->prefix);
+        $this->assertSame('Автомобили с пробегом', $used->title);
+
+        $this->as($this->owner)->post(route('sites.sections.store', $this->site), ['type' => 'specials'])
+            ->assertRedirect(route('sites.sections.index', $this->site));
+
+        $specials = $this->site->sections()->where('type', 'specials')->sole();
+        $this->assertSame('specials', $specials->prefix);
+        $this->assertSame(2, $this->site->sections()->count());
     }
 
     public function test_default_prefix_taken_by_a_page_asks_for_another_one(): void

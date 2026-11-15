@@ -53,7 +53,7 @@ class PageBlocksTest extends TestCase
         $response->assertRedirect(route('sites.designer', [
             'site' => $this->site, 'page' => $this->page->public_id, 'block' => $hero->public_id,
         ]));
-        $this->assertSame(1, $hero->sort_order);
+        $this->assertSame(0, $hero->sort_order);
         $this->assertSame('hero', $hero->version->definition->slug);
         $this->assertSame('Новые автомобили в наличии', $hero->state_json['title']);
         $this->assertSame('left', $hero->state_json['align']);
@@ -72,6 +72,8 @@ class PageBlocksTest extends TestCase
                     'group_label' => 'Первый экран',
                     'preview_url' => null,
                     'author' => null,
+                    'is_component' => false,
+                    'component_position' => null,
                     'access' => ['mode' => 'free', 'restricted' => false, 'label' => 'Бесплатно', 'detail' => null],
                     'available' => true,
                     'reason' => null,
@@ -92,26 +94,25 @@ class PageBlocksTest extends TestCase
 
     public function test_blocks_are_moved_duplicated_hidden_and_deleted_in_dense_order(): void
     {
-        foreach (['header', 'hero', 'footer'] as $slug) {
+        foreach (['header', 'hero', 'footer', 'cta'] as $slug) {
             $this->add($slug);
         }
-        [$header, $hero, $footer] = $this->page->blocks()->get()->all();
+        [$hero, $cta] = $this->page->blocks()->orderBy('sort_order')->get()->all();
 
-        $this->as()->post(route('sites.blocks.move', [$this->site, $footer]), ['direction' => 'up'])->assertSessionHasNoErrors();
-        $this->as()->post(route('sites.blocks.move', [$this->site, $header]), ['direction' => 'up'])->assertSessionHasNoErrors();
-        $this->assertOrder([$header->id, $footer->id, $hero->id]);
+        $this->as()->post(route('sites.blocks.move', [$this->site, $cta]), ['direction' => 'up'])->assertSessionHasNoErrors();
+        $this->assertOrder([$cta->id, $hero->id]);
 
-        $this->as()->patch(route('sites.blocks.visibility', [$this->site, $footer]), ['hidden' => true])->assertSessionHasNoErrors();
-        $this->as()->post(route('sites.blocks.duplicate', [$this->site, $footer]))->assertSessionHasNoErrors();
+        $this->as()->patch(route('sites.blocks.visibility', [$this->site, $cta]), ['hidden' => true])->assertSessionHasNoErrors();
+        $this->as()->post(route('sites.blocks.duplicate', [$this->site, $cta]))->assertSessionHasNoErrors();
         $copy = BlockInstance::query()->latest('id')->firstOrFail();
-        $this->assertOrder([$header->id, $footer->id, $copy->id, $hero->id]);
+        $this->assertOrder([$cta->id, $copy->id, $hero->id]);
         $this->assertTrue($copy->is_hidden);
-        $this->assertSame($footer->fresh()?->state_json, $copy->state_json);
-        $this->assertSame($footer->block_version_id, $copy->block_version_id);
+        $this->assertSame($cta->fresh()?->state_json, $copy->state_json);
+        $this->assertSame($cta->block_version_id, $copy->block_version_id);
 
-        $this->as()->delete(route('sites.blocks.destroy', [$this->site, $footer]))->assertRedirect();
-        $this->assertModelMissing($footer);
-        $this->assertSame([$header->id, $copy->id, $hero->id], $this->page->blocks()->pluck('id')->all());
+        $this->as()->delete(route('sites.blocks.destroy', [$this->site, $cta]))->assertRedirect();
+        $this->assertModelMissing($cta);
+        $this->assertSame([$copy->id, $hero->id], $this->page->blocks()->pluck('id')->all());
     }
 
     public function test_content_editor_saves_schema_valid_state_and_gets_field_errors(): void

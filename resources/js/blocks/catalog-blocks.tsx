@@ -1,6 +1,6 @@
 import { Car } from 'lucide-react';
 import type { CatalogGroup, CatalogTarget } from '@/blocks/catalog';
-import { groupVehicles } from '@/blocks/catalog';
+import { groupModels, groupVehicles } from '@/blocks/catalog';
 import { Container } from '@/blocks/official-blocks';
 import { useBlockRenderContext } from '@/blocks/render-context';
 import type { BlockRendererProps } from '@/blocks/state';
@@ -88,8 +88,9 @@ function GroupCard({
 }
 
 /**
- * «Марки и модели каталога» (ADR-011, D-131): on the catalog page it lists marks, on a mark page
- * every vehicle of the mark as a card leading to its page.
+ * Listing block for Catalog (D-131) and Stock Used/Specials (X-038).
+ * Catalog: index → marks, mark → vehicles.
+ * Stock: index → marks, mark → models, model → vehicles.
  */
 export function VehicleSectionBlock({ state }: BlockRendererProps) {
     const { catalog, pageContext } = useBlockRenderContext();
@@ -99,24 +100,38 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
             : columnsClass.three;
     const buttonLabel = text(state, 'button_label') ?? 'Подробнее';
     const mark = pageContext?.mark ?? null;
-    const vehicles = (catalog?.vehicles ?? []).filter(
-        (vehicle) => mark === null || vehicle.mark.segment === mark,
-    );
-    const level = mark !== null ? 'mark' : 'index';
+    const model = pageContext?.model ?? null;
+    const stock = catalog?.source === 'stock';
+    const vehicles = (catalog?.vehicles ?? []).filter((vehicle) => {
+        if (mark !== null && vehicle.mark.segment !== mark) {
+            return false;
+        }
+        if (model !== null && vehicle.model.segment !== model) {
+            return false;
+        }
+
+        return true;
+    });
+    const level = model !== null ? 'model' : mark !== null ? 'mark' : 'index';
     const first = vehicles[0];
     const autoTitle =
-        level === 'mark' && first ? first.mark.name : (catalog?.title ?? null);
+        level === 'model' && first
+            ? `${first.mark.name} ${first.model.name}`
+            : level === 'mark' && first
+              ? first.mark.name
+              : (catalog?.title ?? null);
     const title = text(state, 'title') ?? autoTitle;
     const subtitle = text(state, 'subtitle');
     const href = (target: CatalogTarget) =>
         catalog?.enabled ? catalog.href(target) : null;
     const indexHref = href({ role: 'index' });
+    const markHref = mark !== null ? href({ role: 'mark', mark }) : null;
 
     return (
         <section className="bg-white py-16 text-neutral-900">
             <Container className="flex flex-col gap-8">
                 {catalog && first && level !== 'index' && (
-                    <nav aria-label="Навигация по каталогу">
+                    <nav aria-label="Навигация по разделу">
                         <ol className="flex flex-wrap items-center gap-2 text-sm text-neutral-500">
                             <li className="flex items-center gap-2">
                                 {indexHref ? (
@@ -131,12 +146,36 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
                                 )}
                                 <span aria-hidden="true">/</span>
                             </li>
-                            <li
-                                aria-current="page"
-                                className="text-neutral-900"
-                            >
-                                {first.mark.name}
-                            </li>
+                            {level === 'model' ? (
+                                <>
+                                    <li className="flex items-center gap-2">
+                                        {markHref ? (
+                                            <a
+                                                href={markHref}
+                                                className="transition-colors hover:text-neutral-900"
+                                            >
+                                                {first.mark.name}
+                                            </a>
+                                        ) : (
+                                            <span>{first.mark.name}</span>
+                                        )}
+                                        <span aria-hidden="true">/</span>
+                                    </li>
+                                    <li
+                                        aria-current="page"
+                                        className="text-neutral-900"
+                                    >
+                                        {first.model.name}
+                                    </li>
+                                </>
+                            ) : (
+                                <li
+                                    aria-current="page"
+                                    className="text-neutral-900"
+                                >
+                                    {first.mark.name}
+                                </li>
+                            )}
                         </ol>
                     </nav>
                 )}
@@ -154,19 +193,37 @@ export function VehicleSectionBlock({ state }: BlockRendererProps) {
                 )}
                 {catalog === null ? (
                     <Placeholder>
-                        Добавьте каталог автомобилей в «Разделах» сайта.
+                        Добавьте раздел автомобилей в «Разделах» сайта.
                     </Placeholder>
                 ) : vehicles.length === 0 ? (
                     <Placeholder>
-                        Добавьте автомобили в разделе «Автомобили» сайта.
+                        {stock
+                            ? 'Добавьте готовые автомобили на склад.'
+                            : 'Добавьте автомобили в разделе «Автомобили» сайта.'}
                     </Placeholder>
-                ) : level === 'mark' ? (
+                ) : level === 'model' || (level === 'mark' && !stock) ? (
                     <VehicleCards
                         ids={vehicles.map((vehicle) => vehicle.public_id)}
                         columns={columns}
                         showPrice={flag(state, 'show_price', true)}
                         buttonLabel={buttonLabel}
                     />
+                ) : level === 'mark' && stock && mark ? (
+                    <ul className={cn('grid gap-6', columns)}>
+                        {groupModels(vehicles).map((group) => (
+                            <li key={group.segment}>
+                                <GroupCard
+                                    group={group}
+                                    label={buttonLabel}
+                                    href={href({
+                                        role: 'model',
+                                        mark,
+                                        model: group.segment,
+                                    })}
+                                />
+                            </li>
+                        ))}
+                    </ul>
                 ) : (
                     <ul className={cn('grid gap-6', columns)}>
                         {groupVehicles(vehicles).map((group) => (

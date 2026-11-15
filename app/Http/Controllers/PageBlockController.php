@@ -7,12 +7,14 @@ use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockStateDefaults;
 use App\Blocks\BlockVersionGrants;
 use App\Blocks\LegacyBlockMigration;
+use App\Blocks\SiteComponents;
 use App\Blocks\SiteTypeBlockAccess;
 use App\Exceptions\InvalidBlockStateException;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Support\DesignerScope;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -29,6 +31,7 @@ class PageBlockController extends Controller
         private ArrangePageBlocks $arrange,
         private BlockCatalogAccess $access,
         private BlockVersionGrants $grants,
+        private SiteComponents $components,
     ) {}
 
     public function store(Request $request, Site $site, Page $page, BlockStateDefaults $defaults): RedirectResponse
@@ -46,7 +49,13 @@ class PageBlockController extends Controller
         $version = $definition->versions()->latest('id')->firstOrFail();
         $this->authorizeCurrentAccess($site, $definition);
 
-        $block = DB::transaction(function () use ($site, $page, $version, $defaults): BlockInstance {
+        if ($definition->is_component) {
+            $component = $this->components->place($site, $version);
+
+            return $this->backTo($site, $page, $component->public_id);
+        }
+
+        $block = DB::transaction(function () use ($page, $version, $defaults, $site): BlockInstance {
             $block = new BlockInstance([
                 'sort_order' => $page->blocks()->count(),
                 'state_json' => $defaults->fromSchema($version->schema_json),
@@ -59,86 +68,147 @@ class PageBlockController extends Controller
             return $block;
         });
 
-        return $this->backTo($site, $page, $block);
+        return $this->backTo($site, $page, $block->public_id);
     }
 
-    public function state(Request $request, Site $site, BlockInstance $block, SiteTypeBlockAccess $siteTypeAccess): RedirectResponse
+    public function state(Request $request, Site $site, string $block, SiteTypeBlockAccess $siteTypeAccess): RedirectResponse
     {
-        $this->scope->block($site, $block);
-        Gate::authorize('editContent', $site);
         $validated = $request->validate(['state' => ['present', 'array']]);
+        $page = $this->resolvePageForRedirect($site, $request);
+
+        if (($component = $this->components->findOnSite($site, $block)) !== null) {
+            $this->scope->site($site);
+            Gate::authorize('editContent', $site);
+
+            try {
+                $component->update(['state_json' => $siteTypeAccess->merge($site, $component->version->schema_json, $component->state_json, $validated['state'])]);
+            } catch (InvalidBlockStateException $exception) {
+                throw ValidationException::withMessages($exception->errors);
+            }
+
+            return $this->backTo($site, $page ?? $this->homePage($site), $component->public_id);
+        }
+
+        $instance = $this->pageBlock($site, $block);
+        Gate::authorize('editContent', $site);
 
         try {
-            $block->update(['state_json' => $siteTypeAccess->merge($site, $block->version->schema_json, $block->state_json, $validated['state'])]);
+            $instance->update(['state_json' => $siteTypeAccess->merge($site, $instance->version->schema_json, $instance->state_json, $validated['state'])]);
         } catch (InvalidBlockStateException $exception) {
             throw ValidationException::withMessages($exception->errors);
         }
 
-        return $this->backTo($site, $block->page, $block);
+        return $this->backTo($site, $instance->page, $instance->public_id);
     }
 
-    public function move(Request $request, Site $site, BlockInstance $block): RedirectResponse
+    public function move(Request $request, Site $site, string $block): RedirectResponse
     {
-        $this->authorizeStructure($site, $block);
         $validated = $request->validate(['direction' => ['required', Rule::in(['up', 'down'])]]);
+        $page = $this->resolvePageForRedirect($site, $request);
 
-        $this->arrange->move($block, $validated['direction'] === 'up' ? -1 : 1);
+        if (($component = $this->components->findOnSite($site, $block)) !== null) {
+            $this->scope->site($site);
+            Gate::authorize('editStructure', $site);
+            $this->components->moveFree($component, $validated['direction'] === 'up' ? -1 : 1);
 
-        return $this->backTo($site, $block->page, $block);
-    }
-
-    public function duplicate(Site $site, BlockInstance $block): RedirectResponse
-    {
-        $this->authorizeStructure($site, $block);
-
-        // Reusing the exact version this Site already installed lawfully needs no new acquisition (D-122).
-        if (! $this->grants->has($site, $block->version)) {
-            $this->authorizeCurrentAccess($site, $block->version->definition);
+            return $this->backTo($site, $page ?? $this->homePage($site), $component->public_id);
         }
 
-        $copy = DB::transaction(function () use ($site, $block): BlockInstance {
-            $copy = new BlockInstance(['state_json' => $block->state_json, 'sort_order' => $block->sort_order]);
-            $copy->is_hidden = $block->is_hidden;
-            $copy->page()->associate($block->page);
-            $copy->version()->associate($block->version);
+        $instance = $this->pageBlock($site, $block);
+        Gate::authorize('editStructure', $site);
+        $this->arrange->move($instance, $validated['direction'] === 'up' ? -1 : 1);
+
+        return $this->backTo($site, $instance->page, $instance->public_id);
+    }
+
+    public function duplicate(Site $site, string $block, Request $request): RedirectResponse
+    {
+        if ($this->components->findOnSite($site, $block) !== null) {
+            throw ValidationException::withMessages(['block' => 'Компонент нельзя дублировать.']);
+        }
+
+        $instance = $this->pageBlock($site, $block);
+        Gate::authorize('editStructure', $site);
+
+        // Reusing the exact version this Site already installed lawfully needs no new acquisition (D-122).
+        if (! $this->grants->has($site, $instance->version)) {
+            $this->authorizeCurrentAccess($site, $instance->version->definition);
+        }
+
+        $copy = DB::transaction(function () use ($site, $instance): BlockInstance {
+            $copy = new BlockInstance(['state_json' => $instance->state_json, 'sort_order' => $instance->sort_order]);
+            $copy->is_hidden = $instance->is_hidden;
+            $copy->page()->associate($instance->page);
+            $copy->version()->associate($instance->version);
             $copy->save();
-            $this->grants->grant($site, [$block->block_version_id]);
-            $this->arrange->insertAfter($copy, $block);
+            $this->grants->grant($site, [$instance->block_version_id]);
+            $this->arrange->insertAfter($copy, $instance);
 
             return $copy;
         });
 
-        return $this->backTo($site, $block->page, $copy);
+        return $this->backTo($site, $instance->page, $copy->public_id);
     }
 
     /**
      * Moves a legacy sandboxed Block to its approved Native version (ADR-009 §10); Quiz / Chat Sites
      * only get upgrades through a new Template version.
      */
-    public function upgrade(Site $site, BlockInstance $block, LegacyBlockMigration $migration): RedirectResponse
+    public function upgrade(Site $site, string $block, LegacyBlockMigration $migration, Request $request): RedirectResponse
     {
-        $this->authorizeStructure($site, $block);
-        $version = $migration->upgradeSiteBlock($site, $block);
+        if (($component = $this->components->findOnSite($site, $block)) !== null) {
+            $this->scope->site($site);
+            Gate::authorize('editStructure', $site);
+            $version = $migration->upgradeSiteComponent($site, $component);
+            Inertia::flash('toast', ['type' => 'success', 'message' => "Блок обновлён до нативной версии {$version->version}."]);
+
+            return $this->backTo($site, $this->resolvePageForRedirect($site, $request) ?? $this->homePage($site), $component->public_id);
+        }
+
+        $instance = $this->pageBlock($site, $block);
+        Gate::authorize('editStructure', $site);
+        $version = $migration->upgradeSiteBlock($site, $instance);
         Inertia::flash('toast', ['type' => 'success', 'message' => "Блок обновлён до нативной версии {$version->version}."]);
 
-        return $this->backTo($site, $block->page, $block);
+        return $this->backTo($site, $instance->page, $instance->public_id);
     }
 
-    public function visibility(Request $request, Site $site, BlockInstance $block): RedirectResponse
+    public function visibility(Request $request, Site $site, string $block): RedirectResponse
     {
-        $this->authorizeStructure($site, $block);
         $validated = $request->validate(['hidden' => ['required', 'boolean']]);
+        $page = $this->resolvePageForRedirect($site, $request);
 
-        BlockInstance::query()->whereKey($block->id)->update(['is_hidden' => (bool) $validated['hidden']]);
+        if (($component = $this->components->findOnSite($site, $block)) !== null) {
+            $this->scope->site($site);
+            Gate::authorize('editStructure', $site);
+            SiteComponent::query()->whereKey($component->id)->update(['is_hidden' => (bool) $validated['hidden']]);
 
-        return $this->backTo($site, $block->page, $block);
+            return $this->backTo($site, $page ?? $this->homePage($site), $component->public_id);
+        }
+
+        $instance = $this->pageBlock($site, $block);
+        Gate::authorize('editStructure', $site);
+        BlockInstance::query()->whereKey($instance->id)->update(['is_hidden' => (bool) $validated['hidden']]);
+
+        return $this->backTo($site, $instance->page, $instance->public_id);
     }
 
-    public function destroy(Site $site, BlockInstance $block): RedirectResponse
+    public function destroy(Site $site, string $block, Request $request): RedirectResponse
     {
-        $this->authorizeStructure($site, $block);
-        $page = $block->page;
-        $block->delete();
+        $page = $this->resolvePageForRedirect($site, $request);
+
+        if (($component = $this->components->findOnSite($site, $block)) !== null) {
+            $this->scope->site($site);
+            Gate::authorize('editStructure', $site);
+            $component->delete();
+
+            return $this->backTo($site, $page ?? $this->homePage($site));
+        }
+
+        $instance = $this->pageBlock($site, $block);
+        Gate::authorize('editStructure', $site);
+        $page = $instance->page;
+        $instance->delete();
 
         return $this->backTo($site, $page);
     }
@@ -152,18 +222,38 @@ class PageBlockController extends Controller
         }
     }
 
-    private function authorizeStructure(Site $site, BlockInstance $block): void
+    private function pageBlock(Site $site, string $publicId): BlockInstance
     {
+        $block = BlockInstance::query()->where('public_id', $publicId)->firstOrFail();
         $this->scope->block($site, $block);
-        Gate::authorize('editStructure', $site);
+
+        return $block;
     }
 
-    private function backTo(Site $site, Page $page, ?BlockInstance $block = null): RedirectResponse
+    private function homePage(Site $site): Page
+    {
+        return $site->pages()->where('is_home', true)->firstOrFail();
+    }
+
+    private function resolvePageForRedirect(Site $site, Request $request): ?Page
+    {
+        $pageId = $request->query('page') ?? $request->input('page');
+
+        if (! is_string($pageId) || $pageId === '') {
+            return null;
+        }
+
+        $page = $site->pages()->where('public_id', $pageId)->first();
+
+        return $page !== null ? $this->scope->page($site, $page) : null;
+    }
+
+    private function backTo(Site $site, Page $page, ?string $blockPublicId = null): RedirectResponse
     {
         return to_route('sites.designer', array_filter([
             'site' => $site->public_id,
             'page' => $page->public_id,
-            'block' => $block?->public_id,
+            'block' => $blockPublicId,
         ]));
     }
 }

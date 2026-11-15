@@ -2,11 +2,13 @@
 
 namespace Tests\Feature\Sites;
 
+use App\Blocks\SiteComponents;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Page;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
@@ -44,9 +46,11 @@ class SiteDesignerTest extends TestCase
                 ->where('blocks.0.name', 'Шапка')
                 ->where('blocks.0.version', '1.0.0')
                 ->where('blocks.0.is_hidden', false)
+                ->where('blocks.0.is_component', true)
                 ->where('blocks.0.state', [])
                 ->missing('blocks.0.id')
                 ->where('blocks.1.public_id', $hero->public_id)
+                ->where('blocks.1.is_component', false)
                 ->where('blocks.1.state', ['title' => 'Новые автомобили'])
                 ->missing('site.id')
                 ->missing('site.workspace_id'));
@@ -94,9 +98,13 @@ class SiteDesignerTest extends TestCase
     /**
      * @param  array<string, mixed>  $state
      */
-    private function place(Page $page, string $slug, int $sortOrder, array $state): BlockInstance
+    private function place(Page $page, string $slug, int $sortOrder, array $state): BlockInstance|SiteComponent
     {
         $version = BlockVersion::query()->whereRelation('definition', 'slug', $slug)->where('version', '1.0.0')->sole();
+
+        if ($version->definition->is_component) {
+            return app(SiteComponents::class)->place($page->site, $version, $state);
+        }
 
         return BlockInstance::factory()->for($page)->for($version, 'version')->create([
             'sort_order' => $sortOrder,

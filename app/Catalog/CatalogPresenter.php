@@ -103,7 +103,13 @@ final class CatalogPresenter
             'title' => "{$model->mark->name} {$model->name}",
             'mark' => ['url' => $model->mark->url, 'name' => $model->mark->name, 'logo' => $this->catalog->imageUrl($model->mark->logo_min)],
             'model' => ['url' => $model->url, 'name' => $model->name],
-            'generation' => ['key' => (string) $generation->external_id, 'name' => $generation->name, 'years' => $generation->years()],
+            'generation' => [
+                'key' => (string) $generation->external_id,
+                'name' => $generation->name,
+                'years' => $generation->years(),
+                'year_from' => $generation->year_from,
+                'year_to' => $generation->year_to,
+            ],
         ];
     }
 

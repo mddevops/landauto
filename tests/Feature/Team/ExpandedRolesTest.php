@@ -49,6 +49,7 @@ class ExpandedRolesTest extends TestCase
 
         $admin = $keys(WorkspaceRole::Admin);
         $this->assertContains('import_vehicles', $admin);
+        $this->assertContains('manage_stock', $admin);
         foreach (['manage_workspace_vehicle_library', 'manage_billing', 'manage_roles', 'transfer_workspace_ownership'] as $denied) {
             $this->assertNotContains($denied, $admin);
         }

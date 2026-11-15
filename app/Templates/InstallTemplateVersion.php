@@ -3,25 +3,31 @@
 namespace App\Templates;
 
 use App\Blocks\BlockVersionGrants;
+use App\Blocks\SiteComponents;
 use App\Enums\BlockActionType;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Page;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\TemplateVersion;
 use LogicException;
 
 /**
  * Copies a published Template Version into independent Site Pages and Block Instances (P9-015).
- * New public IDs are minted; page and scroll targets are remapped from the Template keys. Later
- * Template changes never sync. Runs inside the caller's transaction; access is checked by callers.
- * Every copied Block Version is granted to the Site (D-122), so later access changes never break it.
+ * Component Definitions become Site Components once (ADR-013). New public IDs are minted; page
+ * and scroll targets are remapped from the Template keys. Later Template changes never sync.
+ * Runs inside the caller's transaction; access is checked by callers. Every copied Block Version
+ * is granted to the Site (D-122), so later access changes never break it.
  */
 final class InstallTemplateVersion
 {
     private const REFERENCE_ACTIONS = [BlockActionType::OpenPage, BlockActionType::ScrollTo];
 
-    public function __construct(private BlockVersionGrants $grants) {}
+    public function __construct(
+        private BlockVersionGrants $grants,
+        private SiteComponents $components,
+    ) {}
 
     public function install(Site $site, TemplateVersion $version): void
     {
@@ -42,15 +48,51 @@ final class InstallTemplateVersion
             $pages[] = [$page, $source['blocks']];
         }
 
+        /** @var list<array{key?: string, block_version_id: int, is_hidden?: bool, state?: array<string, mixed>}> $templateComponents */
+        $templateComponents = is_array($content['components'] ?? null) ? array_values(array_filter($content['components'], 'is_array')) : [];
+
+        foreach ($templateComponents as $source) {
+            $blockVersion = $versions->get($source['block_version_id']) ?? throw new LogicException('Template Component Version is missing.');
+            $this->placeComponent(
+                $site,
+                $blockVersion,
+                $source['key'] ?? null,
+                $source['state'] ?? [],
+                (bool) ($source['is_hidden'] ?? false),
+                $pageMap,
+            );
+        }
+
         /** @var array<string, string> $blockMap */
         $blockMap = [];
-        /** @var list<array{0: BlockInstance, 1: array<string, mixed>}> $created */
+        /** @var list<array{0: BlockInstance|SiteComponent, 1: array<string, mixed>}> $created */
         $created = [];
 
         foreach ($pages as [$page, $blocks]) {
-            foreach ($blocks as $index => $source) {
+            $pageSort = 0;
+
+            foreach ($blocks as $source) {
                 $blockVersion = $versions->get($source['block_version_id']) ?? throw new LogicException('Template Block Version is missing.');
-                $instance = new BlockInstance(['sort_order' => $index, 'state_json' => self::remap($source['state'], $pageMap)]);
+
+                if ($blockVersion->definition->is_component) {
+                    $component = $this->placeComponent(
+                        $site,
+                        $blockVersion,
+                        $source['key'],
+                        $source['state'],
+                        (bool) $source['is_hidden'],
+                        $pageMap,
+                    );
+                    $blockMap[$source['key']] = $component->public_id;
+                    $created[] = [$component, $source['state']];
+
+                    continue;
+                }
+
+                $instance = new BlockInstance([
+                    'sort_order' => $pageSort++,
+                    'state_json' => self::remap($source['state'], $pageMap),
+                ]);
                 $instance->is_hidden = $source['is_hidden'];
                 $instance->page()->associate($page);
                 $instance->version()->associate($blockVersion);
@@ -70,6 +112,36 @@ final class InstallTemplateVersion
                 $instance->update(['state_json' => $remapped]);
             }
         }
+    }
+
+    /**
+     * @param  array<string, mixed>  $state
+     * @param  array<string, string>  $pageMap
+     */
+    private function placeComponent(
+        Site $site,
+        BlockVersion $version,
+        ?string $key,
+        array $state,
+        bool $hidden,
+        array $pageMap,
+    ): SiteComponent {
+        $existing = $site->components()
+            ->whereHas('version', fn ($query) => $query->where('block_definition_id', $version->block_definition_id))
+            ->first();
+
+        if ($existing !== null) {
+            return $existing;
+        }
+
+        $component = $this->components->place($site, $version, self::remap($state, $pageMap));
+
+        if ($hidden) {
+            SiteComponent::query()->whereKey($component->id)->update(['is_hidden' => true]);
+            $component->is_hidden = true;
+        }
+
+        return $component;
     }
 
     /**

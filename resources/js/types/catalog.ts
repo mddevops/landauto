@@ -47,7 +47,13 @@ export type CatalogSeries = {
     title: string;
     mark: { url: string; name: string; logo: string | null };
     model: { url: string; name: string };
-    generation: { key: string; name: string; years: string | null };
+    generation: {
+        key: string;
+        name: string;
+        years: string | null;
+        year_from?: number | null;
+        year_to?: number | null;
+    };
 };
 
 export type Spec = { label: string; value: string };

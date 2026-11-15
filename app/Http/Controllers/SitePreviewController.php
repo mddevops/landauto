@@ -3,13 +3,16 @@
 namespace App\Http\Controllers;
 
 use App\Automotive\SectionCatalog;
+use App\Automotive\StockBindings;
 use App\Automotive\VehicleBindings;
+use App\Blocks\SiteComponents;
 use App\Forms\Captcha\CaptchaVerifier;
 use App\Forms\SiteSecurityPolicy;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Models\SiteComponent;
 use App\Popups\PopupRuntime;
 use App\Support\DesignerScope;
 use App\Support\SiteDesignTokens;
@@ -25,15 +28,15 @@ use Symfony\Component\HttpFoundation\Response;
  */
 class SitePreviewController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha, SectionCatalog $sections): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, StockBindings $stockBindings, PopupRuntime $popups, CaptchaVerifier $captcha, SectionCatalog $sections, SiteComponents $components): Response
     {
-        $response = $this->page($request, $site, $scope, $vehicleBindings, $popups, $captcha, $sections)->toResponse($request);
+        $response = $this->page($request, $site, $scope, $vehicleBindings, $stockBindings, $popups, $captcha, $sections, $components)->toResponse($request);
         $response->headers->set('X-Robots-Tag', 'noindex, nofollow');
 
         return $response;
     }
 
-    private function page(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, CaptchaVerifier $captcha, SectionCatalog $sections): InertiaResponse
+    private function page(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, StockBindings $stockBindings, PopupRuntime $popups, CaptchaVerifier $captcha, SectionCatalog $sections, SiteComponents $components): InertiaResponse
     {
         $scope->site($site);
         Gate::authorize('preview', $site);
@@ -43,8 +46,9 @@ class SitePreviewController extends Controller
         $context = null;
 
         if ($request->filled('path')) {
-            $resolved = $catalog === null ? null : SectionCatalog::resolve($catalog, explode('/', trim($request->string('path')->toString(), '/')));
+            $resolved = $sections->resolvePath($site, explode('/', trim($request->string('path')->toString(), '/')));
             abort_if($resolved === null, 404);
+            $catalog = $resolved['catalog'];
             $page = $pages->firstWhere('public_id', $catalog['pages'][$resolved['role']->value] ?? null);
             $context = $resolved['context'];
         } else {
@@ -55,8 +59,11 @@ class SitePreviewController extends Controller
 
         abort_if($page === null, 404);
 
-        if ($context === null && $catalog !== null && $page->isSectionPage()) {
-            $context = SectionCatalog::sampleContext($page, $catalog, $request->string('sample')->toString() ?: null);
+        if ($context === null && $page->isSectionPage()) {
+            $catalog = $sections->propsForPage($site, $page) ?? $catalog;
+            if ($catalog !== null) {
+                $context = SectionCatalog::sampleContext($page, $catalog, $request->string('sample')->toString() ?: null);
+            }
         }
 
         return Inertia::render('sites/preview', [
@@ -69,11 +76,8 @@ class SitePreviewController extends Controller
             'catalog' => $catalog,
             'pageContext' => $context,
             'design' => SiteDesignTokens::resolve($site->design_tokens),
-            'blocks' => $page->blocks()
-                ->where('is_hidden', false)
-                ->with('version.definition')
-                ->get()
-                ->map(fn (BlockInstance $block): array => [
+            'blocks' => $components->forPage($page, includeHidden: false)
+                ->map(fn (BlockInstance|SiteComponent $block): array => [
                     'public_id' => $block->public_id,
                     'slug' => $block->version->definition->slug,
                     'name' => $block->version->definition->name,
@@ -90,7 +94,10 @@ class SitePreviewController extends Controller
                 ])
                 ->values()
                 ->all(),
-            'vehicles' => $vehicleBindings->forSite($site),
+            'vehicles' => [
+                ...$vehicleBindings->forSite($site),
+                ...$stockBindings->forEnabledSections($site)['vehicles'],
+            ],
             'popups' => $popups->forSite($site),
             'captcha' => SiteSecurityPolicy::forSite($site)->captchaRequired && $captcha->isConfigured() ? $captcha->widget() : null,
         ]);

@@ -3,6 +3,7 @@
 namespace Tests\Feature\Sites;
 
 use App\Automotive\SectionPages;
+use App\Blocks\SiteComponents;
 use App\Enums\SectionPageRole;
 use App\Enums\SiteType;
 use App\Enums\WorkspaceRole;
@@ -51,23 +52,27 @@ class CatalogSectionPagesTest extends TestCase
     public function test_adding_catalog_creates_prefilled_template_pages_with_home_header(): void
     {
         $header = BlockDefinition::query()->where('slug', 'header')->sole()->versions()->latest('id')->firstOrFail();
-        $this->home->blocks()->make(['sort_order' => 0, 'state_json' => ['logo_text' => 'Киа Центр']])
-            ->version()->associate($header)->save();
+        app(SiteComponents::class)->place($this->site, $header, ['logo_text' => 'Киа Центр']);
 
         $this->as()->post(route('sites.sections.store', $this->site), ['type' => 'catalog'])->assertSessionHasNoErrors();
 
         $section = $this->site->sections()->sole();
         $pages = $section->pages()->with('blocks.version.definition')->get()->keyBy(fn (Page $page): string => $page->section_role->value);
 
-        $this->assertSame(['index', 'mark', 'item'], array_map(fn (SectionPageRole $role): string => $role->value, SectionPageRole::cases()));
+        $this->assertSame(
+            ['index', 'mark', 'item'],
+            array_map(fn (SectionPageRole $role): string => $role->value, $section->type->roles()),
+        );
         $this->assertEqualsCanonicalizing(['index', 'mark', 'item'], $pages->keys()->all());
         $this->assertSame('_catalog-item', $pages['item']->slug);
         $this->assertSame(
-            ['header', 'vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment'],
+            ['vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment'],
             $pages['item']->blocks->map(fn ($block): string => $block->version->definition->slug)->all(),
         );
-        $this->assertSame(['header', SectionPages::LISTING_BLOCK], $pages['index']->blocks->map(fn ($block): string => $block->version->definition->slug)->all());
-        $this->assertSame('Киа Центр', $pages['index']->blocks->first()?->state_json['logo_text']);
+        $this->assertSame([SectionPages::LISTING_BLOCK], $pages['index']->blocks->map(fn ($block): string => $block->version->definition->slug)->all());
+        $composed = app(SiteComponents::class)->forPage($pages['index']);
+        $this->assertSame(['header', SectionPages::LISTING_BLOCK], $composed->map(fn ($block): string => $block->version->definition->slug)->all());
+        $this->assertSame('Киа Центр', $composed->first()?->state_json['logo_text']);
 
         app(SectionPages::class)->ensure($section);
         $this->assertSame(3, $section->pages()->count());
@@ -133,7 +138,7 @@ class CatalogSectionPagesTest extends TestCase
                 ->where('catalog.pages.item', $item->public_id)
                 ->has('catalog.vehicles', 3)
                 ->where('catalog.vehicles.0.mark.segment', 'kia')
-                ->where('pageContext', ['role' => 'item', 'mark' => 'kia', 'vehicle' => $rio->public_id])
+                ->where('pageContext', ['role' => 'item', 'mark' => 'kia', 'model' => 'rio', 'vehicle' => $rio->public_id])
                 ->where('pages', fn ($pages): bool => collect($pages)->where('section_role', 'item')->count() === 1));
     }
 
@@ -144,15 +149,15 @@ class CatalogSectionPagesTest extends TestCase
         $pages = $section->pages()->get()->keyBy(fn (Page $page): string => $page->section_role->value);
 
         foreach ([
-            'catalog' => ['index', null, null],
-            'catalog/kia' => ['mark', 'kia', null],
-            'catalog/kia/rio-iv-restyling' => ['item', 'kia', $rio->public_id],
-        ] as $path => [$role, $mark, $vehicle]) {
+            'catalog' => ['index', null, null, null],
+            'catalog/kia' => ['mark', 'kia', null, null],
+            'catalog/kia/rio-iv-restyling' => ['item', 'kia', 'rio', $rio->public_id],
+        ] as $path => [$role, $mark, $model, $vehicle]) {
             $this->as()->get(route('sites.preview', ['site' => $this->site, 'path' => $path]))
                 ->assertOk()
                 ->assertInertia(fn (Assert $page) => $page
                     ->where('page.public_id', $pages[$role]->public_id)
-                    ->where('pageContext', ['role' => $role, 'mark' => $mark, 'vehicle' => $vehicle]));
+                    ->where('pageContext', ['role' => $role, 'mark' => $mark, 'model' => $model, 'vehicle' => $vehicle]));
         }
 
         foreach (['catalog/bmw', 'catalog/kia/x5', 'catalog/kia/rio', 'catalog/kia/rio/iv-restyling-sedan', 'autos/kia', 'catalog/kia/rio-iv-restyling/extra'] as $path) {

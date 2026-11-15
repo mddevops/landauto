@@ -27,11 +27,19 @@ export function CatalogSampleSelect({
 
     const options = sampleOptions(catalog.vehicles, context.role);
     const current =
-        catalog.vehicles.find((vehicle) =>
-            context.role === 'item'
-                ? vehicle.public_id === context.vehicle
-                : vehicle.mark.segment === context.mark,
-        ) ?? null;
+        catalog.vehicles.find((vehicle) => {
+            if (context.role === 'item') {
+                return vehicle.public_id === context.vehicle;
+            }
+            if (context.role === 'model') {
+                return (
+                    vehicle.mark.segment === context.mark &&
+                    vehicle.model.segment === context.model
+                );
+            }
+
+            return vehicle.mark.segment === context.mark;
+        }) ?? null;
     const value =
         options.find((option) =>
             current ? sameGroup(option.vehicle, current, context.role) : false,
@@ -80,6 +88,11 @@ function sameGroup(
     switch (role) {
         case 'mark':
             return a.mark.segment === b.mark.segment;
+        case 'model':
+            return (
+                a.mark.segment === b.mark.segment &&
+                a.model.segment === b.model.segment
+            );
         default:
             return a.public_id === b.public_id;
     }
@@ -101,7 +114,12 @@ function sampleOptions(
 
         options.push({
             vehicle,
-            label: role === 'mark' ? vehicle.mark.name : vehicle.title,
+            label:
+                role === 'mark'
+                    ? vehicle.mark.name
+                    : role === 'model'
+                      ? `${vehicle.mark.name} ${vehicle.model.name}`
+                      : vehicle.title,
         });
     }
 

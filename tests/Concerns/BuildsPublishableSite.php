@@ -4,6 +4,7 @@ namespace Tests\Concerns;
 
 use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockStateDefaults;
+use App\Blocks\SiteComponents;
 use App\Enums\MediaAngle;
 use App\Enums\SiteType;
 use App\Enums\WorkspaceRole;
@@ -19,6 +20,7 @@ use App\Models\Form;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use App\Models\User;
@@ -94,16 +96,28 @@ trait BuildsPublishableSite
     /**
      * @param  array<string, mixed>  $state
      */
-    protected function place(string $slug, array $state = [], bool $hidden = false, ?Page $page = null): BlockInstance
+    protected function place(string $slug, array $state = [], bool $hidden = false, ?Page $page = null): BlockInstance|SiteComponent
     {
         $page ??= $this->home;
         $version = BlockVersion::query()->whereHas('definition', fn ($query) => $query->where('slug', $slug))->latest('id')->firstOrFail();
+        $state = array_replace(app(BlockStateDefaults::class)->fromSchema($version->schema_json), $state);
+
+        if ($version->definition->is_component) {
+            $component = app(SiteComponents::class)->place($page->site, $version, $state);
+
+            if ($hidden) {
+                SiteComponent::query()->whereKey($component->id)->update(['is_hidden' => true]);
+                $component->is_hidden = true;
+            }
+
+            return $component;
+        }
 
         $block = BlockInstance::factory()->create([
             'page_id' => $page->id,
             'block_version_id' => $version->id,
             'sort_order' => $page->blocks()->count(),
-            'state_json' => array_replace(app(BlockStateDefaults::class)->fromSchema($version->schema_json), $state),
+            'state_json' => $state,
         ]);
 
         if ($hidden) {

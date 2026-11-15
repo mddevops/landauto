@@ -6,6 +6,7 @@ use App\Actions\Sites\CreateSite;
 use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockGroups;
 use App\Blocks\BlockStateDefaults;
+use App\Blocks\SiteComponents;
 use App\Enums\BlockCategory;
 use App\Enums\CatalogAccessMode;
 use App\Enums\DeveloperPermission;
@@ -34,6 +35,7 @@ use App\Models\Popup;
 use App\Models\SeriesMediaImage;
 use App\Models\SeriesMediaSet;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\SiteOffer;
 use App\Models\SiteVehicle;
 use App\Models\Submission;
@@ -488,16 +490,21 @@ class E2eSeeder extends Seeder
     /**
      * @param  array<string, mixed>  $state
      */
-    private function placeBlock(Page $page, string $slug, int $sortOrder, array $state): BlockInstance
+    private function placeBlock(Page $page, string $slug, int $sortOrder, array $state): BlockInstance|SiteComponent
     {
         $version = BlockVersion::query()->whereHas('definition', fn ($query) => $query->where('slug', $slug))->latest('id')->firstOrFail();
+        $state = array_replace(app(BlockStateDefaults::class)->fromSchema($version->schema_json), $state);
+
+        if ($version->definition->is_component) {
+            return app(SiteComponents::class)->place($page->site, $version, $state);
+        }
 
         $block = new BlockInstance;
         $block->forceFill([
             'page_id' => $page->id,
             'block_version_id' => $version->id,
             'sort_order' => $sortOrder,
-            'state_json' => array_replace(app(BlockStateDefaults::class)->fromSchema($version->schema_json), $state),
+            'state_json' => $state,
         ])->save();
 
         return $block;

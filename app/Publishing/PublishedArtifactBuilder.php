@@ -127,8 +127,17 @@ final class PublishedArtifactBuilder
             $assetUrls[$assetId] = PublicBasePath::prefix("/_landflow/assets/{$versionId}/{$assetId}");
         }
 
-        $catalog = $manifest['catalog'] ?? null;
         $section = $page['section'] ?? null;
+        $catalog = $manifest['catalog'] ?? null;
+
+        if (is_array($section) && isset($section['public_id'], $manifest['sections']) && is_array($manifest['sections'])) {
+            foreach ($manifest['sections'] as $blob) {
+                if (is_array($blob) && ($blob['public_id'] ?? null) === $section['public_id']) {
+                    $catalog = $blob;
+                    break;
+                }
+            }
+        }
         // Generated pages carry full offer details only for the vehicles they show; the rest keep
         // what cards and listings need, so a large catalog does not multiply into every page.
         $detailed = $section === null ? null : array_filter([$section['context']['vehicle'], ...$section['vehicles']]);

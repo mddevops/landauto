@@ -113,11 +113,19 @@ export default function Preview({
     const openedForm = opened?.popup.form ?? null;
     const sample =
         pageContext?.vehicle ??
-        catalog?.vehicles.find(
-            (vehicle) =>
+        catalog?.vehicles.find((vehicle) => {
+            if (pageContext?.model) {
+                return (
+                    vehicle.mark.segment === pageContext.mark &&
+                    vehicle.model.segment === pageContext.model
+                );
+            }
+
+            return (
                 pageContext?.mark !== null &&
-                vehicle.mark.segment === pageContext?.mark,
-        )?.public_id ??
+                vehicle.mark.segment === pageContext?.mark
+            );
+        })?.public_id ??
         null;
 
     return (

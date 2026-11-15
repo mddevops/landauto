@@ -5,6 +5,7 @@ namespace Tests\Feature\Blocks;
 use App\Blocks\BlockAuthoring;
 use App\Blocks\BlockSchemaValidator;
 use App\Blocks\OfficialBlockCatalog;
+use App\Enums\ComponentPosition;
 use App\Enums\PlatformRole;
 use App\Models\BlockDefinition;
 use App\Models\BlockGroup;
@@ -77,7 +78,13 @@ class OfficialBlocksTest extends TestCase
         $this->assertSame($superAdmin->id, $hero->updated_by_user_id);
         $this->assertSame($versions, BlockVersion::query()->orderBy('id')->get(['id', 'block_definition_id', 'version', 'schema_json'])->toArray());
         $this->assertSame(count(OfficialBlockCatalog::blocks()), BlockVersion::query()->count());
-        $this->assertSame('Шапка', BlockDefinition::query()->where('slug', 'header')->value('name'));
+        $header = BlockDefinition::query()->where('slug', 'header')->sole();
+        $footer = BlockDefinition::query()->where('slug', 'footer')->sole();
+        $this->assertSame('Шапка', $header->name);
+        $this->assertTrue($header->is_component);
+        $this->assertSame(ComponentPosition::First, $header->component_position);
+        $this->assertTrue($footer->is_component);
+        $this->assertSame(ComponentPosition::Last, $footer->component_position);
     }
 
     public function test_seeder_appends_missing_official_versions_without_touching_existing_metadata(): void

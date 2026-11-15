@@ -40,26 +40,39 @@ type PagesPanelProps = {
         prefix: string;
         root: boolean;
         enabled: boolean;
+        source?: 'site' | 'stock';
     } | null;
 };
 
-const sectionRoles: SectionPageRole[] = ['index', 'mark', 'item'];
+const catalogRoles: SectionPageRole[] = ['index', 'mark', 'item'];
+const stockRoles: SectionPageRole[] = ['index', 'mark', 'model', 'item'];
 
-const exampleSegments: Record<SectionPageRole, string> = {
+const catalogExamples: Record<SectionPageRole, string> = {
     index: '',
     mark: '/kia',
+    model: '/kia',
     item: '/kia/rio-iv-restyling',
 };
 
+const stockExamples: Record<SectionPageRole, string> = {
+    index: '',
+    mark: '/kia',
+    model: '/kia/rio',
+    item: '/kia/rio/4564',
+};
+
 function examplePath(
-    catalog: { prefix: string; root: boolean },
+    catalog: { prefix: string; root: boolean; source?: 'site' | 'stock' },
     role: SectionPageRole | null | undefined,
 ): string {
     if (catalog.root) {
         return '/rio-iv-restyling';
     }
 
-    return `/${catalog.prefix}${role ? exampleSegments[role] : ''}`;
+    const examples =
+        catalog.source === 'stock' ? stockExamples : catalogExamples;
+
+    return `/${catalog.prefix}${role ? examples[role] : ''}`;
 }
 
 type DialogState =
@@ -82,6 +95,8 @@ export function PagesPanel({
     const [dialog, setDialog] = useState<DialogState>(null);
     const close = () => setDialog(null);
     const regularPages = pages.filter((page) => !page.section_role);
+    const sectionRoles =
+        catalog?.source === 'stock' ? stockRoles : catalogRoles;
     const sectionPages = sectionRoles.flatMap((role) =>
         pages.filter((page) => page.section_role === role),
     );

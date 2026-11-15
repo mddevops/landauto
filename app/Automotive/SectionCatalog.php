@@ -9,27 +9,48 @@ use App\Models\Site;
 use App\Models\SiteSection;
 
 /**
- * Catalog section of a Site for the draft runtimes (Designer, preview): its template Pages, the
- * address of every vehicle and the page context a template Page renders with (ADR-011 §3–§5).
+ * Vehicle sections of a Site for the draft runtimes (Designer, preview): template Pages, addresses
+ * and page context (ADR-011 §3–§5). Catalog / Card use Site vehicles; Used / Specials use Stock.
+ *
+ * Catalog (D-131): `{prefix}/{mark}/{slug}`. Stock (X-038): `{prefix}/{mark}/{model}/{path_key}`.
  *
  * @phpstan-import-type VehiclePage from VehiclePages
  *
- * @phpstan-type PageContext array{role: string, mark: string|null, vehicle: string|null}
- * @phpstan-type CatalogProps array{public_id: string, title: string, prefix: string, root: bool, enabled: bool, pages: array<string, string>, vehicles: list<VehiclePage>}
+ * @phpstan-type PageContext array{role: string, mark: string|null, model: string|null, vehicle: string|null}
+ * @phpstan-type CatalogProps array{public_id: string, title: string, prefix: string, root: bool, enabled: bool, source: string, pages: array<string, string>, vehicles: list<VehiclePage>}
  */
 final class SectionCatalog
 {
     public function __construct(
         private SectionPages $pages,
         private VehiclePages $vehiclePages,
+        private StockVehiclePages $stockPages,
     ) {}
 
+    /**
+     * First Site-vehicle section (Catalog / Card) — kept for ordinary Pages and legacy callers.
+     */
     public function section(Site $site): ?SiteSection
     {
         return $site->sections()
             ->whereIn('type', array_map(fn (SiteSectionType $type): string => $type->value, SiteSectionType::vehicleSections()))
             ->orderBy('id')
             ->first();
+    }
+
+    /**
+     * Enabled sections in Site order.
+     *
+     * @return list<SiteSection>
+     */
+    public function enabled(Site $site): array
+    {
+        return array_values($site->sections()
+            ->where('enabled', true)
+            ->orderBy('sort_order')
+            ->orderBy('id')
+            ->get()
+            ->all());
     }
 
     /**
@@ -51,17 +72,35 @@ final class SectionCatalog
             'prefix' => $section->prefix,
             'root' => $section->type->atRoot(),
             'enabled' => $section->enabled,
+            'source' => $section->type->fromStock() ? 'stock' : 'site',
             'pages' => $section->pages()->get()
                 ->mapWithKeys(fn (Page $page): array => [$page->section_role->value => $page->public_id])
                 ->all(),
-            'vehicles' => $this->vehiclePages->forSite($site),
+            'vehicles' => $section->type->fromStock()
+                ? $this->stockPages->forSection($section)
+                : $this->vehiclePages->forSite($site),
         ];
     }
 
     /**
-     * Context of a template Page shown on the example of one vehicle (`sample`, Designer) or the
-     * first vehicle of the section.
-     *
+     * @return list<CatalogProps>
+     */
+    public function propsAll(Site $site): array
+    {
+        $items = [];
+
+        foreach ($this->enabled($site) as $section) {
+            $props = $this->props($site, $section);
+
+            if ($props !== null) {
+                $items[] = $props;
+            }
+        }
+
+        return $items;
+    }
+
+    /**
      * @param  CatalogProps  $catalog
      * @return PageContext
      */
@@ -71,20 +110,18 @@ final class SectionCatalog
         $vehicle = collect($catalog['vehicles'])->firstWhere('public_id', $sample) ?? ($catalog['vehicles'][0] ?? null);
 
         if ($role === SectionPageRole::Index || $vehicle === null) {
-            return ['role' => $role->value, 'mark' => null, 'vehicle' => null];
+            return ['role' => $role->value, 'mark' => null, 'model' => null, 'vehicle' => null];
         }
 
         return [
             'role' => $role->value,
             'mark' => $vehicle['mark']['segment'],
+            'model' => $role === SectionPageRole::Mark ? null : $vehicle['model']['segment'],
             'vehicle' => $role === SectionPageRole::Item ? $vehicle['public_id'] : null,
         ];
     }
 
     /**
-     * Resolves a section address (`catalog/kia/rio-iv-restyling`) to its template Page and
-     * context; null when no vehicle of the section matches.
-     *
      * @param  CatalogProps  $catalog
      * @param  list<string>  $segments
      * @return array{role: SectionPageRole, context: PageContext}|null
@@ -96,11 +133,34 @@ final class SectionCatalog
 
             return $item === null ? null : [
                 'role' => SectionPageRole::Item,
-                'context' => ['role' => SectionPageRole::Item->value, 'mark' => $item['mark']['segment'], 'vehicle' => $item['public_id']],
+                'context' => [
+                    'role' => SectionPageRole::Item->value,
+                    'mark' => $item['mark']['segment'],
+                    'model' => $item['model']['segment'],
+                    'vehicle' => $item['public_id'],
+                ],
             ];
         }
 
-        if (($segments[0] ?? null) !== $catalog['prefix'] || count($segments) > 3) {
+        if (($segments[0] ?? null) !== $catalog['prefix']) {
+            return null;
+        }
+
+        return $catalog['source'] === 'stock'
+            ? self::resolveStock($catalog, $segments)
+            : self::resolveCatalog($catalog, $segments);
+    }
+
+    /**
+     * Catalog (D-131): prefix / mark / slug.
+     *
+     * @param  CatalogProps  $catalog
+     * @param  list<string>  $segments
+     * @return array{role: SectionPageRole, context: PageContext}|null
+     */
+    private static function resolveCatalog(array $catalog, array $segments): ?array
+    {
+        if (count($segments) > 3) {
             return null;
         }
 
@@ -125,7 +185,95 @@ final class SectionCatalog
 
         return [
             'role' => $role,
-            'context' => ['role' => $role->value, 'mark' => $mark, 'vehicle' => $item['public_id'] ?? null],
+            'context' => [
+                'role' => $role->value,
+                'mark' => $mark,
+                'model' => $item['model']['segment'] ?? null,
+                'vehicle' => $item['public_id'] ?? null,
+            ],
         ];
+    }
+
+    /**
+     * Stock Used/Specials: prefix / mark / model / path_key.
+     *
+     * @param  CatalogProps  $catalog
+     * @param  list<string>  $segments
+     * @return array{role: SectionPageRole, context: PageContext}|null
+     */
+    private static function resolveStock(array $catalog, array $segments): ?array
+    {
+        if (count($segments) > 4) {
+            return null;
+        }
+
+        [, $mark, $model, $slug] = array_pad($segments, 4, null);
+        $vehicles = collect($catalog['vehicles']);
+
+        if ($mark !== null) {
+            $vehicles = $vehicles->filter(fn (array $vehicle): bool => $vehicle['mark']['segment'] === $mark);
+        }
+
+        if ($model !== null) {
+            $vehicles = $vehicles->filter(fn (array $vehicle): bool => $vehicle['model']['segment'] === $model);
+        }
+
+        $item = $slug === null ? null : $vehicles->firstWhere('slug', $slug);
+
+        if (($mark !== null && $vehicles->isEmpty()) || ($model !== null && $vehicles->isEmpty()) || ($slug !== null && $item === null)) {
+            return null;
+        }
+
+        $role = match (true) {
+            $slug !== null => SectionPageRole::Item,
+            $model !== null => SectionPageRole::Model,
+            $mark !== null => SectionPageRole::Mark,
+            default => SectionPageRole::Index,
+        };
+
+        return [
+            'role' => $role,
+            'context' => [
+                'role' => $role->value,
+                'mark' => $mark,
+                'model' => $model,
+                'vehicle' => $item['public_id'] ?? null,
+            ],
+        ];
+    }
+
+    /**
+     * @param  list<string>  $segments
+     * @return array{catalog: CatalogProps, role: SectionPageRole, context: PageContext}|null
+     */
+    public function resolvePath(Site $site, array $segments): ?array
+    {
+        foreach ($this->propsAll($site) as $catalog) {
+            if (! $catalog['enabled']) {
+                continue;
+            }
+
+            $resolved = self::resolve($catalog, $segments);
+
+            if ($resolved !== null) {
+                return ['catalog' => $catalog, ...$resolved];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * @return CatalogProps|null
+     */
+    public function propsForPage(Site $site, Page $page): ?array
+    {
+        if (! $page->isSectionPage() || $page->site_section_id === null) {
+            return $this->props($site);
+        }
+
+        $section = $site->sections()->whereKey($page->site_section_id)->first();
+
+        return $section === null ? null : $this->props($site, $section);
     }
 }

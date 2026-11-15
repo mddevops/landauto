@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Enums\BlockCategory;
 use App\Enums\BlockOwnerScope;
 use App\Enums\CatalogAccessMode;
+use App\Enums\ComponentPosition;
 use App\Enums\Entitlement;
 use App\Models\Concerns\HasImmutablePublicId;
 use Database\Factories\BlockDefinitionFactory;
@@ -30,6 +31,8 @@ use LogicException;
  * @property string $name
  * @property string $slug
  * @property BlockCategory $category
+ * @property bool $is_component
+ * @property ComponentPosition|null $component_position
  * @property int|null $block_group_id
  * @property BlockOwnerScope $owner_scope
  * @property CatalogAccessMode $access_mode
@@ -69,6 +72,8 @@ class BlockDefinition extends Model
         return [
             'owner_scope' => BlockOwnerScope::class,
             'category' => BlockCategory::class,
+            'is_component' => 'boolean',
+            'component_position' => ComponentPosition::class,
             'access_mode' => CatalogAccessMode::class,
             'access_entitlement' => Entitlement::class,
             'site_price_minor' => 'integer',
@@ -79,13 +84,18 @@ class BlockDefinition extends Model
     /**
      * @var array<string, mixed>
      */
-    protected $attributes = ['category' => 'other', 'access_mode' => CatalogAccessMode::Free->value];
+    protected $attributes = [
+        'category' => 'other',
+        'access_mode' => CatalogAccessMode::Free->value,
+        'is_component' => false,
+    ];
 
     protected static function booted(): void
     {
         static::saving(function (BlockDefinition $definition): void {
             $definition->assertOwnershipIsConsistent();
             $definition->assertAccessIsConsistent();
+            $definition->assertComponentIsConsistent();
         });
 
         static::updating(function (BlockDefinition $definition): void {
@@ -242,6 +252,20 @@ class BlockDefinition extends Model
     {
         if (! CatalogAccessMode::fieldsMatch($this->getAttribute('access_mode'), $this->getAttribute('access_entitlement'), $this->site_price_minor, $this->workspace_price_minor, $this->price_currency)) {
             throw new LogicException('Block Definition access fields must match its access mode exactly.');
+        }
+    }
+
+    private function assertComponentIsConsistent(): void
+    {
+        $isComponent = (bool) $this->getAttribute('is_component');
+        $position = $this->getAttribute('component_position');
+
+        if ($isComponent && ! ($position instanceof ComponentPosition)) {
+            throw new LogicException('Component Definitions require a component position.');
+        }
+
+        if (! $isComponent && $position !== null) {
+            throw new LogicException('Non-component Definitions cannot have a component position.');
         }
     }
 

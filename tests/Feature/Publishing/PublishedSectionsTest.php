@@ -64,7 +64,7 @@ class PublishedSectionsTest extends TestCase
         }
 
         $payload = $this->payload($version, self::ITEM);
-        $this->assertSame(['role' => 'item', 'mark' => 'kia', 'vehicle' => $this->vehicle->public_id], $payload['page_context']);
+        $this->assertSame(['role' => 'item', 'mark' => 'kia', 'model' => 'rio', 'vehicle' => $this->vehicle->public_id], $payload['page_context']);
         $this->assertSame('catalog', $payload['catalog']['prefix']);
         $this->assertSame('rio-iv', $payload['catalog']['vehicles'][0]['slug']);
         $this->assertArrayHasKey('catalog', $this->payload($version, ''), 'vehicle cards on ordinary Pages link to section pages');

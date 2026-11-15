@@ -6,6 +6,7 @@ use App\Enums\BlockRuntime;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\TemplateBlock;
 use App\Templates\TemplateBlockReferences;
 use Illuminate\Support\Facades\DB;
@@ -71,30 +72,30 @@ final class LegacyBlockMigration
      */
     public function forSite(Site $site, BlockInstance $block, ?array $licensed = null, ?array $granted = null): LegacyBlockUpgrade
     {
-        $version = $block->version;
+        return $this->siteUpgrade(
+            $site,
+            $block->version,
+            $block->state_json,
+            new PageBlockReferences($block->page),
+            $licensed,
+            $granted,
+        );
+    }
 
-        if (! self::isLegacy($version)) {
-            return LegacyBlockUpgrade::denied('Блок уже использует актуальную версию.');
-        }
-
-        $target = $this->successor($version);
-
-        if ($target === null) {
-            return LegacyBlockUpgrade::denied('Нативная версия этого блока ещё не опубликована.');
-        }
-
-        if ($site->site_type->hasLockedStructure()) {
-            return LegacyBlockUpgrade::denied('На сайтах этого типа блоки обновляются только вместе с новой версией шаблона.', $target);
-        }
-
-        $isGranted = $granted !== null ? isset($granted[$target->id]) : $this->grants->has($site, $target);
-        $denial = $isGranted ? null : $this->access->denial($site, $version->definition, $licensed);
-
-        if ($denial !== null) {
-            return LegacyBlockUpgrade::denied($denial, $target);
-        }
-
-        return $this->migrateState($target, $block->state_json, new PageBlockReferences($block->page));
+    /**
+     * @param  array<int, true>|null  $licensed
+     * @param  array<int, true>|null  $granted
+     */
+    public function forSiteComponent(Site $site, SiteComponent $component, ?array $licensed = null, ?array $granted = null): LegacyBlockUpgrade
+    {
+        return $this->siteUpgrade(
+            $site,
+            $component->version,
+            $component->state_json,
+            new SiteBlockReferences($site),
+            $licensed,
+            $granted,
+        );
     }
 
     public function forTemplate(TemplateBlock $block): LegacyBlockUpgrade
@@ -126,6 +127,27 @@ final class LegacyBlockMigration
             $current = BlockInstance::query()->whereKey($block->id)->lockForUpdate()->firstOrFail();
             $current->setRelation('page', $block->page);
             $upgrade = $this->forSite($site, $current);
+
+            if (! $upgrade->possible()) {
+                throw ValidationException::withMessages(['block' => $upgrade->reason ?? 'Блок нельзя обновить.']);
+            }
+
+            $this->grants->grant($site, [$upgrade->target->id]);
+            $this->pin($current, $upgrade);
+
+            return $upgrade->target;
+        });
+    }
+
+    /**
+     * @throws ValidationException with the Russian reason when the upgrade is not possible
+     */
+    public function upgradeSiteComponent(Site $site, SiteComponent $component): BlockVersion
+    {
+        return DB::transaction(function () use ($site, $component): BlockVersion {
+            $current = SiteComponent::query()->whereKey($component->id)->lockForUpdate()->firstOrFail();
+            $current->setRelation('site', $site);
+            $upgrade = $this->forSiteComponent($site, $current);
 
             if (! $upgrade->possible()) {
                 throw ValidationException::withMessages(['block' => $upgrade->reason ?? 'Блок нельзя обновить.']);
@@ -180,7 +202,43 @@ final class LegacyBlockMigration
      * The pinned-version guard of the models is bypassed only here: the state was validated
      * against the target schema by {@see migrateState()}.
      */
-    private function pin(BlockInstance|TemplateBlock $block, LegacyBlockUpgrade $upgrade): void
+    /**
+     * @param  array<int, true>|null  $licensed
+     * @param  array<int, true>|null  $granted
+     */
+    private function siteUpgrade(
+        Site $site,
+        BlockVersion $version,
+        array $state,
+        BlockReferenceResolver $references,
+        ?array $licensed,
+        ?array $granted,
+    ): LegacyBlockUpgrade {
+        if (! self::isLegacy($version)) {
+            return LegacyBlockUpgrade::denied('Блок уже использует актуальную версию.');
+        }
+
+        $target = $this->successor($version);
+
+        if ($target === null) {
+            return LegacyBlockUpgrade::denied('Нативная версия этого блока ещё не опубликована.');
+        }
+
+        if ($site->site_type->hasLockedStructure()) {
+            return LegacyBlockUpgrade::denied('На сайтах этого типа блоки обновляются только вместе с новой версией шаблона.', $target);
+        }
+
+        $isGranted = $granted !== null ? isset($granted[$target->id]) : $this->grants->has($site, $target);
+        $denial = $isGranted ? null : $this->access->denial($site, $version->definition, $licensed);
+
+        if ($denial !== null) {
+            return LegacyBlockUpgrade::denied($denial, $target);
+        }
+
+        return $this->migrateState($target, $state, $references);
+    }
+
+    private function pin(BlockInstance|SiteComponent|TemplateBlock $block, LegacyBlockUpgrade $upgrade): void
     {
         $block->block_version_id = (int) $upgrade->target?->id;
         $block->state_json = $upgrade->state;

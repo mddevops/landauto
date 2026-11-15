@@ -47,8 +47,7 @@ enum SiteSectionType: string
     }
 
     /**
-     * Sections a Site of this type can show in «Разделах»; Used and Specials need Stock, which
-     * does not exist yet.
+     * Sections a Site of this type can show in «Разделах».
      *
      * @return list<self>
      */
@@ -63,7 +62,22 @@ enum SiteSectionType: string
 
     public function isAvailable(): bool
     {
-        return $this === self::Catalog || $this === self::Card;
+        return true;
+    }
+
+    /**
+     * Sections whose vehicles come from Workspace Stock (ADR-012 / X-038).
+     *
+     * @return list<self>
+     */
+    public static function stockSections(): array
+    {
+        return [self::Used, self::Specials];
+    }
+
+    public function fromStock(): bool
+    {
+        return in_array($this, self::stockSections(), true);
     }
 
     /**
@@ -73,7 +87,20 @@ enum SiteSectionType: string
      */
     public function roles(): array
     {
-        return $this === self::Card ? [SectionPageRole::Item] : SectionPageRole::cases();
+        return match ($this) {
+            self::Card => [SectionPageRole::Item],
+            self::Used, self::Specials => [
+                SectionPageRole::Index,
+                SectionPageRole::Mark,
+                SectionPageRole::Model,
+                SectionPageRole::Item,
+            ],
+            self::Catalog => [
+                SectionPageRole::Index,
+                SectionPageRole::Mark,
+                SectionPageRole::Item,
+            ],
+        };
     }
 
     /**

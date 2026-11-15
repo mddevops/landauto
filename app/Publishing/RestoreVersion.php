@@ -6,9 +6,11 @@ use App\Automotive\VehiclePages;
 use App\Automotive\VehiclePhotos;
 use App\Blocks\BlockVersionGrants;
 use App\Catalog\AutoCatalog;
+use App\Enums\ComponentPosition;
 use App\Enums\MediaAngle;
 use App\Enums\PublishedVersionStatus;
 use App\Enums\SectionPageRole;
+use App\Enums\SiteSectionType;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
@@ -18,6 +20,7 @@ use App\Models\Page;
 use App\Models\Popup;
 use App\Models\PublishedVersion;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\SiteOffer;
 use App\Models\SiteSection;
 use App\Models\SiteVehicle;
@@ -76,6 +79,12 @@ final class RestoreVersion
             $this->restoreForms($site, self::list($snapshot['forms'] ?? []));
             $this->restorePopups($site, self::list($snapshot['popups'] ?? []));
             $this->restoreVehicles($site, self::list($snapshot['vehicles'] ?? []));
+            $this->restoreComponents(
+                $site,
+                self::list($snapshot['components'] ?? []),
+                self::list($snapshot['pages'] ?? []),
+                array_key_exists('sections', $snapshot) ? self::list($snapshot['sections']) : [],
+            );
             $this->restorePages($site, self::list($snapshot['pages'] ?? []));
 
             // Snapshots from before X-035 have no sections; the current sections are kept then.
@@ -396,13 +405,119 @@ final class RestoreVersion
                 $redirect->save();
             }
 
-            // Versions from before D-131 also carry a model template Page; that role no longer exists.
+            // Catalog snapshots from before D-131 may carry a model template Page; Catalog no longer has it.
+            // Used / Specials keep the model level (X-038).
             $pages = array_values(array_filter(
                 self::list($data['pages'] ?? []),
-                fn (array $page): bool => SectionPageRole::tryFrom((string) ($page['role'] ?? '')) !== null,
+                function (array $page) use ($section): bool {
+                    $role = SectionPageRole::tryFrom((string) ($page['role'] ?? ''));
+
+                    if ($role === null) {
+                        return false;
+                    }
+
+                    return ! ($role === SectionPageRole::Model && $section->type === SiteSectionType::Catalog);
+                },
             ));
             $this->restorePages($site, $pages, $section);
         }
+    }
+
+    /**
+     * Site Components (ADR-013). Snapshots from before X-041 promote home header/footer page Blocks.
+     *
+     * @param  list<array<string, mixed>>  $components
+     * @param  list<array<string, mixed>>  $pages
+     * @param  list<array<string, mixed>>  $sections
+     */
+    private function restoreComponents(Site $site, array $components, array $pages, array $sections): void
+    {
+        if ($components === []) {
+            $sectionPages = [];
+
+            foreach ($sections as $section) {
+                foreach (self::list($section['pages'] ?? []) as $page) {
+                    $sectionPages[] = $page;
+                }
+            }
+
+            $components = $this->legacyComponentsFromPages([...$pages, ...$sectionPages]);
+        }
+
+        $keep = array_map(fn (array $component): string => (string) $component['public_id'], $components);
+        $site->components()->whereNotIn('public_id', $keep)->delete();
+        $versionIds = [];
+
+        foreach ($components as $data) {
+            $version = $this->blockVersion((string) $data['definition'], (string) $data['version']);
+
+            if (! $version->definition->is_component) {
+                continue;
+            }
+
+            $component = SiteComponent::query()->where('public_id', $data['public_id'])->first();
+
+            if ($component !== null && $component->site_id !== $site->id) {
+                throw new RestoreFailed('Версия ссылается на данные другого сайта.');
+            }
+
+            $component ??= new SiteComponent;
+            $component->forceFill([
+                'public_id' => $data['public_id'],
+                'site_id' => $site->id,
+                'block_version_id' => $version->id,
+                'sort_order' => (int) ($data['sort_order'] ?? 0),
+                'is_hidden' => (bool) ($data['is_hidden'] ?? false),
+                'state_json' => is_array($data['state'] ?? null) ? $data['state'] : [],
+            ]);
+            $component->saveQuietly();
+            $versionIds[] = $version->id;
+        }
+
+        $this->grants->grant($site, $versionIds);
+    }
+
+    /**
+     * @param  list<array<string, mixed>>  $pages
+     * @return list<array<string, mixed>>
+     */
+    private function legacyComponentsFromPages(array $pages): array
+    {
+        $ordered = [...array_filter($pages, fn (array $page): bool => (bool) ($page['is_home'] ?? false)), ...$pages];
+        $found = [];
+
+        foreach ($ordered as $page) {
+            foreach (self::list($page['blocks'] ?? []) as $block) {
+                $definition = (string) ($block['definition'] ?? '');
+
+                if ($definition === '' || isset($found[$definition])) {
+                    continue;
+                }
+
+                try {
+                    $version = $this->blockVersion($definition, (string) $block['version']);
+                } catch (RestoreFailed) {
+                    continue;
+                }
+
+                if (! $version->definition->is_component) {
+                    continue;
+                }
+
+                $found[$definition] = [
+                    'public_id' => $block['public_id'],
+                    'definition' => $definition,
+                    'version' => $block['version'],
+                    'sort_order' => $version->definition->component_position === ComponentPosition::Free
+                        ? count($found)
+                        : 0,
+                    'is_hidden' => (bool) ($block['is_hidden'] ?? false),
+                    'state' => is_array($block['state'] ?? null) ? $block['state'] : [],
+                ];
+            }
+        }
+
+        return array_values($found);
     }
 
     /**
@@ -418,9 +533,15 @@ final class RestoreVersion
 
         foreach ($pages as $page) {
             foreach (self::list($page['blocks'] ?? []) as $block) {
+                $version = $this->blockVersion((string) $block['definition'], (string) $block['version']);
+
+                if ($version->definition->is_component) {
+                    continue;
+                }
+
                 $targets[(string) $block['public_id']] = [
                     'page' => (string) $page['public_id'],
-                    'version' => $this->blockVersion((string) $block['definition'], (string) $block['version']),
+                    'version' => $version,
                 ];
             }
         }

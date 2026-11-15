@@ -12,6 +12,7 @@ use App\Models\SiteVehicle;
 use App\Models\VehicleColor;
 use App\Models\VehiclePhoto;
 use App\Models\WorkspaceVehicle;
+use App\Stock\StockAccess;
 use App\Support\DesignerScope;
 use App\Support\ImageUpload;
 use App\Support\WorkspaceContext;
@@ -46,6 +47,9 @@ class VehiclePhotoController extends Controller
         if ($photo->site_vehicle_id !== null) {
             $site = SiteVehicle::query()->whereKey($photo->site_vehicle_id)->first()?->site;
             abort_unless($site instanceof Site && Gate::allows('viewVehicles', $site), 404);
+        } elseif ($photo->stock_vehicle_id !== null) {
+            $user = request()->user();
+            abort_unless($user !== null && app(StockAccess::class)->allows($user), 404);
         } else {
             abort_unless($photo->workspace_vehicle_id !== null && Gate::allows(WorkspacePermission::ManageWorkspaceVehicleLibrary->value), 404);
         }

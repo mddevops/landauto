@@ -6,6 +6,7 @@ use App\Blocks\BlockStateDefaults;
 use App\Blocks\BlockVersionGrants;
 use App\Enums\BlockOwnerScope;
 use App\Enums\SectionPageRole;
+use App\Enums\SiteSectionType;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
@@ -16,14 +17,11 @@ use Illuminate\Support\Facades\DB;
 /**
  * Generated template Pages of a vehicle section (ADR-011 §3): one editable Page per role, created
  * pre-filled when the section appears. They render every mark, model or vehicle of the section and
- * are removed only together with it.
+ * are removed only together with it. Shared Header / Footer come from Site Components (ADR-013).
  */
 final class SectionPages
 {
     public const LISTING_BLOCK = 'vehicle-section';
-
-    /** Header and footer of the home Page are copied so a new template Page looks like the Site. */
-    private const SHARED_BLOCKS = ['header', 'footer'];
 
     /**
      * @var array<string, list<string>>
@@ -31,7 +29,9 @@ final class SectionPages
     private const CONTENT = [
         'index' => [self::LISTING_BLOCK],
         'mark' => [self::LISTING_BLOCK],
+        'model' => [self::LISTING_BLOCK],
         'item' => ['vehicle-gallery', 'vehicle-offers', 'vehicle-characteristics', 'vehicle-equipment'],
+        'item_stock' => ['vehicle-gallery', 'vehicle-characteristics', 'vehicle-equipment'],
     ];
 
     public function __construct(
@@ -54,9 +54,8 @@ final class SectionPages
         }
 
         $site = $section->site()->firstOrFail();
-        $shared = $this->sharedBlocks($site);
 
-        DB::transaction(function () use ($site, $section, $missing, $shared): void {
+        DB::transaction(function () use ($site, $section, $missing): void {
             $sortOrder = (int) $site->pages()->max('sort_order');
 
             foreach ($missing as $role) {
@@ -70,7 +69,7 @@ final class SectionPages
                 $page->section_role = $role;
                 $page->save();
 
-                $this->fill($site, $page, $role, $shared);
+                $this->fill($site, $page, $role, $section->type);
             }
         });
     }
@@ -84,27 +83,16 @@ final class SectionPages
         return "_{$section->type->value}-{$role->value}";
     }
 
-    /**
-     * @param  array{header: BlockInstance|null, footer: BlockInstance|null}  $shared
-     */
-    private function fill(Site $site, Page $page, SectionPageRole $role, array $shared): void
+    private function fill(Site $site, Page $page, SectionPageRole $role, SiteSectionType $type): void
     {
         $sortOrder = 0;
         $versionIds = [];
 
-        $place = function (int $versionId, array $state) use ($page, &$sortOrder, &$versionIds): void {
-            $block = new BlockInstance(['sort_order' => $sortOrder++, 'state_json' => $state]);
-            $block->page()->associate($page);
-            $block->block_version_id = $versionId;
-            $block->save();
-            $versionIds[] = $versionId;
-        };
+        $contentKey = $role === SectionPageRole::Item && $type->fromStock()
+            ? 'item_stock'
+            : $role->value;
 
-        if ($shared['header'] !== null) {
-            $place($shared['header']->block_version_id, $shared['header']->state_json);
-        }
-
-        foreach (self::CONTENT[$role->value] as $slug) {
+        foreach (self::CONTENT[$contentKey] as $slug) {
             $version = BlockDefinition::query()
                 ->where('slug', $slug)
                 ->where('owner_scope', BlockOwnerScope::Platform->value)
@@ -114,31 +102,17 @@ final class SectionPages
                 ->first();
 
             if ($version !== null) {
-                $place($version->id, $this->defaults->fromSchema($version->schema_json));
+                $block = new BlockInstance([
+                    'sort_order' => $sortOrder++,
+                    'state_json' => $this->defaults->fromSchema($version->schema_json),
+                ]);
+                $block->page()->associate($page);
+                $block->block_version_id = $version->id;
+                $block->save();
+                $versionIds[] = $version->id;
             }
         }
 
-        if ($shared['footer'] !== null) {
-            $place($shared['footer']->block_version_id, $shared['footer']->state_json);
-        }
-
         $this->grants->grant($site, array_unique($versionIds));
-    }
-
-    /**
-     * @return array{header: BlockInstance|null, footer: BlockInstance|null}
-     */
-    private function sharedBlocks(Site $site): array
-    {
-        $home = $site->pages()->where('is_home', true)->first();
-        $blocks = $home?->blocks()->with('version.definition')->get() ?? collect();
-        $shared = ['header' => null, 'footer' => null];
-
-        foreach (self::SHARED_BLOCKS as $slug) {
-            $shared[$slug] = $blocks->first(fn (BlockInstance $block): bool => $block->version->definition->slug === $slug
-                && $block->version->definition->isPlatformOwned());
-        }
-
-        return $shared;
     }
 }

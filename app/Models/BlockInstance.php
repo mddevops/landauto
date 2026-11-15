@@ -55,6 +55,10 @@ class BlockInstance extends Model
             if ($instance->version->definition->isWorkspacePrivate()) {
                 throw new LogicException('Workspace-private Blocks cannot be placed until they have a customer runtime.');
             }
+
+            if ($instance->version->definition->is_component) {
+                throw new LogicException('Component Definitions must be placed as Site Components.');
+            }
         });
 
         static::updating(function (BlockInstance $instance): void {

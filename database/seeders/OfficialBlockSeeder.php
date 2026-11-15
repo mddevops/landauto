@@ -6,6 +6,7 @@ use App\Blocks\BlockGroups;
 use App\Blocks\BlockSchemaValidator;
 use App\Blocks\OfficialBlockCatalog;
 use App\Enums\BlockOwnerScope;
+use App\Enums\ComponentPosition;
 use App\Models\BlockDefinition;
 use Illuminate\Database\Seeder;
 use LogicException;
@@ -31,9 +32,13 @@ class OfficialBlockSeeder extends Seeder
                     'category' => OfficialBlockCatalog::category($block['slug']),
                 ]);
                 $definition->owner_scope = BlockOwnerScope::Platform;
+                $this->applyComponentFlags($definition, $block['slug']);
                 $definition->save();
             } elseif (! $definition->isPlatformOwned()) {
                 throw new LogicException("Official Block slug [{$block['slug']}] is held by a non-platform Block.");
+            } else {
+                $this->applyComponentFlags($definition, $block['slug']);
+                $definition->save();
             }
 
             $definition->versions()->firstOrCreate(
@@ -43,5 +48,20 @@ class OfficialBlockSeeder extends Seeder
         }
 
         $groups->backfill();
+    }
+
+    private function applyComponentFlags(BlockDefinition $definition, string $slug): void
+    {
+        if ($slug === 'header') {
+            $definition->is_component = true;
+            $definition->component_position = ComponentPosition::First;
+
+            return;
+        }
+
+        if ($slug === 'footer') {
+            $definition->is_component = true;
+            $definition->component_position = ComponentPosition::Last;
+        }
     }
 }

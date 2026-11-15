@@ -104,7 +104,9 @@ class TemplateInstallationTest extends TestCase
         $this->assertSame('Автомобили шаблона', $siteHero->state_json['title']);
         $this->assertSame(['type' => 'open_page', 'page' => $siteAbout->public_id], $siteHero->state_json['primary_button']['action']);
         $this->assertSame(['type' => 'scroll_to', 'block' => $siteCta->public_id], $siteHero->state_json['secondary_button']['action']);
-        $siteHeader = $siteAbout->blocks()->sole();
+        $this->assertSame(0, $siteAbout->blocks()->count());
+        $siteHeader = $site->components()->sole();
+        $this->assertSame('header', $siteHeader->version->definition->slug);
         $this->assertSame(['type' => 'open_page', 'page' => $siteHome->public_id], $siteHeader->state_json['menu'][0]['action']);
     }
 

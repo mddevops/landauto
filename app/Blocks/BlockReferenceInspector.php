@@ -6,6 +6,7 @@ use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use Illuminate\Database\Eloquent\Collection;
 
 /**
@@ -38,14 +39,14 @@ final class BlockReferenceInspector
      * Issues per Block public ID for one Page. With `$visibleOnly`, hidden Blocks are skipped
      * and a scroll target that is hidden counts as broken, matching what will be published.
      *
-     * @param  Collection<int, BlockInstance>|null  $blocks
+     * @param  Collection<int, BlockInstance|SiteComponent>|null  $blocks
      * @return array<string, list<Issue>>
      */
     public function inspectPage(Page $page, ?Collection $blocks = null, bool $visibleOnly = false): array
     {
         $blocks ??= $page->blocks()->with('version')->get();
         $blocks->loadMissing('version');
-        $sources = $visibleOnly ? $blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) : $blocks;
+        $sources = $visibleOnly ? $blocks->reject(fn (BlockInstance|SiteComponent $block): bool => $block->is_hidden) : $blocks;
         $references = [];
 
         foreach ($sources as $block) {
@@ -74,7 +75,7 @@ final class BlockReferenceInspector
             };
         }
 
-        $hiddenBlocks = $blocks->filter(fn (BlockInstance $block): bool => $block->is_hidden)->pluck('public_id')->all();
+        $hiddenBlocks = $blocks->filter(fn (BlockInstance|SiteComponent $block): bool => $block->is_hidden)->pluck('public_id')->all();
         $popupsWithDisabledForm = $existing['popups'] === [] ? [] : Popup::query()
             ->where('site_id', $page->site_id)
             ->whereIn('public_id', $existing['popups'])
@@ -114,9 +115,10 @@ final class BlockReferenceInspector
     public function inspectSite(Site $site, bool $visibleOnly = false): array
     {
         $flat = [];
+        $composer = app(SiteComponents::class);
 
         foreach ($site->pages()->regular()->orderBy('sort_order')->orderBy('id')->get() as $page) {
-            foreach ($this->inspectPage($page, null, $visibleOnly) as $blockId => $issues) {
+            foreach ($this->inspectPage($page, $composer->forPage($page), $visibleOnly) as $blockId => $issues) {
                 foreach ($issues as $issue) {
                     $flat[] = ['page' => $page->public_id, 'block' => $blockId, ...$issue];
                 }

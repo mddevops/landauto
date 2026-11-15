@@ -2399,6 +2399,8 @@ Owner decisions 2026-11-12. Details: `docs/architecture/decisions/ADR-010-autoru
 - A Landing presents one mark; its vehicle card is at the Site root: `domain.ru/rio-iv-restyling`.
 - In Used / Specials the vehicle address part is the Stock vehicle's unique id or `inner_id`.
 
+Stock product shape: `docs/architecture/decisions/ADR-012-workspace-stock.md` (Accepted 2026-11-15) — Workspace «Склад», gate `multi_page_sites` + `manage_stock`, auto.ru-like wizard, catalog-backed refs; Used/Specials bind later (`X-038`).
+
 ### Resolved By
 
 Owner answers 2026-11-14. Details: `docs/architecture/decisions/ADR-011-site-sections-and-vehicle-pages.md`.
@@ -2418,7 +2420,7 @@ Owner answers 2026-11-14. Details: `docs/architecture/decisions/ADR-011-site-sec
 
 ### Resolved By
 
-Owner answers 2026-11-14. Tasks: X-039 (groups), X-040 (previews and cards), X-041 (Components).
+Owner answers 2026-11-14. Tasks: X-039 (groups), X-040 (previews and cards), X-041 (Components). Storage and compose rules: ADR-013 Accepted 2026-11-16.
 
 ---
 
@@ -2436,6 +2438,24 @@ Owner answers 2026-11-14. Tasks: X-039 (groups), X-040 (previews and cards), X-0
 ### Resolved By
 
 Owner answers 2026-11-14. Task: X-042.
+
+---
+
+## D-132 — Stock Used / Specials Address Shape and Path Key
+
+**Status:** APPROVED (owner 2026-11-16; amends ADR-011 §4 for Stock only; Catalog stays D-131)
+
+### Decision
+
+- Used and Specials addresses are four levels: `{prefix}/{mark}/{model}/{path_key}`, e.g. `used/kia/rio/4564`, `specials/changan/uni-v/454784`.
+- Template Pages for Used / Specials: `index`, `mark`, `model`, `item`. Catalog keeps three levels (D-131).
+- Mark and model segments are auto.ru `url` values (lowercase, `_` → `-`), never numeric ids.
+- **Path key (last segment), once and for all:** dealer `inner_id` when set, otherwise the platform `stock_number`. Never the ULID `public_id`. The value is lowercased and normalized to `[a-z0-9-]+` for the URL (`NEW-1` → `new-1`).
+- `public_id` remains the internal/external API identity and Block binding key; it is not the public path segment.
+
+### Resolved By
+
+Owner correction 2026-11-16 during X-038 address review.
 
 ---
 

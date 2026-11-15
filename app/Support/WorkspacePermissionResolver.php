@@ -28,6 +28,7 @@ class WorkspacePermissionResolver
                 WorkspacePermission::EditPrices,
                 WorkspacePermission::EditBenefits,
                 WorkspacePermission::ImportVehicles,
+                WorkspacePermission::ManageStock,
                 WorkspacePermission::ViewIntegrations,
                 WorkspacePermission::ManageIntegrations,
                 WorkspacePermission::EditFormRoutes,

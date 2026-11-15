@@ -112,7 +112,11 @@ function AddSectionCard({
                 )}
             </div>
             <p className="font-mono text-xs break-all text-muted-foreground">
-                {type.root ? '/rio-iv-restyling' : `/${type.prefix}/kia/…`}
+                {type.root
+                    ? '/rio-iv-restyling'
+                    : type.value === 'used' || type.value === 'specials'
+                      ? `/${type.prefix}/kia/rio/4564`
+                      : `/${type.prefix}/kia/…`}
             </p>
             {type.available ? (
                 !type.added && (

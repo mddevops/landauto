@@ -2,9 +2,11 @@
 
 namespace App\Publishing;
 
+use App\Automotive\StockBindings;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockStateValidator;
 use App\Blocks\Native\NativeBlockCompiler;
+use App\Blocks\SiteComponents;
 use App\Enums\PublishedAssetKind;
 use App\Forms\SiteSecurityPolicy;
 use App\Models\BlockInstance;
@@ -13,6 +15,7 @@ use App\Models\FormField;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\Site;
+use App\Models\SiteComponent;
 use App\Models\SiteOffer;
 use App\Models\SiteOfferBenefit;
 use App\Models\SiteSection;
@@ -38,6 +41,8 @@ final class PublishedSnapshotBuilder
         private PopupRuntime $popups,
         private BlockStateValidator $states,
         private SectionManifest $sections,
+        private StockBindings $stockBindings,
+        private SiteComponents $components,
     ) {}
 
     public function build(Site $site): PublishedSnapshot
@@ -47,8 +52,19 @@ final class PublishedSnapshotBuilder
             $site = Site::query()->with('workspace')->findOrFail($site->id);
             $pages = $site->pages()->regular()->orderBy('sort_order')->orderBy('id')->with('blocks.version.definition')->get();
             $vehicles = $this->vehicles->forPublication($site);
+            $stock = $this->stockBindings->forEnabledSections($site);
+            $mergedVehicles = [...$vehicles['vehicles'], ...$stock['vehicles']];
+            $mergedOffers = [...$vehicles['offers'], ...$stock['offers']];
             $popups = $site->popups()->active()->with('form.fields')->orderBy('name')->orderBy('id')->get();
-            $manifest = $this->manifest($site, array_values($pages->all()), $vehicles['vehicles'], $vehicles['offers'], array_values($popups->all()));
+            $manifest = $this->manifest(
+                $site,
+                array_values($pages->all()),
+                $mergedVehicles,
+                $mergedOffers,
+                array_values($popups->all()),
+                array_column($vehicles['vehicles'], 'public_id'),
+                array_column($stock['vehicles'], 'public_id'),
+            );
 
             return new PublishedSnapshot(
                 $manifest,
@@ -87,9 +103,11 @@ final class PublishedSnapshotBuilder
      * @param  list<array<string, mixed>>  $vehicles
      * @param  array<string, array{price_minor: int, currency: string}>  $money
      * @param  list<Popup>  $popups
+     * @param  list<string>  $siteVehicleIds
+     * @param  list<string>  $stockVehicleIds
      * @return array<string, mixed>
      */
-    private function manifest(Site $site, array $pages, array $vehicles, array $money, array $popups): array
+    private function manifest(Site $site, array $pages, array $vehicles, array $money, array $popups, array $siteVehicleIds = [], array $stockVehicleIds = []): array
     {
         $assets = [];
         $manifestPages = [];
@@ -97,7 +115,8 @@ final class PublishedSnapshotBuilder
             $blocks = [];
             $vehicleIds = [];
 
-            foreach ($page->blocks->reject(fn (BlockInstance $block): bool => $block->is_hidden) as $block) {
+            foreach ($this->components->forPage($page, includeHidden: false) as $block) {
+                /** @var BlockInstance|SiteComponent $block */
                 $references = $this->states->references($block->version->schema_json, $block->state_json);
 
                 foreach ($references['assets'] as $assetId) {
@@ -150,7 +169,12 @@ final class PublishedSnapshotBuilder
             ];
         }
 
-        $section = $this->sections->build($site, array_column($vehicles, 'public_id'), $content);
+        $section = $this->sections->build(
+            $site,
+            $siteVehicleIds !== [] ? $siteVehicleIds : array_column($vehicles, 'public_id'),
+            $content,
+            $stockVehicleIds,
+        );
 
         if ($section !== null) {
             array_push($manifestPages, ...$section['pages']);
@@ -195,9 +219,10 @@ final class PublishedSnapshotBuilder
             $manifest['analytics'] = ['yandex_metrica' => $metrica];
         }
 
-        // Present only while the catalog section is on, so Sites without sections keep their manifest hash.
+        // Present only while a vehicle section is on, so Sites without sections keep their manifest hash.
         if ($section !== null) {
             $manifest['catalog'] = $section['catalog'];
+            $manifest['sections'] = $section['sections'];
         }
 
         return $manifest;
@@ -275,9 +300,19 @@ final class PublishedSnapshotBuilder
             ->with(['redirects', 'pages' => fn ($query) => $query->orderBy('id'), 'pages.blocks.version.definition'])
             ->get();
 
+        $components = $site->components()->with('version.definition')->orderBy('id')->get();
+
         return [
             'schema' => self::SCHEMA,
             'site' => ['name' => $site->name, 'design_tokens' => $site->design_tokens],
+            'components' => array_values($components->map(fn (SiteComponent $component): array => [
+                'public_id' => $component->public_id,
+                'definition' => $component->version->definition->slug,
+                'version' => $component->version->version,
+                'sort_order' => $component->sort_order,
+                'is_hidden' => $component->is_hidden,
+                'state' => $component->state_json,
+            ])->all()),
             'pages' => array_map($this->draftPage(...), $pages),
             'sections' => array_values($sections->map(fn (SiteSection $section): array => [
                 'public_id' => $section->public_id,
@@ -377,14 +412,16 @@ final class PublishedSnapshotBuilder
             'sort_order' => $page->sort_order,
             'is_home' => $page->is_home,
             'seo' => ['title' => $page->seo_title, 'description' => $page->seo_description, 'noindex' => $page->seo_noindex],
-            'blocks' => array_values($page->blocks->map(fn (BlockInstance $block): array => [
-                'public_id' => $block->public_id,
-                'definition' => $block->version->definition->slug,
-                'version' => $block->version->version,
-                'sort_order' => $block->sort_order,
-                'is_hidden' => $block->is_hidden,
-                'state' => $block->state_json,
-            ])->all()),
+            'blocks' => array_values($page->blocks
+                ->reject(fn (BlockInstance $block): bool => $block->version->definition->is_component)
+                ->map(fn (BlockInstance $block): array => [
+                    'public_id' => $block->public_id,
+                    'definition' => $block->version->definition->slug,
+                    'version' => $block->version->version,
+                    'sort_order' => $block->sort_order,
+                    'is_hidden' => $block->is_hidden,
+                    'state' => $block->state_json,
+                ])->all()),
         ];
     }
 }

@@ -2,6 +2,7 @@
 
 namespace App\Support;
 
+use App\Enums\Entitlement;
 use App\Enums\WorkspacePermission;
 use App\Models\Site;
 use App\Models\User;
@@ -14,6 +15,7 @@ final class WorkspaceAuthorization
         private WorkspaceContext $context,
         private WorkspacePermissionResolver $permissions,
         private SiteAccessResolver $siteAccess,
+        private WorkspaceEntitlements $entitlements,
     ) {}
 
     public function allows(User $user, WorkspacePermission $permission): bool
@@ -55,9 +57,20 @@ final class WorkspaceAuthorization
             return [];
         }
 
+        $workspace = $this->context->current();
+        $rolePermissions = $this->permissions->forRole($membership->role);
+
+        // manage_stock is role-granted but only exposed when the Workspace may create multi-page Sites (ADR-012).
+        if ($workspace === null || ! $this->entitlements->allows($workspace, Entitlement::MultiPageSites)) {
+            $rolePermissions = array_values(array_filter(
+                $rolePermissions,
+                fn (WorkspacePermission $permission): bool => $permission !== WorkspacePermission::ManageStock,
+            ));
+        }
+
         return array_map(
             fn (WorkspacePermission $permission): string => $permission->value,
-            $this->permissions->forRole($membership->role),
+            $rolePermissions,
         );
     }
 

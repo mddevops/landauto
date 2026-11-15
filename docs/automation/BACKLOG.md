@@ -84,7 +84,7 @@ Native First-Party Block Runtime replan (ADR-009; D-123, D-124, D-125; D-126 app
 
 Native runtime tasks `X-023` through `X-029` are DONE. `X-013`, `X-017` and D-094 DONE for launch-without-billing. Remaining before production: server deploy / DNS / secrets (`Production deployment: NOT_CONFIGURED`).
 
-No task is ready as of 2026-11-12. Open work needs an owner decision first: `X-003` (object storage provider, D-076) and Phase 11 (`P11-001` start and source choice). Everything else not DONE is DEFERRED.
+Stock («Склад»): ADR-012 / `X-037` DONE; `X-043`…`X-046` DONE; `X-038` DONE (Used/Specials from Ready Stock). Still open later: Stock feed/VIN (ADR-012), `X-003` (D-076), Phase 11 start.
 
 ---
 
@@ -4542,21 +4542,80 @@ Acceptance: Landing with two vehicles opens each card from its block; publishing
 
 ## X-037 — Stock («Склад авто») ADR
 
-**Status:** NOT_STARTED
-**Trigger:** owner specification of the Stock section
-**Decision:** D-129
+**Status:** DONE
+**Trigger:** owner specification of the Stock section (2026-11-15)
+**Decision:** D-129; ADR-011
+**Resolves:** Stock product shape for Used / Specials
 
-Stock holds concrete vehicles for sale (new and used), created like an auto.ru listing. ADR must define the listing fields, link to the auto.ru catalog, photos, prices, statuses, ownership (Workspace) and how Used / Specials sections select items. Replaces P11-007 / P11-008 for this product. `BLOCKED_DECISION` until the owner provides the Stock specification.
+Result: `docs/architecture/decisions/ADR-012-workspace-stock.md` Accepted — Workspace-owned Stock; gate `multi_page_sites` + permission `manage_stock`; condition new/used; catalog-backed progressive wizard (auto.ru-like); Used/Specials consume ready items later (`X-038`). Implementation: `X-043` … `X-046`.
+
+---
+
+## X-043 — Stock Schema, Permission and Entitlement Gate
+
+**Status:** DONE
+**Dependencies:** X-037
+**Decision:** ADR-012; ADR-001; ADR-004; ADR-010
+
+Scope: `stock_vehicles` (Workspace-owned: condition, catalog refs, year, colour, mileage, availability, price_minor, inner_id, platform stock number, status, used PTS fields); photo ownership; permission `manage_stock` (Owner/Admin); routes/nav «Склад» only when Workspace has `multi_page_sites` and the member has `manage_stock`; policies 404 outside entitlement.
+
+Result: `stock_vehicles` + `vehicle_photos.stock_vehicle_id`; enums condition/availability/status/PTS; `StockAccess` (multi_page + `manage_stock`); Admin role map; Inertia omits `manage_stock` without entitlement; stub «Склад» index. Checks: `StockAccessTest` (6), WorkspacePermission/ExpandedRoles, Pint, PHPStan, `npm run check` PASS.
+
+Acceptance: migrations + models + focused Feature isolation/entitlement/permission tests; PHPStan / Pint. No wizard UI yet beyond a minimal index stub if needed for nav.
+
+---
+
+## X-044 — Stock Add Wizard (auto.ru-like)
+
+**Status:** DONE
+**Dependencies:** X-043
+**Decision:** ADR-012
+
+Scope: Russian progressive wizard — тип → марка (лого/поиск) → модель → год → кузов → поколение → двигатель/привод/КПП → модификация → цвет → наличие → пробег (used) → фото → комплектация (skip ok) → ПТС (used, optional MVP) → цена; catalog options only from `catalog` tables; clear chips reset dependents; create Draft/Ready item.
+
+Result: `StockListingCreator` + `StoreStockVehicleRequest`; create route/UI (`StockWizard`: тип → марка → модель → кузов → фильтры/модификация/комплектация → объявление); uploads via `VehiclePhotos`; Draft when photos later. Checks: `StockWizardTest` (5) + `StockAccessTest`, Pint, PHPStan, `npm run check` PASS.
+
+Acceptance: create new and used Stock items end-to-end; focused Feature + `npm run check`; no global catalog writes.
+
+---
+
+## X-045 — Stock Cabinet Index and Item Edit
+
+**Status:** DONE
+**Dependencies:** X-044
+**Decision:** ADR-012
+
+Scope: list/filter/search Stock; item edit; archive rules; Russian empty states; reuse photo upload patterns.
+
+Result: index filters (тип/статус/наличие/поиск); show/edit; archive/restore; photo upload/delete; foreign Workspace 404. Checks: `StockCabinetTest` (4) + Stock suite 15/15; Pint, PHPStan, `npm run check` PASS.
+
+Acceptance: Owner/Admin with entitlement manages Stock; foreign Workspace 404; focused tests + `npm run check`.
+
+---
+
+## X-046 — Stock Catalog Selection API Hardening
+
+**Status:** DONE
+**Dependencies:** X-043
+**Decision:** ADR-012; ADR-010
+
+Scope: shared read endpoints/services for wizard cascading filters (marks popular + all, models, years, bodies/series, engines, drives, gearboxes, modifications, equipment, colours) with stable string refs only; throttle; no numeric auto.ru ids in props.
+
+Acceptance: Feature tests for cascade and tenancy-safe reads; PHPStan / Pint. May land with X-044 if smaller.
+
+Result: `StockCatalogSelection` reuses `CatalogPresenter` / `AutoCatalog`; JSON cascade under `workspace/stock/catalog/*` (marks, models, years, bodies, series+filters/trims/colours, equipment, colours) gated by `StockAccess`, throttled 120/min; Stock colour palette ids are strings. Checks: `StockCatalogSelectionTest` (5) + Stock suite 20/20; Pint; PHPStan.
 
 ---
 
 ## X-038 — Used and Specials Sections from Stock
 
-**Status:** NOT_STARTED
-**Dependencies:** X-035; X-037 and the Stock implementation tasks it defines
-**Decision:** ADR-011; X-037
+**Status:** DONE
+**Dependencies:** X-035; X-037; X-045
+**Decision:** ADR-011; ADR-012
 
-Scope: section types `used` and `specials` with the same generated pages, fed by Stock items; card template per section; vehicle address part = Stock unique id or `inner_id` (ADR-011 §4).
+Scope: section types `used` and `specials` with the same generated pages, fed by ready Stock items; card template per section; vehicle address part = `inner_id` or platform stock number (ADR-011 §4); publish snapshot of Stock presentation.
+
+Result: Used/Specials available in «Разделах»; Ready Stock (`used` → Used, `new` → Specials); addresses `{prefix}/{mark}/{model}/{path_key}` (D-132: `path_key` = `inner_id` or `stock_number`, never ULID); model template Page for Stock; `StockVehiclePages` / `StockBindings`; multi-section publish; draft Designer/preview. Checks: `PublishedStockSectionsTest`, `SiteSectionsTest`, Stock suite; Pint; PHPStan; `npm run check`.
 
 ---
 
@@ -4590,11 +4649,11 @@ Acceptance: a published version keeps its preview; cards show it; image type / s
 
 ## X-041 — Components (Shared Header, Footer, Banners)
 
-**Status:** NOT_STARTED
+**Status:** DONE
 **Dependencies:** X-039
-**Decision:** D-130; ADR draft required (shared Site-level Block Instance across Pages, publishing / restore / templates)
+**Decision:** D-130; ADR-013 Accepted (site_components, compose-on-read)
 
-Scope: Block Definition flag «Компонент» with a position (first / last / free); one shared instance per Site shown on every Page and on Pages created later, at most once per Page; editing on any Page changes all; header first, footer last; publishing, restore and Templates carry Components.
+Result: `block_definitions.is_component` + `component_position` (`first` / `last` / `free`); official header/footer marked; `site_components` table; Designer / Preview / Publish / restore / template install compose Components onto every Page; SectionPages no longer copy header/footer; focused Feature tests.
 
 Acceptance: adding a header on one Page shows it on all Pages and new ones; it cannot be added twice; editing changes all Pages; published pages render Components; focused tests and E2E.
 
@@ -4722,7 +4781,7 @@ Task statuses and results live in the phase sections above; this section only po
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 - Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029` DONE.
-- Current: Native First-Party Block Runtime replan completed through `X-029`; `X-030` DONE (path-based Site address, D-127); no subsequent task started (P9-018 and P9-010 DEFERRED).
+- Current: Stock `X-037` / ADR-012 and `X-043`…`X-045` DONE — next ready task `X-046` (optional harden) or `X-038` (Used/Specials from Stock).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

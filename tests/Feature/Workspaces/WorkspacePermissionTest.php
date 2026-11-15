@@ -45,6 +45,7 @@ class WorkspacePermissionTest extends TestCase
             WorkspacePermission::EditPrices,
             WorkspacePermission::EditBenefits,
             WorkspacePermission::ImportVehicles,
+            WorkspacePermission::ManageStock,
             WorkspacePermission::ViewIntegrations,
             WorkspacePermission::ManageIntegrations,
             WorkspacePermission::EditFormRoutes,

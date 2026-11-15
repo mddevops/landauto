@@ -106,6 +106,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteComponent, $this>
+     */
+    public function components(): HasMany
+    {
+        return $this->hasMany(SiteComponent::class);
+    }
+
+    /**
      * @return HasMany<SiteSection, $this>
      */
     public function sections(): HasMany

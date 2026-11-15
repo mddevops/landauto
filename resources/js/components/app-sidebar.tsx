@@ -13,6 +13,7 @@ import {
     Settings,
     Store,
     Users,
+    Warehouse,
 } from 'lucide-react';
 import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
@@ -42,6 +43,7 @@ import { index as platformTemplatesIndex } from '@/routes/platform/templates';
 import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
 import { index as teamIndex } from '@/routes/workspace/team';
+import { index as stockIndex } from '@/routes/workspace/stock';
 import { index as vehicleLibraryIndex } from '@/routes/workspace/vehicles';
 import type { NavItem } from '@/types';
 
@@ -67,6 +69,16 @@ export function AppSidebar() {
                       title: 'Библиотека автомобилей',
                       href: vehicleLibraryIndex(),
                       icon: CarFront,
+                      matchPrefix: true,
+                  },
+              ]
+            : []),
+        ...(permissions.includes('manage_stock')
+            ? [
+                  {
+                      title: 'Склад',
+                      href: stockIndex(),
+                      icon: Warehouse,
                       matchPrefix: true,
                   },
               ]

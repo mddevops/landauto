@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Automotive\SectionCatalog;
+use App\Automotive\StockBindings;
 use App\Automotive\VehicleBindings;
 use App\Blocks\BlockCatalogAccess;
 use App\Blocks\BlockGroups;
@@ -10,12 +11,14 @@ use App\Blocks\BlockPreviews;
 use App\Blocks\BlockReferenceInspector;
 use App\Blocks\BlockVersionGrants;
 use App\Blocks\LegacyBlockMigration;
+use App\Blocks\SiteComponents;
 use App\Blocks\SiteTypeBlockAccess;
 use App\Models\BlockDefinition;
 use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteAsset;
+use App\Models\SiteComponent;
 use App\Popups\PopupRuntime;
 use App\Support\DesignerScope;
 use App\Support\SiteDesignTokens;
@@ -26,7 +29,7 @@ use Inertia\Response;
 
 class SiteDesignerController extends Controller
 {
-    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess, BlockVersionGrants $grants, LegacyBlockMigration $legacy, SectionCatalog $sections): Response
+    public function __invoke(Request $request, Site $site, DesignerScope $scope, VehicleBindings $vehicleBindings, StockBindings $stockBindings, PopupRuntime $popups, BlockReferenceInspector $references, BlockCatalogAccess $access, SiteTypeBlockAccess $siteTypeAccess, BlockVersionGrants $grants, LegacyBlockMigration $legacy, SectionCatalog $sections, SiteComponents $components): Response
     {
         $scope->site($site);
         Gate::authorize('view', $site);
@@ -37,9 +40,14 @@ class SiteDesignerController extends Controller
             : $pages->firstWhere('is_home', true);
         abort_if($page === null, 404);
 
-        $blocks = $page->blocks()->with('version.definition')->get();
-        $vehicles = $vehicleBindings->forSite($site);
-        $catalog = $sections->props($site);
+        $blocks = $components->forPage($page);
+        $vehicles = [
+            ...$vehicleBindings->forSite($site),
+            ...$stockBindings->forEnabledSections($site)['vehicles'],
+        ];
+        $catalog = $page->isSectionPage()
+            ? ($sections->propsForPage($site, $page) ?? $sections->props($site))
+            : $sections->props($site);
         $pages = $catalog === null ? $pages : $site->pages()->orderBy('sort_order')->orderBy('id')->get();
         $licensed = $access->licensedBlockIds($site);
         $granted = $grants->grantedVersionIds($site);
@@ -75,20 +83,33 @@ class SiteDesignerController extends Controller
                 ->values()
                 ->all(),
             'blocks' => $blocks
-                ->map(fn (BlockInstance $block): array => [
-                    'public_id' => $block->public_id,
-                    'slug' => $block->version->definition->slug,
-                    'name' => $block->version->definition->name,
-                    'version' => $block->version->version,
-                    'is_hidden' => $block->is_hidden,
-                    'schema' => $siteTypeAccess->schema($site, $block->version->schema_json),
-                    'sandbox' => $block->version->previewSource(),
-                    'state' => (object) $siteTypeAccess->visibleState($site, $block->version->schema_json, $block->state_json),
-                    'renderState' => (object) $block->state_json,
-                    'legacy' => LegacyBlockMigration::isLegacy($block->version)
-                        ? LegacyBlockMigration::props($legacy->forSite($site, $block->setRelation('page', $page), $licensed, $granted))
-                        : null,
-                ])
+                ->map(function (BlockInstance|SiteComponent $block) use ($site, $page, $siteTypeAccess, $legacy, $licensed, $granted): array {
+                    $legacyProps = null;
+
+                    if (LegacyBlockMigration::isLegacy($block->version)) {
+                        $upgrade = $block instanceof SiteComponent
+                            ? $legacy->forSiteComponent($site, $block, $licensed, $granted)
+                            : $legacy->forSite($site, $block->setRelation('page', $page), $licensed, $granted);
+                        $legacyProps = LegacyBlockMigration::props($upgrade);
+                    }
+
+                    return [
+                        'public_id' => $block->public_id,
+                        'slug' => $block->version->definition->slug,
+                        'name' => $block->version->definition->name,
+                        'version' => $block->version->version,
+                        'is_hidden' => $block->is_hidden,
+                        'is_component' => $block instanceof SiteComponent,
+                        'component_position' => $block instanceof SiteComponent
+                            ? $block->version->definition->component_position?->value
+                            : null,
+                        'schema' => $siteTypeAccess->schema($site, $block->version->schema_json),
+                        'sandbox' => $block->version->previewSource(),
+                        'state' => (object) $siteTypeAccess->visibleState($site, $block->version->schema_json, $block->state_json),
+                        'renderState' => (object) $block->state_json,
+                        'legacy' => $legacyProps,
+                    ];
+                })
                 ->values()
                 ->all(),
             'assets' => $site->assets()
@@ -156,6 +177,8 @@ class SiteDesignerController extends Controller
                     'group_label' => $definition->group->name ?? 'Другие блоки',
                     'preview_url' => $previews[$definition->id] ?? null,
                     'author' => $definition->developerProfile?->display_name,
+                    'is_component' => $definition->is_component,
+                    'component_position' => $definition->component_position?->value,
                     'access' => BlockCatalogAccess::card($definition),
                     'available' => $reason === null,
                     'reason' => $reason,

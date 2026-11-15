@@ -6,6 +6,7 @@ use App\Models\BlockInstance;
 use App\Models\Page;
 use App\Models\Popup;
 use App\Models\SiteAsset;
+use App\Models\SiteComponent;
 use App\Models\SiteVehicle;
 
 /**
@@ -28,7 +29,16 @@ final readonly class PageBlockReferences implements BlockReferenceResolver
 
     public function existingBlocks(array $ids): array
     {
-        return BlockInstance::query()->where('page_id', $this->page->id)->whereIn('public_id', $ids)->pluck('public_id')->all();
+        $pageBlocks = BlockInstance::query()
+            ->where('page_id', $this->page->id)
+            ->whereIn('public_id', $ids)
+            ->pluck('public_id');
+        $components = SiteComponent::query()
+            ->where('site_id', $this->page->site_id)
+            ->whereIn('public_id', $ids)
+            ->pluck('public_id');
+
+        return array_values(array_unique([...$pageBlocks->all(), ...$components->all()]));
     }
 
     public function existingVehicles(array $ids): array

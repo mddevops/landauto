@@ -93,48 +93,67 @@ final class PublishedPages
      */
     public function redirect(Site $site, PublishedVersion $version, string $path): ?string
     {
-        $catalog = Cache::remember(
+        $sections = Cache::remember(
             "published:{$site->public_id}:{$version->public_id}:catalog-redirects",
             (int) config('publishing.cache_ttl'),
             function () use ($version): array {
                 $manifest = PublishedVersion::query()->whereKey($version->id)->first(['id', 'public_manifest_json'])?->public_manifest_json;
-                $catalog = $manifest['catalog'] ?? null;
+                $blobs = $manifest['sections'] ?? null;
 
-                return is_array($catalog) ? [
-                    'prefix' => (string) $catalog['prefix'],
-                    'prefixes' => array_values(array_map('strval', $catalog['redirects']['prefixes'] ?? [])),
-                    'vehicles' => array_map('strval', (array) ($catalog['redirects']['vehicles'] ?? [])),
-                ] : [];
+                if (! is_array($blobs) || $blobs === []) {
+                    $catalog = $manifest['catalog'] ?? null;
+                    $blobs = is_array($catalog) ? [$catalog] : [];
+                }
+
+                return array_values(array_filter(array_map(function (mixed $catalog): ?array {
+                    if (! is_array($catalog)) {
+                        return null;
+                    }
+
+                    return [
+                        'prefix' => (string) $catalog['prefix'],
+                        'prefixes' => array_values(array_map('strval', $catalog['redirects']['prefixes'] ?? [])),
+                        'vehicles' => array_map('strval', (array) ($catalog['redirects']['vehicles'] ?? [])),
+                    ];
+                }, $blobs)));
             },
         );
 
-        if ($catalog === []) {
+        if ($sections === []) {
             return null;
         }
 
-        $segments = explode('/', $path);
-        $moved = false;
+        $index = $this->index($site, $version);
 
-        if ($segments[0] !== $catalog['prefix'] && in_array($segments[0], $catalog['prefixes'], true)) {
-            $segments[0] = $catalog['prefix'];
-            $moved = true;
+        foreach ($sections as $catalog) {
+            $segments = explode('/', $path);
+            $moved = false;
+
+            if ($segments[0] !== $catalog['prefix'] && in_array($segments[0], $catalog['prefixes'], true)) {
+                $segments[0] = $catalog['prefix'];
+                $moved = true;
+            }
+
+            // The Landing vehicle card has no prefix: its previous slug is the whole path.
+            $vehicle = match (true) {
+                $catalog['prefix'] === '' => count($segments) === 1 ? ($catalog['vehicles'][$segments[0]] ?? null) : null,
+                $segments[0] === $catalog['prefix'] && count($segments) >= 3 => $catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null,
+                default => null,
+            };
+
+            if ($vehicle !== null && ! isset($index[implode('/', $segments)])) {
+                $segments[count($segments) - 1] = $vehicle;
+                $moved = true;
+            }
+
+            $target = implode('/', $segments);
+
+            if ($moved && isset($index[$target])) {
+                return $target;
+            }
         }
 
-        // The Landing vehicle card has no prefix: its previous slug is the whole path.
-        $vehicle = match (true) {
-            $catalog['prefix'] === '' => count($segments) === 1 ? ($catalog['vehicles'][$segments[0]] ?? null) : null,
-            $segments[0] === $catalog['prefix'] && count($segments) >= 3 => $catalog['vehicles'][implode('/', array_slice($segments, 1))] ?? null,
-            default => null,
-        };
-
-        if ($vehicle !== null && ! isset($this->index($site, $version)[implode('/', $segments)])) {
-            $segments[count($segments) - 1] = $vehicle;
-            $moved = true;
-        }
-
-        $target = implode('/', $segments);
-
-        return $moved && isset($this->index($site, $version)[$target]) ? $target : null;
+        return null;
     }
 
     /**

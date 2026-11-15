@@ -5,6 +5,7 @@ namespace App\Publishing;
 use App\Automotive\SectionCatalog;
 use App\Automotive\VehiclePages;
 use App\Enums\SectionPageRole;
+use App\Enums\SiteSectionType;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteSection;
@@ -14,13 +15,11 @@ use App\Support\SitePaths;
 use Symfony\Component\Uid\Ulid;
 
 /**
- * Catalog section of a Publish (ADR-011 §5): every address of the section becomes its own manifest
- * page carrying the blocks of its template Page, so the public runtime serves the section from the
- * snapshot exactly like ordinary Pages. Ids of generated pages are derived from the template and
- * the address, so the same Draft keeps the same manifest hash.
+ * Vehicle sections of a Publish (ADR-011 §5 / X-038): every address becomes its own manifest page.
  *
  * @phpstan-import-type VehiclePage from VehiclePages
  * @phpstan-import-type PageContext from SectionCatalog
+ * @phpstan-import-type CatalogProps from SectionCatalog
  */
 final class SectionManifest
 {
@@ -33,69 +32,87 @@ final class SectionManifest
     public function __construct(private SectionCatalog $catalog) {}
 
     /**
-     * @param  list<string>  $published  public ids of the vehicles in the manifest
+     * @param  list<string>  $publishedSiteVehicles  public ids of Site vehicles in the manifest
+     * @param  list<string>  $publishedStockVehicles  public ids of Stock vehicles in the manifest
      * @param  callable(Page): array{blocks: list<array<string, mixed>>, vehicles: list<string>}  $blocks
-     * @return array{catalog: array<string, mixed>, pages: list<array<string, mixed>>}|null
+     * @return array{catalog: array<string, mixed>|null, sections: list<array<string, mixed>>, pages: list<array<string, mixed>>}|null
      */
-    public function build(Site $site, array $published, callable $blocks): ?array
+    public function build(Site $site, array $publishedSiteVehicles, callable $blocks, array $publishedStockVehicles = []): ?array
     {
-        $section = $this->catalog->section($site);
-
-        if ($section === null || ! $section->enabled) {
-            return null;
-        }
-
-        $props = $this->catalog->props($site, $section);
-
-        if ($props === null) {
-            return null;
-        }
-
-        $vehicles = array_values(array_filter($props['vehicles'], fn (array $vehicle): bool => in_array($vehicle['public_id'], $published, true)));
-        $templates = $section->pages()->with('blocks.version.definition')->get()
-            ->keyBy(fn (Page $page): string => $page->section_role->value);
+        $sections = [];
         $pages = [];
+        $primary = null;
 
-        foreach ($this->addresses($section, $vehicles) as $address) {
-            $template = $templates->get($address['context']['role']);
+        foreach ($this->catalog->enabled($site) as $section) {
+            $props = $this->catalog->props($site, $section);
 
-            $path = SitePaths::join($section->prefix, ...$address['segments']);
-
-            if (! $template instanceof Page || strlen($path) > self::PATH_MAX) {
+            if ($props === null) {
                 continue;
             }
 
-            $content = $blocks($template);
-            $pages[] = [
-                'public_id' => self::pageId($template->public_id, $path),
-                'slug' => $path,
-                'is_home' => false,
-                'title' => $address['title'],
-                'sort_order' => self::SORT_OFFSET + count($pages),
-                'seo' => [
-                    'title' => $address['seo_title'] ?? $template->seo_title ?? $section->title,
-                    'description' => $template->seo_description,
-                    'indexable' => ! $template->seo_noindex,
-                ],
-                'blocks' => $content['blocks'],
-                'section' => [
-                    'template' => $template->public_id,
-                    'context' => $address['context'],
-                    'vehicles' => $content['vehicles'],
-                ],
-            ];
-        }
+            $allow = $section->type->fromStock() ? $publishedStockVehicles : $publishedSiteVehicles;
+            $vehicles = array_values(array_filter(
+                $props['vehicles'],
+                fn (array $vehicle): bool => in_array($vehicle['public_id'], $allow, true),
+            ));
+            $templates = $section->pages()->with('blocks.version.definition')->get()
+                ->keyBy(fn (Page $page): string => $page->section_role->value);
 
-        return [
-            'catalog' => [
+            foreach ($this->addresses($section, $vehicles) as $address) {
+                $template = $templates->get($address['context']['role']);
+                $path = SitePaths::join($section->prefix, ...$address['segments']);
+
+                if (! $template instanceof Page || strlen($path) > self::PATH_MAX) {
+                    continue;
+                }
+
+                $content = $blocks($template);
+                $pages[] = [
+                    'public_id' => self::pageId($template->public_id, $path),
+                    'slug' => $path,
+                    'is_home' => false,
+                    'title' => $address['title'],
+                    'sort_order' => self::SORT_OFFSET + count($pages),
+                    'seo' => [
+                        'title' => $address['seo_title'] ?? $template->seo_title ?? $section->title,
+                        'description' => $template->seo_description,
+                        'indexable' => ! $template->seo_noindex,
+                    ],
+                    'blocks' => $content['blocks'],
+                    'section' => [
+                        'public_id' => $section->public_id,
+                        'template' => $template->public_id,
+                        'context' => $address['context'],
+                        'vehicles' => $content['vehicles'],
+                    ],
+                ];
+            }
+
+            $blob = [
                 'public_id' => $section->public_id,
+                'type' => $section->type->value,
                 'title' => $section->title,
                 'prefix' => $section->prefix,
                 'root' => $props['root'],
+                'source' => $props['source'],
                 'pages' => $props['pages'],
                 'vehicles' => $vehicles,
                 'redirects' => $this->redirects($site, $section, $vehicles),
-            ],
+            ];
+            $sections[] = $blob;
+
+            if ($primary === null && in_array($section->type, SiteSectionType::vehicleSections(), true)) {
+                $primary = $blob;
+            }
+        }
+
+        if ($sections === []) {
+            return null;
+        }
+
+        return [
+            'catalog' => $primary ?? $sections[0],
+            'sections' => $sections,
             'pages' => $pages,
         ];
     }
@@ -109,8 +126,6 @@ final class SectionManifest
     }
 
     /**
-     * Section addresses in reading order: the section, then each mark with its vehicles (D-131).
-     *
      * @param  list<VehiclePage>  $vehicles
      * @return list<array{segments: array<int, string>, title: string, seo_title: string|null, context: PageContext}>
      */
@@ -121,7 +136,12 @@ final class SectionManifest
                 'segments' => [$vehicle['slug']],
                 'title' => $vehicle['title'],
                 'seo_title' => $vehicle['title'],
-                'context' => ['role' => SectionPageRole::Item->value, 'mark' => $vehicle['mark']['segment'], 'vehicle' => $vehicle['public_id']],
+                'context' => [
+                    'role' => SectionPageRole::Item->value,
+                    'mark' => $vehicle['mark']['segment'],
+                    'model' => $vehicle['model']['segment'],
+                    'vehicle' => $vehicle['public_id'],
+                ],
             ], $vehicles);
         }
 
@@ -129,8 +149,10 @@ final class SectionManifest
             'segments' => [],
             'title' => $section->title,
             'seo_title' => null,
-            'context' => ['role' => SectionPageRole::Index->value, 'mark' => null, 'vehicle' => null],
+            'context' => ['role' => SectionPageRole::Index->value, 'mark' => null, 'model' => null, 'vehicle' => null],
         ]];
+
+        $stock = $section->type->fromStock();
 
         foreach (collect($vehicles)->groupBy(fn (array $vehicle): string => $vehicle['mark']['segment']) as $mark => $byMark) {
             $mark = (string) $mark;
@@ -139,15 +161,49 @@ final class SectionManifest
                 'segments' => [$mark],
                 'title' => $markName,
                 'seo_title' => "{$markName} — {$section->title}",
-                'context' => ['role' => SectionPageRole::Mark->value, 'mark' => $mark, 'vehicle' => null],
+                'context' => ['role' => SectionPageRole::Mark->value, 'mark' => $mark, 'model' => null, 'vehicle' => null],
             ];
+
+            if ($stock) {
+                foreach ($byMark->groupBy(fn (array $vehicle): string => $vehicle['model']['segment']) as $model => $byModel) {
+                    $model = (string) $model;
+                    $modelName = $byModel->first()['model']['name'];
+                    $addresses[] = [
+                        'segments' => [$mark, $model],
+                        'title' => "{$markName} {$modelName}",
+                        'seo_title' => "{$markName} {$modelName} — {$section->title}",
+                        'context' => ['role' => SectionPageRole::Model->value, 'mark' => $mark, 'model' => $model, 'vehicle' => null],
+                    ];
+
+                    foreach ($byModel as $vehicle) {
+                        $addresses[] = [
+                            'segments' => [$mark, $model, $vehicle['slug']],
+                            'title' => $vehicle['title'],
+                            'seo_title' => $vehicle['title'],
+                            'context' => [
+                                'role' => SectionPageRole::Item->value,
+                                'mark' => $mark,
+                                'model' => $model,
+                                'vehicle' => $vehicle['public_id'],
+                            ],
+                        ];
+                    }
+                }
+
+                continue;
+            }
 
             foreach ($byMark as $vehicle) {
                 $addresses[] = [
                     'segments' => [$mark, $vehicle['slug']],
                     'title' => $vehicle['title'],
                     'seo_title' => $vehicle['title'],
-                    'context' => ['role' => SectionPageRole::Item->value, 'mark' => $mark, 'vehicle' => $vehicle['public_id']],
+                    'context' => [
+                        'role' => SectionPageRole::Item->value,
+                        'mark' => $mark,
+                        'model' => $vehicle['model']['segment'],
+                        'vehicle' => $vehicle['public_id'],
+                    ],
                 ];
             }
         }
@@ -156,8 +212,6 @@ final class SectionManifest
     }
 
     /**
-     * Previous section prefixes and previous vehicle addresses (`kia/old-slug` → `new-slug`).
-     *
      * @param  list<VehiclePage>  $vehicles
      * @return array{prefixes: list<string>, vehicles: array<string, string>}
      */
@@ -169,17 +223,19 @@ final class SectionManifest
         $byId = collect($vehicles)->keyBy('public_id');
         $moved = [];
 
-        $root = $section->type->atRoot();
-        $site->vehicles()->whereIn('public_id', $byId->keys()->all())->with('slugRedirects')->get()
-            ->each(function (SiteVehicle $vehicle) use ($byId, $root, &$moved): void {
-                /** @var VehiclePage $page */
-                $page = $byId->get($vehicle->public_id);
+        if (! $section->type->fromStock()) {
+            $root = $section->type->atRoot();
+            $site->vehicles()->whereIn('public_id', $byId->keys()->all())->with('slugRedirects')->get()
+                ->each(function (SiteVehicle $vehicle) use ($byId, $root, &$moved): void {
+                    /** @var VehiclePage $page */
+                    $page = $byId->get($vehicle->public_id);
 
-                foreach ($vehicle->slugRedirects as $redirect) {
-                    /** @var SiteVehicleSlugRedirect $redirect */
-                    $moved[$root ? $redirect->slug : "{$page['mark']['segment']}/{$redirect->slug}"] = $page['slug'];
-                }
-            });
+                    foreach ($vehicle->slugRedirects as $redirect) {
+                        /** @var SiteVehicleSlugRedirect $redirect */
+                        $moved[$root ? $redirect->slug : "{$page['mark']['segment']}/{$redirect->slug}"] = $page['slug'];
+                    }
+                });
+        }
 
         ksort($moved);
 

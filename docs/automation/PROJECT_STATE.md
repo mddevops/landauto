@@ -1529,8 +1529,8 @@ Phase 9 — Developer Platform: COMPLETED for planned scope (P9-018 DEFERRED, P9
 Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after P10-001 (D-125; P10-001, P10-004 DONE)
 Cross-cutting — Native First-Party Block Runtime: X-023 through X-029 DONE
 Cross-cutting — X-031 auto.ru Catalog: DONE
-Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): ADR-011 Accepted (X-032 DONE); X-033 DONE («Разделы», prefixes with history); X-034 DONE (catalog template Pages, vehicle slugs, Designer sample / preview addresses); X-035 DONE (published section pages from the snapshot, 301 for old prefixes / vehicle slugs, sitemap, restore with sections); X-036 … X-038 NOT_STARTED
-Cross-cutting — Block Groups / previews / components (D-130): X-039 DONE (Block Groups); X-040 DONE (version previews, Block cards); X-041 NOT_STARTED
+Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): ADR-011 Accepted (X-032 DONE); X-033 DONE («Разделы», prefixes with history); X-034 DONE (catalog template Pages, vehicle slugs, Designer sample / preview addresses); X-035 DONE (published section pages from the snapshot, 301 for old prefixes / vehicle slugs, sitemap, restore with sections); X-036 DONE (Landing root vehicle cards); X-037 DONE (ADR-012 Stock); X-043…X-046 DONE (Stock schema, wizard, cabinet, catalog cascade JSON API); Stock wizard UX polish DONE; X-038 DONE (Used/Specials from Ready Stock; D-132 addresses `used/{mark}/{model}/{inner_id|stock_number}`)
+Cross-cutting — Block Groups / previews / components (D-130): X-039 DONE (Block Groups); X-040 DONE (version previews, Block cards); X-041 DONE (ADR-013 Site Components: site_components + compose-on-read)
 Cross-cutting — Catalog section without the model level (D-131): X-042 DONE (`catalog/{mark}/{model-generation}`)
 Cross-cutting — Landing vehicle card (ADR-011 §7): X-036 DONE (section type `card`, root addresses `/{model-generation}`)
 Phase 11 — External Data Sources: NOT_STARTED
