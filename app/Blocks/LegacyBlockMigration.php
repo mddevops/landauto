@@ -203,6 +203,7 @@ final class LegacyBlockMigration
      * against the target schema by {@see migrateState()}.
      */
     /**
+     * @param  array<string, mixed>  $state
      * @param  array<int, true>|null  $licensed
      * @param  array<int, true>|null  $granted
      */

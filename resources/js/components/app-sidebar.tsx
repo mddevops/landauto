@@ -11,6 +11,7 @@ import {
     ListChecks,
     Plug,
     Settings,
+    ShieldCheck,
     Store,
     Users,
     Warehouse,
@@ -35,6 +36,7 @@ import { index as assetsIndex } from '@/routes/workspace/assets';
 import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
+import { index as accessIndex } from '@/routes/platform/access';
 import { index as licensesIndex } from '@/routes/platform/licenses';
 import { index as catalogAccessIndex } from '@/routes/platform/catalog-access';
 import { index as platformMarketplaceIndex } from '@/routes/platform/marketplace';
@@ -166,6 +168,15 @@ export function AppSidebar() {
                       title: 'Настройки платформы',
                       href: platformSettingsEdit(),
                       icon: Settings,
+                  },
+              ]
+            : []),
+        ...(platform.permissions.includes('manage_access')
+            ? [
+                  {
+                      title: 'Доступы',
+                      href: accessIndex(),
+                      icon: ShieldCheck,
                   },
               ]
             : []),

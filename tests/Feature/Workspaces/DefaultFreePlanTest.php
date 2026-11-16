@@ -95,6 +95,8 @@ class DefaultFreePlanTest extends TestCase
             $this->normalize(app_path('Support/DefaultWorkspacePlan.php')),
             // Catalog access mode value (D-121), not a plan name.
             $this->normalize(app_path('Enums/CatalogAccessMode.php')),
+            // Site Component placement (ADR-013), not a Workspace plan.
+            $this->normalize(app_path('Enums/ComponentPosition.php')),
         ];
         $offenders = [];
 

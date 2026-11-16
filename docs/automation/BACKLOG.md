@@ -4671,6 +4671,18 @@ Acceptance: no model addresses or model template Page; preview, Designer and pub
 
 ---
 
+## X-047 — Super Admin Access Panel (Plans and Platform Roles)
+
+**Status:** DONE
+**Trigger:** owner request 2026-11-16 (beta before paid billing)
+**Decision:** D-133
+
+Result: `/platform/access` («Доступы») for Super Admin (`manage_access`): look up an existing User by email; assign system Workspace plans `free` / `full` to spaces they own; sync platform roles `super_admin` / `catalog_manager`. Cannot revoke own or last `super_admin`. CLI `plan:assign` and `platform:role` remain. Sidebar link under «Платформа».
+
+Acceptance: Super Admin finds a user, changes plan and roles; Catalog Manager is forbidden; focused tests.
+
+---
+
 # BACKLOG MAINTENANCE RULES
 
 ---
@@ -4781,7 +4793,8 @@ Task statuses and results live in the phase sections above; this section only po
 - Done in the re-plan: `P9-013`, `P9-004`, `P9-005`, `P9-008`, `P9-006`, `P9-009`, `P9-014`, `P9-007`, `P9-015`, `P9-016`, `P9-017`, `P9-011`, `P9-012`.
 - Phase 10 — Marketplace: PUBLIC EXPANSION DEFERRED after `P10-001` (DONE, retained) by D-125; P10-004 DONE; P10-002, P10-003, P10-005 … P10-009 DEFERRED.
 - Native runtime replan (ADR-009; D-123 … D-126): `X-023` DONE → `X-024` DONE → `X-025` DONE → `X-026` DONE → `X-027` DONE → `X-028` DONE → `X-029` DONE.
-- Current: Stock `X-037` / ADR-012 and `X-043`…`X-045` DONE — next ready task `X-046` (optional harden) or `X-038` (Used/Specials from Stock).
+- Cross-cutting sections / Stock / Components / Landing card / access panel: X-032…X-047 DONE (including X-038, X-041, X-043…X-046).
+- No ordered ready product task after X-047; Phase 11 (`P11-001`) needs an explicit backlog start decision (depends on deferred P10-009). ADR Object Storage `X-003` waits on owner provider choice (D-076).
 - Before the first production deployment: `X-013` and D-094. Non-blocking, before production: `X-017` (storage quota).
 
 ---

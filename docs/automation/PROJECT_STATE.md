@@ -1533,6 +1533,7 @@ Cross-cutting — Site sections / generated vehicle pages (ADR-011, D-129): ADR-
 Cross-cutting — Block Groups / previews / components (D-130): X-039 DONE (Block Groups); X-040 DONE (version previews, Block cards); X-041 DONE (ADR-013 Site Components: site_components + compose-on-read)
 Cross-cutting — Catalog section without the model level (D-131): X-042 DONE (`catalog/{mark}/{model-generation}`)
 Cross-cutting — Landing vehicle card (ADR-011 §7): X-036 DONE (section type `card`, root addresses `/{model-generation}`)
+Cross-cutting — Super Admin access panel (D-133): X-047 DONE (`/platform/access` — Workspace plans + platform roles)
 Phase 11 — External Data Sources: NOT_STARTED
 ```
 

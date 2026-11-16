@@ -88,7 +88,7 @@ test('owner adds the catalog section, renames its prefix and keeps the old addre
         page
             .getByRole('listitem')
             .filter({ hasText: 'Автомобили с пробегом' })
-            .getByText('Скоро'),
+            .getByRole('button', { name: /Добавить раздел/ }),
     ).toBeVisible();
     await expectNoHorizontalOverflow(page);
 
