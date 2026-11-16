@@ -2459,6 +2459,24 @@ Owner correction 2026-11-16 during X-038 address review.
 
 ---
 
+## D-133 — Super Admin Access Panel Before Paid Billing
+
+**Status:** APPROVED (owner request 2026-11-16)
+
+### Decision
+
+- Until paid subscriptions ship, a Super Admin may grant beta access from the platform UI: system Workspace plans (`free`, `full`) and platform roles (`super_admin`, `catalog_manager`).
+- Lookup is by email of an existing User (no create-user flow). Plans apply only to Workspaces where the User is an active Owner; when several exist, each Workspace is chosen explicitly.
+- Platform permission `manage_access` (Super Admin only). Operator CLI (`plan:assign`, `platform:role`) stays available.
+- A Super Admin cannot revoke their own `super_admin` role or remove the last remaining `super_admin` assignment.
+- When real billing lands, Workspace entitlements come from the purchased plan; this panel remains an operator override / support tool unless a later decision removes it.
+
+### Resolved By
+
+Owner request 2026-11-16. Task: X-047.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

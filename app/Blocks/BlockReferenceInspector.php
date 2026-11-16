@@ -7,7 +7,7 @@ use App\Models\Page;
 use App\Models\Popup;
 use App\Models\Site;
 use App\Models\SiteComponent;
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Collection;
 
 /**
  * Finds stale references in saved Block state (X-018): actions pointing to deleted Pages,
@@ -45,7 +45,7 @@ final class BlockReferenceInspector
     public function inspectPage(Page $page, ?Collection $blocks = null, bool $visibleOnly = false): array
     {
         $blocks ??= $page->blocks()->with('version')->get();
-        $blocks->loadMissing('version');
+        $blocks->each(fn (BlockInstance|SiteComponent $block): mixed => $block->loadMissing('version'));
         $sources = $visibleOnly ? $blocks->reject(fn (BlockInstance|SiteComponent $block): bool => $block->is_hidden) : $blocks;
         $references = [];
 

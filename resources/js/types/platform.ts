@@ -6,6 +6,7 @@ export type PlatformPermission =
     | 'manage_platform_content'
     | 'manage_catalog_licenses'
     | 'manage_platform_settings'
+    | 'manage_access'
     | 'approve_native_blocks';
 
 export type PlatformContext = {

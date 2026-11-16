@@ -18,4 +18,6 @@ enum PlatformPermission: string
     case ManageCatalogLicenses = 'manage_catalog_licenses';
     // Platform policy defaults (retention, deletion grace, Free storage); Super Admin only.
     case ManagePlatformSettings = 'manage_platform_settings';
+    // Beta operator panel: assign Workspace plans and platform roles (before paid billing).
+    case ManageAccess = 'manage_access';
 }

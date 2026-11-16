@@ -29,6 +29,7 @@ use App\Http\Controllers\Platform\CatalogAccessMatrixController;
 use App\Http\Controllers\Platform\CatalogBrowserController;
 use App\Http\Controllers\Platform\CatalogLicenseController;
 use App\Http\Controllers\Platform\DeveloperProfileController;
+use App\Http\Controllers\Platform\PlatformAccessController;
 use App\Http\Controllers\Platform\PlatformBlockController;
 use App\Http\Controllers\Platform\PlatformBlockGroupController;
 use App\Http\Controllers\Platform\PlatformMarketplaceController;
@@ -442,6 +443,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('/', [PlatformSettingsController::class, 'edit'])->name('edit');
             Route::put('/', [PlatformSettingsController::class, 'update'])->middleware('throttle:30,1')->name('update');
+        });
+
+    // Beta operator access: Workspace plans + platform roles until paid billing ships (D-133).
+    Route::prefix('platform/access')
+        ->name('platform.access.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageAccess->value)
+        ->group(function () {
+            Route::get('/', [PlatformAccessController::class, 'index'])->name('index');
+            Route::put('roles', [PlatformAccessController::class, 'syncRoles'])->middleware('throttle:30,1')->name('roles.update');
+            Route::put('plan', [PlatformAccessController::class, 'assignPlan'])->middleware('throttle:30,1')->name('plan.update');
         });
 
     // Plan ↔ catalog access matrix (X-026), restricted to Super Admin catalog-license managers.

@@ -103,7 +103,7 @@ class LandingVehicleCardTest extends TestCase
             ->assertInertia(fn (Assert $page) => $page
                 ->where('page.public_id', $item->public_id)
                 ->where('catalog.root', true)
-                ->where('pageContext', ['role' => 'item', 'mark' => 'kia', 'vehicle' => $this->vehicle->public_id]));
+                ->where('pageContext', ['role' => 'item', 'mark' => 'kia', 'model' => 'rio', 'vehicle' => $this->vehicle->public_id]));
 
         foreach (['kia', 'kia/rio-iv', 'card/rio-iv', 'rio-iv/extra'] as $path) {
             $this->as()->get(route('sites.preview', ['site' => $this->site, 'path' => $path]))->assertNotFound();
