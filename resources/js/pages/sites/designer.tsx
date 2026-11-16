@@ -95,6 +95,8 @@ type DesignerProps = {
         section_role: SectionPageRole | null;
     };
     catalog: CatalogProps | null;
+    /** Every Site section for the Pages panel (Catalog / Used / Specials). */
+    sections: CatalogProps[];
     pageContext: PageContext | null;
     pages: DesignerPage[];
     blocks: DesignerBlock[];
@@ -147,6 +149,7 @@ export default function Designer({
     design,
     page,
     catalog,
+    sections = [],
     pageContext,
     pages,
     blocks,
@@ -377,7 +380,7 @@ export default function Designer({
                                 currentPageId={page.public_id}
                                 canEdit={can.editDesign}
                                 canAddPages={can.addPage}
-                                catalog={catalog}
+                                sections={sections}
                             />
                         }
                     />

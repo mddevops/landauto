@@ -142,6 +142,31 @@ class CatalogSectionPagesTest extends TestCase
                 ->where('pages', fn ($pages): bool => collect($pages)->where('section_role', 'item')->count() === 1));
     }
 
+    public function test_designer_lists_each_section_once_without_mixing_roles(): void
+    {
+        $this->as()->post(route('sites.sections.store', $this->site), ['type' => 'used'])->assertSessionHasNoErrors();
+        $this->as()->post(route('sites.sections.store', $this->site), ['type' => 'catalog'])->assertSessionHasNoErrors();
+
+        $used = $this->site->sections()->where('type', 'used')->sole();
+        $catalog = $this->site->sections()->where('type', 'catalog')->sole();
+
+        $this->as()->get(route('sites.designer', $this->site))
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->has('sections', 2)
+                ->where('sections.0.public_id', $used->public_id)
+                ->where('sections.0.prefix', 'used')
+                ->where('sections.0.source', 'stock')
+                ->where('sections.0.pages.index', $used->pages()->where('section_role', 'index')->value('public_id'))
+                ->where('sections.0.pages.model', $used->pages()->where('section_role', 'model')->value('public_id'))
+                ->where('sections.1.public_id', $catalog->public_id)
+                ->where('sections.1.prefix', 'catalog')
+                ->where('sections.1.source', 'site')
+                ->missing('sections.1.pages.model')
+                ->where('pages', fn ($pages): bool => collect($pages)->where('section_role', 'index')->count() === 2)
+                ->where('pages', fn ($pages): bool => collect($pages)->where('section_role', 'model')->count() === 1));
+    }
+
     public function test_preview_resolves_section_addresses(): void
     {
         [$rio] = $this->vehicles();

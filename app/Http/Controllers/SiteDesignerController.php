@@ -45,10 +45,13 @@ class SiteDesignerController extends Controller
             ...$vehicleBindings->forSite($site),
             ...$stockBindings->forEnabledSections($site)['vehicles'],
         ];
+        // Every Site section for the Pages panel (including disabled). Canvas uses the current
+        // Page's section or the Site default (Catalog / Card preferred, else Used / Specials).
+        $navSections = $sections->propsAll($site, enabledOnly: false);
         $catalog = $page->isSectionPage()
             ? ($sections->propsForPage($site, $page) ?? $sections->props($site))
             : $sections->props($site);
-        $pages = $catalog === null ? $pages : $site->pages()->orderBy('sort_order')->orderBy('id')->get();
+        $pages = $navSections === [] ? $pages : $site->pages()->orderBy('sort_order')->orderBy('id')->get();
         $licensed = $access->licensedBlockIds($site);
         $granted = $grants->grantedVersionIds($site);
 
@@ -64,6 +67,7 @@ class SiteDesignerController extends Controller
                 'section_role' => $page->section_role?->value,
             ],
             'catalog' => $catalog,
+            'sections' => $navSections,
             'pageContext' => $catalog !== null && $page->isSectionPage()
                 ? SectionCatalog::sampleContext($page, $catalog, $request->string('sample')->toString() ?: null)
                 : null,
