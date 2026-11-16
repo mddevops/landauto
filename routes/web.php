@@ -140,6 +140,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::post('{vehicle}/archive', [StockVehicleController::class, 'archive'])->whereUlid('vehicle')->middleware('throttle:30,1')->name('archive');
             Route::post('{vehicle}/restore', [StockVehicleController::class, 'restore'])->whereUlid('vehicle')->middleware('throttle:30,1')->name('restore');
             Route::post('{vehicle}/photos', [StockPhotoController::class, 'store'])->whereUlid('vehicle')->middleware('throttle:60,1')->name('photos.store');
+            Route::put('{vehicle}/photos', [StockPhotoController::class, 'reorder'])->whereUlid('vehicle')->middleware('throttle:60,1')->name('photos.reorder');
             Route::delete('{vehicle}/photos/{photo}', [StockPhotoController::class, 'destroy'])->whereUlid(['vehicle', 'photo'])->name('photos.destroy');
         });
 

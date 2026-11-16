@@ -11,6 +11,7 @@ use App\Support\ImageUpload;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Validator;
+use Illuminate\Validation\Rule;
 use Illuminate\Validation\ValidationException;
 use Inertia\Inertia;
 
@@ -70,6 +71,35 @@ class StockPhotoController extends Controller
         $this->photos->remove($photo);
 
         Inertia::flash('toast', ['type' => 'success', 'message' => 'Фото удалено.']);
+
+        return back();
+    }
+
+    public function reorder(Request $request, StockVehicle $vehicle): RedirectResponse
+    {
+        $workspace = $this->stock->authorize($request->user());
+        abort_unless($vehicle->workspace_id === $workspace->id, 404);
+
+        $ownedIds = $vehicle->photos()->pluck('public_id')->all();
+
+        $validated = $request->validate([
+            'photos' => ['required', 'array', 'min:1', 'max:100'],
+            'photos.*' => ['required', 'string', 'size:26', Rule::in($ownedIds)],
+        ], [
+            'photos.required' => 'Укажите порядок фото.',
+            'photos.*.in' => 'Одно из фото не принадлежит этому автомобилю.',
+        ]);
+
+        /** @var list<string> $order */
+        $order = array_values($validated['photos']);
+
+        if (count($order) !== count(array_unique($order)) || count($order) !== count($ownedIds)) {
+            throw ValidationException::withMessages([
+                'photos' => 'Порядок должен включать все фото автомобиля без повторов.',
+            ]);
+        }
+
+        $this->photos->reorderStockGallery($vehicle, $order);
 
         return back();
     }

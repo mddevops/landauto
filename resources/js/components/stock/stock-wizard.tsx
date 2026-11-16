@@ -1,5 +1,5 @@
 import { Link, router, useForm } from '@inertiajs/react';
-import { ArrowRight, Car, ImagePlus, X } from 'lucide-react';
+import { ArrowRight, Car, X } from 'lucide-react';
 import { useId, useMemo, useRef, useState } from 'react';
 import type { FormEvent, ReactNode } from 'react';
 import {
@@ -8,9 +8,12 @@ import {
     MarkGrid,
     ModelGrid,
 } from '@/components/catalog/catalog-grids';
-import { IMAGE_ACCEPT } from '@/components/catalog/photo-parts';
-import { STOCK_COLORS } from '@/components/stock/stock-colors';
 import InputError from '@/components/input-error';
+import { STOCK_COLORS } from '@/components/stock/stock-colors';
+import {
+    STOCK_PHOTO_MAX_FILES_WIZARD,
+    StockPhotoUpload,
+} from '@/components/stock/stock-photo-upload';
 import { TextField } from '@/components/platform/form-fields';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -1009,32 +1012,13 @@ export function StockWizard({
 
                         {step === 'photos' && (
                             <StepCard title="Фото">
-                                <div className="space-y-3 rounded-xl border border-dashed p-4">
-                                    <div className="flex items-center gap-2">
-                                        <ImagePlus className="size-4" />
-                                        <p className="font-medium">
-                                            Загрузите снимки
-                                        </p>
-                                    </div>
-                                    <input
-                                        type="file"
-                                        accept={IMAGE_ACCEPT}
-                                        multiple
-                                        onChange={(event) =>
-                                            form.setData(
-                                                'uploads',
-                                                Array.from(
-                                                    event.target.files ?? [],
-                                                ),
-                                            )
+                                <div className="space-y-4">
+                                    <StockPhotoUpload
+                                        maxFiles={STOCK_PHOTO_MAX_FILES_WIZARD}
+                                        onChange={(uploads) =>
+                                            form.setData('uploads', uploads)
                                         }
                                     />
-                                    {form.data.uploads.length > 0 && (
-                                        <p className="text-sm text-muted-foreground">
-                                            Выбрано файлов:{' '}
-                                            {form.data.uploads.length}
-                                        </p>
-                                    )}
                                     <InputError message={form.errors.uploads} />
                                     <label className="flex items-center gap-2 text-sm">
                                         <Checkbox

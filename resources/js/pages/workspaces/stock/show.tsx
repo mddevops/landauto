@@ -1,11 +1,15 @@
 import { Head, router, useForm } from '@inertiajs/react';
-import { Archive, ArchiveRestore, ImagePlus, Trash2 } from 'lucide-react';
-import { useId } from 'react';
+import { Archive, ArchiveRestore, ImagePlus } from 'lucide-react';
+import { useId, useState } from 'react';
 import type { FormEvent } from 'react';
-import { IMAGE_ACCEPT } from '@/components/catalog/photo-parts';
-import { STOCK_COLORS } from '@/components/stock/stock-colors';
 import InputError from '@/components/input-error';
 import { TextField } from '@/components/platform/form-fields';
+import { STOCK_COLORS } from '@/components/stock/stock-colors';
+import {
+    STOCK_PHOTO_MAX_FILES_SHOW,
+    StockPhotoUpload,
+    StockSavedPhotoGrid,
+} from '@/components/stock/stock-photo-upload';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Checkbox } from '@/components/ui/checkbox';
@@ -135,6 +139,7 @@ export default function ShowStockVehicle({
     });
 
     const photoForm = useForm<{ uploads: File[] }>({ uploads: [] });
+    const [uploadResetKey, setUploadResetKey] = useState(0);
     const cover = vehicle.photos[0] ?? null;
     const isUsed = vehicle.condition === 'used';
 
@@ -152,7 +157,10 @@ export default function ShowStockVehicle({
         event.preventDefault();
         photoForm.post(photos.store.url(vehicle.public_id), {
             forceFormData: true,
-            onSuccess: () => photoForm.reset('uploads'),
+            onSuccess: () => {
+                photoForm.reset('uploads');
+                setUploadResetKey((key) => key + 1);
+            },
         });
     };
 
@@ -201,8 +209,7 @@ export default function ShowStockVehicle({
                                     router.post(archive(vehicle.public_id))
                                 }
                             >
-                                <Archive className="size-4" />
-                                В архив
+                                <Archive className="size-4" />В архив
                             </Button>
                         )}
                     </div>
@@ -532,61 +539,38 @@ export default function ShowStockVehicle({
                             Пока нет фото. Загрузите снимки автомобиля.
                         </p>
                     ) : (
-                        <ul className="grid grid-cols-2 gap-3 sm:grid-cols-3 md:grid-cols-4">
-                            {vehicle.photos.map((photo, index) => (
-                                <li
-                                    key={photo.public_id}
-                                    className="group relative overflow-hidden rounded-lg border"
-                                >
-                                    <img
-                                        src={photo.url}
-                                        alt={photo.original_name}
-                                        className="aspect-[4/3] w-full object-cover"
-                                    />
-                                    {index === 0 &&
-                                        isUsed &&
-                                        vehicle.owners_count !== null && (
-                                            <div className="absolute top-2 left-2 rounded bg-black/70 px-2 py-0.5 text-[11px] font-medium text-white">
-                                                {ownersLabel(
-                                                    vehicle.owners_count,
-                                                )}
-                                            </div>
-                                        )}
-                                    <Button
-                                        type="button"
-                                        size="icon"
-                                        variant="secondary"
-                                        className="absolute top-2 right-2 opacity-0 transition-opacity group-hover:opacity-100"
-                                        onClick={() =>
-                                            router.delete(
-                                                photos.destroy.url({
-                                                    vehicle: vehicle.public_id,
-                                                    photo: photo.public_id,
-                                                }),
-                                            )
-                                        }
-                                    >
-                                        <Trash2 className="size-4" />
-                                        <span className="sr-only">Удалить</span>
-                                    </Button>
-                                </li>
-                            ))}
-                        </ul>
+                        <StockSavedPhotoGrid
+                            photos={vehicle.photos}
+                            coverBadge={
+                                isUsed && vehicle.owners_count !== null
+                                    ? ownersLabel(vehicle.owners_count)
+                                    : 'Обложка'
+                            }
+                            onReorder={(orderedIds) =>
+                                router.put(
+                                    photos.reorder.url(vehicle.public_id),
+                                    { photos: orderedIds },
+                                    { preserveScroll: true },
+                                )
+                            }
+                            onRemove={(photoId) =>
+                                router.delete(
+                                    photos.destroy.url({
+                                        vehicle: vehicle.public_id,
+                                        photo: photoId,
+                                    }),
+                                    { preserveScroll: true },
+                                )
+                            }
+                        />
                     )}
 
-                    <form
-                        onSubmit={uploadPhotos}
-                        className="flex flex-wrap items-end gap-3"
-                    >
-                        <input
-                            type="file"
-                            accept={IMAGE_ACCEPT}
-                            multiple
-                            onChange={(event) =>
-                                photoForm.setData(
-                                    'uploads',
-                                    Array.from(event.target.files ?? []),
-                                )
+                    <form onSubmit={uploadPhotos} className="space-y-3">
+                        <StockPhotoUpload
+                            maxFiles={STOCK_PHOTO_MAX_FILES_SHOW}
+                            resetKey={uploadResetKey}
+                            onChange={(uploads) =>
+                                photoForm.setData('uploads', uploads)
                             }
                         />
                         <Button

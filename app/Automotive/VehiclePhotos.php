@@ -160,6 +160,22 @@ final class VehiclePhotos
         $this->copyAll($from, $to);
     }
 
+    /**
+     * Persist gallery order for a stock vehicle (cover = first public_id).
+     *
+     * @param  list<string>  $publicIds
+     */
+    public function reorderStockGallery(StockVehicle $vehicle, array $publicIds): void
+    {
+        $photos = $vehicle->photos()->get()->keyBy('public_id');
+
+        DB::transaction(function () use ($publicIds, $photos): void {
+            foreach ($publicIds as $position => $id) {
+                $photos->get($id)?->update(['sort_order' => $position]);
+            }
+        });
+    }
+
     public function remove(VehiclePhoto $photo): void
     {
         if (PublishedAssetReference::isReferenced(PublishedAssetKind::VehiclePhoto, $photo->public_id)) {

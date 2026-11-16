@@ -163,6 +163,32 @@ class StockCabinetTest extends TestCase
         $this->assertSame(0, $vehicle->photos()->count());
     }
 
+    public function test_photos_can_be_reordered(): void
+    {
+        $vehicle = StockVehicle::factory()->for($this->workspace)->forSeries($this->series)->create();
+
+        $this->as($this->owner)->post(route('workspace.stock.photos.store', $vehicle), [
+            'uploads' => [
+                UploadedFile::fake()->image('a.jpg', 640, 480),
+                UploadedFile::fake()->image('b.jpg', 640, 480),
+            ],
+        ])->assertSessionHasNoErrors()->assertRedirect();
+
+        $ids = $vehicle->photos()->orderBy('sort_order')->orderBy('id')->pluck('public_id')->all();
+        $this->assertCount(2, $ids);
+        $reversed = array_reverse($ids);
+
+        $this->as($this->owner)
+            ->put(route('workspace.stock.photos.reorder', $vehicle), ['photos' => $reversed])
+            ->assertSessionHasNoErrors()
+            ->assertRedirect();
+
+        $this->assertSame(
+            $reversed,
+            $vehicle->photos()->orderBy('sort_order')->orderBy('id')->pluck('public_id')->all(),
+        );
+    }
+
     private function enableMultiPage(): void
     {
         $plan = Plan::query()->create(['key' => 'stock-cab-'.uniqid(), 'name' => 'Stock', 'is_active' => true]);
