@@ -78,14 +78,11 @@ class SiteDesignerTest extends TestCase
         $this->designer($user, $workspace, $site)
             ->assertOk()
             ->assertInertia(fn (Assert $page) => $page
-                ->where('sections.0', [
-                    'public_id' => $used->public_id,
-                    'title' => 'Автомобили с пробегом',
-                    'prefix' => 'used',
-                    'root' => false,
-                    'enabled' => true,
-                    'source' => 'stock',
-                ])
+                ->where('sections.0.public_id', $used->public_id)
+                ->where('sections.0.title', 'Автомобили с пробегом')
+                ->where('sections.0.prefix', 'used')
+                ->where('sections.0.source', 'stock')
+                ->where('sections.0.pages.model', fn (mixed $id): bool => is_string($id) && $id !== '')
                 ->where('sections.1.title', 'Новые')
                 ->where('sections.1.public_id', $specials->public_id)
                 ->where('sections.1.source', 'stock')

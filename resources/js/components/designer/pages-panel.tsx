@@ -29,24 +29,25 @@ import { Label } from '@/components/ui/label';
 import { cn } from '@/lib/utils';
 import type { RouteFormDefinition } from '@/wayfinder';
 
+type SectionNav = {
+    public_id: string;
+    title: string;
+    prefix: string;
+    root: boolean;
+    enabled: boolean;
+    source?: 'site' | 'stock';
+    pages: Partial<Record<SectionPageRole, string>>;
+};
+
 type PagesPanelProps = {
     routes: DesignerPageRoutes;
     pages: DesignerPage[];
     currentPageId: string;
     canEdit: boolean;
     canAddPages: boolean;
-    catalog?: DesignerSection | null;
-    /** Every Site section. When set, each one is its own group in the page list. */
-    sections?: DesignerSection[];
-};
-
-type DesignerSection = {
-    public_id?: string;
-    title: string;
-    prefix: string;
-    root: boolean;
-    enabled: boolean;
-    source?: 'site' | 'stock';
+    /** @deprecated Prefer `sections`; kept for Template Designer / single-section callers. */
+    catalog?: SectionNav | null;
+    sections?: SectionNav[];
 };
 
 const catalogRoles: SectionPageRole[] = ['index', 'mark', 'item'];
@@ -67,17 +68,31 @@ const stockExamples: Record<SectionPageRole, string> = {
 };
 
 function examplePath(
-    catalog: { prefix: string; root: boolean; source?: 'site' | 'stock' },
+    section: { prefix: string; root: boolean; source?: 'site' | 'stock' },
     role: SectionPageRole | null | undefined,
 ): string {
-    if (catalog.root) {
+    if (section.root) {
         return '/rio-iv-restyling';
     }
 
     const examples =
-        catalog.source === 'stock' ? stockExamples : catalogExamples;
+        section.source === 'stock' ? stockExamples : catalogExamples;
 
-    return `/${catalog.prefix}${role ? examples[role] : ''}`;
+    return `/${section.prefix}${role ? examples[role] : ''}`;
+}
+
+function sectionPagesFor(
+    section: SectionNav,
+    pages: DesignerPage[],
+): DesignerPage[] {
+    const roles = (
+        section.source === 'stock' ? stockRoles : catalogRoles
+    ).filter((role) => Boolean(section.pages[role]));
+    const byId = new Map(pages.map((page) => [page.public_id, page]));
+
+    return roles
+        .map((role) => byId.get(section.pages[role] ?? ''))
+        .filter((page): page is DesignerPage => page !== undefined);
 }
 
 type DialogState =
@@ -88,121 +103,6 @@ type DialogState =
 
 const linkClass =
     'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
-
-function SectionGroup({
-    section,
-    pages,
-    currentPageId,
-    canEdit,
-    routes,
-    onEdit,
-}: {
-    section: DesignerSection;
-    pages: DesignerPage[];
-    currentPageId: string;
-    canEdit: boolean;
-    routes: DesignerPageRoutes;
-    onEdit: (page: DesignerPage) => void;
-}) {
-    const [open, setOpen] = useState(true);
-
-    if (pages.length === 0) {
-        return null;
-    }
-
-    const headingId = `designer-section-${section.public_id ?? section.title}`;
-    const listId = `${headingId}-pages`;
-
-    return (
-        <li>
-            <section
-                aria-labelledby={headingId}
-                className="flex flex-col gap-1"
-            >
-                <h2 id={headingId}>
-                    <button
-                        type="button"
-                        aria-expanded={open}
-                        aria-controls={listId}
-                        onClick={() => setOpen((current) => !current)}
-                        className={cn(linkClass, 'w-full')}
-                    >
-                        <FolderTree
-                            className="size-4 shrink-0"
-                            aria-hidden="true"
-                        />
-                        <span className="flex-1 truncate text-left">
-                            {section.title}
-                            {!section.enabled && (
-                                <span className="text-muted-foreground">
-                                    {' '}
-                                    (выключен)
-                                </span>
-                            )}
-                        </span>
-                        <ChevronDown
-                            aria-hidden="true"
-                            className={cn(
-                                'size-4 shrink-0 text-muted-foreground transition-transform',
-                                !open && '-rotate-90',
-                            )}
-                        />
-                    </button>
-                </h2>
-                {open && (
-                    <ul
-                        id={listId}
-                        className="ml-4 flex flex-col gap-1 border-l pl-2"
-                    >
-                        {pages.map((page) => (
-                            <li
-                                key={page.public_id}
-                                className="flex items-center gap-1"
-                            >
-                                <Link
-                                    href={routes.href(page.public_id)}
-                                    aria-current={
-                                        page.public_id === currentPageId
-                                            ? 'page'
-                                            : undefined
-                                    }
-                                    className={cn(
-                                        linkClass,
-                                        'flex-col items-start gap-0',
-                                        page.public_id === currentPageId &&
-                                            'bg-muted font-medium',
-                                    )}
-                                >
-                                    <span className="max-w-full truncate">
-                                        {page.title}
-                                    </span>
-                                    <span className="max-w-full truncate font-mono text-xs font-normal text-muted-foreground">
-                                        {examplePath(
-                                            section,
-                                            page.section_role,
-                                        )}
-                                    </span>
-                                </Link>
-                                {canEdit && (
-                                    <Button
-                                        type="button"
-                                        variant="ghost"
-                                        size="icon"
-                                        className="size-8"
-                                        aria-label={`Изменить страницу «${page.title}»`}
-                                        onClick={() => onEdit(page)}
-                                    >
-                                        <Pencil aria-hidden="true" />
-                                    </Button>
-                                )}
-                            </li>
-                        ))}
-                    </ul>
-                )}
-            </section>
-        </li>
-    );
-}
 
 export function PagesPanel({
     routes,
@@ -215,35 +115,22 @@ export function PagesPanel({
 }: PagesPanelProps) {
     const [dialog, setDialog] = useState<DialogState>(null);
     const close = () => setDialog(null);
-    const sectionGroups =
-        sections ??
-        (catalog
-            ? [{ ...catalog, public_id: catalog.public_id ?? 'catalog' }]
-            : []);
-    const regularPages = pages.filter((page) => {
-        if (sections) {
-            return !page.section_public_id;
-        }
+    const regularPages = pages.filter((page) => !page.section_role);
+    const navSections = sections ?? (catalog ? [catalog] : []);
+    const [openSections, setOpenSections] = useState<Record<string, boolean>>(
+        () => {
+            const initial: Record<string, boolean> = {};
 
-        return !page.section_role;
-    });
-    const pagesOf = (section: DesignerSection): DesignerPage[] => {
-        const roles = section.source === 'stock' ? stockRoles : catalogRoles;
+            for (const section of navSections) {
+                const sectionPages = sectionPagesFor(section, pages);
+                initial[section.public_id] = sectionPages.some(
+                    (page) => page.public_id === currentPageId,
+                );
+            }
 
-        return roles.flatMap((role) =>
-            pages.filter((page) => {
-                const sameRole = page.section_role === role;
-
-                if (sections && section.public_id) {
-                    return (
-                        sameRole && page.section_public_id === section.public_id
-                    );
-                }
-
-                return sameRole;
-            }),
-        );
-    };
+            return initial;
+        },
+    );
 
     return (
         <div className="flex flex-col gap-3">
@@ -311,17 +198,122 @@ export function PagesPanel({
                         )}
                     </li>
                 ))}
-                {sectionGroups.map((section) => (
-                    <SectionGroup
-                        key={section.public_id ?? section.title}
-                        section={section}
-                        pages={pagesOf(section)}
-                        currentPageId={currentPageId}
-                        canEdit={canEdit}
-                        routes={routes}
-                        onEdit={(page) => setDialog({ mode: 'edit', page })}
-                    />
-                ))}
+                {navSections.map((section) => {
+                    const sectionPages = sectionPagesFor(section, pages);
+
+                    if (sectionPages.length === 0) {
+                        return null;
+                    }
+
+                    const open = openSections[section.public_id] ?? false;
+                    const listId = `designer-section-pages-${section.public_id}`;
+                    const headingId = `designer-section-${section.public_id}`;
+
+                    return (
+                        <li key={section.public_id}>
+                            <section
+                                aria-labelledby={headingId}
+                                className="flex flex-col gap-1"
+                            >
+                                <h2 id={headingId}>
+                                    <button
+                                        type="button"
+                                        aria-expanded={open}
+                                        aria-controls={listId}
+                                        onClick={() =>
+                                            setOpenSections((current) => ({
+                                                ...current,
+                                                [section.public_id]:
+                                                    !current[section.public_id],
+                                            }))
+                                        }
+                                        className={cn(linkClass, 'w-full')}
+                                    >
+                                        <FolderTree
+                                            className="size-4 shrink-0"
+                                            aria-hidden="true"
+                                        />
+                                        <span className="flex-1 truncate text-left">
+                                            {section.title}
+                                            {!section.enabled && (
+                                                <span className="text-muted-foreground">
+                                                    {' '}
+                                                    (выключен)
+                                                </span>
+                                            )}
+                                        </span>
+                                        <ChevronDown
+                                            aria-hidden="true"
+                                            className={cn(
+                                                'size-4 shrink-0 text-muted-foreground transition-transform',
+                                                !open && '-rotate-90',
+                                            )}
+                                        />
+                                    </button>
+                                </h2>
+                                {open && (
+                                    <ul
+                                        id={listId}
+                                        className="ml-4 flex flex-col gap-1 border-l pl-2"
+                                    >
+                                        {sectionPages.map((page) => (
+                                            <li
+                                                key={page.public_id}
+                                                className="flex items-center gap-1"
+                                            >
+                                                <Link
+                                                    href={routes.href(
+                                                        page.public_id,
+                                                    )}
+                                                    aria-current={
+                                                        page.public_id ===
+                                                        currentPageId
+                                                            ? 'page'
+                                                            : undefined
+                                                    }
+                                                    className={cn(
+                                                        linkClass,
+                                                        'flex-col items-start gap-0',
+                                                        page.public_id ===
+                                                            currentPageId &&
+                                                            'bg-muted font-medium',
+                                                    )}
+                                                >
+                                                    <span className="max-w-full truncate">
+                                                        {page.title}
+                                                    </span>
+                                                    <span className="max-w-full truncate font-mono text-xs font-normal text-muted-foreground">
+                                                        {examplePath(
+                                                            section,
+                                                            page.section_role,
+                                                        )}
+                                                    </span>
+                                                </Link>
+                                                {canEdit && (
+                                                    <Button
+                                                        type="button"
+                                                        variant="ghost"
+                                                        size="icon"
+                                                        className="size-8"
+                                                        aria-label={`Изменить страницу «${page.title}»`}
+                                                        onClick={() =>
+                                                            setDialog({
+                                                                mode: 'edit',
+                                                                page,
+                                                            })
+                                                        }
+                                                    >
+                                                        <Pencil aria-hidden="true" />
+                                                    </Button>
+                                                )}
+                                            </li>
+                                        ))}
+                                    </ul>
+                                )}
+                            </section>
+                        </li>
+                    );
+                })}
             </ul>
 
             {canAddPages && (

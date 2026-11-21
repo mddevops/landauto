@@ -28,14 +28,17 @@ final class SectionCatalog
     ) {}
 
     /**
-     * First Site-vehicle section (Catalog / Card) — kept for ordinary Pages and legacy callers.
+     * Default section for ordinary Pages: prefer Catalog / Card, otherwise any section (Used / Specials).
      */
     public function section(Site $site): ?SiteSection
     {
+        $prefer = array_map(fn (SiteSectionType $type): string => $type->value, SiteSectionType::vehicleSections());
+
         return $site->sections()
-            ->whereIn('type', array_map(fn (SiteSectionType $type): string => $type->value, SiteSectionType::vehicleSections()))
+            ->whereIn('type', $prefer)
             ->orderBy('id')
-            ->first();
+            ->first()
+            ?? $site->sections()->orderBy('id')->first();
     }
 
     /**
@@ -83,38 +86,16 @@ final class SectionCatalog
     }
 
     /**
-     * Every section for the Designer page list, including disabled ones. Creates missing template Pages.
-     *
-     * @return list<array{public_id: string, title: string, prefix: string, root: bool, enabled: bool, source: string}>
-     */
-    public function summaries(Site $site): array
-    {
-        $items = [];
-
-        foreach ($site->sections()->orderBy('sort_order')->orderBy('id')->get() as $section) {
-            $this->pages->ensure($section);
-
-            $items[] = [
-                'public_id' => $section->public_id,
-                'title' => $section->title,
-                'prefix' => $section->prefix,
-                'root' => $section->type->atRoot(),
-                'enabled' => $section->enabled,
-                'source' => $section->type->fromStock() ? 'stock' : 'site',
-            ];
-        }
-
-        return $items;
-    }
-
-    /**
      * @return list<CatalogProps>
      */
-    public function propsAll(Site $site): array
+    public function propsAll(Site $site, bool $enabledOnly = true): array
     {
         $items = [];
+        $sections = $enabledOnly
+            ? $this->enabled($site)
+            : array_values($site->sections()->orderBy('sort_order')->orderBy('id')->get()->all());
 
-        foreach ($this->enabled($site) as $section) {
+        foreach ($sections as $section) {
             $props = $this->props($site, $section);
 
             if ($props !== null) {

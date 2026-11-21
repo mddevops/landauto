@@ -94,14 +94,8 @@ type DesignerProps = {
         section_role: SectionPageRole | null;
     };
     catalog: CatalogProps | null;
-    sections: {
-        public_id: string;
-        title: string;
-        prefix: string;
-        root: boolean;
-        enabled: boolean;
-        source: 'site' | 'stock';
-    }[];
+    /** Every Site section for the Pages panel (Catalog / Used / Specials). */
+    sections: CatalogProps[];
     pageContext: PageContext | null;
     pages: DesignerPage[];
     blocks: DesignerBlock[];
@@ -295,7 +289,10 @@ export default function Designer({
             <div className="flex min-h-svh flex-col bg-muted/40 lg:h-svh">
                 <header className="flex min-w-0 items-center gap-2 border-b bg-background px-3 py-2 sm:gap-3 sm:px-4">
                     <Button asChild variant="ghost" size="icon">
-                        <Link href={showSite(site.public_id)} aria-label="Назад к сайту">
+                        <Link
+                            href={showSite(site.public_id)}
+                            aria-label="Назад к сайту"
+                        >
                             <ArrowLeft aria-hidden="true" />
                         </Link>
                     </Button>
