@@ -13,6 +13,7 @@ use App\Models\PublishedPage;
 use App\Models\PublishedVersion;
 use App\Models\Site;
 use App\Models\SiteSection;
+use App\Models\SiteStockListing;
 use App\Models\StockVehicle;
 use App\Publishing\PublishSite;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -67,6 +68,14 @@ class PublishedStockSectionsTest extends TestCase
                 'availability' => StockAvailability::InStock,
                 'price_minor' => 220_000_000,
             ]);
+        SiteStockListing::factory()->create([
+            'site_id' => $this->site->id,
+            'stock_vehicle_id' => $this->used->id,
+        ]);
+        SiteStockListing::factory()->create([
+            'site_id' => $this->site->id,
+            'stock_vehicle_id' => $this->special->id,
+        ]);
     }
 
     public function test_used_and_specials_sections_publish_ready_stock_addresses(): void
@@ -120,8 +129,26 @@ class PublishedStockSectionsTest extends TestCase
                 'color_name' => 'Чёрный',
             ]);
 
+        $leftOut = StockVehicle::factory()
+            ->for($this->workspace)
+            ->forSeries($this->series)
+            ->used(2_000, 1)
+            ->ready()
+            ->create([
+                'year' => 2020,
+                'color_name' => 'Синий',
+                'inner_id' => 'left-out',
+            ]);
+
+        $other = Site::factory()->for($this->workspace)->create(['site_type' => SiteType::MultiPage]);
+        SiteStockListing::factory()->create([
+            'site_id' => $other->id,
+            'stock_vehicle_id' => $leftOut->id,
+        ]);
+
         $this->publish();
         $this->visit('/used/kia/rio/draft-1')->assertNotFound();
+        $this->visit('/used/kia/rio/left-out')->assertNotFound();
     }
 
     public function test_used_section_creates_model_template_page(): void

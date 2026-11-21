@@ -3,6 +3,7 @@
 namespace App\Http\Middleware;
 
 use App\Developers\DeveloperAccess;
+use App\Enums\SiteType;
 use App\Models\Site;
 use App\Models\Workspace;
 use App\Support\PlatformAuthorization;
@@ -109,6 +110,7 @@ class HandleInertiaRequests extends Middleware
             'can' => [
                 'preview' => $gate->allows('preview', $site),
                 'viewVehicles' => $gate->allows('viewVehicles', $site),
+                'viewStock' => $site->site_type === SiteType::MultiPage && $gate->allows('viewVehicles', $site),
                 'viewSubmissions' => $gate->allows('viewSubmissions', $site),
                 'viewDeliveryLogs' => $gate->allows('viewDeliveryLogs', $site),
                 'viewIntegrations' => $gate->allows('viewIntegrations', $site),

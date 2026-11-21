@@ -9,6 +9,7 @@ use App\Models\PublishedAssetReference;
 use App\Models\SeriesGalleryImage;
 use App\Models\SeriesMediaImage;
 use App\Models\SeriesMediaSet;
+use App\Models\SiteStockListing;
 use App\Models\SiteVehicle;
 use App\Models\StockVehicle;
 use App\Models\VehicleColor;
@@ -95,7 +96,7 @@ final class VehiclePhotos
     /**
      * Customer upload: into a colour angle (replacing the previous photo of that angle) or the gallery.
      */
-    public function upload(WorkspaceVehicle|SiteVehicle|StockVehicle $vehicle, UploadedFile $file, ?VehicleColor $color = null, ?MediaAngle $angle = null): VehiclePhoto
+    public function upload(WorkspaceVehicle|SiteVehicle|StockVehicle|SiteStockListing $vehicle, UploadedFile $file, ?VehicleColor $color = null, ?MediaAngle $angle = null): VehiclePhoto
     {
         $mime = (string) $file->getMimeType();
         $extension = ImageUpload::TYPES[$mime] ?? throw ValidationException::withMessages(['file' => 'Загрузите изображение JPG, PNG или WebP.']);
@@ -249,7 +250,7 @@ final class VehiclePhotos
     /**
      * @param  array<string, mixed>  $attributes
      */
-    private function newPhoto(WorkspaceVehicle|SiteVehicle|StockVehicle $vehicle, ?VehicleColor $color, array $attributes, string $extension): VehiclePhoto
+    private function newPhoto(WorkspaceVehicle|SiteVehicle|StockVehicle|SiteStockListing $vehicle, ?VehicleColor $color, array $attributes, string $extension): VehiclePhoto
     {
         $photo = new VehiclePhoto($attributes);
         $photo->public_id = $photo->newUniqueId();

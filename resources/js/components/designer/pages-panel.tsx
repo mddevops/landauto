@@ -35,13 +35,18 @@ type PagesPanelProps = {
     currentPageId: string;
     canEdit: boolean;
     canAddPages: boolean;
-    catalog?: {
-        title: string;
-        prefix: string;
-        root: boolean;
-        enabled: boolean;
-        source?: 'site' | 'stock';
-    } | null;
+    catalog?: DesignerSection | null;
+    /** Every Site section. When set, each one is its own group in the page list. */
+    sections?: DesignerSection[];
+};
+
+type DesignerSection = {
+    public_id?: string;
+    title: string;
+    prefix: string;
+    root: boolean;
+    enabled: boolean;
+    source?: 'site' | 'stock';
 };
 
 const catalogRoles: SectionPageRole[] = ['index', 'mark', 'item'];
@@ -84,6 +89,121 @@ type DialogState =
 const linkClass =
     'flex min-w-0 flex-1 items-center gap-2 rounded-md px-2 py-1.5 text-sm transition-colors hover:bg-muted focus-visible:ring-2 focus-visible:ring-ring focus-visible:outline-none';
 
+function SectionGroup({
+    section,
+    pages,
+    currentPageId,
+    canEdit,
+    routes,
+    onEdit,
+}: {
+    section: DesignerSection;
+    pages: DesignerPage[];
+    currentPageId: string;
+    canEdit: boolean;
+    routes: DesignerPageRoutes;
+    onEdit: (page: DesignerPage) => void;
+}) {
+    const [open, setOpen] = useState(true);
+
+    if (pages.length === 0) {
+        return null;
+    }
+
+    const headingId = `designer-section-${section.public_id ?? section.title}`;
+    const listId = `${headingId}-pages`;
+
+    return (
+        <li>
+            <section
+                aria-labelledby={headingId}
+                className="flex flex-col gap-1"
+            >
+                <h2 id={headingId}>
+                    <button
+                        type="button"
+                        aria-expanded={open}
+                        aria-controls={listId}
+                        onClick={() => setOpen((current) => !current)}
+                        className={cn(linkClass, 'w-full')}
+                    >
+                        <FolderTree
+                            className="size-4 shrink-0"
+                            aria-hidden="true"
+                        />
+                        <span className="flex-1 truncate text-left">
+                            {section.title}
+                            {!section.enabled && (
+                                <span className="text-muted-foreground">
+                                    {' '}
+                                    (выключен)
+                                </span>
+                            )}
+                        </span>
+                        <ChevronDown
+                            aria-hidden="true"
+                            className={cn(
+                                'size-4 shrink-0 text-muted-foreground transition-transform',
+                                !open && '-rotate-90',
+                            )}
+                        />
+                    </button>
+                </h2>
+                {open && (
+                    <ul
+                        id={listId}
+                        className="ml-4 flex flex-col gap-1 border-l pl-2"
+                    >
+                        {pages.map((page) => (
+                            <li
+                                key={page.public_id}
+                                className="flex items-center gap-1"
+                            >
+                                <Link
+                                    href={routes.href(page.public_id)}
+                                    aria-current={
+                                        page.public_id === currentPageId
+                                            ? 'page'
+                                            : undefined
+                                    }
+                                    className={cn(
+                                        linkClass,
+                                        'flex-col items-start gap-0',
+                                        page.public_id === currentPageId &&
+                                            'bg-muted font-medium',
+                                    )}
+                                >
+                                    <span className="max-w-full truncate">
+                                        {page.title}
+                                    </span>
+                                    <span className="max-w-full truncate font-mono text-xs font-normal text-muted-foreground">
+                                        {examplePath(
+                                            section,
+                                            page.section_role,
+                                        )}
+                                    </span>
+                                </Link>
+                                {canEdit && (
+                                    <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        className="size-8"
+                                        aria-label={`Изменить страницу «${page.title}»`}
+                                        onClick={() => onEdit(page)}
+                                    >
+                                        <Pencil aria-hidden="true" />
+                                    </Button>
+                                )}
+                            </li>
+                        ))}
+                    </ul>
+                )}
+            </section>
+        </li>
+    );
+}
+
 export function PagesPanel({
     routes,
     pages,
@@ -91,18 +211,39 @@ export function PagesPanel({
     canEdit,
     canAddPages,
     catalog = null,
+    sections,
 }: PagesPanelProps) {
     const [dialog, setDialog] = useState<DialogState>(null);
     const close = () => setDialog(null);
-    const regularPages = pages.filter((page) => !page.section_role);
-    const sectionRoles =
-        catalog?.source === 'stock' ? stockRoles : catalogRoles;
-    const sectionPages = sectionRoles.flatMap((role) =>
-        pages.filter((page) => page.section_role === role),
-    );
-    const [catalogOpen, setCatalogOpen] = useState(() =>
-        sectionPages.some((page) => page.public_id === currentPageId),
-    );
+    const sectionGroups =
+        sections ??
+        (catalog
+            ? [{ ...catalog, public_id: catalog.public_id ?? 'catalog' }]
+            : []);
+    const regularPages = pages.filter((page) => {
+        if (sections) {
+            return !page.section_public_id;
+        }
+
+        return !page.section_role;
+    });
+    const pagesOf = (section: DesignerSection): DesignerPage[] => {
+        const roles = section.source === 'stock' ? stockRoles : catalogRoles;
+
+        return roles.flatMap((role) =>
+            pages.filter((page) => {
+                const sameRole = page.section_role === role;
+
+                if (sections && section.public_id) {
+                    return (
+                        sameRole && page.section_public_id === section.public_id
+                    );
+                }
+
+                return sameRole;
+            }),
+        );
+    };
 
     return (
         <div className="flex flex-col gap-3">
@@ -170,106 +311,17 @@ export function PagesPanel({
                         )}
                     </li>
                 ))}
-                {catalog && sectionPages.length > 0 && (
-                    <li>
-                        <section
-                            aria-labelledby="designer-catalog-pages"
-                            className="flex flex-col gap-1"
-                        >
-                            <h2 id="designer-catalog-pages">
-                                <button
-                                    type="button"
-                                    aria-expanded={catalogOpen}
-                                    aria-controls="designer-catalog-pages-list"
-                                    onClick={() =>
-                                        setCatalogOpen((open) => !open)
-                                    }
-                                    className={cn(linkClass, 'w-full')}
-                                >
-                                    <FolderTree
-                                        className="size-4 shrink-0"
-                                        aria-hidden="true"
-                                    />
-                                    <span className="flex-1 truncate text-left">
-                                        {catalog.title}
-                                        {!catalog.enabled && (
-                                            <span className="text-muted-foreground">
-                                                {' '}
-                                                (выключен)
-                                            </span>
-                                        )}
-                                    </span>
-                                    <ChevronDown
-                                        aria-hidden="true"
-                                        className={cn(
-                                            'size-4 shrink-0 text-muted-foreground transition-transform',
-                                            !catalogOpen && '-rotate-90',
-                                        )}
-                                    />
-                                </button>
-                            </h2>
-                            {catalogOpen && (
-                                <ul
-                                    id="designer-catalog-pages-list"
-                                    className="ml-4 flex flex-col gap-1 border-l pl-2"
-                                >
-                                    {sectionPages.map((page) => (
-                                        <li
-                                            key={page.public_id}
-                                            className="flex items-center gap-1"
-                                        >
-                                            <Link
-                                                href={routes.href(
-                                                    page.public_id,
-                                                )}
-                                                aria-current={
-                                                    page.public_id ===
-                                                    currentPageId
-                                                        ? 'page'
-                                                        : undefined
-                                                }
-                                                className={cn(
-                                                    linkClass,
-                                                    'flex-col items-start gap-0',
-                                                    page.public_id ===
-                                                        currentPageId &&
-                                                        'bg-muted font-medium',
-                                                )}
-                                            >
-                                                <span className="max-w-full truncate">
-                                                    {page.title}
-                                                </span>
-                                                <span className="max-w-full truncate font-mono text-xs font-normal text-muted-foreground">
-                                                    {examplePath(
-                                                        catalog,
-                                                        page.section_role,
-                                                    )}
-                                                </span>
-                                            </Link>
-                                            {canEdit && (
-                                                <Button
-                                                    type="button"
-                                                    variant="ghost"
-                                                    size="icon"
-                                                    className="size-8"
-                                                    aria-label={`Изменить страницу «${page.title}»`}
-                                                    onClick={() =>
-                                                        setDialog({
-                                                            mode: 'edit',
-                                                            page,
-                                                        })
-                                                    }
-                                                >
-                                                    <Pencil aria-hidden="true" />
-                                                </Button>
-                                            )}
-                                        </li>
-                                    ))}
-                                </ul>
-                            )}
-                        </section>
-                    </li>
-                )}
+                {sectionGroups.map((section) => (
+                    <SectionGroup
+                        key={section.public_id ?? section.title}
+                        section={section}
+                        pages={pagesOf(section)}
+                        currentPageId={currentPageId}
+                        canEdit={canEdit}
+                        routes={routes}
+                        onEdit={(page) => setDialog({ mode: 'edit', page })}
+                    />
+                ))}
             </ul>
 
             {canAddPages && (

@@ -10,6 +10,7 @@ use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\SiteOffer;
 use App\Models\SiteSection;
+use App\Models\SiteStockListing;
 use App\Models\SiteVehicle;
 
 /**
@@ -72,6 +73,14 @@ final class DesignerScope
         abort_unless($vehicle->site_id === $site->id, 404);
 
         return $vehicle;
+    }
+
+    public function stockListing(Site $site, SiteStockListing $listing): SiteStockListing
+    {
+        $this->site($site);
+        abort_unless($listing->site_id === $site->id, 404);
+
+        return $listing;
     }
 
     public function form(Site $site, Form $form): Form

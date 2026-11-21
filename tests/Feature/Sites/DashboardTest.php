@@ -40,12 +40,16 @@ class DashboardTest extends TestCase
             ->where('sites.0', [
                 'public_id' => $active->public_id,
                 'name' => 'Активный сайт',
+                'site_type' => 'multi_page',
+                'site_type_label' => 'Многостраничный сайт',
                 'status' => 'active',
                 'address' => null,
             ])
             ->where('sites.1', [
                 'public_id' => $archived->public_id,
                 'name' => 'Архивный сайт',
+                'site_type' => 'multi_page',
+                'site_type_label' => 'Многостраничный сайт',
                 'status' => 'archived',
                 'address' => null,
             ])

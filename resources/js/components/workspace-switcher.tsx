@@ -1,5 +1,6 @@
 import { Link, router, usePage } from '@inertiajs/react';
-import { Building2, Check, ChevronsUpDown, Plus, Settings } from 'lucide-react';
+import { Check, ChevronsUpDown, Plus, Settings } from 'lucide-react';
+import AppLogoIcon from '@/components/app-logo-icon';
 import { useState } from 'react';
 import WorkspaceContextController from '@/actions/App/Http/Controllers/WorkspaceContextController';
 import {
@@ -60,8 +61,8 @@ export function WorkspaceSwitcher() {
                             disabled={switchingTo !== null}
                         >
                             <div className="flex aspect-square size-8 items-center justify-center rounded-md bg-sidebar-primary text-sidebar-primary-foreground">
-                                <Building2
-                                    className="size-4"
+                                <AppLogoIcon
+                                    className="size-5 fill-current text-white dark:text-black"
                                     aria-hidden="true"
                                 />
                             </div>

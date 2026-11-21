@@ -1,4 +1,4 @@
-import { Link, usePage } from '@inertiajs/react';
+import { usePage } from '@inertiajs/react';
 import {
     Blocks,
     Car,
@@ -14,9 +14,9 @@ import {
     ShieldCheck,
     Store,
     Users,
+    UsersRound,
     Warehouse,
 } from 'lucide-react';
-import AppLogo from '@/components/app-logo';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
 import { WorkspaceSwitcher } from '@/components/workspace-switcher';
@@ -25,9 +25,6 @@ import {
     SidebarContent,
     SidebarFooter,
     SidebarHeader,
-    SidebarMenu,
-    SidebarMenuButton,
-    SidebarMenuItem,
     SidebarSeparator,
 } from '@/components/ui/sidebar';
 import { dashboard } from '@/routes';
@@ -37,12 +34,12 @@ import { index as platformBlocksIndex } from '@/routes/platform/blocks';
 import { index as catalogIndex } from '@/routes/platform/catalog';
 import { index as developersIndex } from '@/routes/platform/developers';
 import { index as accessIndex } from '@/routes/platform/access';
+import { index as platformUsersIndex } from '@/routes/platform/users';
 import { index as licensesIndex } from '@/routes/platform/licenses';
 import { index as catalogAccessIndex } from '@/routes/platform/catalog-access';
 import { index as platformMarketplaceIndex } from '@/routes/platform/marketplace';
 import { edit as platformSettingsEdit } from '@/routes/platform/settings';
 import { index as platformTemplatesIndex } from '@/routes/platform/templates';
-import { edit as editProfile } from '@/routes/profile';
 import { edit as workspaceSettings } from '@/routes/workspace/settings';
 import { index as teamIndex } from '@/routes/workspace/team';
 import { index as stockIndex } from '@/routes/workspace/stock';
@@ -174,6 +171,11 @@ export function AppSidebar() {
         ...(platform.permissions.includes('manage_access')
             ? [
                   {
+                      title: 'Пользователи',
+                      href: platformUsersIndex(),
+                      icon: UsersRound,
+                  },
+                  {
                       title: 'Доступы',
                       href: accessIndex(),
                       icon: ShieldCheck,
@@ -184,21 +186,7 @@ export function AppSidebar() {
 
     return (
         <Sidebar collapsible="icon" variant="inset">
-            <SidebarHeader>
-                <SidebarMenu>
-                    <SidebarMenuItem>
-                        <SidebarMenuButton size="lg" asChild>
-                            <Link
-                                href={isVerified ? dashboard() : editProfile()}
-                                prefetch
-                            >
-                                <AppLogo />
-                            </Link>
-                        </SidebarMenuButton>
-                    </SidebarMenuItem>
-                </SidebarMenu>
-                {isVerified && <WorkspaceSwitcher />}
-            </SidebarHeader>
+            <SidebarHeader>{isVerified && <WorkspaceSwitcher />}</SidebarHeader>
 
             <SidebarContent>
                 {isVerified && (

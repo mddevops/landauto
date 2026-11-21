@@ -83,6 +83,31 @@ final class SectionCatalog
     }
 
     /**
+     * Every section for the Designer page list, including disabled ones. Creates missing template Pages.
+     *
+     * @return list<array{public_id: string, title: string, prefix: string, root: bool, enabled: bool, source: string}>
+     */
+    public function summaries(Site $site): array
+    {
+        $items = [];
+
+        foreach ($site->sections()->orderBy('sort_order')->orderBy('id')->get() as $section) {
+            $this->pages->ensure($section);
+
+            $items[] = [
+                'public_id' => $section->public_id,
+                'title' => $section->title,
+                'prefix' => $section->prefix,
+                'root' => $section->type->atRoot(),
+                'enabled' => $section->enabled,
+                'source' => $section->type->fromStock() ? 'stock' : 'site',
+            ];
+        }
+
+        return $items;
+    }
+
+    /**
      * @return list<CatalogProps>
      */
     public function propsAll(Site $site): array

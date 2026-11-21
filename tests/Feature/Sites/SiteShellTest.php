@@ -39,6 +39,7 @@ class SiteShellTest extends TestCase
                 ->where('siteContext.can', [
                     'preview' => true,
                     'viewVehicles' => true,
+                    'viewStock' => true,
                     'viewSubmissions' => true,
                     'viewDeliveryLogs' => true,
                     'viewIntegrations' => true,
@@ -75,6 +76,7 @@ class SiteShellTest extends TestCase
                 ->where('siteContext.can', [
                     'preview' => true,
                     'viewVehicles' => false,
+                    'viewStock' => false,
                     'viewSubmissions' => false,
                     'viewDeliveryLogs' => false,
                     'viewIntegrations' => false,
@@ -99,6 +101,7 @@ class SiteShellTest extends TestCase
                 ->where('siteContext.can', [
                     'preview' => true,
                     'viewVehicles' => true,
+                    'viewStock' => true,
                     'viewSubmissions' => true,
                     'viewDeliveryLogs' => true,
                     'viewIntegrations' => true,

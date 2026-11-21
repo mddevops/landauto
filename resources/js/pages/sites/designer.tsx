@@ -61,8 +61,7 @@ import {
     DropdownMenuItem,
     DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu';
-import { dashboard } from '@/routes';
-import { designer, preview } from '@/routes/sites';
+import { designer, preview, show as showSite } from '@/routes/sites';
 import {
     destroy as destroyBlock,
     duplicate as duplicateBlock,
@@ -95,6 +94,14 @@ type DesignerProps = {
         section_role: SectionPageRole | null;
     };
     catalog: CatalogProps | null;
+    sections: {
+        public_id: string;
+        title: string;
+        prefix: string;
+        root: boolean;
+        enabled: boolean;
+        source: 'site' | 'stock';
+    }[];
     pageContext: PageContext | null;
     pages: DesignerPage[];
     blocks: DesignerBlock[];
@@ -147,6 +154,7 @@ export default function Designer({
     design,
     page,
     catalog,
+    sections,
     pageContext,
     pages,
     blocks,
@@ -287,7 +295,7 @@ export default function Designer({
             <div className="flex min-h-svh flex-col bg-muted/40 lg:h-svh">
                 <header className="flex min-w-0 items-center gap-2 border-b bg-background px-3 py-2 sm:gap-3 sm:px-4">
                     <Button asChild variant="ghost" size="icon">
-                        <Link href={dashboard()} aria-label="Назад к сайтам">
+                        <Link href={showSite(site.public_id)} aria-label="Назад к сайту">
                             <ArrowLeft aria-hidden="true" />
                         </Link>
                     </Button>
@@ -377,7 +385,7 @@ export default function Designer({
                                 currentPageId={page.public_id}
                                 canEdit={can.editDesign}
                                 canAddPages={can.addPage}
-                                catalog={catalog}
+                                sections={sections}
                             />
                         }
                     />

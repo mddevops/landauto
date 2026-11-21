@@ -2477,6 +2477,24 @@ Owner request 2026-11-16. Task: X-047.
 
 ---
 
+## D-134 — Stock Reaches a Site Only by Explicit Placement
+
+**Status:** APPROVED (owner 2026-11-21; amends the X-038 reading of ADR-012 §6)
+
+### Decision
+
+- A Ready Stock vehicle does not appear on every Site of the Workspace. It appears on a Site only after it is added in that Site's «Со склада».
+- Used cars fill «С пробегом»; new cars fill «Новые». Draft and archived Stock stay off the published Site even if a placement row remains.
+- Price and photos saved on the Site apply only to that Site. An empty site price and untouched photos keep showing the Stock card.
+- Mileage, condition, availability and the stock number stay on the Stock vehicle. Removing the car from a Site does not delete it from Stock.
+- The same Stock vehicle may be placed on more than one Site when someone adds it to each.
+
+### Resolved By
+
+Owner correction 2026-11-21.
+
+---
+
 # SUPERSEDED DECISIONS
 
 - D-018 — Automotive Hierarchy → superseded by D-101 (Catalog V2).

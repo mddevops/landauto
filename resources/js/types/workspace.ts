@@ -51,6 +51,7 @@ export type SiteContext = {
     can: {
         preview: boolean;
         viewVehicles: boolean;
+        viewStock: boolean;
         viewSubmissions: boolean;
         viewDeliveryLogs: boolean;
         viewIntegrations: boolean;

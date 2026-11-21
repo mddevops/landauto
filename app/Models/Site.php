@@ -146,6 +146,14 @@ class Site extends Model
     }
 
     /**
+     * @return HasMany<SiteStockListing, $this>
+     */
+    public function stockListings(): HasMany
+    {
+        return $this->hasMany(SiteStockListing::class);
+    }
+
+    /**
      * @return HasMany<Submission, $this>
      */
     public function submissions(): HasMany

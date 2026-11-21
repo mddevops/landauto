@@ -95,8 +95,8 @@ export default function StockIndex({
                             Склад
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Автомобили для разделов с пробегом и
-                            спецпредложений.
+                            Общий склад рабочего пространства. На сайт машина
+                            попадает из меню сайта «Со склада».
                         </p>
                     </div>
                     <Button asChild>

@@ -45,10 +45,11 @@ class SiteDesignerController extends Controller
             ...$vehicleBindings->forSite($site),
             ...$stockBindings->forEnabledSections($site)['vehicles'],
         ];
+        $sectionSummaries = $sections->summaries($site);
         $catalog = $page->isSectionPage()
             ? ($sections->propsForPage($site, $page) ?? $sections->props($site))
             : $sections->props($site);
-        $pages = $catalog === null ? $pages : $site->pages()->orderBy('sort_order')->orderBy('id')->get();
+        $pages = $site->pages()->with('section')->orderBy('sort_order')->orderBy('id')->get();
         $licensed = $access->licensedBlockIds($site);
         $granted = $grants->grantedVersionIds($site);
 
@@ -64,6 +65,7 @@ class SiteDesignerController extends Controller
                 'section_role' => $page->section_role?->value,
             ],
             'catalog' => $catalog,
+            'sections' => $sectionSummaries,
             'pageContext' => $catalog !== null && $page->isSectionPage()
                 ? SectionCatalog::sampleContext($page, $catalog, $request->string('sample')->toString() ?: null)
                 : null,
@@ -74,6 +76,7 @@ class SiteDesignerController extends Controller
                     'slug' => $sitePage->slug,
                     'is_home' => $sitePage->is_home,
                     'section_role' => $sitePage->section_role?->value,
+                    'section_public_id' => $sitePage->section?->public_id,
                     'seo' => [
                         'title' => $sitePage->seo_title,
                         'description' => $sitePage->seo_description,

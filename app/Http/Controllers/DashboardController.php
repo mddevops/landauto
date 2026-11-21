@@ -47,11 +47,13 @@ class DashboardController extends Controller
             'sites' => $canViewSites && $membership !== null
                 ? $siteAccess->scopeAccessible(Site::query(), $membership)
                     ->orderBy('name')
-                    ->get(['id', 'workspace_id', 'public_id', 'name', 'status', 'public_number', 'active_published_version_id'])
+                    ->get(['id', 'workspace_id', 'public_id', 'name', 'site_type', 'status', 'public_number', 'active_published_version_id'])
                     ->each(fn (Site $site) => $site->setRelation('workspace', $workspace))
                     ->map(fn (Site $site): array => [
                         'public_id' => $site->public_id,
                         'name' => $site->name,
+                        'site_type' => $site->site_type->value,
+                        'site_type_label' => $site->site_type->label(),
                         'status' => $site->status->value,
                         'address' => $site->active_published_version_id !== null && $site->status === SiteStatus::Active
                             ? PublicSiteResolver::primaryUrl($site)

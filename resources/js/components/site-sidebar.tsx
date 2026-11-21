@@ -15,6 +15,7 @@ import {
     Send,
     ShieldCheck,
     SquareStack,
+    Warehouse,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
 import { NavUser } from '@/components/nav-user';
@@ -39,6 +40,7 @@ import { show as publishing } from '@/routes/sites/publishing';
 import { index as sections } from '@/routes/sites/sections';
 import { index as seo } from '@/routes/sites/seo';
 import { index as submissions } from '@/routes/sites/submissions';
+import { index as siteStock } from '@/routes/sites/stock';
 import { index as vehicles } from '@/routes/sites/vehicles';
 import type { NavItem, SiteContext } from '@/types';
 
@@ -66,6 +68,12 @@ export function SiteSidebar({ site }: { site: SiteContext }) {
             title: 'Автомобили',
             href: vehicles(id),
             icon: Car,
+            matchPrefix: true,
+        },
+        can.viewStock && {
+            title: 'Со склада',
+            href: siteStock(id),
+            icon: Warehouse,
             matchPrefix: true,
         },
         { title: 'Формы', href: forms(id), icon: FileText, matchPrefix: true },

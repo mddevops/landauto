@@ -24,6 +24,7 @@ import { index as vehicles } from '@/routes/sites/vehicles';
 type SiteSummary = {
     public_id: string;
     name: string;
+    site_type_label: string;
     status: 'active' | 'archived';
     address: string | null;
 };
@@ -187,6 +188,9 @@ export default function Dashboard({
                                                 {statusLabels[site.status]}
                                             </Badge>
                                         </div>
+                                        <CardDescription>
+                                            {site.site_type_label}
+                                        </CardDescription>
                                         {site.address && (
                                             <CardDescription className="break-all">
                                                 {site.address}

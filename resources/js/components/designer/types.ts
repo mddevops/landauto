@@ -17,6 +17,8 @@ export type DesignerPage = {
     is_home: boolean;
     /** Set on generated catalog template Pages (Site Designer only). */
     section_role?: SectionPageRole | null;
+    /** Section that owns this template Page. */
+    section_public_id?: string | null;
     seo: {
         title: string | null;
         description: string | null;

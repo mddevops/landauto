@@ -3,12 +3,14 @@
 namespace Tests\Feature\Sites;
 
 use App\Blocks\SiteComponents;
+use App\Enums\SiteSectionType;
 use App\Enums\WorkspaceRole;
 use App\Models\BlockInstance;
 use App\Models\BlockVersion;
 use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteComponent;
+use App\Models\SiteSection;
 use App\Models\User;
 use App\Models\Workspace;
 use App\Support\WorkspaceContext;
@@ -54,6 +56,51 @@ class SiteDesignerTest extends TestCase
                 ->where('blocks.1.state', ['title' => 'Новые автомобили'])
                 ->missing('site.id')
                 ->missing('site.workspace_id'));
+    }
+
+    public function test_stock_sections_are_listed_among_designer_pages(): void
+    {
+        [$user, $workspace] = $this->member(WorkspaceRole::Owner);
+        $site = Site::factory()->for($workspace)->create();
+        Page::factory()->for($site)->home()->create();
+        $used = SiteSection::factory()->for($site)->create([
+            'type' => SiteSectionType::Used,
+            'title' => 'Автомобили с пробегом',
+            'prefix' => 'used',
+        ]);
+        $specials = SiteSection::factory()->for($site)->create([
+            'type' => SiteSectionType::Specials,
+            'title' => 'Новые',
+            'prefix' => 'specials',
+            'sort_order' => 1,
+        ]);
+
+        $this->designer($user, $workspace, $site)
+            ->assertOk()
+            ->assertInertia(fn (Assert $page) => $page
+                ->where('sections.0', [
+                    'public_id' => $used->public_id,
+                    'title' => 'Автомобили с пробегом',
+                    'prefix' => 'used',
+                    'root' => false,
+                    'enabled' => true,
+                    'source' => 'stock',
+                ])
+                ->where('sections.1.title', 'Новые')
+                ->where('sections.1.public_id', $specials->public_id)
+                ->where('sections.1.source', 'stock')
+                ->where('pages', fn ($pages): bool => collect($pages)
+                    ->where('section_public_id', $used->public_id)
+                    ->pluck('section_role')
+                    ->sort()
+                    ->values()
+                    ->all() === ['index', 'item', 'mark', 'model'])
+                ->where('pages', fn ($pages): bool => collect($pages)
+                    ->where('section_public_id', $specials->public_id)
+                    ->pluck('section_role')
+                    ->sort()
+                    ->values()
+                    ->all() === ['index', 'item', 'mark', 'model']));
     }
 
     public function test_site_from_another_workspace_is_not_found_even_for_its_member(): void

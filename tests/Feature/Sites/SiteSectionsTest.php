@@ -84,6 +84,7 @@ class SiteSectionsTest extends TestCase
 
         $specials = $this->site->sections()->where('type', 'specials')->sole();
         $this->assertSame('specials', $specials->prefix);
+        $this->assertSame('Новые', $specials->title);
         $this->assertSame(2, $this->site->sections()->count());
     }
 

@@ -8,9 +8,11 @@ use App\Enums\SiteSectionType;
 use App\Enums\StockCondition;
 use App\Models\Catalog\AutoSeries;
 use App\Models\Site;
+use App\Models\SiteStockListing;
 use App\Models\StockVehicle;
 use App\Models\VehiclePhoto;
 use App\Support\Money;
+use Illuminate\Support\Collection;
 
 /**
  * Stock → Vehicle binding shape for Used / Specials (X-038). Blocks reuse the same registry fields.
@@ -22,7 +24,7 @@ final class StockBindings
     public function __construct(private AutoCatalog $catalog) {}
 
     /**
-     * Ready Stock of the Site's Workspace for the given section type.
+     * Ready Stock explicitly placed on this Site for the given section type.
      *
      * @return array{vehicles: list<Vehicle>, offers: array<string, array{price_minor: int, currency: string}>}
      */
@@ -38,22 +40,26 @@ final class StockBindings
             return ['vehicles' => [], 'offers' => []];
         }
 
-        $vehicles = $site->workspace->stockVehicles()
-            ->ready()
-            ->where('condition', $condition)
-            ->with(['photos' => fn ($query) => $query->orderBy('sort_order')->orderBy('id')])
-            ->orderByDesc('id')
+        $listings = SiteStockListing::query()
+            ->visibleFor($site, $condition)
+            ->with([
+                'stockVehicle.photos' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
+                'photos' => fn ($query) => $query->orderBy('sort_order')->orderBy('id'),
+            ])
             ->get();
 
-        if ($vehicles->isEmpty()) {
+        if ($listings->isEmpty()) {
             return ['vehicles' => [], 'offers' => []];
         }
 
-        $series = $this->catalog->seriesByRefs($vehicles->map(fn (StockVehicle $vehicle): string => $vehicle->catalog_series_ref)->all());
+        $series = $this->catalog->seriesByRefs($listings->map(fn (SiteStockListing $listing): string => $listing->stockVehicle->catalog_series_ref)->all());
         $bindings = [];
         $money = [];
 
-        foreach ($vehicles as $vehicle) {
+        foreach ($listings as $listing) {
+            $vehicle = $listing->stockVehicle;
+            $priceMinor = $listing->price_minor ?? $vehicle->price_minor;
+            $currency = $listing->price_minor === null ? $vehicle->currency : ($listing->currency ?? $vehicle->currency);
             $row = $series->get($vehicle->catalog_series_ref);
 
             if (! $row instanceof AutoSeries) {
@@ -62,9 +68,9 @@ final class StockBindings
 
             $title = $this->catalog->title($row);
             $offerId = $vehicle->public_id;
-            $priceLabel = $vehicle->price_minor === null
+            $priceLabel = $priceMinor === null
                 ? null
-                : Money::format($vehicle->price_minor, $vehicle->currency);
+                : Money::format($priceMinor, $currency);
             $equipment = $vehicle->catalog_equipment_ref === null
                 ? null
                 : $this->catalog->equipment($row, $vehicle->catalog_equipment_ref);
@@ -108,10 +114,10 @@ final class StockBindings
                 'options' => $options,
             ]];
 
-            if ($vehicle->price_minor !== null) {
+            if ($priceMinor !== null) {
                 $money[$offerId] = [
-                    'price_minor' => $vehicle->price_minor,
-                    'currency' => $vehicle->currency,
+                    'price_minor' => $priceMinor,
+                    'currency' => $currency,
                 ];
             }
 
@@ -126,7 +132,7 @@ final class StockBindings
                 ...($vehicle->description === null ? [] : ['description' => $vehicle->description]),
                 'price_from_label' => $priceLabel,
                 'benefit_up_to_label' => null,
-                'media' => $this->media($vehicle),
+                'media' => $this->media($vehicle, $listing->photos_custom ? $listing->photos : $vehicle->photos, $listing->photos_custom ? $listing->public_id : $vehicle->public_id),
                 'offers' => $offers,
             ];
         }
@@ -167,18 +173,19 @@ final class StockBindings
     }
 
     /**
+     * @param  Collection<int, VehiclePhoto>  $photos
      * @return array{source: string|null, primary_angle: string|null, sets: list<array{public_id: string, name: string, swatch_hex: string|null, images: list<array{public_id: string, angle: string, label: string, url: string, width: int, height: int}>}>, gallery: list<array{public_id: string, url: string, width: int, height: int}>}
      */
-    private function media(StockVehicle $vehicle): array
+    private function media(StockVehicle $vehicle, Collection $photos, string $setId): array
     {
-        $gallery = array_values($vehicle->photos->map(fn (VehiclePhoto $photo): array => [
+        $gallery = array_values($photos->map(fn (VehiclePhoto $photo): array => [
             'public_id' => $photo->public_id,
             'url' => $photo->url(),
             'width' => $photo->width,
             'height' => $photo->height,
         ])->all());
 
-        $images = array_values($vehicle->photos->map(fn (VehiclePhoto $photo): array => [
+        $images = array_values($photos->map(fn (VehiclePhoto $photo): array => [
             'public_id' => $photo->public_id,
             'angle' => MediaAngle::SideLeft->value,
             'label' => MediaAngle::SideLeft->label(),
@@ -191,7 +198,7 @@ final class StockBindings
             'source' => 'stock',
             'primary_angle' => MediaAngle::SideLeft->value,
             'sets' => $images === [] ? [] : [[
-                'public_id' => $vehicle->public_id,
+                'public_id' => $setId,
                 'name' => $vehicle->color_name,
                 'swatch_hex' => $vehicle->color_swatch_hex,
                 'images' => $images,

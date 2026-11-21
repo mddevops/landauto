@@ -22,6 +22,7 @@ use Illuminate\Support\Carbon;
  * @property int|null $workspace_vehicle_id
  * @property int|null $site_vehicle_id
  * @property int|null $stock_vehicle_id
+ * @property int|null $site_stock_listing_id
  * @property int|null $vehicle_color_id
  * @property MediaAngle|null $angle
  * @property string $source
@@ -38,7 +39,7 @@ use Illuminate\Support\Carbon;
  * @property-read VehicleColor|null $color
  */
 #[Fillable(['angle', 'source', 'original_name', 'mime_type', 'size_bytes', 'width', 'height', 'sort_order'])]
-#[Hidden(['id', 'workspace_id', 'workspace_vehicle_id', 'site_vehicle_id', 'stock_vehicle_id', 'vehicle_color_id', 'path'])]
+#[Hidden(['id', 'workspace_id', 'workspace_vehicle_id', 'site_vehicle_id', 'stock_vehicle_id', 'site_stock_listing_id', 'vehicle_color_id', 'path'])]
 class VehiclePhoto extends Model
 {
     use HasImmutablePublicId, SoftDeletes;

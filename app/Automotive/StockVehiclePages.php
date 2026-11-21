@@ -8,7 +8,7 @@ use App\Enums\StockCondition;
 use App\Models\Catalog\AutoSeries;
 use App\Models\Site;
 use App\Models\SiteSection;
-use App\Models\StockVehicle;
+use App\Models\SiteStockListing;
 
 /**
  * Addresses of Ready Stock vehicles inside Used / Specials (ADR-011 §4, ADR-012 / X-038).
@@ -49,22 +49,21 @@ final class StockVehiclePages
             return [];
         }
 
-        $vehicles = $site->workspace->stockVehicles()
-            ->ready()
-            ->where('condition', $condition)
-            ->with('photos')
-            ->orderByDesc('id')
+        $listings = SiteStockListing::query()
+            ->visibleFor($site, $condition)
+            ->with('stockVehicle')
             ->get();
 
-        if ($vehicles->isEmpty()) {
+        if ($listings->isEmpty()) {
             return [];
         }
 
-        $series = $this->catalog->seriesByRefs($vehicles->map(fn (StockVehicle $vehicle): string => $vehicle->catalog_series_ref)->all());
+        $series = $this->catalog->seriesByRefs($listings->map(fn (SiteStockListing $listing): string => $listing->stockVehicle->catalog_series_ref)->all());
         $pages = [];
         $taken = [];
 
-        foreach ($vehicles as $vehicle) {
+        foreach ($listings as $listing) {
+            $vehicle = $listing->stockVehicle;
             $row = $series->get($vehicle->catalog_series_ref);
 
             if (! $row instanceof AutoSeries) {

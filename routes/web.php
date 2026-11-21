@@ -35,6 +35,7 @@ use App\Http\Controllers\Platform\PlatformBlockGroupController;
 use App\Http\Controllers\Platform\PlatformMarketplaceController;
 use App\Http\Controllers\Platform\PlatformSettingsController;
 use App\Http\Controllers\Platform\PlatformTemplateController;
+use App\Http\Controllers\Platform\PlatformUsersController;
 use App\Http\Controllers\Platform\SeriesGalleryController;
 use App\Http\Controllers\Platform\SeriesMediaController;
 use App\Http\Controllers\Platform\SeriesMediaImageController;
@@ -61,6 +62,7 @@ use App\Http\Controllers\Team\WorkspaceInvitationController;
 use App\Http\Controllers\Team\WorkspaceMemberController;
 use App\Http\Controllers\Team\WorkspaceTeamController;
 use App\Http\Controllers\Vehicles\SiteOfferController;
+use App\Http\Controllers\Vehicles\SiteStockListingController;
 use App\Http\Controllers\Vehicles\SiteVehicleController;
 use App\Http\Controllers\Vehicles\SiteVehicleImportController;
 use App\Http\Controllers\Vehicles\VehicleCollectionController;
@@ -304,6 +306,16 @@ Route::middleware(['auth', 'verified'])->group(function () {
             Route::delete('integrations/{binding}', [SiteIntegrationController::class, 'destroy'])->whereUlid('binding')->name('integrations.destroy');
             Route::put('analytics', [SiteAnalyticsController::class, 'update'])->name('analytics.update');
 
+            Route::get('stock', [SiteStockListingController::class, 'index'])->name('stock.index');
+            Route::get('stock/create', [SiteStockListingController::class, 'create'])->name('stock.create');
+            Route::post('stock', [SiteStockListingController::class, 'store'])->middleware('throttle:30,1')->name('stock.store');
+            Route::get('stock/{listing}', [SiteStockListingController::class, 'show'])->whereUlid('listing')->name('stock.show');
+            Route::patch('stock/{listing}', [SiteStockListingController::class, 'update'])->whereUlid('listing')->name('stock.update');
+            Route::delete('stock/{listing}', [SiteStockListingController::class, 'destroy'])->whereUlid('listing')->name('stock.destroy');
+            Route::post('stock/{listing}/photos', [SiteStockListingController::class, 'storePhotos'])->whereUlid('listing')->middleware('throttle:60,1')->name('stock.photos.store');
+            Route::delete('stock/{listing}/photos', [SiteStockListingController::class, 'resetPhotos'])->whereUlid('listing')->name('stock.photos.reset');
+            Route::delete('stock/{listing}/photos/{photo}', [SiteStockListingController::class, 'destroyPhoto'])->whereUlid(['listing', 'photo'])->name('stock.photos.destroy');
+
             Route::get('vehicles', [SiteVehicleController::class, 'index'])->name('vehicles.index');
             Route::get('vehicles/create', [SiteVehicleController::class, 'create'])->name('vehicles.create');
             Route::get('vehicles/import', [SiteVehicleImportController::class, 'create'])->name('vehicles.imports.create');
@@ -444,6 +456,14 @@ Route::middleware(['auth', 'verified'])->group(function () {
         ->group(function () {
             Route::get('/', [PlatformSettingsController::class, 'edit'])->name('edit');
             Route::put('/', [PlatformSettingsController::class, 'update'])->middleware('throttle:30,1')->name('update');
+        });
+
+    // Registered accounts for Super Admin: email, date, roles, plan and verification.
+    Route::prefix('platform/users')
+        ->name('platform.users.')
+        ->middleware(EnsurePlatformPermission::class.':'.PlatformPermission::ManageAccess->value)
+        ->group(function () {
+            Route::get('/', [PlatformUsersController::class, 'index'])->name('index');
         });
 
     // Beta operator access: Workspace plans + platform roles until paid billing ships (D-133).
