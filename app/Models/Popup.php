@@ -33,10 +33,11 @@ use LogicException;
  * @property bool $close_on_escape
  * @property bool $show_close_button
  * @property bool $mobile_fullscreen
+ * @property array<string, mixed>|null $launch_json
  * @property Carbon|null $created_at
  * @property Carbon|null $updated_at
  */
-#[Fillable(['name', 'status', 'title', 'text', 'size', 'animation', 'close_on_overlay', 'close_on_escape', 'show_close_button', 'mobile_fullscreen'])]
+#[Fillable(['name', 'status', 'title', 'text', 'size', 'animation', 'close_on_overlay', 'close_on_escape', 'show_close_button', 'mobile_fullscreen', 'launch_json'])]
 #[Hidden(['id', 'site_id', 'form_id'])]
 class Popup extends Model
 {
@@ -69,6 +70,7 @@ class Popup extends Model
             'close_on_escape' => 'boolean',
             'show_close_button' => 'boolean',
             'mobile_fullscreen' => 'boolean',
+            'launch_json' => 'array',
         ];
     }
 

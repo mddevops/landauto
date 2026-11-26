@@ -1,14 +1,11 @@
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { CaptchaConfig } from '@/blocks/captcha';
 import { catalogPath, runtimeCatalog } from '@/blocks/catalog';
 import type { CatalogProps, PageContext } from '@/blocks/catalog';
 import type { DesignTokens } from '@/blocks/design';
-import { FormView } from '@/blocks/form';
-import { currentTracking, submitForm } from '@/blocks/form-submit';
 import { NativeBlock } from '@/blocks/native-block';
 import type { NativeOutput } from '@/blocks/native-block';
-import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
@@ -18,8 +15,12 @@ import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { TriggerScope } from '@/blocks/trigger-context';
-import type { TriggerContextValue } from '@/blocks/trigger-context';
 import type { VehicleBinding } from '@/blocks/vehicles';
+import { FloatingLauncherButton } from '@/popups/floating-launcher-button';
+import { defaultLaunch } from '@/popups/launch';
+import type { FloatingLauncher } from '@/popups/launcher';
+import { PopupFormLayer } from '@/popups/popup-form-layer';
+import { useSitePopups } from '@/popups/use-site-popups';
 import { track } from './analytics';
 
 /**
@@ -28,7 +29,7 @@ import { track } from './analytics';
  */
 export type PublishedPagePayload = {
     version: string;
-    site: { name: string };
+    site: { name: string; public_id?: string };
     page: { public_id: string; title: string };
     pages: { public_id: string; path: string }[];
     /** Present while the catalog section is published; `base` prefixes its addresses. */
@@ -48,12 +49,7 @@ export type PublishedPagePayload = {
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
     form_action: string;
-};
-
-type OpenedPopup = {
-    popup: PopupRuntime;
-    context: TriggerContextValue;
-    trigger: HTMLElement;
+    floating_launcher?: FloatingLauncher;
 };
 
 export function PublishedSite({
@@ -64,7 +60,19 @@ export function PublishedSite({
     /** Live widget config added in the browser only; Popups are closed during SSR. */
     captcha?: CaptchaConfig | null;
 }) {
-    const [opened, setOpened] = useState<OpenedPopup | null>(null);
+    const popups = useMemo(
+        () =>
+            payload.popups.map((popup) => ({
+                ...popup,
+                launch: popup.launch ?? defaultLaunch(),
+            })),
+        [payload.popups],
+    );
+    const { opened, openManual, close } = useSitePopups({
+        popups,
+        siteId: payload.site.public_id ?? payload.version,
+        onOpen: () => track('popup.open'),
+    });
     const renderContext = useMemo<BlockRenderContextValue>(() => {
         const urls = new Map(
             payload.assets.map((asset) => [asset.public_id, asset.url]),
@@ -75,9 +83,7 @@ export function PublishedSite({
         const vehicles = new Map(
             payload.vehicles.map((vehicle) => [vehicle.public_id, vehicle]),
         );
-        const popups = new Map(
-            payload.popups.map((popup) => [popup.public_id, popup]),
-        );
+        const popupIds = new Set(popups.map((popup) => popup.public_id));
         const base = payload.catalog?.base ?? '';
 
         return {
@@ -94,18 +100,10 @@ export function PublishedSite({
             pageHref: (id) => paths.get(id) ?? null,
             vehicle: (id) => vehicles.get(id) ?? null,
             vehicles: payload.vehicles,
-            hasPopup: (id) => popups.has(id),
-            openPopup: (id, context, trigger) => {
-                const popup = popups.get(id);
-
-                if (popup) {
-                    setOpened({ popup, context, trigger });
-                    track('popup.open');
-                }
-            },
+            hasPopup: (id) => popupIds.has(id),
+            openPopup: openManual,
         };
-    }, [payload]);
-    const openedForm = opened?.popup.form ?? null;
+    }, [payload, popups, openManual]);
 
     return (
         <>
@@ -146,63 +144,53 @@ export function PublishedSite({
                     </SiteTheme>
                 </BlockRenderContext>
             </main>
-            {opened && (
-                <PopupView
-                    popup={opened.popup}
-                    tokens={payload.design}
-                    open
-                    onOpenChange={(open) => {
-                        if (!open) {
-                            setOpened(null);
-                            track('popup.close');
+            {payload.floating_launcher?.enabled && (
+                <FloatingLauncherButton
+                    launcher={payload.floating_launcher}
+                    onOpenPopup={(trigger) => {
+                        if (payload.floating_launcher?.popup) {
+                            openManual(
+                                payload.floating_launcher.popup,
+                                {},
+                                trigger,
+                            );
                         }
                     }}
-                    returnFocusTo={opened.trigger}
-                >
-                    {openedForm && (
-                        <FormView
-                            form={openedForm}
-                            captcha={captcha}
-                            onEvent={(event) =>
-                                track(
-                                    event === 'start'
-                                        ? 'form.start'
-                                        : 'form.validation_error',
-                                )
+                />
+            )}
+            {opened && (
+                <PopupFormLayer
+                    opened={opened}
+                    design={payload.design}
+                    pagePublicId={payload.page.public_id}
+                    formAction={(formId) => `${payload.form_action}/${formId}`}
+                    captcha={captcha}
+                    onClose={() => {
+                        close();
+                        track('popup.close');
+                    }}
+                    onFormEvent={(event, context) => {
+                        if (event === 'start') {
+                            track('form.start');
+                        }
+
+                        if (event === 'validation_error') {
+                            track('form.validation_error');
+                        }
+
+                        if (event === 'submit') {
+                            track('form.submit');
+
+                            if (context.vehicle) {
+                                track('vehicle.form_submit');
                             }
-                            onSubmit={async (values, meta) => {
-                                track('form.submit');
+                        }
 
-                                if (opened.context.vehicle) {
-                                    track('vehicle.form_submit');
-                                }
-
-                                const result = await submitForm(
-                                    `${payload.form_action}/${openedForm.public_id}`,
-                                    {
-                                        fields: values,
-                                        lf_hp: meta.honeypot,
-                                        ...(meta.captchaToken !== null && {
-                                            captcha_token: meta.captchaToken,
-                                        }),
-                                        context: {
-                                            ...opened.context,
-                                            page: payload.page.public_id,
-                                            popup: opened.popup.public_id,
-                                        },
-                                        tracking: currentTracking(),
-                                    },
-                                );
-
-                                if (result.ok) {
-                                    track('form.success');
-                                }
-
-                                return result;
-                            }}
-                        />
-                    )}
-                </PopupView>
+                        if (event === 'success') {
+                            track('form.success');
+                        }
+                    }}
+                />
             )}
         </>
     );

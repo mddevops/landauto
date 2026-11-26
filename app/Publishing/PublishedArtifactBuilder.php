@@ -155,7 +155,10 @@ final class PublishedArtifactBuilder
 
         return [
             'version' => $versionId,
-            'site' => ['name' => $manifest['site']['name']],
+            'site' => [
+                'name' => $manifest['site']['name'],
+                'public_id' => $manifest['site']['public_id'],
+            ],
             'page' => ['public_id' => $page['public_id'], 'title' => $page['title']],
             'pages' => $links,
             ...(is_array($catalog) ? ['catalog' => [
@@ -208,6 +211,7 @@ final class PublishedArtifactBuilder
                 'form' => is_string($popup['form']) ? ($forms[$popup['form']] ?? null) : null,
             ], $manifest['popups']),
             'form_action' => PublicBasePath::prefix("/_landflow/forms/{$versionId}"),
+            ...(isset($manifest['floating_launcher']) ? ['floating_launcher' => $manifest['floating_launcher']] : []),
         ];
     }
 

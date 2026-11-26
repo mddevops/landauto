@@ -289,6 +289,7 @@ Route::middleware(['auth', 'verified'])->group(function () {
 
             Route::get('popups', [SitePopupController::class, 'index'])->name('popups.index');
             Route::post('popups', [SitePopupController::class, 'store'])->name('popups.store');
+            Route::patch('popups-launcher', [SitePopupController::class, 'updateLauncher'])->name('popups.launcher');
             Route::patch('popups/{popup}', [SitePopupController::class, 'update'])->whereUlid('popup')->name('popups.update');
             Route::delete('popups/{popup}', [SitePopupController::class, 'destroy'])->whereUlid('popup')->name('popups.destroy');
 

@@ -13,6 +13,7 @@ use App\Models\Page;
 use App\Models\Site;
 use App\Models\SiteAsset;
 use App\Models\SiteComponent;
+use App\Popups\FloatingLauncher;
 use App\Popups\PopupRuntime;
 use App\Support\DesignerScope;
 use App\Support\SiteDesignTokens;
@@ -99,6 +100,7 @@ class SitePreviewController extends Controller
                 ...$stockBindings->forEnabledSections($site)['vehicles'],
             ],
             'popups' => $popups->forSite($site),
+            'launcher' => FloatingLauncher::present($site),
             'captcha' => SiteSecurityPolicy::forSite($site)->captchaRequired && $captcha->isConfigured() ? $captcha->widget() : null,
         ]);
     }

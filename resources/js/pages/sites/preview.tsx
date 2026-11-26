@@ -1,14 +1,11 @@
 import { Head, Link } from '@inertiajs/react';
 import { ArrowLeft } from 'lucide-react';
-import { useMemo, useState } from 'react';
+import { useMemo } from 'react';
 import { blockAnchor } from '@/blocks/actions';
 import type { CaptchaConfig } from '@/blocks/captcha';
 import type { CatalogProps, PageContext } from '@/blocks/catalog';
 import { catalogPath, runtimeCatalog } from '@/blocks/catalog';
 import type { DesignTokens } from '@/blocks/design';
-import { FormView } from '@/blocks/form';
-import { currentTracking, submitForm } from '@/blocks/form-submit';
-import { PopupView } from '@/blocks/popup';
 import type { PopupRuntime } from '@/blocks/popup';
 import { blockRenderer } from '@/blocks/registry';
 import { BlockRenderContext } from '@/blocks/render-context';
@@ -17,10 +14,14 @@ import type { SandboxSource } from '@/blocks/sandboxed-block';
 import type { BlockState } from '@/blocks/state';
 import { SiteTheme } from '@/blocks/theme';
 import { TriggerScope } from '@/blocks/trigger-context';
-import type { TriggerContextValue } from '@/blocks/trigger-context';
 import type { VehicleBinding } from '@/blocks/vehicles';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
+import { FloatingLauncherButton } from '@/popups/floating-launcher-button';
+import { defaultLaunch } from '@/popups/launch';
+import type { FloatingLauncher } from '@/popups/launcher';
+import { PopupFormLayer } from '@/popups/popup-form-layer';
+import { useSitePopups } from '@/popups/use-site-popups';
 import { designer, preview } from '@/routes/sites';
 import { store as previewSubmission } from '@/routes/sites/preview/submissions';
 
@@ -39,15 +40,10 @@ type PreviewProps = {
     assets: { public_id: string; url: string }[];
     vehicles: VehicleBinding[];
     popups: PopupRuntime[];
+    launcher: FloatingLauncher | null;
     captcha: CaptchaConfig | null;
     catalog: CatalogProps | null;
     pageContext: PageContext | null;
-};
-
-type OpenedPopup = {
-    popup: PopupRuntime;
-    context: TriggerContextValue;
-    trigger: HTMLElement;
 };
 
 export default function Preview({
@@ -59,11 +55,23 @@ export default function Preview({
     assets,
     vehicles,
     popups,
+    launcher,
     captcha,
     catalog,
     pageContext,
 }: PreviewProps) {
-    const [opened, setOpened] = useState<OpenedPopup | null>(null);
+    const runtimePopups = useMemo(
+        () =>
+            popups.map((popup) => ({
+                ...popup,
+                launch: popup.launch ?? defaultLaunch(),
+            })),
+        [popups],
+    );
+    const { opened, openManual, close } = useSitePopups({
+        popups: runtimePopups,
+        siteId: site.public_id,
+    });
     const renderContext = useMemo(() => {
         const urls = new Map(
             assets.map((asset) => [asset.public_id, asset.url]),
@@ -72,9 +80,7 @@ export default function Preview({
         const vehicleMap = new Map(
             vehicles.map((vehicle) => [vehicle.public_id, vehicle]),
         );
-        const popupMap = new Map(
-            popups.map((popup) => [popup.public_id, popup]),
-        );
+        const popupIds = new Set(runtimePopups.map((popup) => popup.public_id));
 
         return {
             assetUrl: (id: string) => urls.get(id) ?? null,
@@ -88,18 +94,8 @@ export default function Preview({
                       : null,
             vehicle: (id: string) => vehicleMap.get(id) ?? null,
             vehicles,
-            hasPopup: (id: string) => popupMap.has(id),
-            openPopup: (
-                id: string,
-                context: TriggerContextValue,
-                trigger: HTMLElement,
-            ) => {
-                const popup = popupMap.get(id);
-
-                if (popup) {
-                    setOpened({ popup, context, trigger });
-                }
-            },
+            hasPopup: (id: string) => popupIds.has(id),
+            openPopup: openManual,
             catalog: runtimeCatalog(catalog, (current, target) => {
                 const path = catalogPath(current, target);
 
@@ -109,8 +105,16 @@ export default function Preview({
             }),
             pageContext,
         };
-    }, [assets, pages, vehicles, popups, site.public_id, catalog, pageContext]);
-    const openedForm = opened?.popup.form ?? null;
+    }, [
+        assets,
+        pages,
+        vehicles,
+        runtimePopups,
+        site.public_id,
+        catalog,
+        pageContext,
+        openManual,
+    ]);
     const sample =
         pageContext?.vehicle ??
         catalog?.vehicles.find((vehicle) => {
@@ -195,43 +199,31 @@ export default function Preview({
                     </BlockRenderContext>
                 </main>
             </div>
+            {launcher?.enabled && (
+                <FloatingLauncherButton
+                    launcher={launcher}
+                    onOpenPopup={(trigger) => {
+                        if (launcher.popup) {
+                            openManual(launcher.popup, {}, trigger);
+                        }
+                    }}
+                />
+            )}
             {opened && (
-                <PopupView
-                    popup={opened.popup}
-                    tokens={design}
-                    open
-                    onOpenChange={(open) => !open && setOpened(null)}
-                    returnFocusTo={opened.trigger}
-                >
-                    {openedForm && (
-                        <FormView
-                            form={openedForm}
-                            captcha={captcha}
-                            onSubmit={(values, meta) =>
-                                submitForm(
-                                    previewSubmission.url({
-                                        site: site.public_id,
-                                        form: openedForm.public_id,
-                                    }),
-                                    {
-                                        fields: values,
-                                        lf_hp: meta.honeypot,
-                                        ...(meta.captchaToken !== null && {
-                                            captcha_token: meta.captchaToken,
-                                        }),
-                                        context: {
-                                            ...opened.context,
-                                            page: page.public_id,
-                                            popup: opened.popup.public_id,
-                                        },
-                                        tracking: currentTracking(),
-                                    },
-                                    { authenticated: true },
-                                )
-                            }
-                        />
-                    )}
-                </PopupView>
+                <PopupFormLayer
+                    opened={opened}
+                    design={design}
+                    pagePublicId={page.public_id}
+                    formAction={(formId) =>
+                        previewSubmission.url({
+                            site: site.public_id,
+                            form: formId,
+                        })
+                    }
+                    captcha={captcha}
+                    authenticated
+                    onClose={close}
+                />
             )}
         </>
     );

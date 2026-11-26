@@ -5,6 +5,7 @@ import type { DesignTokens } from '@/blocks/design';
 import { FormView } from '@/blocks/form';
 import { PopupView } from '@/blocks/popup';
 import type { Choice } from '@/components/platform/form-fields';
+import { FloatingLauncherEditor } from '@/components/popups/floating-launcher-editor';
 import type {
     ManagedPopup,
     PopupChoices,
@@ -13,12 +14,14 @@ import { PopupSettingsDialog } from '@/components/popups/popup-settings-dialog';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
 import { Card, CardDescription, CardHeader } from '@/components/ui/card';
+import type { FloatingLauncher } from '@/popups/launcher';
 import { dashboard } from '@/routes';
 import { designer } from '@/routes/sites';
 
 type PopupsIndexProps = {
     site: { public_id: string; name: string };
     design: DesignTokens;
+    launcher: FloatingLauncher;
     popups: ManagedPopup[];
     forms: Choice[];
     choices: PopupChoices;
@@ -28,6 +31,7 @@ type PopupsIndexProps = {
 export default function PopupsIndex({
     site,
     design,
+    launcher,
     popups,
     forms,
     choices,
@@ -37,6 +41,20 @@ export default function PopupsIndex({
     const previewed = popups.find((popup) => popup.public_id === previewId);
     const sizeLabel = (value: string) =>
         choices.sizes.find((choice) => choice.value === value)?.label ?? value;
+    const autoLabel = (popup: ManagedPopup) => {
+        switch (popup.launch?.auto_show) {
+            case 'auto':
+                return 'автопоказ 8 сек';
+            case 'once_session':
+                return 'один раз за сессию';
+            case 'periodic':
+                return 'периодический';
+            case 'custom':
+                return 'свои интервалы';
+            default:
+                return 'только по кнопке';
+        }
+    };
 
     return (
         <>
@@ -51,8 +69,8 @@ export default function PopupsIndex({
                             Попапы
                         </h1>
                         <p className="text-sm text-muted-foreground">
-                            Всплывающие окна, которые открываются кнопками
-                            сайта. Один попап можно открыть из разных блоков.
+                            Библиотека окон сайта: кнопки конструктора,
+                            плавающая кнопка и автоматический показ без кнопки.
                         </p>
                     </div>
                     <div className="flex flex-wrap gap-2">
@@ -66,6 +84,7 @@ export default function PopupsIndex({
                                 sitePublicId={site.public_id}
                                 choices={choices}
                                 forms={forms}
+                                popups={popups}
                                 trigger={
                                     <Button>
                                         <Plus aria-hidden="true" />
@@ -77,6 +96,14 @@ export default function PopupsIndex({
                     </div>
                 </header>
 
+                {can.editPopups && (
+                    <FloatingLauncherEditor
+                        sitePublicId={site.public_id}
+                        launcher={launcher}
+                        popups={popups}
+                    />
+                )}
+
                 {popups.length === 0 ? (
                     <Card className="border-dashed">
                         <CardHeader>
@@ -85,7 +112,8 @@ export default function PopupsIndex({
                             </h2>
                             <CardDescription>
                                 Создайте попап, затем выберите действие «Открыть
-                                попап» у кнопки в дизайнере.
+                                попап» у кнопки в дизайнере или включите
+                                автопоказ.
                             </CardDescription>
                         </CardHeader>
                     </Card>
@@ -122,8 +150,20 @@ export default function PopupsIndex({
                                                 form.value ===
                                                 popup.form_public_id,
                                         )?.label ?? 'не выбрана'
-                                    }`}
+                                    } · ${autoLabel(popup)}`}
                                 </p>
+                                {popup.bindings.length > 0 && (
+                                    <p className="text-xs text-muted-foreground">
+                                        Привязки:{' '}
+                                        {popup.bindings
+                                            .map((binding) =>
+                                                binding.page
+                                                    ? `${binding.label} (${binding.page})`
+                                                    : binding.label,
+                                            )
+                                            .join(', ')}
+                                    </p>
+                                )}
                                 <div className="mt-auto flex flex-wrap gap-2">
                                     <Button
                                         variant="outline"
@@ -141,6 +181,7 @@ export default function PopupsIndex({
                                             sitePublicId={site.public_id}
                                             choices={choices}
                                             forms={forms}
+                                            popups={popups}
                                             popup={popup}
                                             trigger={
                                                 <Button
@@ -167,7 +208,12 @@ export default function PopupsIndex({
                     open
                     onOpenChange={(open) => !open && setPreviewId(null)}
                 >
-                    {previewed.form && <FormView form={previewed.form} />}
+                    {previewed.form && (
+                        <FormView
+                            form={previewed.form}
+                            confirmation={previewed.launch?.confirmation}
+                        />
+                    )}
                 </PopupView>
             )}
         </>

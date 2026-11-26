@@ -111,6 +111,7 @@ final class RestoreVersion
         $site->forceFill([
             'name' => is_string($data['name'] ?? null) ? $data['name'] : $site->name,
             'design_tokens' => is_array($data['design_tokens'] ?? null) ? $data['design_tokens'] : null,
+            'floating_launcher_json' => is_array($data['floating_launcher_json'] ?? null) ? $data['floating_launcher_json'] : null,
         ])->save();
     }
 
@@ -192,6 +193,7 @@ final class RestoreVersion
                 'close_on_escape' => (bool) $data['close_on_escape'],
                 'show_close_button' => (bool) $data['show_close_button'],
                 'mobile_fullscreen' => (bool) $data['mobile_fullscreen'],
+                'launch_json' => is_array($data['launch_json'] ?? null) ? $data['launch_json'] : null,
             ])->save();
         }
     }

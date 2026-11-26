@@ -9,7 +9,9 @@ use App\Models\Popup;
 use App\Models\Site;
 use App\Models\User;
 use App\Models\Workspace;
+use App\Popups\PopupLaunch;
 use App\Support\WorkspaceContext;
+use Database\Seeders\OfficialBlockSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
 use Tests\TestCase;
@@ -130,8 +132,86 @@ class SitePopupTest extends TestCase
                     ->has('popups', 1)
                     ->where('popups.0.public_id', $active->public_id)
                     ->where('popups.0.close_on_escape', true)
+                    ->where('popups.0.launch.auto_show', 'off')
                     ->missing('popups.0.id'));
         }
+    }
+
+    public function test_launch_rules_are_saved_and_a_used_popup_cannot_be_deleted_without_reassign(): void
+    {
+        $this->seed(OfficialBlockSeeder::class);
+        $home = new Page(['title' => Page::HOME_TITLE, 'slug' => Page::HOME_SLUG, 'sort_order' => 0]);
+        $home->is_home = true;
+        $home->site()->associate($this->site)->save();
+
+        $this->as($this->owner)->post(route('sites.popups.store', $this->site), $this->payload([
+            'name' => 'Узнать цену',
+            'launch' => [
+                'auto_show' => 'once_session',
+                'delay_seconds' => 3,
+                'period_seconds' => 60,
+                'shows' => [],
+                'confirmation' => 'notice',
+                'conditions' => [
+                    'join' => 'and',
+                    'groups' => [[
+                        'join' => 'and',
+                        'rules' => [
+                            ['type' => 'pages', 'operator' => 'contains', 'value' => '/credit'],
+                            ['type' => 'devices', 'operator' => 'equals', 'value' => 'mobile'],
+                        ],
+                    ]],
+                ],
+            ],
+        ]))->assertSessionHasNoErrors();
+
+        $price = Popup::query()->where('name', 'Узнать цену')->sole();
+        $this->assertSame('once_session', $price->launch_json['auto_show']);
+        $this->assertSame('mobile', $price->launch_json['conditions']['groups'][0]['rules'][1]['value']);
+
+        $this->as($this->owner)->post(route('sites.popups.store', $this->site), $this->payload(['name' => 'Тест-драйв']))->assertSessionHasNoErrors();
+        $drive = Popup::query()->where('name', 'Тест-драйв')->sole();
+
+        $this->as($this->owner)->post(route('sites.blocks.store', [$this->site, $home]), ['block' => 'cta'])->assertSessionHasNoErrors();
+        $block = $home->blocks()->latest('id')->firstOrFail();
+        $this->as($this->owner)->patch(route('sites.blocks.state', [$this->site, $block]), [
+            'state' => ['button' => ['label' => 'Заявка', 'action' => ['type' => 'open_popup', 'popup' => $price->public_id]]],
+        ])->assertSessionHasNoErrors();
+
+        $this->as($this->owner)->delete(route('sites.popups.destroy', [$this->site, $price]))->assertSessionHasErrors('popup');
+        $this->assertModelExists($price);
+
+        $this->as($this->owner)->delete(route('sites.popups.destroy', [$this->site, $price]), ['replace_with' => $drive->public_id])->assertSessionHasNoErrors();
+        $this->assertModelMissing($price);
+        $this->assertSame($drive->public_id, $block->fresh()?->state_json['button']['action']['popup']);
+    }
+
+    public function test_floating_launcher_accepts_only_a_popup_of_the_same_site(): void
+    {
+        $popup = Popup::factory()->for($this->site)->create();
+        $foreign = Popup::factory()->create();
+
+        $this->as($this->owner)->patch(route('sites.popups.launcher', $this->site), [
+            ...$this->launcherPayload($popup->public_id),
+        ])->assertSessionHasNoErrors()->assertRedirect();
+        $this->assertTrue($this->site->fresh()?->floating_launcher_json['enabled']);
+        $this->assertSame($popup->public_id, $this->site->fresh()?->floating_launcher_json['popup']);
+
+        $this->as($this->owner)->patch(route('sites.popups.launcher', $this->site), [
+            ...$this->launcherPayload($foreign->public_id),
+        ])->assertSessionHasErrors('popup');
+    }
+
+    public function test_popup_launch_supports_the_verified_condition_pairs(): void
+    {
+        $this->assertSame(29, array_sum(array_map(count(...), PopupLaunch::OPERATORS)));
+        $this->assertNull(PopupLaunch::tryNormalize([
+            'auto_show' => 'auto',
+            'conditions' => ['join' => 'and', 'groups' => [[
+                'join' => 'and',
+                'rules' => [['type' => 'pages', 'operator' => 'visited', 'value' => '/x']],
+            ]]],
+        ]));
     }
 
     /**
@@ -152,6 +232,53 @@ class SitePopupTest extends TestCase
             'show_close_button' => true,
             'mobile_fullscreen' => true,
             ...$overrides,
+        ];
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function launcherPayload(string $popupId): array
+    {
+        return [
+            'enabled' => true,
+            'popup' => $popupId,
+            'desktop' => [
+                'variant' => 'standard',
+                'size' => 64,
+                'text_instead_of_icon' => false,
+                'text' => 'Звонок',
+                'icon' => 'phone',
+                'auto_icon_size' => true,
+                'icon_size' => 32,
+                'hover' => 'dialog',
+                'idle' => 'none',
+                'interval_seconds' => 0,
+                'width' => 206,
+                'subtitle' => '',
+            ],
+            'mobile' => [
+                'variant' => 'full_width',
+                'size' => 64,
+                'text_instead_of_icon' => true,
+                'text' => 'Заявка',
+                'icon' => 'phone',
+                'auto_icon_size' => true,
+                'icon_size' => 24,
+                'hover' => 'none',
+                'idle' => 'none',
+                'interval_seconds' => 0,
+                'width' => 206,
+                'subtitle' => '',
+            ],
+            'dialog' => [
+                'title' => 'Нужна помощь?',
+                'subtitle' => 'Оставьте заявку',
+                'cta_label' => 'Открыть форму',
+                'open_delay_seconds' => 0,
+                'show_seconds' => 5,
+                'open_popup' => true,
+            ],
         ];
     }
 

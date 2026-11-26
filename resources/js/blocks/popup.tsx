@@ -3,6 +3,7 @@ import { XIcon } from 'lucide-react';
 import type { ReactNode } from 'react';
 import type { DesignTokens } from '@/blocks/design';
 import type { FormRuntime } from '@/blocks/form';
+import type { PopupLaunch } from '@/popups/launch';
 import { SiteTheme } from '@/blocks/theme';
 import { cn } from '@/lib/utils';
 
@@ -18,6 +19,7 @@ export type PopupRuntime = {
     close_on_escape: boolean;
     show_close_button: boolean;
     mobile_fullscreen: boolean;
+    launch?: PopupLaunch;
     /** Attached active Form; the Popup only presents it. */
     form: FormRuntime | null;
 };

@@ -103,6 +103,7 @@ export function FormView({
     onEvent,
     extra,
     captcha = null,
+    confirmation = 'replace',
 }: {
     form: FormRuntime;
     onSubmit?: (
@@ -113,6 +114,7 @@ export function FormView({
     onEvent?: (event: FormInteraction) => void;
     extra?: ReactNode;
     captcha?: CaptchaConfig | null;
+    confirmation?: 'replace' | 'notice';
 }) {
     const id = useId();
     const started = useRef(false);
@@ -126,7 +128,7 @@ export function FormView({
         'idle' | 'submitting' | 'success' | 'error'
     >('idle');
 
-    if (status === 'success') {
+    if (status === 'success' && confirmation !== 'notice') {
         return (
             <p
                 role="status"
@@ -200,6 +202,14 @@ export function FormView({
             }}
             className="flex flex-col gap-4"
         >
+            {status === 'success' && confirmation === 'notice' && (
+                <p
+                    role="status"
+                    className="rounded-(--lf-radius) bg-green-50 p-4 text-sm font-medium text-green-800"
+                >
+                    {message ?? form.success_message}
+                </p>
+            )}
             {status === 'error' && message && (
                 <p
                     role="alert"
@@ -358,7 +368,9 @@ export function FormView({
             {extra}
             <button
                 type="submit"
-                disabled={!onSubmit || status === 'submitting'}
+                disabled={
+                    !onSubmit || status === 'submitting' || status === 'success'
+                }
                 className={cn(
                     'inline-flex items-center justify-center rounded-(--lf-radius) border-2 border-(--lf-primary) bg-(--lf-primary) px-5 py-2 text-sm font-medium text-(--lf-on-primary) disabled:opacity-60',
                 )}

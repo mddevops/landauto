@@ -7,6 +7,7 @@ use App\Enums\PopupSize;
 use App\Models\Form;
 use App\Models\Popup;
 use App\Models\Site;
+use App\Popups\PopupLaunch;
 use App\Support\DesignerScope;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
@@ -42,6 +43,7 @@ class SavePopupRequest extends FormRequest
             'show_close_button' => ['required', 'boolean'],
             'mobile_fullscreen' => ['required', 'boolean'],
             'form' => ['nullable', 'string', 'size:26'],
+            'launch' => ['nullable', 'array'],
         ];
     }
 
@@ -73,6 +75,10 @@ class SavePopupRequest extends FormRequest
 
             if ($this->filled('form') && $this->form() === null) {
                 $validator->errors()->add('form', 'Выберите форму этого сайта.');
+            }
+
+            if ($this->exists('launch')) {
+                PopupLaunch::validate($validator, $this->input('launch'));
             }
         }];
     }
@@ -109,6 +115,7 @@ class SavePopupRequest extends FormRequest
             'close_on_escape' => $this->boolean('close_on_escape'),
             'show_close_button' => $this->boolean('show_close_button'),
             'mobile_fullscreen' => $this->boolean('mobile_fullscreen'),
+            'launch_json' => PopupLaunch::present($this->input('launch')),
         ];
     }
 

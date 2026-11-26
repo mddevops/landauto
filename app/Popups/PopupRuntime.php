@@ -49,6 +49,7 @@ final class PopupRuntime
             'close_on_escape' => $popup->close_on_escape,
             'show_close_button' => $popup->show_close_button,
             'mobile_fullscreen' => $popup->mobile_fullscreen,
+            'launch' => PopupLaunch::present($popup->launch_json),
             'form' => $form !== null && $form->status ? $this->forms->present($form) : null,
         ];
     }

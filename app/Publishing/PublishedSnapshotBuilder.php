@@ -22,6 +22,7 @@ use App\Models\SiteSection;
 use App\Models\SiteVehicle;
 use App\Models\VehicleColor;
 use App\Models\VehiclePhoto;
+use App\Popups\FloatingLauncher;
 use App\Popups\PopupRuntime;
 use App\Support\SiteDesignTokens;
 use Illuminate\Support\Facades\DB;
@@ -219,6 +220,19 @@ final class PublishedSnapshotBuilder
             $manifest['analytics'] = ['yandex_metrica' => $metrica];
         }
 
+        $launcher = FloatingLauncher::present($site);
+
+        if ($launcher['enabled']) {
+            $activeIds = array_map(fn (Popup $popup): string => $popup->public_id, $popups);
+
+            if (! is_string($launcher['popup']) || ! in_array($launcher['popup'], $activeIds, true)) {
+                $launcher['popup'] = null;
+                $launcher['dialog']['open_popup'] = false;
+            }
+
+            $manifest['floating_launcher'] = $launcher;
+        }
+
         // Present only while a vehicle section is on, so Sites without sections keep their manifest hash.
         if ($section !== null) {
             $manifest['catalog'] = $section['catalog'];
@@ -304,7 +318,11 @@ final class PublishedSnapshotBuilder
 
         return [
             'schema' => self::SCHEMA,
-            'site' => ['name' => $site->name, 'design_tokens' => $site->design_tokens],
+            'site' => [
+                'name' => $site->name,
+                'design_tokens' => $site->design_tokens,
+                'floating_launcher_json' => $site->floating_launcher_json,
+            ],
             'components' => array_values($components->map(fn (SiteComponent $component): array => [
                 'public_id' => $component->public_id,
                 'definition' => $component->version->definition->slug,
@@ -396,6 +414,7 @@ final class PublishedSnapshotBuilder
                 'close_on_escape' => $popup->close_on_escape,
                 'show_close_button' => $popup->show_close_button,
                 'mobile_fullscreen' => $popup->mobile_fullscreen,
+                'launch_json' => $popup->launch_json,
             ])->all()),
         ];
     }

@@ -27,6 +27,7 @@ use LogicException;
  * @property string $public_number
  * @property SiteStatus $status
  * @property array<string, string>|null $design_tokens
+ * @property array<string, mixed>|null $floating_launcher_json
  * @property array<string, int|bool>|null $form_security
  * @property int|null $active_published_version_id
  * @property Carbon|null $created_at
@@ -56,6 +57,7 @@ class Site extends Model
             'status' => SiteStatus::class,
             'site_type' => SiteType::class,
             'design_tokens' => 'array',
+            'floating_launcher_json' => 'array',
             'form_security' => 'array',
         ];
     }
