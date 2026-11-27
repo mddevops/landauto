@@ -53,6 +53,8 @@ class HandleInertiaRequests extends Middleware
         return [
             ...parent::share($request),
             'name' => config('app.name'),
+            // Адрес приложения для макетов браузера (APP_URL без схемы).
+            'appHost' => fn () => self::appHost(),
             'auth' => [
                 'user' => fn () => $request->user()?->only([
                     'name',
@@ -81,6 +83,15 @@ class HandleInertiaRequests extends Middleware
             'siteContext' => fn () => $this->siteContext($request),
             'sidebarOpen' => ! $request->hasCookie('sidebar_state') || $request->cookie('sidebar_state') === 'true',
         ];
+    }
+
+    private static function appHost(): string
+    {
+        $url = (string) config('app.url');
+        $host = (string) parse_url($url, PHP_URL_HOST);
+        $port = parse_url($url, PHP_URL_PORT);
+
+        return $host === '' ? 'landflow.app' : $host.($port === null ? '' : ':'.$port);
     }
 
     /**

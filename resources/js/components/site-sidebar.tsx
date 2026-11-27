@@ -3,7 +3,6 @@ import {
     ArrowLeft,
     Car,
     Eye,
-    FileText,
     FolderTree,
     Globe,
     Inbox,
@@ -11,10 +10,10 @@ import {
     PencilRuler,
     Plug,
     Rocket,
+    Phone,
     Search,
     Send,
     ShieldCheck,
-    SquareStack,
     Warehouse,
 } from 'lucide-react';
 import { NavMain } from '@/components/nav-main';
@@ -33,7 +32,6 @@ import { designer, preview, show } from '@/routes/sites';
 import { index as deliveries } from '@/routes/sites/deliveries';
 import { index as domains } from '@/routes/sites/domains';
 import { show as formSecurity } from '@/routes/sites/form-security';
-import { index as forms } from '@/routes/sites/forms';
 import { index as integrations } from '@/routes/sites/integrations';
 import { index as popups } from '@/routes/sites/popups';
 import { show as publishing } from '@/routes/sites/publishing';
@@ -76,8 +74,7 @@ export function SiteSidebar({ site }: { site: SiteContext }) {
             icon: Warehouse,
             matchPrefix: true,
         },
-        { title: 'Формы', href: forms(id), icon: FileText, matchPrefix: true },
-        { title: 'Попапы', href: popups(id), icon: SquareStack },
+        { title: 'Виджет', href: popups(id), icon: Phone },
         can.editSeo && { title: 'SEO', href: seo(id), icon: Search },
     ]);
 

@@ -12,6 +12,7 @@ declare module '@inertiajs/core' {
     export interface InertiaConfig {
         sharedPageProps: {
             name: string;
+            appHost: string;
             auth: Auth;
             workspace: WorkspaceContext;
             platform: PlatformContext;

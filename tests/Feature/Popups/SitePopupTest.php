@@ -154,6 +154,8 @@ class SitePopupTest extends TestCase
                 'confirmation' => 'notice',
                 'conditions' => [
                     'join' => 'and',
+                    'name' => '  Кредитные страницы  ',
+                    'enabled' => false,
                     'groups' => [[
                         'join' => 'and',
                         'rules' => [
@@ -168,6 +170,8 @@ class SitePopupTest extends TestCase
         $price = Popup::query()->where('name', 'Узнать цену')->sole();
         $this->assertSame('once_session', $price->launch_json['auto_show']);
         $this->assertSame('mobile', $price->launch_json['conditions']['groups'][0]['rules'][1]['value']);
+        $this->assertSame('Кредитные страницы', $price->launch_json['conditions']['name']);
+        $this->assertFalse($price->launch_json['conditions']['enabled']);
 
         $this->as($this->owner)->post(route('sites.popups.store', $this->site), $this->payload(['name' => 'Тест-драйв']))->assertSessionHasNoErrors();
         $drive = Popup::query()->where('name', 'Тест-драйв')->sole();

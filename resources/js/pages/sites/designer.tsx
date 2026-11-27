@@ -79,7 +79,6 @@ import {
 import { index as deliveriesIndex } from '@/routes/sites/deliveries';
 import { update as updateDesign } from '@/routes/sites/design';
 import { show as formSecurity } from '@/routes/sites/form-security';
-import { index as formsIndex } from '@/routes/sites/forms';
 import { index as siteIntegrations } from '@/routes/sites/integrations';
 import { index as popupsIndex } from '@/routes/sites/popups';
 import { show as publishing } from '@/routes/sites/publishing';
@@ -681,17 +680,9 @@ function SiteSectionsMenu({
                 <DropdownMenuItem asChild>
                     <Link
                         className="block w-full cursor-pointer"
-                        href={formsIndex(siteId)}
-                    >
-                        Формы
-                    </Link>
-                </DropdownMenuItem>
-                <DropdownMenuItem asChild>
-                    <Link
-                        className="block w-full cursor-pointer"
                         href={popupsIndex(siteId)}
                     >
-                        Попапы
+                        Виджет
                     </Link>
                 </DropdownMenuItem>
                 <DropdownMenuItem asChild>

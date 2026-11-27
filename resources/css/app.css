@@ -141,3 +141,108 @@
         @apply bg-background text-foreground;
     }
 }
+
+/* Анимации плавающей кнопки виджета */
+@keyframes lf-waves {
+    0% {
+        box-shadow: 0 0 0 0 rgba(61, 175, 204, 0.55);
+    }
+    100% {
+        box-shadow: 0 0 0 22px rgba(61, 175, 204, 0);
+    }
+}
+
+@keyframes lf-scale {
+    0%,
+    100% {
+        transform: scale(1);
+    }
+    50% {
+        transform: scale(1.12);
+    }
+}
+
+@keyframes lf-wobble {
+    0%,
+    100% {
+        transform: rotate(0deg);
+    }
+    25% {
+        transform: rotate(-10deg);
+    }
+    75% {
+        transform: rotate(10deg);
+    }
+}
+
+@keyframes lf-shake {
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+    20%,
+    60% {
+        transform: translateX(-5px);
+    }
+    40%,
+    80% {
+        transform: translateX(5px);
+    }
+}
+
+@keyframes lf-jelly {
+    0%,
+    100% {
+        transform: scale(1, 1);
+    }
+    30% {
+        transform: scale(1.15, 0.85);
+    }
+    50% {
+        transform: scale(0.9, 1.1);
+    }
+    70% {
+        transform: scale(1.05, 0.95);
+    }
+}
+
+@keyframes lf-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.lf-idle-waves {
+    animation: lf-waves 1.6s ease-out infinite;
+}
+
+.lf-idle-scale {
+    animation: lf-scale 1.4s ease-in-out infinite;
+}
+
+.lf-idle-wobble {
+    animation: lf-wobble 1.4s ease-in-out infinite;
+}
+
+.lf-idle-shake {
+    animation: lf-shake 0.9s ease-in-out infinite;
+}
+
+.lf-idle-jelly {
+    animation: lf-jelly 1.4s ease-in-out infinite;
+}
+
+.lf-icon-spin {
+    animation: lf-spin 2.4s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .lf-idle-waves,
+    .lf-idle-scale,
+    .lf-idle-wobble,
+    .lf-idle-shake,
+    .lf-idle-jelly,
+    .lf-icon-spin {
+        animation: none;
+    }
+}

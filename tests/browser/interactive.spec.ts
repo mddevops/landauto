@@ -38,7 +38,7 @@ async function openDesigner(page: Page, siteName: string) {
 
 async function openSection(
     page: Page,
-    name: 'Формы' | 'Попапы' | 'Защита форм' | 'Заявки',
+    name: 'Виджет' | 'Защита форм' | 'Заявки',
 ) {
     await page.getByRole('button', { name: 'Разделы сайта' }).click();
     await page.getByRole('menuitem', { name }).click();
@@ -68,8 +68,18 @@ async function backToDesigner(page: Page) {
     ).toBeVisible();
 }
 
+async function openSiteSection(page: Page, section: 'forms' | 'popups') {
+    const site = page.url().match(/\/sites\/([^/]+)/);
+
+    if (!site) {
+        throw new Error('Не удалось определить сайт');
+    }
+
+    await page.goto(`/sites/${site[1]}/${section}`);
+}
+
 async function createForm(page: Page, name: string) {
-    await openSection(page, 'Формы');
+    await openSiteSection(page, 'forms');
     await page.getByRole('button', { name: 'Создать форму' }).click();
     await page
         .getByRole('dialog', { name: 'Новая форма' })
@@ -113,16 +123,22 @@ async function createPopup(
     title: string,
     formName: string,
 ) {
-    await page.getByRole('link', { name: /Все формы/ }).click();
-    await backToDesigner(page);
-    await openSection(page, 'Попапы');
+    await openSiteSection(page, 'popups');
     await page.getByRole('button', { name: 'Создать попап' }).click();
-    const dialog = page.getByRole('dialog', { name: 'Новый попап' });
-    await dialog.getByLabel('Название').fill(name);
-    await dialog.getByLabel('Заголовок окна').fill(title);
-    await dialog.getByLabel('Форма заявки').selectOption({ label: formName });
-    await dialog.getByRole('button', { name: 'Сохранить' }).click();
-    await expect(dialog).toBeHidden();
+    await page.getByRole('button', { name: 'Переименовать' }).click();
+    await page.getByLabel('Название', { exact: true }).fill(name);
+    await page.getByLabel('Название', { exact: true }).press('Enter');
+    await page.getByText('Давайте мы вам позвоним', { exact: true }).click();
+    await page.getByLabel('Текст заголовка').fill(title);
+    await page
+        .getByRole('button', { name: 'Закрыть настройки элемента' })
+        .click();
+    await page.getByRole('combobox', { name: 'Форма заявки' }).click();
+    await page.getByRole('option', { name: formName }).click();
+    await page.getByRole('button', { name: 'Сохранить' }).click();
+    await expect(
+        page.getByRole('heading', { level: 1, name: 'Виджет' }),
+    ).toBeVisible();
     await expect(page.getByText(`Форма: ${formName}`)).toBeVisible();
 }
 

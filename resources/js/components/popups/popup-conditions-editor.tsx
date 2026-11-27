@@ -361,7 +361,14 @@ export function PopupConditionsEditor({
                     type="button"
                     variant="ghost"
                     size="sm"
-                    onClick={() => onChange({ join: 'and', groups: [] })}
+                    onClick={() =>
+                        onChange({
+                            join: 'and',
+                            groups: [],
+                            name: '',
+                            enabled: true,
+                        })
+                    }
                 >
                     Отменить условия
                 </Button>

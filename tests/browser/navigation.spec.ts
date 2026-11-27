@@ -138,8 +138,7 @@ test(
             'Дизайнер',
             'Предпросмотр',
             'Автомобили',
-            'Формы',
-            'Попапы',
+            'Виджет',
             'SEO',
             'Заявки',
             'Доставка заявок',
@@ -156,8 +155,10 @@ test(
         ).toHaveCount(0);
         await expectNoHorizontalOverflow(page);
 
-        await siteNav.getByRole('link', { name: 'Формы', exact: true }).click();
-        await expect(page).toHaveURL(/\/forms$/);
+        await siteNav
+            .getByRole('link', { name: 'Виджет', exact: true })
+            .click();
+        await expect(page).toHaveURL(/\/popups$/);
 
         await openSidebar(page);
         await page
@@ -192,8 +193,7 @@ test('designer sees only permitted site sections', async ({ browser }) => {
         'Дизайнер',
         'Предпросмотр',
         'Разделы',
-        'Формы',
-        'Попапы',
+        'Виджет',
     ]);
     await expect(
         designer.getByRole('link', { name: 'Перейти к публикации' }),
@@ -237,8 +237,8 @@ test('admin site navigation includes leads and settings but not workspace settin
         'Предпросмотр',
         'Разделы',
         'Автомобили',
-        'Формы',
-        'Попапы',
+        'Со склада',
+        'Виджет',
         'SEO',
         'Заявки',
         'Доставка заявок',

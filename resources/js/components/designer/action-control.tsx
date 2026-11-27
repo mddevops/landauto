@@ -196,7 +196,7 @@ export function ActionControl({
                     {popups.length === 0 && (
                         <p className="text-xs text-muted-foreground">
                             Активных попапов нет. Создайте попап в разделе
-                            «Попапы».
+                            «Виджет».
                         </p>
                     )}
                 </div>
